@@ -17,7 +17,7 @@ localStorage (ga_* keys)  ⇄  cloud.js (LWW, debounce 3s)  ⇄  PostgREST  ⇄ 
 
 ## راه‌اندازی (یک‌باره)
 
-1. پروژه: `https://mszrzhoezqrjvonxrefi.supabase.co` (ref: `mszrzhoezqrjvonxrefi`)
+1. پروژه: `https://iultwqtzvrysugfxwshw.supabase.co` (ref: `iultwqtzvrysugfxwshw`)
 2. Dashboard → **SQL Editor** → محتوای [`schema.sql`](./schema.sql) را اجرا کنید (idempotent؛ چند بار اجرا مشکل‌ساز نیست).
 3. Dashboard → **Settings → API Keys** → کلید **publishable** (`sb_publishable_…`)
    یا **anon legacy** (`eyJ…`) را کپی کنید.

@@ -1,7 +1,7 @@
 -- ═══════════════════════════════════════════════════════════════════
 -- GolfAcademy PRO — همگام‌سازی ابری، فاز ۱: آینهٔ localStorage
 -- اجرا در: Supabase Dashboard → SQL Editor (قابل اجراى مجدد — idempotent)
--- پروژه: https://mszrzhoezqrjvonxrefi.supabase.co
+-- پروژه: https://iultwqtzvrysugfxwshw.supabase.co
 -- ═══════════════════════════════════════════════════════════════════
 
 -- جدول کلید/مقدار: هر کلید localStorage با پیشوند ga_ یک ردیف است.

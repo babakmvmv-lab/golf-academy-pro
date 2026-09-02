@@ -79,7 +79,7 @@ cloud → labels → holidays → data → charts → qrcode.min → battle → 
 
 ### پروژهٔ Supabase
 
-- URL: `https://mszrzhoezqrjvonxrefi.supabase.co` (ref: `mszrzhoezqrjvonxrefi`)
+- URL: `https://iultwqtzvrysugfxwshw.supabase.co` (ref: `iultwqtzvrysugfxwshw`)
 - جدول: `public.ga_store` — ستون‌ها `k | v | updated_at` (به‌همین نام‌ها؛ نه `key/value`)
 - کلیدهای همگام‌نشونده (SKIP): `ga_session`, `ga_seed_v2`, `ga_cloud_cfg`, `ga_cloud_dirty`, `ga_cloud_ts`, `__ga_t`
 

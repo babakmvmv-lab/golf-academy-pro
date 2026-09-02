@@ -936,7 +936,7 @@ tr.off-row{opacity:.5}
 .as-rb{padding:6px 12px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:700;color:#CBD5E1;
   background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
 .as-rb:hover{border-color:rgba(30,187,138,.6);color:#5FE3B0}
-.as-gender{display:flex;gap:6px;justify-content:center;margin-top:8px}
+.as-gender{display:flex;gap:6px;justify-content:center;margin-top:8px;flex-wrap:wrap}
 .as-gb{flex:1;padding:7px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:800;color:#CBD5E1;
   background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
 .as-gb.on{background:linear-gradient(135deg,#1EBB8A,#0F7D5C);color:#fff;border-color:transparent}
@@ -4599,10 +4599,13 @@ window.__L3D = {
   }
   function resetShop(){ try { localStorage.removeItem(SHOP_KEY); } catch(e){} }
   const FREE_IDS = () => shop().filter(i => +i.price === 0).map(i => i.id);
+  /* جنسیت‌ها: m=آقا ، f=خانم ، b=پسر بچه ، c=دختر بچه — b/c «حالت کوچک» همان ساختارند.
+     سازگاری آیتم: g:'m' ⇒ آقا+پسر ، g:'f' ⇒ خانم+دختر ، g:'a' ⇒ همه (خریدها همیشه می‌مانند) */
+  const fitsGender = (ig, g) => !ig || ig === 'a' || (ig === 'm' ? (g === 'm' || g === 'b') : (g === 'f' || g === 'c'));
   const DEFAULT_SEL = g => ({
     shirt:'sh_ac', pants:'pt_ac', shoes:'sn_ac', hat: g === 'f' ? 'ht_sc' : 'ht_no',
     glove:'gl_no', glass:'gs_no', club:'cl_no', bag:'bg_no', ball:'bl_no', watch:'wt_no',
-    hair: g === 'f' ? 'hr_f1' : 'hr_m1', eyes:'ey_br', skin:'sk_2',
+    hair: (g === 'f' || g === 'c') ? 'hr_f1' : 'hr_m1', eyes:'ey_br', skin:'sk_2',
   });
 
 
@@ -4724,7 +4727,10 @@ window.__L3D = {
   function avatarOf(user, defGender){
     user = norm(user);
     const d = avatarData();
-    const g = (defGender === 'f' || defGender === 'زن') ? 'f' : 'm';
+    const g = ['m','f','b','c'].includes(defGender) ? defGender
+      : (defGender === 'زن' || defGender === 'خانم') ? 'f'
+      : (defGender === 'پسر' || defGender === 'پسر بچه' || defGender === 'پسربچه') ? 'b'
+      : (defGender === 'دختر' || defGender === 'دختر بچه' || defGender === 'دختربچه') ? 'c' : 'm';
     let rec = d[user];
     if (!rec){
       // اگر آواتار زیرِ کلیدی با حروف متفاوت (مثلاً Sina_Golf) ذخیره شده، آن را بکش و کوچک کن
@@ -4891,10 +4897,12 @@ window.__L3D = {
   function renderAvatarSVG(sel, opt){
     opt = opt || {};
     const g = uid();
-    const gender = opt.gender === 'f' ? 'f' : 'm';
+    const gender = ['m','f','b','c'].includes(opt.gender) ? opt.gender : 'm';
+    const isChild = gender === 'b' || gender === 'c';   // پسر/دختر بچه → بدن کوچک‌تر، سر بزرگ‌تر
+    const femAv   = gender === 'f' || gender === 'c';
     const skinIt = itemOf(sel, 'skin') || { c1:'#EBBE8F' };
     const skin = skinIt.c1;
-    const hair = itemOf(sel, 'hair') || { style:(gender==='f'?'long':'short'), c1:'#2A1E16' };
+    const hair = itemOf(sel, 'hair') || { style:(femAv?'long':'short'), c1:'#2A1E16' };
     const eyeIt = itemOf(sel, 'eyes') || { c1:'#5A3B22' };
     const shirt = itemOf(sel, 'shirt') || { c1:'#F4F6F8', c2:'#D4AF37', pat:'solid' };
     const pants = itemOf(sel, 'pants') || { c1:'#3A424E' };
@@ -5050,7 +5058,17 @@ window.__L3D = {
         <rect x="47" y="194.5" width="10" height="7" rx="2.5" fill="${w2}" opacity=".95"/></g>`;
     }
     const eyeShine = eyeIt.shine ? `<circle cx="86" cy="92" r="8" fill="${eyeIt.c1}" opacity=".28"/><circle cx="114" cy="92" r="8" fill="${eyeIt.c1}" opacity=".28"/>` : '';
-    const lips = gender === 'f' ? `<path d="M92 112 Q100 118 108 112 Q100 116 92 112Z" fill="#C0546A"/>` : '';
+    const lips = femAv ? `<path d="M92 112 Q100 118 108 112 Q100 116 92 112Z" fill="#C0546A"/>` : '';
+
+    /* ── فرم بچه: کل بدن (از یقه تا کفش) حول گردن ۷۸٪ فشرده و کمی باریک‌تر می‌شود؛
+       سر دست‌نخورده می‌ماند تا نسبت «سر بزرگ / بدن کوچک» بچه‌گونه شود. لباس‌ها و
+       اکسسوریِ خریداری‌شده چون داخل همان گروه‌اند، خودکار روی بدن کوچک سوار می‌شوند. ── */
+    const bodyOpen  = isChild ? `<g transform="translate(8 24.6) scale(0.92 0.78)">` : '';
+    const bodyClose = isChild ? `</g>` : '';
+    const accOpen   = isChild ? `<g transform="translate(0 -54)">` : '';
+    const accClose  = isChild ? `</g>` : '';
+    const groundY   = isChild ? 297 : 350;
+    const groundRx  = isChild ? 52  : 62;
 
     return `<svg class="av-svg" viewBox="0 0 200 360" width="${opt.w || 190}" height="${opt.h || 342}" style="overflow:visible">
       <defs>
@@ -5060,17 +5078,19 @@ window.__L3D = {
         <radialGradient id="${g}fc" cx="38%" cy="30%" r="75%">
           <stop offset="0" stop-color="${light(skin,10)}"/><stop offset="1" stop-color="${dark(skin,10)}"/></radialGradient>
       </defs>
-      <ellipse cx="100" cy="350" rx="62" ry="9" fill="rgba(0,0,0,.42)"/>
-      ${bagSvg}
-      ${clubSvg}
+      <ellipse cx="100" cy="${groundY}" rx="${groundRx}" ry="9" fill="rgba(0,0,0,.42)"/>
+      ${accOpen}${bagSvg}${clubSvg}${accClose}
       ${hairBack}
+      ${bodyOpen}
       ${legs}${shoesSvg}
       <path d="${bodyPath}" fill="url(#${g}sh)" stroke="rgba(0,0,0,.16)"/>
       ${shirtPat}
-      ${sleeve}${armL}${armR}${gloveSvg}${watchSvg}${ballSvg}
+      ${sleeve}${armL}${armR}${gloveSvg}${watchSvg}
       <path d="M88 108 L112 108 L112 126 Q100 132 88 126 Z" fill="${dark(skin,12)}"/>
       <path d="M84 118 Q100 136 116 118 L124 124 Q100 146 76 124 Z" fill="${light(shirt.c1,6)}"/>
       <path d="M100 122 L92 140 L100 136 L108 140 Z" fill="${shirt.c2}"/>
+      ${bodyClose}
+      ${accOpen}${ballSvg}${accClose}
       <ellipse cx="100" cy="86" rx="38" ry="42" fill="url(#${g}fc)"/>
       <path d="M62 86 Q56 96 64 106" stroke="${dark(skin,14)}" stroke-width="3" fill="none"/>
       <path d="M138 86 Q144 96 136 106" stroke="${dark(skin,14)}" stroke-width="3" fill="none"/>
@@ -5257,7 +5277,7 @@ window.__L3D = {
     itemMeta, cats, catsAll, addCat, setCat, removeCat, brands, setBrand, removeBrand,
     bundles, bundlesAll, addBundle, setBundle, removeBundle, buyBundle,
     cart, cartAdd, cartRemove, cartClear, cartTotal, checkout, favs, toggleFav,
-    avatarData, avatarOf, saveAvatars, setAvatar, selectItem, buyItem, DEFAULT_SEL, FREE_IDS,
+    avatarData, avatarOf, saveAvatars, setAvatar, selectItem, buyItem, DEFAULT_SEL, FREE_IDS, fitsGender,
     coinData, coinOf, addCoins, spendCoins, setAutoProvider, autoOf,
     reqs, reqsOf, pendingReqs, addReq, decideReq, deleteReq, clearDecided,
   };
@@ -5457,8 +5477,10 @@ window.__L3D = {
             <button class="as-rb" data-rot="30">⟳</button>
           </div>
           <div class="as-gender">
-            <button class="as-gb ${av.gender==='m'?'on':''}" data-agender="m">🙍‍♂️ آقا</button>
-            <button class="as-gb ${av.gender==='f'?'on':''}" data-agender="f">🙍‍♀️ خانم</button>
+            <button class="as-gb ${av.gender==='m'?'on':''}" data-agender="m">👨 آقا</button>
+            <button class="as-gb ${av.gender==='f'?'on':''}" data-agender="f">👩 خانم</button>
+            <button class="as-gb ${av.gender==='b'?'on':''}" data-agender="b">👦 پسر بچه</button>
+            <button class="as-gb ${av.gender==='c'?'on':''}" data-agender="c">👧 دختر بچه</button>
           </div>
         </div>
         <div class="as-cart">
@@ -5590,7 +5612,7 @@ window.__L3D = {
       const sel = Object.assign({}, rec.sel);
       ['hair','hat','shirt','pants'].forEach(cat => {
         const it = AV.shopItem(sel[cat]);
-        if (it && it.g !== 'a' && it.g !== g) sel[cat] = AV.DEFAULT_SEL(g)[cat];
+        if (it && !AV.fitsGender(it.g, g)) sel[cat] = AV.DEFAULT_SEL(g)[cat];
       });
       AV.setAvatar(user, { gender: g, sel });
       refresh();
@@ -5655,7 +5677,7 @@ window.__L3D = {
             <ul class="as-dlg-ul">
               <li>ردهٔ برند: <b>${esc(br.tier || '—')}</b></li>
               <li>دسته: <b>${esc((AV.CATS.find(c => c[0] === it.cat) || ['','—'])[1])}</b></li>
-              <li>مناسب: <b>${it.g === 'f' ? 'خانم' : it.g === 'm' ? 'آقا' : 'خانم و آقا'}</b></li>
+              <li>مناسب: <b>${it.g === 'f' ? 'خانم و دختر' : it.g === 'm' ? 'آقا و پسر' : 'همه (بزرگ و کوچک)'}</b></li>
               <li>موجودی: <b>${fa(m.stock)} عدد</b> • فروش: <b>${fa(m.sold)}</b></li>
             </ul>
             <div class="as-dlg-btns">
@@ -5761,7 +5783,7 @@ window.__L3D = {
             <span class="asa-col"><small>قبل تخفیف</small><input class="asa-in" type="number" data-f="disc" value="${m.disc||''}" style="width:80px;direction:ltr"></span>
             <span class="asa-col"><small>موجودی</small><input class="asa-in" type="number" data-f="stock" value="${m.stock}" style="width:70px;direction:ltr"></span>
             <span class="asa-col"><small>جنسیت</small><select class="asa-in" data-f="g">
-              <option value="a" ${it.g==='a'?'selected':''}>هردو</option><option value="m" ${it.g==='m'?'selected':''}>آقا</option><option value="f" ${it.g==='f'?'selected':''}>خانم</option></select></span>
+              <option value="a" ${it.g==='a'?'selected':''}>همه (بزرگ و کوچک)</option><option value="m" ${it.g==='m'?'selected':''}>آقا/پسر</option><option value="f" ${it.g==='f'?'selected':''}>خانم/دختر</option></select></span>
             <span class="asa-col"><small>رنگ‌ها</small><span style="display:flex;gap:3px">
               <input class="asa-in" type="color" data-f="c1" value="${/^#/.test(it.c1||'')?it.c1:'#8A93A6'}">
               <input class="asa-in" type="color" data-f="c2" value="${/^#/.test(it.c2||'')?it.c2:'#2A2F3A'}"></span></span>
@@ -8652,7 +8674,7 @@ window.__L3D = {
             <td><input class="input" data-in="${it.id}" value="${esc(it.n)}" style="min-width:150px;font-size:12px"></td>
             <td><span class="bnd" style="color:${br.c};background:${br.c}1f;border:1px solid ${br.c}44;padding:2px 7px;border-radius:20px;font-size:10px">${esc(br.name)}</span>
               <div style="font-size:10px;color:var(--muted)">${esc(br.tier)}</div></td>
-            <td>${it.g === 'a' ? 'هردو' : it.g === 'f' ? 'خانم' : 'آقا'}</td>
+            <td>${it.g === 'a' ? 'همه' : it.g === 'f' ? 'خانم/دختر' : 'آقا/پسر'}</td>
             <td><input class="input" type="number" data-ip="${it.id}" value="${+it.price || 0}" style="width:82px;text-align:center;direction:ltr"></td>
             <td>${it.off ? '<span class="chip red">غیرفعال</span>' : '<span class="chip green">فعال</span>'}</td>
             <td style="white-space:nowrap">
@@ -8671,7 +8693,7 @@ window.__L3D = {
         <div><label>نام آیتم</label><input class="input" id="sp-n" placeholder="مثلاً پولوشرت تابستانی" style="width:100%"></div>
         <div><label>برند</label><select class="sel" id="sp-b" style="width:100%">${brands.map(b => `<option value="${b}">${esc(AV.BRANDS[b].name)} — ${esc(AV.BRANDS[b].tier)}</option>`).join('')}</select></div>
         <div><label>قیمت (سکه)</label><input class="input" id="sp-p" type="number" value="30" style="width:100%;direction:ltr"></div>
-        <div><label>جنسیت</label><select class="sel" id="sp-g" style="width:100%"><option value="a">هردو</option><option value="m">آقا</option><option value="f">خانم</option></select></div>
+        <div><label>جنسیت</label><select class="sel" id="sp-g" style="width:100%"><option value="a">همه (بزرگ و کوچک)</option><option value="m">آقا/پسر</option><option value="f">خانم/دختر</option></select></div>
         <div><label>رنگ اصلی</label><input class="input" type="color" id="sp-c1" value="#2E86DE" style="width:100%;height:38px;padding:3px"></div>
         <div><label>رنگ دوم</label><input class="input" type="color" id="sp-c2" value="#D4AF37" style="width:100%;height:38px;padding:3px"></div>
       </div>
@@ -10509,8 +10531,10 @@ window.__L3D = {
         ${honorProgHTML(o.hn)}
         <div style="margin-top:12px;font-size:12.5px;color:var(--muted)">موجودی: <b class="gold-text" style="font-size:16px">${D.fa(c.total)} 🪙</b></div>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">
-          <button class="btn sm ${av.gender === 'm' ? '' : 'ghost'}" data-gender="m">🙍‍♂️ آقا</button>
-          <button class="btn sm ${av.gender === 'f' ? '' : 'ghost'}" data-gender="f">🙍‍♀️ خانم</button>
+          <button class="btn sm ${av.gender === 'm' ? '' : 'ghost'}" data-gender="m">👨 آقا</button>
+          <button class="btn sm ${av.gender === 'f' ? '' : 'ghost'}" data-gender="f">👩 خانم</button>
+          <button class="btn sm ${av.gender === 'b' ? '' : 'ghost'}" data-gender="b">👦 پسر بچه</button>
+          <button class="btn sm ${av.gender === 'c' ? '' : 'ghost'}" data-gender="c">👧 دختر بچه</button>
           <button class="btn sm ghost" id="av-reset">↺ ساده‌سازی</button>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.9">کمد شما: <b class="gold-text">${D.fa(av.owned.length)}</b> آیتم — خریدهای شما همیشه باقی می‌مانند.</div>
@@ -10559,7 +10583,7 @@ window.__L3D = {
       /* اگر مو/کلاه فعلی برای جنسیت جدید نیست، به گزینهٔ پیش‌فرض برگرد */
       ['hair','hat','shirt','pants'].forEach(cat => {
         const it = AV.shopItem(sel[cat]);
-        if (it && it.g !== 'a' && it.g !== g) sel[cat] = AV.DEFAULT_SEL(g)[cat];
+        if (it && !AV.fitsGender(it.g, g)) sel[cat] = AV.DEFAULT_SEL(g)[cat];
       });
       AV.setAvatar(currentUser, { gender: g, sel });
       pageMemberZone();

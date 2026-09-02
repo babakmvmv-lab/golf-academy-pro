@@ -192,8 +192,10 @@
             <button class="as-rb" data-rot="30">⟳</button>
           </div>
           <div class="as-gender">
-            <button class="as-gb ${av.gender==='m'?'on':''}" data-agender="m">🙍‍♂️ آقا</button>
-            <button class="as-gb ${av.gender==='f'?'on':''}" data-agender="f">🙍‍♀️ خانم</button>
+            <button class="as-gb ${av.gender==='m'?'on':''}" data-agender="m">👨 آقا</button>
+            <button class="as-gb ${av.gender==='f'?'on':''}" data-agender="f">👩 خانم</button>
+            <button class="as-gb ${av.gender==='b'?'on':''}" data-agender="b">👦 پسر بچه</button>
+            <button class="as-gb ${av.gender==='c'?'on':''}" data-agender="c">👧 دختر بچه</button>
           </div>
         </div>
         <div class="as-cart">
@@ -325,7 +327,7 @@
       const sel = Object.assign({}, rec.sel);
       ['hair','hat','shirt','pants'].forEach(cat => {
         const it = AV.shopItem(sel[cat]);
-        if (it && it.g !== 'a' && it.g !== g) sel[cat] = AV.DEFAULT_SEL(g)[cat];
+        if (it && !AV.fitsGender(it.g, g)) sel[cat] = AV.DEFAULT_SEL(g)[cat];
       });
       AV.setAvatar(user, { gender: g, sel });
       refresh();
@@ -390,7 +392,7 @@
             <ul class="as-dlg-ul">
               <li>ردهٔ برند: <b>${esc(br.tier || '—')}</b></li>
               <li>دسته: <b>${esc((AV.CATS.find(c => c[0] === it.cat) || ['','—'])[1])}</b></li>
-              <li>مناسب: <b>${it.g === 'f' ? 'خانم' : it.g === 'm' ? 'آقا' : 'خانم و آقا'}</b></li>
+              <li>مناسب: <b>${it.g === 'f' ? 'خانم و دختر' : it.g === 'm' ? 'آقا و پسر' : 'همه (بزرگ و کوچک)'}</b></li>
               <li>موجودی: <b>${fa(m.stock)} عدد</b> • فروش: <b>${fa(m.sold)}</b></li>
             </ul>
             <div class="as-dlg-btns">
@@ -496,7 +498,7 @@
             <span class="asa-col"><small>قبل تخفیف</small><input class="asa-in" type="number" data-f="disc" value="${m.disc||''}" style="width:80px;direction:ltr"></span>
             <span class="asa-col"><small>موجودی</small><input class="asa-in" type="number" data-f="stock" value="${m.stock}" style="width:70px;direction:ltr"></span>
             <span class="asa-col"><small>جنسیت</small><select class="asa-in" data-f="g">
-              <option value="a" ${it.g==='a'?'selected':''}>هردو</option><option value="m" ${it.g==='m'?'selected':''}>آقا</option><option value="f" ${it.g==='f'?'selected':''}>خانم</option></select></span>
+              <option value="a" ${it.g==='a'?'selected':''}>همه (بزرگ و کوچک)</option><option value="m" ${it.g==='m'?'selected':''}>آقا/پسر</option><option value="f" ${it.g==='f'?'selected':''}>خانم/دختر</option></select></span>
             <span class="asa-col"><small>رنگ‌ها</small><span style="display:flex;gap:3px">
               <input class="asa-in" type="color" data-f="c1" value="${/^#/.test(it.c1||'')?it.c1:'#8A93A6'}">
               <input class="asa-in" type="color" data-f="c2" value="${/^#/.test(it.c2||'')?it.c2:'#2A2F3A'}"></span></span>

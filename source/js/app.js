@@ -1764,8 +1764,10 @@
         ${honorProgHTML(o.hn)}
         <div style="margin-top:12px;font-size:12.5px;color:var(--muted)">موجودی: <b class="gold-text" style="font-size:16px">${D.fa(c.total)} 🪙</b></div>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">
-          <button class="btn sm ${av.gender === 'm' ? '' : 'ghost'}" data-gender="m">🙍‍♂️ آقا</button>
-          <button class="btn sm ${av.gender === 'f' ? '' : 'ghost'}" data-gender="f">🙍‍♀️ خانم</button>
+          <button class="btn sm ${av.gender === 'm' ? '' : 'ghost'}" data-gender="m">👨 آقا</button>
+          <button class="btn sm ${av.gender === 'f' ? '' : 'ghost'}" data-gender="f">👩 خانم</button>
+          <button class="btn sm ${av.gender === 'b' ? '' : 'ghost'}" data-gender="b">👦 پسر بچه</button>
+          <button class="btn sm ${av.gender === 'c' ? '' : 'ghost'}" data-gender="c">👧 دختر بچه</button>
           <button class="btn sm ghost" id="av-reset">↺ ساده‌سازی</button>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.9">کمد شما: <b class="gold-text">${D.fa(av.owned.length)}</b> آیتم — خریدهای شما همیشه باقی می‌مانند.</div>
@@ -1814,7 +1816,7 @@
       /* اگر مو/کلاه فعلی برای جنسیت جدید نیست، به گزینهٔ پیش‌فرض برگرد */
       ['hair','hat','shirt','pants'].forEach(cat => {
         const it = AV.shopItem(sel[cat]);
-        if (it && it.g !== 'a' && it.g !== g) sel[cat] = AV.DEFAULT_SEL(g)[cat];
+        if (it && !AV.fitsGender(it.g, g)) sel[cat] = AV.DEFAULT_SEL(g)[cat];
       });
       AV.setAvatar(currentUser, { gender: g, sel });
       pageMemberZone();

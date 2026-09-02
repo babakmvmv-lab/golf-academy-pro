@@ -2678,7 +2678,7 @@
             <td><input class="input" data-in="${it.id}" value="${esc(it.n)}" style="min-width:150px;font-size:12px"></td>
             <td><span class="bnd" style="color:${br.c};background:${br.c}1f;border:1px solid ${br.c}44;padding:2px 7px;border-radius:20px;font-size:10px">${esc(br.name)}</span>
               <div style="font-size:10px;color:var(--muted)">${esc(br.tier)}</div></td>
-            <td>${it.g === 'a' ? 'هردو' : it.g === 'f' ? 'خانم' : 'آقا'}</td>
+            <td>${it.g === 'a' ? 'همه' : it.g === 'f' ? 'خانم/دختر' : 'آقا/پسر'}</td>
             <td><input class="input" type="number" data-ip="${it.id}" value="${+it.price || 0}" style="width:82px;text-align:center;direction:ltr"></td>
             <td>${it.off ? '<span class="chip red">غیرفعال</span>' : '<span class="chip green">فعال</span>'}</td>
             <td style="white-space:nowrap">
@@ -2697,7 +2697,7 @@
         <div><label>نام آیتم</label><input class="input" id="sp-n" placeholder="مثلاً پولوشرت تابستانی" style="width:100%"></div>
         <div><label>برند</label><select class="sel" id="sp-b" style="width:100%">${brands.map(b => `<option value="${b}">${esc(AV.BRANDS[b].name)} — ${esc(AV.BRANDS[b].tier)}</option>`).join('')}</select></div>
         <div><label>قیمت (سکه)</label><input class="input" id="sp-p" type="number" value="30" style="width:100%;direction:ltr"></div>
-        <div><label>جنسیت</label><select class="sel" id="sp-g" style="width:100%"><option value="a">هردو</option><option value="m">آقا</option><option value="f">خانم</option></select></div>
+        <div><label>جنسیت</label><select class="sel" id="sp-g" style="width:100%"><option value="a">همه (بزرگ و کوچک)</option><option value="m">آقا/پسر</option><option value="f">خانم/دختر</option></select></div>
         <div><label>رنگ اصلی</label><input class="input" type="color" id="sp-c1" value="#2E86DE" style="width:100%;height:38px;padding:3px"></div>
         <div><label>رنگ دوم</label><input class="input" type="color" id="sp-c2" value="#D4AF37" style="width:100%;height:38px;padding:3px"></div>
       </div>

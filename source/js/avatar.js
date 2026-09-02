@@ -374,10 +374,13 @@
   }
   function resetShop(){ try { localStorage.removeItem(SHOP_KEY); } catch(e){} }
   const FREE_IDS = () => shop().filter(i => +i.price === 0).map(i => i.id);
+  /* جنسیت‌ها: m=آقا ، f=خانم ، b=پسر بچه ، c=دختر بچه — b/c «حالت کوچک» همان ساختارند.
+     سازگاری آیتم: g:'m' ⇒ آقا+پسر ، g:'f' ⇒ خانم+دختر ، g:'a' ⇒ همه (خریدها همیشه می‌مانند) */
+  const fitsGender = (ig, g) => !ig || ig === 'a' || (ig === 'm' ? (g === 'm' || g === 'b') : (g === 'f' || g === 'c'));
   const DEFAULT_SEL = g => ({
     shirt:'sh_ac', pants:'pt_ac', shoes:'sn_ac', hat: g === 'f' ? 'ht_sc' : 'ht_no',
     glove:'gl_no', glass:'gs_no', club:'cl_no', bag:'bg_no', ball:'bl_no', watch:'wt_no',
-    hair: g === 'f' ? 'hr_f1' : 'hr_m1', eyes:'ey_br', skin:'sk_2',
+    hair: (g === 'f' || g === 'c') ? 'hr_f1' : 'hr_m1', eyes:'ey_br', skin:'sk_2',
   });
 
 
@@ -499,7 +502,10 @@
   function avatarOf(user, defGender){
     user = norm(user);
     const d = avatarData();
-    const g = (defGender === 'f' || defGender === 'زن') ? 'f' : 'm';
+    const g = ['m','f','b','c'].includes(defGender) ? defGender
+      : (defGender === 'زن' || defGender === 'خانم') ? 'f'
+      : (defGender === 'پسر' || defGender === 'پسر بچه' || defGender === 'پسربچه') ? 'b'
+      : (defGender === 'دختر' || defGender === 'دختر بچه' || defGender === 'دختربچه') ? 'c' : 'm';
     let rec = d[user];
     if (!rec){
       // اگر آواتار زیرِ کلیدی با حروف متفاوت (مثلاً Sina_Golf) ذخیره شده، آن را بکش و کوچک کن
@@ -666,10 +672,12 @@
   function renderAvatarSVG(sel, opt){
     opt = opt || {};
     const g = uid();
-    const gender = opt.gender === 'f' ? 'f' : 'm';
+    const gender = ['m','f','b','c'].includes(opt.gender) ? opt.gender : 'm';
+    const isChild = gender === 'b' || gender === 'c';   // پسر/دختر بچه → بدن کوچک‌تر، سر بزرگ‌تر
+    const femAv   = gender === 'f' || gender === 'c';
     const skinIt = itemOf(sel, 'skin') || { c1:'#EBBE8F' };
     const skin = skinIt.c1;
-    const hair = itemOf(sel, 'hair') || { style:(gender==='f'?'long':'short'), c1:'#2A1E16' };
+    const hair = itemOf(sel, 'hair') || { style:(femAv?'long':'short'), c1:'#2A1E16' };
     const eyeIt = itemOf(sel, 'eyes') || { c1:'#5A3B22' };
     const shirt = itemOf(sel, 'shirt') || { c1:'#F4F6F8', c2:'#D4AF37', pat:'solid' };
     const pants = itemOf(sel, 'pants') || { c1:'#3A424E' };
@@ -825,7 +833,17 @@
         <rect x="47" y="194.5" width="10" height="7" rx="2.5" fill="${w2}" opacity=".95"/></g>`;
     }
     const eyeShine = eyeIt.shine ? `<circle cx="86" cy="92" r="8" fill="${eyeIt.c1}" opacity=".28"/><circle cx="114" cy="92" r="8" fill="${eyeIt.c1}" opacity=".28"/>` : '';
-    const lips = gender === 'f' ? `<path d="M92 112 Q100 118 108 112 Q100 116 92 112Z" fill="#C0546A"/>` : '';
+    const lips = femAv ? `<path d="M92 112 Q100 118 108 112 Q100 116 92 112Z" fill="#C0546A"/>` : '';
+
+    /* ── فرم بچه: کل بدن (از یقه تا کفش) حول گردن ۷۸٪ فشرده و کمی باریک‌تر می‌شود؛
+       سر دست‌نخورده می‌ماند تا نسبت «سر بزرگ / بدن کوچک» بچه‌گونه شود. لباس‌ها و
+       اکسسوریِ خریداری‌شده چون داخل همان گروه‌اند، خودکار روی بدن کوچک سوار می‌شوند. ── */
+    const bodyOpen  = isChild ? `<g transform="translate(8 24.6) scale(0.92 0.78)">` : '';
+    const bodyClose = isChild ? `</g>` : '';
+    const accOpen   = isChild ? `<g transform="translate(0 -54)">` : '';
+    const accClose  = isChild ? `</g>` : '';
+    const groundY   = isChild ? 297 : 350;
+    const groundRx  = isChild ? 52  : 62;
 
     return `<svg class="av-svg" viewBox="0 0 200 360" width="${opt.w || 190}" height="${opt.h || 342}" style="overflow:visible">
       <defs>
@@ -835,17 +853,19 @@
         <radialGradient id="${g}fc" cx="38%" cy="30%" r="75%">
           <stop offset="0" stop-color="${light(skin,10)}"/><stop offset="1" stop-color="${dark(skin,10)}"/></radialGradient>
       </defs>
-      <ellipse cx="100" cy="350" rx="62" ry="9" fill="rgba(0,0,0,.42)"/>
-      ${bagSvg}
-      ${clubSvg}
+      <ellipse cx="100" cy="${groundY}" rx="${groundRx}" ry="9" fill="rgba(0,0,0,.42)"/>
+      ${accOpen}${bagSvg}${clubSvg}${accClose}
       ${hairBack}
+      ${bodyOpen}
       ${legs}${shoesSvg}
       <path d="${bodyPath}" fill="url(#${g}sh)" stroke="rgba(0,0,0,.16)"/>
       ${shirtPat}
-      ${sleeve}${armL}${armR}${gloveSvg}${watchSvg}${ballSvg}
+      ${sleeve}${armL}${armR}${gloveSvg}${watchSvg}
       <path d="M88 108 L112 108 L112 126 Q100 132 88 126 Z" fill="${dark(skin,12)}"/>
       <path d="M84 118 Q100 136 116 118 L124 124 Q100 146 76 124 Z" fill="${light(shirt.c1,6)}"/>
       <path d="M100 122 L92 140 L100 136 L108 140 Z" fill="${shirt.c2}"/>
+      ${bodyClose}
+      ${accOpen}${ballSvg}${accClose}
       <ellipse cx="100" cy="86" rx="38" ry="42" fill="url(#${g}fc)"/>
       <path d="M62 86 Q56 96 64 106" stroke="${dark(skin,14)}" stroke-width="3" fill="none"/>
       <path d="M138 86 Q144 96 136 106" stroke="${dark(skin,14)}" stroke-width="3" fill="none"/>
@@ -1032,7 +1052,7 @@
     itemMeta, cats, catsAll, addCat, setCat, removeCat, brands, setBrand, removeBrand,
     bundles, bundlesAll, addBundle, setBundle, removeBundle, buyBundle,
     cart, cartAdd, cartRemove, cartClear, cartTotal, checkout, favs, toggleFav,
-    avatarData, avatarOf, saveAvatars, setAvatar, selectItem, buyItem, DEFAULT_SEL, FREE_IDS,
+    avatarData, avatarOf, saveAvatars, setAvatar, selectItem, buyItem, DEFAULT_SEL, FREE_IDS, fitsGender,
     coinData, coinOf, addCoins, spendCoins, setAutoProvider, autoOf,
     reqs, reqsOf, pendingReqs, addReq, decideReq, deleteReq, clearDecided,
   };

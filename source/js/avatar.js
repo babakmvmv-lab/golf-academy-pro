@@ -789,11 +789,22 @@
       <path d="M${r1(100+B.sw-2)} ${r1(B.sy+6)} Q${r1(100+B.sw+8)} ${r1(B.sy+11)} ${r1(100+B.sw+7)} ${r1(B.at+12)} L${r1(100+B.sw-6)} ${r1(B.at+17)} Q${r1(100+B.sw-5)} ${r1(B.sy+12)} Z" fill="${dark(shirt.c1,8)}"/>`;
     const armL = `<path d="M${r1(100-B.sw-6)} ${r1(B.at+13)} Q${r1(100-B.sw-6)} ${r1(B.at+26)} ${r1(handL-7)} ${r1(B.ae)} L${r1(handL+7)} ${r1(B.ae)} Q${r1(100-B.sw+6)} ${r1(B.at+28)} ${r1(100-B.sw+6)} ${r1(B.at+17)} Z" fill="${skin}"/>`;
     const armR = `<path d="M${r1(100+B.sw+6)} ${r1(B.at+13)} Q${r1(100+B.sw+6)} ${r1(B.at+26)} ${r1(handR+7)} ${r1(B.ae)} L${r1(handR-7)} ${r1(B.ae)} Q${r1(100+B.sw-6)} ${r1(B.at+28)} ${r1(100+B.sw-6)} ${r1(B.at+17)} Z" fill="${skin}"/>`;
-    const hands = `<circle cx="${handL}" cy="${r1(B.ae+3)}" r="${B.hd}" fill="${skin}"/><circle cx="${handR}" cy="${r1(B.ae+3)}" r="${B.hd}" fill="${skin}"/>`;
+    /* ── دستِ باز (نه مشت): کف دست + سه انگشت ── */
+    const hand = (cx, col) => {
+      const w = B.hd + 1.5, hh = B.hd + 3, fy = B.ae + 1;
+      return `<g fill="${col}" stroke="rgba(0,0,0,.1)" stroke-width=".8">
+        <ellipse cx="${cx}" cy="${r1(fy+1)}" rx="${r1(w)}" ry="${r1(hh)}"/>
+        <rect x="${r1(cx-w+0.6)}"  y="${r1(fy+hh-1)}" width="${r1(B.hd*0.62)}" height="${r1(B.hd*0.9)}"  rx="${r1(B.hd*0.31)}"/>
+        <rect x="${r1(cx-w*0.34)}" y="${r1(fy+hh)}"   width="${r1(B.hd*0.62)}" height="${r1(B.hd*1.05)}" rx="${r1(B.hd*0.31)}"/>
+        <rect x="${r1(cx+w*0.28)}" y="${r1(fy+hh-1)}" width="${r1(B.hd*0.62)}" height="${r1(B.hd*0.85)}" rx="${r1(B.hd*0.31)}"/>
+      </g>`;
+    };
+    const hands = hand(handL, skin) + hand(handR, skin);
 
     /* ── دستکش / ساعت ── */
-    const gloveSvg = (glove.type === 'none') ? '' :
-      `<circle cx="${handL}" cy="${r1(B.ae+3)}" r="${B.hd+1.4}" fill="${glove.c1 || '#fff'}" stroke="rgba(0,0,0,.2)"/>`;
+    const gloveSvg = (glove.type === 'none') ? '' : (
+      `<rect x="${r1(handL-B.hd-2)}" y="${r1(B.ae-10)}" width="${r1(B.hd*2+4)}" height="7.5" rx="3.4" fill="${dark(glove.c1 || '#fff', 16)}"/>`
+      + hand(handL, glove.c1 || '#fff'));
     let watchSvg = '';
     if (watch.type && watch.type !== 'none'){
       const w1 = watch.c1 || '#2A2F3A', w2 = watch.c2 || '#5FE3B0';
@@ -802,6 +813,7 @@
     }
 
     /* ── شلوار / دامن چین‌دار ── */
+    const tw = B.lw + 6;   // عرض مچ شلوار (تیپرد مثل جاگر — تا روی کفش بشیند)
     let legs = '';
     if (pants.skirt){
       const hem = B.wy + (isChild ? 50 : 58);
@@ -811,22 +823,28 @@
         <path d="M${r1(100-4)} ${r1(hem-2)} L${r1(100-4)} ${r1(B.ly)} L${r1(100-B.lw-2)} ${r1(B.ly)} L${r1(100-B.lw+1)} ${r1(hem-2)} Z" fill="${skin}"/>
         <path d="M${r1(100+4)} ${r1(hem-2)} L${r1(100+4)} ${r1(B.ly)} L${r1(100+B.lw+2)} ${r1(B.ly)} L${r1(100+B.lw-1)} ${r1(hem-2)} Z" fill="${skin}"/>`;
     } else {
-      legs = `<path d="M${r1(100-B.ww-6)} ${r1(B.wy-2)} L${r1(100-B.ww-9)} ${r1(B.ly)} L${r1(100-B.lw-2)} ${r1(B.ly)} L${r1(100-3)} ${r1(B.cr)} L${r1(100+3)} ${r1(B.cr)} L${r1(100+B.lw+2)} ${r1(B.ly)} L${r1(100+B.ww+9)} ${r1(B.ly)} L${r1(100+B.ww+6)} ${r1(B.wy-2)} Q100 ${r1(B.wy+6)} ${r1(100-B.ww-6)} ${r1(B.wy-2)} Z" fill="${pants.c1}"/>
+      legs = `<path d="M${r1(100-B.ww-6)} ${r1(B.wy-2)} L${r1(100-3-tw)} ${r1(B.ly)} L${r1(100-1.5)} ${r1(B.ly)} L${r1(100-2)} ${r1(B.cr)} L${r1(100+2)} ${r1(B.cr)} L${r1(100+1.5)} ${r1(B.ly)} L${r1(100+3+tw)} ${r1(B.ly)} L${r1(100+B.ww+6)} ${r1(B.wy-2)} Q100 ${r1(B.wy+6)} ${r1(100-B.ww-6)} ${r1(B.wy-2)} Z" fill="${pants.c1}"/>
         <rect x="${r1(100-B.ww-6)}" y="${r1(B.wy-2)}" width="${r1(B.ww*2+12)}" height="6" fill="${dark(pants.c1,16)}" opacity=".6"/>
-        <path d="M100 ${r1(B.cr+2)} L100 ${r1(B.ly)}" stroke="${dark(pants.c1,20)}" stroke-width="2" opacity=".6"/>`;
+        <path d="M100 ${r1(B.cr+2)} L100 ${r1(B.ly-5)}" stroke="${dark(pants.c1,9)}" stroke-width="1.5" opacity=".3"/>
+        <rect x="${r1(100-3-tw)}" y="${r1(B.ly-11)}" width="${r1(tw-1)}" height="11" fill="${dark(pants.c1,12)}"/>
+        <rect x="${r1(100+4)}" y="${r1(B.ly-11)}" width="${r1(tw-1)}" height="11" fill="${dark(pants.c1,12)}"/>`;
     }
 
-    /* ── کفش کتانی (بند + سوزن‌دوخت) ── */
-    const fw = isChild ? 17 : 21;
-    const inL = 100 - 3, inR = 100 + 3;
+    /* ── کفش کتانی — چسبیده به مچ شلوار، با بند و لبه ── */
+    const shT = B.ly - 12;   // بالای کفش زیر مچ شلوار می‌رود
     const shoesSvg = `<g>
-      <path d="M${inL} ${r1(B.ly-2)} L${r1(inL-1)} ${r1(B.fy-5)} L${r1(inL-fw-5)} ${r1(B.fy-5)} Q${r1(inL-fw-11)} ${r1(B.fy-5)} ${r1(inL-fw-9)} ${r1(B.fy-11)} Q${r1(inL-fw-5)} ${r1(B.ly+4)} ${r1(inL-fw+2)} ${r1(B.ly-2)} Z" fill="${shoes.c1}" stroke="rgba(0,0,0,.18)"/>
-      <path d="M${inR} ${r1(B.ly-2)} L${r1(inR+1)} ${r1(B.fy-5)} L${r1(inR+fw+5)} ${r1(B.fy-5)} Q${r1(inR+fw+11)} ${r1(B.fy-5)} ${r1(inR+fw+9)} ${r1(B.fy-11)} Q${r1(inR+fw+5)} ${r1(B.ly+4)} ${r1(inR+fw-2)} ${r1(B.ly-2)} Z" fill="${shoes.c1}" stroke="rgba(0,0,0,.18)"/>
-      <path d="M${r1(inL-fw-10)} ${r1(B.fy-6)} L${r1(inL+1)} ${r1(B.fy-6)} L${r1(inL+1)} ${r1(B.fy)} L${r1(inL-fw-9)} ${r1(B.fy)} Q${r1(inL-fw-13)} ${r1(B.fy-2)} ${r1(inL-fw-10)} ${r1(B.fy-6)}Z" fill="${shoes.c2}"/>
-      <path d="M${r1(inR+fw+10)} ${r1(B.fy-6)} L${r1(inR-1)} ${r1(B.fy-6)} L${r1(inR-1)} ${r1(B.fy)} L${r1(inR+fw+9)} ${r1(B.fy)} Q${r1(inR+fw+13)} ${r1(B.fy-2)} ${r1(inR+fw+10)} ${r1(B.fy-6)}Z" fill="${shoes.c2}"/>
-      <g stroke="${dark(shoes.c1,26)}" stroke-width="1.8" stroke-linecap="round">
-        <path d="M${r1(inL-fw+4)} ${r1(B.ly+8)} L${r1(inL-fw+13)} ${r1(B.ly+13)}"/><path d="M${r1(inL-fw+3)} ${r1(B.ly+17)} L${r1(inL-fw+11)} ${r1(B.ly+22)}"/>
-        <path d="M${r1(inR+fw-4)} ${r1(B.ly+8)} L${r1(inR+fw-13)} ${r1(B.ly+13)}"/><path d="M${r1(inR+fw-3)} ${r1(B.ly+17)} L${r1(inR+fw-11)} ${r1(B.ly+22)}"/></g></g>`;
+      <path d="M${r1(100-3)} ${r1(shT)} L${r1(100-4)} ${r1(B.fy-10)} L${r1(100-3-tw-3)} ${r1(B.fy-10)} Q${r1(100-3-tw-12)} ${r1(B.fy-10)} ${r1(100-3-tw-10)} ${r1(B.fy-2)} L${r1(100-2)} ${r1(B.fy-2)} Z" fill="${shoes.c1}" stroke="rgba(0,0,0,.18)"/>
+      <path d="M${r1(100+3)} ${r1(shT)} L${r1(100+4)} ${r1(B.fy-10)} L${r1(100+3+tw+3)} ${r1(B.fy-10)} Q${r1(100+3+tw+12)} ${r1(B.fy-10)} ${r1(100+3+tw+10)} ${r1(B.fy-2)} L${r1(100+2)} ${r1(B.fy-2)} Z" fill="${shoes.c1}" stroke="rgba(0,0,0,.18)"/>
+      <path d="M${r1(100-3-tw-10)} ${r1(B.fy-7)} L${r1(100-2)} ${r1(B.fy-7)} L${r1(100-2)} ${r1(B.fy)} L${r1(100-3-tw-9)} ${r1(B.fy)} Q${r1(100-3-tw-15)} ${r1(B.fy-2)} ${r1(100-3-tw-13)} ${r1(B.fy-7)}Z" fill="${shoes.c2}"/>
+      <path d="M${r1(100+3+tw+10)} ${r1(B.fy-7)} L${r1(100+2)} ${r1(B.fy-7)} L${r1(100+2)} ${r1(B.fy)} L${r1(100+3+tw+9)} ${r1(B.fy)} Q${r1(100+3+tw+15)} ${r1(B.fy-2)} ${r1(100+3+tw+13)} ${r1(B.fy-7)}Z" fill="${shoes.c2}"/>
+      <g stroke="${dark(shoes.c1,24)}" stroke-width="1.9" stroke-linecap="round" fill="none">
+        <path d="M${r1(100-tw-4)} ${r1(B.ly-5)}  q6 4 11 0"/>
+        <path d="M${r1(100-tw-6)} ${r1(B.ly+2)}  q6 4 11 1"/>
+        <path d="M${r1(100-tw-8)} ${r1(B.ly+9)}  q6 4 10 1"/>
+        <path d="M${r1(100+tw-7)} ${r1(B.ly-5)}  q-6 4 -11 0"/>
+        <path d="M${r1(100+tw-5)} ${r1(B.ly+2)}  q-6 4 -11 1"/>
+        <path d="M${r1(100+tw-2)} ${r1(B.ly+9)}  q-6 4 -10 1"/>
+      </g></g>`;
 
     /* ── عینک ── */
     let glassSvg = '';

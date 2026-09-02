@@ -1,0 +1,274 @@
+
+/* ═══════════════ پنل مدیریت جامع + تنظیمات نمایش ═══════════════ */
+
+/* ── تبهای پنل مدیریت ── */
+.mgmt-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.mgmt-tab{
+  padding:9px 16px;border-radius:12px;cursor:pointer;font-size:12.5px;font-weight:700;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);color:var(--muted);
+  transition:.2s;display:flex;gap:7px;align-items:center;
+}
+.mgmt-tab:hover{border-color:rgba(212,175,55,.35);color:var(--gold-l)}
+.mgmt-tab.on{background:linear-gradient(135deg,rgba(212,175,55,.16),rgba(0,122,90,.12));border-color:rgba(212,175,55,.5);color:var(--gold-l);box-shadow:0 0 18px rgba(212,175,55,.12)}
+
+/* ── کنترلهای کمکی ── */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toolbar .lbl{font-size:12px;color:var(--muted);font-weight:600}
+.sel,.input,.input-sm{
+  background:rgba(8,14,22,.75);border:1px solid rgba(255,255,255,.1);color:var(--text);
+  border-radius:10px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;transition:.2s;
+}
+.sel:focus,.input:focus{border-color:rgba(30,187,138,.6);box-shadow:0 0 0 3px rgba(30,187,138,.12)}
+.sel option{background:#101722}
+.input-sm{width:64px;padding:6px 8px;text-align:center}
+.input:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── کارت تنظیمات نمایش ── */
+.set-row{
+  display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;
+  background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);margin-bottom:8px;transition:.2s;
+}
+.set-row:hover{border-color:rgba(30,187,138,.3)}
+.set-row.off{opacity:.5}
+.set-row .info{flex:1}
+.set-row .info b{font-size:13px}
+.set-row .info small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.switch{position:relative;width:44px;height:24px;flex-shrink:0;cursor:pointer}
+.switch input{opacity:0;width:0;height:0}
+.switch .trk{
+  position:absolute;inset:0;background:rgba(255,255,255,.12);border-radius:20px;transition:.25s;border:1px solid rgba(255,255,255,.08);
+}
+.switch .trk::after{
+  content:'';position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;
+  background:#F8FAFC;transition:.25s;
+}
+.switch input:checked + .trk{background:linear-gradient(135deg,#1EBB8A,#007A5A);border-color:rgba(30,187,138,.5)}
+.switch input:checked + .trk::after{transform:translateX(-20px);background:#fff}
+
+/* ── ردیف آیتم با اکشنها ── */
+.row-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.btn.sm.ghost{border-color:rgba(255,255,255,.12);color:var(--muted)}
+.btn.sm.ghost:hover{border-color:rgba(212,175,55,.5);color:var(--gold-l)}
+.btn.sm.danger{border-color:rgba(231,76,60,.35);color:#E74C3C;background:rgba(231,76,60,.08)}
+.btn.sm.danger:hover{background:rgba(231,76,60,.2);border-color:rgba(231,76,60,.7)}
+.btn.sm.green-ghost{border-color:rgba(30,187,138,.4);color:#1EBB8A;background:rgba(30,187,138,.07)}
+.btn.sm.green-ghost:hover{background:rgba(30,187,138,.18)}
+
+/* ── فرم ویرایش (فیلدها) ── */
+.edit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.edit-grid label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+
+/* ── تقویم: خانه تعطیل ── */
+.cal-cell{position:relative}
+.cal-cell.holiday .cal-num{color:#ff7b72;font-weight:800}
+.cal-cell.holiday::after{
+  content:'★';position:absolute;top:2px;left:6px;font-size:10px;color:#ffd76e;opacity:.9;
+}
+.cal-cell.event .cal-num{color:#f1c40f}
+.cal-cell.event::after{
+  content:'•';position:absolute;top:1px;left:8px;font-size:12px;color:#e8c05a;
+}
+.cal-cell.today .cal-box{border-color:var(--gold-l);box-shadow:0 0 14px rgba(212,175,55,.25);background:rgba(212,175,55,.08)}
+.cal-cell .holi-tip{position:absolute;bottom:100%;right:50%;transform:translateX(50%);white-space:nowrap;z-index:30;display:none;background:#0d1520;border:1px solid rgba(212,175,55,.35);border-radius:8px;padding:6px 10px;font-size:10.5px;color:var(--gold-l);box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.cal-cell:hover .holi-tip{display:block}
+
+/* ── نمودار تقویم / لیست ── */
+.holi-list{display:flex;flex-direction:column;gap:6px}
+.holi-list .h-item{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);font-size:12px}
+.holi-list .h-day{min-width:64px;font-weight:800;color:var(--gold-l)}
+.holi-list .h-tag{margin-right:auto}
+
+/* ── افزودن رویداد سفارشی ── */
+.ev-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end}
+
+/* ── آمار جدولها ── */
+.tbl .num{font-variant-numeric:tabular-nums}
+.muted-sm{color:var(--muted);font-size:11.5px}
+.badge-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:5px;vertical-align:middle}
+
+/* ═══════════════ فرم جامع بازیکن + نقشهٔ ماهوارهای ═══════════════ */
+.form-section{
+  margin:16px 0 8px;padding:10px 12px;border-radius:10px;background:rgba(212,175,55,.06);
+  border:1px solid rgba(212,175,55,.18);font-size:12px;font-weight:800;color:var(--gold-l);
+  display:flex;align-items:center;gap:8px;
+}
+.field-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.field-grid label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+.field-grid .span2{grid-column:span 2}
+.photo-upload{display:flex;gap:14px;align-items:center}
+.photo-upload .ph-prev{
+  width:88px;height:88px;border-radius:16px;object-fit:cover;border:2px solid rgba(212,175,55,.4);
+  background:#0d1520;box-shadow:0 0 16px rgba(212,175,55,.15);flex-shrink:0;
+}
+.photo-upload .ph-prev.empty{display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--muted)}
+.gen-pass{
+  display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--green-l);
+  cursor:pointer;border:1px dashed rgba(30,187,138,.4);border-radius:8px;padding:4px 10px;margin-top:5px;
+}
+.gen-pass:hover{background:rgba(30,187,138,.1)}
+/* نقشهٔ ماهوارهای */
+.sat-wrap{position:relative;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:#0c1a10}
+.sat-wrap canvas{display:block;width:100%;height:auto}
+.sat-overlay{
+  position:absolute;top:10px;right:12px;background:rgba(6,12,8,.72);backdrop-filter:blur(4px);
+  border:1px solid rgba(212,175,55,.3);border-radius:10px;padding:7px 12px;font-size:11.5px;color:var(--gold-l);z-index:2;
+}
+.sat-coords{
+  position:absolute;bottom:10px;left:12px;background:rgba(6,12,8,.72);border-radius:8px;padding:4px 10px;
+  font-size:10.5px;color:var(--muted);direction:ltr;font-family:Consolas,monospace;z-index:2;
+}
+.map-picker{position:relative;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);cursor:crosshair}
+.map-picker canvas{display:block;width:100%;height:auto}
+.map-picker .mk{
+  position:absolute;width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+  background:linear-gradient(135deg,#E74C3C,#c0392b);border:2px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.5);
+  pointer-events:none;transition:.15s;
+}
+/* حالت غیرفعال در جدول */
+tr.off-row{opacity:.5}
+
+/* ═══════════════ تقویم بزرگ — پیمایش ماه + تعطیلات ═══════════════ */
+.cal-legend{
+  display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);
+  margin-top:10px;padding:8px 14px;background:rgba(255,255,255,.02);
+  border-radius:10px;border:1px solid rgba(255,255,255,.05);
+}
+.cal-legend b{font-size:13px}
+.hol-star{color:#ff7b72}
+.hol-dot{color:#f1c40f}
+.hol-ev{color:#1EBB8A}
+.cal-wd{font-size:11px;color:var(--muted);padding:6px 2px;font-weight:700}
+.cal-box{
+  position:relative;padding:8px 4px;border-radius:10px;min-height:46px;
+  border:1px solid rgba(255,255,255,.06);background:transparent;transition:.15s;
+}
+.cal-cell{cursor:default}
+.cal-cell:hover .cal-box{border-color:rgba(212,175,55,.45);background:rgba(212,175,55,.05)}
+.cal-cell.holiday .cal-box{background:rgba(255,80,80,.1);border-color:rgba(255,80,80,.4)}
+.cal-cell.holiday .cal-num{color:#ff8d85;font-weight:800}
+.cal-cell.event .cal-num{color:#f1c40f}
+.cal-cell.has-ev .cal-box{border-color:rgba(30,187,138,.4)}
+.cal-cell.today .cal-box{border-color:var(--gold-l);box-shadow:0 0 14px rgba(212,175,55,.28);background:rgba(212,175,55,.1)}
+.cal-ev{font-size:8.5px;color:var(--green-l);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-top:2px;direction:rtl}
+.cal-f.on{background:rgba(212,175,55,.18);border-color:rgba(212,175,55,.55);color:var(--gold-l)}
+
+/* ═══════════════ JDate — ورود تاریخ شمسی ═══════════════ */
+.jdate{position:relative}
+.jdate-row{display:flex;gap:6px;align-items:center;min-width:0}
+.jdate-manual{flex:1;min-width:0;box-sizing:border-box;direction:rtl;text-align:center;letter-spacing:.5px}
+.jdate-cal-btn{
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.35);border-radius:10px;font-size:16px;
+  transition:.2s;flex-shrink:0;
+}
+.jdate-cal-btn:hover{background:rgba(212,175,55,.25)}
+.jdate-pop{
+  position:absolute;top:calc(100% + 6px);right:0;z-index:300;min-width:280px;
+  background:#0d1520;border:1px solid rgba(212,175,55,.35);border-radius:14px;padding:14px;
+  box-shadow:0 18px 50px rgba(0,0,0,.65);
+}
+.jdate-selects{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.jdate-field label{display:block;font-size:10.5px;color:var(--muted);margin-bottom:4px;text-align:center}
+.jdate-field .sel{width:100%;text-align:center;padding:7px 4px;font-size:12px}
+.jdate-actions{display:flex;align-items:center;gap:10px;margin-top:12px;justify-content:space-between}
+.jdate-result{font-size:12px;color:var(--green-l);font-weight:700}
+
+/* ═══════════════ تقویم فصل — نمای تعاملی دو ستونه ═══════════════ */
+.cal-main{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start}
+@media (max-width:900px){ .cal-main{grid-template-columns:1fr} }
+.cal-list-pane .card-head{flex-wrap:wrap}
+.cal-events-list{max-height:640px;overflow:auto;margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.cal-ev-item{
+  display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:12px;cursor:pointer;
+  background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);transition:.15s;
+}
+.cal-ev-item:hover{border-color:rgba(212,175,55,.45);background:rgba(212,175,55,.05)}
+.cal-ev-item.sel{border-color:rgba(30,187,138,.7);background:rgba(30,187,138,.09);box-shadow:0 0 14px rgba(30,187,138,.15)}
+.cal-ev-item.past{opacity:.55}
+.cal-ev-date{
+  width:44px;height:44px;border-radius:11px;background:rgba(212,175,55,.1);
+  border:1px solid rgba(212,175,55,.3);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;
+}
+.cal-ev-d{font-weight:900;font-size:16px;line-height:1.1}
+.cal-ev-m{font-size:9.5px;color:var(--muted)}
+.cal-ev-body{flex:1;min-width:0}
+.cal-ev-body b{font-size:12.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-ev-sub{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-ev-sch{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.cal-ev-sch span{font-size:9px;background:rgba(30,187,138,.12);color:var(--green-l);border-radius:5px;padding:1px 6px}
+.cal-ev-group{font-size:11px;color:var(--muted);padding:8px 4px 2px;font-weight:700}
+.cal-grid-big-row{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center;direction:rtl}
+.cal-grid-big .cal-wd{font-size:11px;color:var(--muted);padding:6px 2px;font-weight:700}
+.cal-cell .cal-num{font-weight:800;font-size:13.5px;color:var(--text);padding:7px 4px 2px}
+.cal-cell.holiday .cal-num{color:#ff8d85;background:rgba(255,80,80,.12);border-radius:8px}
+.cal-cell.event .cal-num{color:#f1c40f}
+.cal-cell.sel .cal-num{
+  background:rgba(30,187,138,.2);color:#7dffd0;border-radius:8px;box-shadow:0 0 10px rgba(30,187,138,.25);
+}
+.cal-cell.has-ev{background:rgba(30,187,138,.05);border-radius:10px}
+.cal-cell.today .cal-num{border:1px solid var(--gold-l);background:rgba(212,175,55,.12);color:var(--gold-l)}
+.cal-ev-mini{font-size:8.5px;color:var(--green-l);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 3px 5px}
+.cal-month-hols{margin-top:10px;font-size:12px;color:var(--muted);padding:8px 12px;background:rgba(255,255,255,.02);border-radius:10px;border:1px solid rgba(255,255,255,.05)}
+.cal-month-hols b{color:#ff8d85}
+.hol-sel{color:#1EBB8A}
+/* چیپ رویداد داخل سلول تقویم (فقط ۴ نوع) */
+.cal-mini-ev{display:inline-block;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:1px 5px;font-size:9.5px;line-height:1.5;margin:1px 2px 0 0;color:#e8eef5;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;vertical-align:top}
+.cal-mini-ev.مسابقه{border-color:rgba(212,175,55,.55);background:rgba(212,175,55,.10);color:#f0d989}
+.cal-mini-ev.کلاس{border-color:rgba(168,85,247,.5);background:rgba(168,85,247,.10);color:#d8b4fe}
+.cal-mini-ev.تمرین{border-color:rgba(30,187,138,.5);background:rgba(30,187,138,.10);color:#8fe3c4}
+.cal-mini-ev.اردو{border-color:rgba(249,115,22,.5);background:rgba(249,115,22,.10);color:#fdba74}
+.cal-mini-more{display:inline-block;font-size:9.5px;color:var(--gold-l);margin:1px 2px 0 0}
+.cal-month-hols{font-size:12px;color:var(--muted);margin-top:10px;text-align:left}
+.cal-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:10.5px;color:var(--muted);margin-top:6px}
+.cal-legend .hol-sel{color:var(--gold-l)}
+
+
+/* پیکر شرکت‌کنندگان (دبل‌کلیک) */
+.rp-list{background:rgba(11,15,20,.6);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:6px;min-height:120px}
+.rp-item{padding:7px 10px;border-radius:8px;cursor:pointer;font-size:13px;transition:.15s;user-select:none}
+.rp-item:hover{background:rgba(30,187,138,.14)}
+.rp-item.sel{background:rgba(30,187,138,.16);border:1px solid rgba(30,187,138,.35);margin:2px 0}
+.lbl{font-size:11.5px;color:var(--gold-l);font-weight:700}
+.mr-tour-card{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px;transition:.2s}
+.mr-tour-card:hover{border-color:rgba(212,175,55,.4)}
+.mr-tour-card.done{border-color:rgba(30,187,138,.4)}
+.hole-box{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:6px;text-align:center}
+.hole-lbl{font-size:10px;color:var(--muted);margin-bottom:4px}
+.hole-inp:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.2)}
+
+/* ═══════════════ ویرایش مرکزی نام آیتم‌ها ═══════════════ */
+.label-hero{margin-bottom:16px}
+.label-help{font-size:12px;color:var(--muted);line-height:2;margin-top:7px}
+.label-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:14px}
+.label-toolbar #lbl-search{flex:1;min-width:240px}
+.label-count{font-size:11px;color:var(--gold-l);padding:7px 11px;border-radius:20px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.25)}
+.label-group{margin-bottom:14px;padding:15px}
+.label-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.label-row{display:grid;grid-template-columns:minmax(190px,.9fr) minmax(220px,1.35fr) auto;align-items:center;gap:10px;padding:9px 10px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.065);transition:.2s}
+.label-row:hover{border-color:rgba(212,175,55,.35);background:rgba(212,175,55,.035)}
+.label-row.changed{border-color:rgba(30,187,138,.42);background:rgba(30,187,138,.045)}
+.label-meta{display:flex;align-items:center;gap:9px;min-width:0}
+.label-icon{width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto;border-radius:10px;font-size:17px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.25)}
+.label-meta b{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label-meta small{display:block;margin-top:2px;font-size:8.5px;color:var(--dim);direction:ltr;text-align:right;letter-spacing:.2px}
+.label-input{width:100%;font-weight:750}
+.label-row.changed .label-input{border-color:rgba(30,187,138,.55);box-shadow:0 0 0 2px rgba(30,187,138,.07)}
+.label-reset{padding:8px 11px!important;font-size:10.5px!important;white-space:nowrap}
+.label-sync{margin-top:18px}
+.label-sync-grid{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:18px;align-items:center;margin-top:12px}
+.label-sync-grid label{font-size:11px;color:var(--gold-l);font-weight:700}
+.label-link-row{display:flex;gap:8px;align-items:stretch;margin-top:6px}
+.label-link-row .input{flex:1;min-width:0;direction:ltr;text-align:left;font-size:10px;resize:vertical}
+.label-qr{min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;border-radius:16px;background:#fff;color:#18202b;padding:10px;font-size:10px}
+.label-qr img{width:138px;height:138px;image-rendering:auto}
+.label-qr small{color:#253244;font-size:9.5px}
+@media(max-width:760px){
+  .label-toolbar>*{width:100%!important}
+  .label-toolbar #lbl-search{min-width:0}
+  .label-row{grid-template-columns:1fr;padding:10px}
+  .label-reset{width:100%!important}
+  .label-sync-grid{grid-template-columns:1fr}
+  .label-link-row{flex-direction:column}
+  .label-link-row .btn{width:100%}
+  .label-qr{width:min(190px,100%);margin:auto}
+}

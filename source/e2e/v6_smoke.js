@@ -1,0 +1,54 @@
+/* smoke v6 */
+const { chromium } = require('playwright-core');
+const fs = require('fs');
+const SHOT_DIR = process.env.SHOT_DIR || '/tmp/golf-academy-screenshots';
+fs.mkdirSync(SHOT_DIR, { recursive: true });
+const EXE = process.env.CHROME || '/home/user/.cache/ms-playwright/chromium-1140/chrome-linux/chrome';
+const BASE = process.env.BASE || 'http://127.0.0.1:8181/index.html';
+(async () => {
+  const browser = await chromium.launch({ executablePath: EXE, headless: true, args: ['--no-sandbox','--use-gl=swiftshader','--disable-dev-shm-usage'] });
+  const page = await (await browser.newContext({ viewport:{width:1360,height:900} })).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
+  page.on('console', m => { if (m.type()==='error') errors.push('CONSOLE: ' + m.text()); });
+  await page.goto(BASE, { waitUntil:'load', timeout:30000 });
+  await page.waitForFunction(() => window.__L3D && window.__L3D.state().introDone, null, { timeout: 25000 });
+  await page.waitForFunction(() => document.getElementById('l3d-intro').classList.contains('l3d-hide'), null, { timeout: 6000 });
+  const landTxt = await page.locator('body').innerText();
+  console.log('hero tag present?', /همین حالا وارد شو/.test(landTxt));
+  await page.click('#l3d-enter', { force:true }); await page.waitForTimeout(900);
+  await page.fill('#login-user','p8'); await page.fill('#login-pass','golf1405');
+  await page.click('#login-form button[type="submit"]'); await page.waitForTimeout(1800);
+  console.log('memberzone card:', await page.locator('.av-card').count(), 'chest:', await page.locator('.av-chest').count());
+  await page.screenshot({ path:SHOT_DIR + '/v6_home.png', fullPage:true });
+  await page.click('[data-mtab="earn"]'); await page.waitForTimeout(700);
+  await page.screenshot({ path:SHOT_DIR + '/v6_earn.png', fullPage:true });
+  console.log('req buttons:', await page.locator('[data-req]').count());
+  await page.click('[data-req="story"]'); await page.waitForTimeout(900);
+  const reqs = await page.evaluate(() => JSON.parse(localStorage.getItem('ga_coinreq')||'[]'));
+  console.log('reqs:', JSON.stringify(reqs).slice(0,200));
+  await page.click('[data-mtab="avatar"]'); await page.waitForTimeout(900);
+  await page.screenshot({ path:SHOT_DIR + '/v6_avatar.png', fullPage:true });
+  console.log('buy btns:', await page.locator('[data-buy]').count(), 'cats:', await page.locator('[data-acat]').count());
+  await page.click('[data-mtab="guide"]'); await page.waitForTimeout(700);
+  await page.screenshot({ path:SHOT_DIR + '/v6_guide.png', fullPage:true });
+  // admin
+  await page.click('#logout-btn'); await page.waitForTimeout(1500);
+  await page.waitForFunction(() => window.__L3D && window.__L3D.state().introDone, null, { timeout: 25000 });
+  const vis = await page.locator('#l3d-enter').isVisible().catch(()=>false);
+  if (vis){ await page.click('#l3d-enter', { force:true }); await page.waitForTimeout(900); }
+  await page.fill('#login-user','admin'); await page.fill('#login-pass','golf1405');
+  await page.click('#login-form button[type="submit"]'); await page.waitForTimeout(1800);
+  await page.click('.nav-item[data-page="mgmt"]'); await page.waitForTimeout(1000);
+  await page.click('.mgmt-tab:has-text("درخواست سکه")'); await page.waitForTimeout(900);
+  await page.screenshot({ path:SHOT_DIR + '/v6_mgmt_coins.png', fullPage:true });
+  console.log('pending rows:', await page.locator('[data-ok]').count());
+  await page.click('.mgmt-tab:has-text("رنک و آواتار")'); await page.waitForTimeout(1200);
+  await page.screenshot({ path:SHOT_DIR + '/v6_mgmt_honor.png', fullPage:true });
+  console.log('rank chips:', await page.locator('[data-hlv]').count(), 'preview:', await page.locator('#hr-prev').count());
+  await page.click('.mgmt-tab[data-tab="shop"]'); await page.waitForTimeout(900);
+  await page.screenshot({ path:SHOT_DIR + '/v6_mgmt_shop.png', fullPage:true });
+  console.log('shop rows:', await page.locator('[data-isave]').count());
+  console.log('ERRORS:', errors.filter(e=>!/arcTo/.test(e)).slice(0,6).join(' | ') || 'none');
+  await browser.close();
+})().catch(e => { console.error('FATAL', e && e.message); process.exit(1); });

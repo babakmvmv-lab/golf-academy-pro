@@ -230,6 +230,7 @@
     { id:'sh_rl',  cat:'shirt', b:'rlx',       n:'کلاسیک لوکس RLX',             price:190, g:'a', c1:'#0B2C5E', c2:'#D7263D', pat:'stripe' },
     /* ── شلوار و دامن ── */
     { id:'pt_ac',  cat:'pants', b:'academy',   n:'شلوار سادهٔ آکادمی',           price:0,   g:'a', c1:'#3A424E' },
+    { id:'pt_sk',  cat:'pants', b:'academy',   n:'دامن تنیس آکادمی',             price:0,   g:'f', c1:'#F4F6F8', skirt:1 },
     { id:'pt_am',  cat:'pants', b:'essential', n:'شلوار خاکی پایه',             price:12,  g:'a', c1:'#B9A88A' },
     { id:'pt_ua',  cat:'pants', b:'ua',        n:'درایو تیپرد',                 price:35,  g:'a', c1:'#2B3440' },
     { id:'pt_ad',  cat:'pants', b:'adidas',    n:'الترمیت۳۶۵ کلاسیک',           price:38,  g:'a', c1:'#1D2733' },
@@ -673,7 +674,7 @@
     opt = opt || {};
     const g = uid();
     const gender = ['m','f','b','c'].includes(opt.gender) ? opt.gender : 'm';
-    const isChild = gender === 'b' || gender === 'c';   // پسر/دختر بچه → بدن کوچک‌تر، سر بزرگ‌تر
+    const isChild = gender === 'b' || gender === 'c';   // پسر/دختر بچه → فرم بچه
     const femAv   = gender === 'f' || gender === 'c';
     const skinIt = itemOf(sel, 'skin') || { c1:'#EBBE8F' };
     const skin = skinIt.c1;
@@ -690,107 +691,156 @@
     const ball  = itemOf(sel, 'ball')  || { type:'none' };
     const watch = itemOf(sel, 'watch') || { type:'none' };
     const hairC = hair.c1 || '#2A1E16';
+    const tieC  = hair.c2 || '#E97FB2';
     const dark = (c, k) => shade(c, -(k || 18));
     const light = (c, k) => shade(c, (k || 16));
+    const r1 = n => Math.round(n * 10) / 10;
+
+    /* ═══ بدن ۴ تیپ — تمام لباس‌ها/اکسسوری‌ها از همین جدول ساخته می‌شوند،
+       پس هر آیتم خریداری‌شده روی هر ۴ کاراکتر دقیق می‌نشیند ═══ */
+    const B = isChild ? {
+      hy: 96, hrx: 41, hry: 45,               // سر بزرگ بچه‌گونه
+      nk0: 132, nk1: 146, nkw: 11,            // گردن
+      sy: 152, sw: 33, wy: 236, ww: 26,       // شانه / کمر
+      at: 158, ae: 220, hd: 8,                // بازو / مچ / مشت
+      cr: 262, ly: 322, lw: 12, fy: 348       // کشاله / مچ پا / کف پا
+    } : {
+      hy: 74, hrx: 37, hry: 42,               // بزرگ‌سال
+      nk0: 104, nk1: 120, nkw: 12,
+      sy: 128, sw: (gender === 'f' ? 35 : 42), wy: 242, ww: (gender === 'f' ? 26 : 30),
+      at: 136, ae: 222, hd: 9,
+      cr: 270, ly: 326, lw: 14, fy: 348
+    };
+    const ground = 352, eyeY = B.hy + 6, eDX = 15, crown = B.hy - B.hry;
+    const handL = r1(100 - B.sw + 2), handR = r1(100 + B.sw - 2);
 
     /* ── مو (پشت سر) ── */
-    let hairBack = '';
     const st = hair.style || 'short';
+    let hairBack = '';
     if (st === 'long' || st === 'bob' || st === 'braid' || st === 'pony'){
-      const len = st === 'bob' ? 118 : 152;
-      hairBack = `<path d="M62 66 Q54 ${len - 20} 66 ${len} L134 ${len} Q146 ${len-20} 138 66 Z" fill="${dark(hairC,10)}"/>`;
+      const len = st === 'bob' ? B.hy + 32 : B.hy + (isChild ? 60 : 76);
+      hairBack = `<path d="M${r1(100-B.hrx)} ${r1(B.hy-12)} Q${r1(100-B.hrx-8)} ${r1(B.hy+28)} ${r1(100-B.hrx+5)} ${r1(len)} L${r1(100+B.hrx-5)} ${r1(len)} Q${r1(100+B.hrx+8)} ${r1(B.hy+28)} ${r1(100+B.hrx)} ${r1(B.hy-12)} Z" fill="${dark(hairC,10)}"/>`;
     }
-    /* ── مو (جلو) ── */
+
+    /* ── مو (جلو/روی سر) — همهٔ مدل‌ها با رنگ دلخواه ── */
     let hairFront = '';
-    if (st === 'short') hairFront = `<path d="M64 62 Q62 26 100 24 Q138 24 136 60 Q128 40 100 42 Q74 42 64 62Z" fill="${hairC}"/>`;
-    else if (st === 'fade') hairFront = `<path d="M66 58 Q68 28 100 26 Q134 26 134 58 Q124 44 100 44 Q76 44 66 58Z" fill="${hairC}"/><path d="M66 58 Q66 66 68 70 L132 70 Q134 64 134 58 Q120 52 100 52 Q80 52 66 58Z" fill="${dark(hairC,26)}" opacity=".55"/>`;
-    else if (st === 'wavy') hairFront = `<path d="M62 62 Q60 24 100 24 Q142 24 138 64 Q130 46 118 52 Q108 34 92 46 Q78 36 62 62Z" fill="${hairC}"/>`;
-    else if (st === 'curly') hairFront = `<g fill="${hairC}"><circle cx="76" cy="42" r="15"/><circle cx="100" cy="32" r="17"/><circle cx="124" cy="42" r="15"/><circle cx="66" cy="58" r="12"/><circle cx="134" cy="58" r="12"/></g>`;
-    else if (st === 'bun') hairFront = `<circle cx="100" cy="16" r="13" fill="${dark(hairC,8)}"/><path d="M64 62 Q62 26 100 24 Q138 24 136 60 Q128 42 100 44 Q74 44 64 62Z" fill="${hairC}"/>`;
-    else if (st === 'pony') hairFront = `<path d="M62 64 Q60 24 100 22 Q140 22 138 64 Q128 40 100 42 Q72 42 62 64Z" fill="${hairC}"/><path d="M138 56 Q166 66 158 104 Q152 126 140 128 Q152 104 146 82 Q142 66 132 62Z" fill="${dark(hairC,6)}"/>`;
-    else if (st === 'braid') hairFront = `<path d="M62 64 Q60 22 100 20 Q140 20 138 64 Q128 40 100 42 Q72 42 62 64Z" fill="${hairC}"/><g fill="${dark(hairC,6)}"><circle cx="58" cy="86" r="9"/><circle cx="58" cy="102" r="9"/><circle cx="58" cy="118" r="8"/><circle cx="142" cy="86" r="9"/><circle cx="142" cy="102" r="9"/><circle cx="142" cy="118" r="8"/></g>`;
-    else if (st === 'bob') hairFront = `<path d="M60 66 Q58 22 100 22 Q142 22 140 66 Q130 42 100 44 Q70 44 60 66Z" fill="${hairC}"/>`;
-    else hairFront = `<path d="M64 62 Q62 26 100 24 Q138 24 136 60 Q128 40 100 42 Q74 42 64 62Z" fill="${hairC}"/>`;
+    const capShort = `<path d="M${r1(100-B.hrx)} ${r1(B.hy-12)} Q${r1(100-B.hrx-2)} ${r1(crown-8)} 100 ${r1(crown-9)} Q${r1(100+B.hrx+2)} ${r1(crown-8)} ${r1(100+B.hrx)} ${r1(B.hy-12)} Q${r1(100+B.hrx-13)} ${r1(B.hy-30)} 100 ${r1(B.hy-32)} Q${r1(100-B.hrx+13)} ${r1(B.hy-30)} ${r1(100-B.hrx)} ${r1(B.hy-12)}Z" fill="${hairC}"/>`;
+    if (st === 'short') hairFront = capShort;
+    else if (st === 'fade') hairFront = capShort + `<path d="M${r1(100-B.hrx)} ${r1(B.hy-12)} Q${r1(100-B.hrx-1)} ${r1(B.hy+1)} ${r1(100-B.hrx+3)} ${r1(B.hy+6)} L${r1(100+B.hrx-3)} ${r1(B.hy+6)} Q${r1(100+B.hrx+1)} ${r1(B.hy+1)} ${r1(100+B.hrx)} ${r1(B.hy-12)} Q${r1(100+B.hrx-10)} ${r1(B.hy-8)} 100 ${r1(B.hy-9)} Q${r1(100-B.hrx+10)} ${r1(B.hy-8)} ${r1(100-B.hrx)} ${r1(B.hy-12)}Z" fill="${dark(hairC,26)}" opacity=".5"/>`;
+    else if (st === 'wavy') hairFront = `<path d="M${r1(100-B.hrx-1)} ${r1(B.hy-12)} Q${r1(100-B.hrx-2)} ${r1(crown-10)} 100 ${r1(crown-11)} Q${r1(100+B.hrx+2)} ${r1(crown-10)} ${r1(100+B.hrx+1)} ${r1(B.hy-12)} Q${r1(100+B.hrx-8)} ${r1(B.hy-26)} ${r1(100+eDX)} ${r1(B.hy-18)} Q${r1(100+eDX-6)} ${r1(B.hy-32)} ${r1(100+eDX*0.3)} ${r1(B.hy-24)} Q${r1(100-eDX*0.3)} ${r1(B.hy-34)} ${r1(100-eDX)} ${r1(B.hy-20)} Q${r1(100-B.hrx+8)} ${r1(B.hy-24)} ${r1(100-B.hrx-1)} ${r1(B.hy-12)}Z" fill="${hairC}"/>`;
+    else if (st === 'curly') hairFront = `<g fill="${hairC}"><circle cx="${r1(100-B.hrx*0.62)}" cy="${r1(crown+14)}" r="${r1(B.hrx*0.34)}"/><circle cx="100" cy="${r1(crown+4)}" r="${r1(B.hrx*0.4)}"/><circle cx="${r1(100+B.hrx*0.62)}" cy="${r1(crown+14)}" r="${r1(B.hrx*0.34)}"/><circle cx="${r1(100-B.hrx*0.9)}" cy="${r1(B.hy-8)}" r="${r1(B.hrx*0.27)}"/><circle cx="${r1(100+B.hrx*0.9)}" cy="${r1(B.hy-8)}" r="${r1(B.hrx*0.27)}"/></g>`;
+    else if (st === 'bun') hairFront = `<circle cx="100" cy="${r1(crown-2)}" r="${r1(B.hrx*0.3)}" fill="${hairC}"/>` + capShort;
+    else if (st === 'pony') hairFront = capShort
+      + `<path d="M${r1(100+B.hrx-3)} ${r1(B.hy-16)} Q${r1(100+B.hrx+22)} ${r1(B.hy-2)} ${r1(100+B.hrx+17)} ${r1(B.hy+30)} Q${r1(100+B.hrx+13)} ${r1(B.hy+48)} ${r1(100+B.hrx+2)} ${r1(B.hy+44)} Q${r1(100+B.hrx+11)} ${r1(B.hy+16)} ${r1(100+B.hrx-8)} ${r1(B.hy+4)}Z" fill="${dark(hairC,4)}"/>`
+      + `<circle cx="${r1(100+B.hrx)}" cy="${r1(B.hy-13)}" r="4.4" fill="${tieC}"/>`;
+    else if (st === 'braid') hairFront = capShort + `<g fill="${dark(hairC,4)}"><circle cx="${r1(100-B.hrx)}" cy="${r1(B.hy+16)}" r="7"/><circle cx="${r1(100-B.hrx-1)}" cy="${r1(B.hy+30)}" r="6.4"/><circle cx="${r1(100-B.hrx-2)}" cy="${r1(B.hy+43)}" r="5.8"/><circle cx="${r1(100+B.hrx)}" cy="${r1(B.hy+16)}" r="7"/><circle cx="${r1(100+B.hrx+1)}" cy="${r1(B.hy+30)}" r="6.4"/><circle cx="${r1(100+B.hrx+2)}" cy="${r1(B.hy+43)}" r="5.8"/></g><circle cx="${r1(100-B.hrx)}" cy="${r1(B.hy+11)}" r="3.4" fill="${tieC}"/><circle cx="${r1(100+B.hrx)}" cy="${r1(B.hy+11)}" r="3.4" fill="${tieC}"/>`;
+    else if (st === 'bob') hairFront = capShort + `<path d="M${r1(100-B.hrx)} ${r1(B.hy-12)} Q${r1(100-B.hrx+2)} ${r1(B.hy+16)} ${r1(100-B.hrx+7)} ${r1(B.hy+20)} L${r1(100-B.hrx+12)} ${r1(B.hy-16)}Z" fill="${hairC}"/><path d="M${r1(100+B.hrx)} ${r1(B.hy-12)} Q${r1(100+B.hrx-2)} ${r1(B.hy+16)} ${r1(100+B.hrx-7)} ${r1(B.hy+20)} L${r1(100+B.hrx-12)} ${r1(B.hy-16)}Z" fill="${hairC}"/>`;
+    else hairFront = capShort;
 
-    /* ── کلاه / روسری ── */
+    /* ── کلاه / ویزور / باکت / روسری ── */
     let hatSvg = '';
+    const brimY = B.hy - B.hry * 0.40;
     if (hat.type === 'cap'){
-      hatSvg = `<path d="M62 48 Q66 16 100 14 Q134 16 138 48 L138 54 L62 54 Z" fill="${hat.c1}"/>
-        <path d="M62 54 L146 54 Q152 56 150 63 L62 63 Z" fill="${dark(hat.c1,22)}"/>
-        <circle cx="100" cy="22" r="5" fill="${hat.c2}"/>
-        <path d="M100 15 L100 54" stroke="${dark(hat.c1,30)}" stroke-width="1.6" opacity=".7"/>
-        <rect x="86" y="30" width="28" height="10" rx="3" fill="${hat.c2}" opacity=".92"/>`;
+      hatSvg = `<path d="M${r1(100-B.hrx-1)} ${r1(brimY+3)} Q${r1(100-B.hrx)} ${r1(crown-11)} 100 ${r1(crown-9)} Q${r1(100+B.hrx)} ${r1(crown-11)} ${r1(100+B.hrx+1)} ${r1(brimY+3)} Z" fill="${hat.c1}"/>
+        <path d="M${r1(100-B.hrx-3)} ${r1(brimY+1)} L${r1(100+B.hrx+3)} ${r1(brimY+1)} L${r1(100+B.hrx+22)} ${r1(brimY+6)} Q${r1(100+B.hrx+24)} ${r1(brimY+11)} ${r1(100+B.hrx+16)} ${r1(brimY+11)} L${r1(100-B.hrx-3)} ${r1(brimY+9)} Z" fill="${dark(hat.c1,18)}"/>
+        <circle cx="100" cy="${r1(crown-7)}" r="4" fill="${hat.c2}"/>
+        <rect x="${r1(100-13)}" y="${r1(brimY-14)}" width="26" height="8.5" rx="3" fill="${hat.c2}" opacity=".92"/>`;
     } else if (hat.type === 'visor'){
-      hatSvg = `<path d="M62 50 Q100 40 138 50 L138 58 Q100 50 62 58 Z" fill="${hat.c1}"/>
-        <path d="M62 56 L148 56 Q154 58 152 65 L62 65 Z" fill="${dark(hat.c1,20)}"/>
-        <rect x="88" y="46" width="24" height="8" rx="3" fill="${hat.c2}"/>`;
+      hatSvg = `<path d="M${r1(100-B.hrx-1)} ${r1(brimY-4)} Q100 ${r1(brimY-11)} ${r1(100+B.hrx+1)} ${r1(brimY-4)} L${r1(100+B.hrx+1)} ${r1(brimY+4)} Q100 ${r1(brimY-3)} ${r1(100-B.hrx-1)} ${r1(brimY+4)} Z" fill="${hat.c1}"/>
+        <path d="M${r1(100-B.hrx-2)} ${r1(brimY+4)} L${r1(100+B.hrx+4)} ${r1(brimY+4)} L${r1(100+B.hrx+20)} ${r1(brimY+9)} Q${r1(100+B.hrx+22)} ${r1(brimY+13)} ${r1(100+B.hrx+14)} ${r1(brimY+13)} L${r1(100-B.hrx-2)} ${r1(brimY+11)} Z" fill="${dark(hat.c1,16)}"/>
+        <rect x="${r1(100-11)}" y="${r1(brimY-5)}" width="22" height="7" rx="3" fill="${hat.c2}"/>`;
     } else if (hat.type === 'bucket'){
-      hatSvg = `<path d="M64 46 Q68 18 100 16 Q132 18 136 46 L136 52 L64 52 Z" fill="${hat.c1}"/>
-        <path d="M50 52 Q100 42 150 52 Q152 64 146 68 Q100 60 54 68 Q48 64 50 52 Z" fill="${dark(hat.c1,14)}"/>
-        <rect x="84" y="28" width="32" height="9" rx="4" fill="${hat.c2}"/>`;
+      hatSvg = `<path d="M${r1(100-B.hrx+1)} ${r1(brimY+2)} Q${r1(100-B.hrx)} ${r1(crown-12)} 100 ${r1(crown-10)} Q${r1(100+B.hrx)} ${r1(crown-12)} ${r1(100+B.hrx-1)} ${r1(brimY+2)} Z" fill="${hat.c1}"/>
+        <path d="M${r1(100-B.hrx-12)} ${r1(brimY+2)} Q100 ${r1(brimY-7)} ${r1(100+B.hrx+12)} ${r1(brimY+2)} Q${r1(100+B.hrx+14)} ${r1(brimY+13)} ${r1(100+B.hrx+7)} ${r1(brimY+15)} Q100 ${r1(brimY+7)} ${r1(100-B.hrx-7)} ${r1(brimY+15)} Q${r1(100-B.hrx-14)} ${r1(brimY+13)} ${r1(100-B.hrx-12)} ${r1(brimY+2)}Z" fill="${dark(hat.c1,14)}"/>
+        <rect x="${r1(100-15)}" y="${r1(brimY-8)}" width="30" height="7.5" rx="3.5" fill="${hat.c2}"/>`;
     } else if (hat.type === 'scarf'){
-      hatSvg = `<path d="M58 74 Q56 20 100 18 Q144 20 142 74 Q142 92 132 98 L128 66 Q120 44 100 44 Q80 44 72 66 L68 98 Q58 92 58 74Z" fill="${hat.c1}"/>
-        <path d="M64 84 Q60 128 74 150 L126 150 Q140 128 136 84 Q128 70 100 70 Q72 70 64 84Z" fill="${light(hat.c1,6)}"/>
-        <path d="M64 92 Q100 104 136 92" stroke="${hat.c2}" stroke-width="4" fill="none" opacity=".85"/>`;
+      hatSvg = `<path d="M${r1(100-B.hrx-3)} ${r1(B.hy+4)} Q${r1(100-B.hrx-4)} ${r1(crown-7)} 100 ${r1(crown-7)} Q${r1(100+B.hrx+4)} ${r1(crown-7)} ${r1(100+B.hrx+3)} ${r1(B.hy+4)} Q${r1(100+B.hrx+3)} ${r1(B.hy+22)} ${r1(100+B.hrx-7)} ${r1(B.hy+28)} L${r1(100+B.hrx-13)} ${r1(B.hy-4)} Q100 ${r1(B.hy-18)} ${r1(100-B.hrx+13)} ${r1(B.hy-4)} L${r1(100-B.hrx+7)} ${r1(B.hy+28)} Q${r1(100-B.hrx-3)} ${r1(B.hy+22)} ${r1(100-B.hrx-3)} ${r1(B.hy+4)}Z" fill="${hat.c1}"/>
+        <path d="M${r1(100-B.hrx+7)} ${r1(B.hy+22)} Q${r1(100-B.hrx+3)} ${r1(B.nk1+20)} ${r1(100-B.nkw-17)} ${r1(B.nk1+32)} L${r1(100+B.nkw+17)} ${r1(B.nk1+32)} Q${r1(100+B.hrx-3)} ${r1(B.nk1+20)} ${r1(100+B.hrx-7)} ${r1(B.hy+22)} Q${r1(100+B.hrx-15)} ${r1(B.hy+4)} 100 ${r1(B.hy+5)} Q${r1(100-B.hrx+15)} ${r1(B.hy+4)} ${r1(100-B.hrx+7)} ${r1(B.hy+22)}Z" fill="${light(hat.c1,6)}"/>
+        <path d="M${r1(100-B.hrx+4)} ${r1(B.hy+30)} Q100 ${r1(B.hy+42)} ${r1(100+B.hrx-4)} ${r1(B.hy+30)}" stroke="${hat.c2}" stroke-width="3.6" fill="none" opacity=".85"/>`;
     }
 
-    /* ── الگوی پیراهن ── */
-    const bodyPath = 'M60 150 Q60 122 100 118 Q140 122 140 150 L146 232 Q124 242 100 242 Q76 242 54 232 Z';
+    /* ── پیراهن پولو (یقه + دکمه) + الگوها ── */
+    const torsoPath = `M${r1(100-B.sw)} ${r1(B.sy+10)} Q${r1(100-B.sw)} ${r1(B.sy)} 100 ${r1(B.sy-5)} Q${r1(100+B.sw)} ${r1(B.sy)} ${r1(100+B.sw)} ${r1(B.sy+10)} L${r1(100+B.ww+6)} ${r1(B.wy)} Q100 ${r1(B.wy+9)} ${r1(100-B.ww-6)} ${r1(B.wy)} Z`;
     let shirtPat = '';
     if (shirt.pat === 'stripe'){
       shirtPat = `<g clip-path="url(#${g}body)" opacity=".9">
-        <rect x="72" y="118" width="7" height="130" fill="${shirt.c2}"/>
-        <rect x="86" y="118" width="7" height="130" fill="${shirt.c2}"/>
-        <rect x="100" y="118" width="7" height="130" fill="${shirt.c2}"/></g>`;
+        <rect x="${r1(100-B.ww)}" y="${r1(B.sy)}" width="6" height="${r1(B.wy-B.sy+12)}" fill="${shirt.c2}"/>
+        <rect x="${r1(100-3)}"     y="${r1(B.sy)}" width="6" height="${r1(B.wy-B.sy+12)}" fill="${shirt.c2}"/>
+        <rect x="${r1(100+B.ww-6)}" y="${r1(B.sy)}" width="6" height="${r1(B.wy-B.sy+12)}" fill="${shirt.c2}"/></g>`;
     } else if (shirt.pat === 'block'){
-      shirtPat = `<g clip-path="url(#${g}body)"><path d="M54 186 L150 176 L150 200 L54 210 Z" fill="${shirt.c2}" opacity=".95"/></g>`;
+      const mid = (B.sy + B.wy) / 2;
+      shirtPat = `<g clip-path="url(#${g}body)"><path d="M${r1(100-B.sw-4)} ${r1(mid-6)} L${r1(100+B.sw+4)} ${r1(mid-14)} L${r1(100+B.sw+4)} ${r1(mid+12)} L${r1(100-B.sw-4)} ${r1(mid+20)} Z" fill="${shirt.c2}" opacity=".95"/></g>`;
     } else if (shirt.pat === 'argyle'){
+      const mid = (B.sy + B.wy) / 2;
       shirtPat = `<g clip-path="url(#${g}body)" opacity=".55" fill="${shirt.c2}">
-        <path d="M78 150 L92 170 L78 190 L64 170 Z"/><path d="M112 150 L126 170 L112 190 L98 170 Z"/>
-        <path d="M95 195 L109 215 L95 235 L81 215 Z"/></g>`;
+        <path d="M${r1(100-B.ww)} ${r1(B.sy+18)} L${r1(100-B.ww+13)} ${r1(B.sy+36)} L${r1(100-B.ww)} ${r1(B.sy+54)} L${r1(100-B.ww-13)} ${r1(B.sy+36)} Z"/>
+        <path d="M${r1(100+B.ww)} ${r1(B.sy+18)} L${r1(100+B.ww+13)} ${r1(B.sy+36)} L${r1(100+B.ww)} ${r1(B.sy+54)} L${r1(100+B.ww-13)} ${r1(B.sy+36)} Z"/>
+        <path d="M100 ${r1(mid-8)} L${r1(100+13)} ${r1(mid+10)} L100 ${r1(mid+28)} L${r1(100-13)} ${r1(mid+10)} Z"/></g>`;
     } else if (shirt.pat === 'zip'){
-      shirtPat = `<g clip-path="url(#${g}body)"><rect x="96" y="118" width="8" height="120" fill="${shirt.c2}" opacity=".9"/>
-        <circle cx="100" cy="150" r="4" fill="${light(shirt.c2,25)}"/></g>`;
+      shirtPat = `<g clip-path="url(#${g}body)"><rect x="${r1(100-3.5)}" y="${r1(B.sy-4)}" width="7" height="${r1(B.wy-B.sy+10)}" fill="${shirt.c2}" opacity=".9"/>
+        <circle cx="100" cy="${r1(B.sy+16)}" r="3.6" fill="${light(shirt.c2,25)}"/></g>`;
+    }
+    const collar = `<path d="M${r1(100-B.nkw-4)} ${r1(B.sy-3)} L100 ${r1(B.sy+13)} L${r1(100+B.nkw+4)} ${r1(B.sy-3)} L${r1(100+B.nkw+10)} ${r1(B.sy+8)} L100 ${r1(B.sy+17)} L${r1(100-B.nkw-10)} ${r1(B.sy+8)} Z" fill="${light(shirt.c1,8)}" stroke="rgba(0,0,0,.14)" stroke-width="1"/>
+      <rect x="98.8" y="${r1(B.sy+12)}" width="2.4" height="17" fill="${shirt.c2}"/>
+      <circle cx="100" cy="${r1(B.sy+17)}" r="1.7" fill="${light(shirt.c2,20)}"/><circle cx="100" cy="${r1(B.sy+25)}" r="1.7" fill="${light(shirt.c2,20)}"/>`;
+
+    /* ── آستین + بازو + دست ── */
+    const sleeve = `<path d="M${r1(100-B.sw+2)} ${r1(B.sy+6)} Q${r1(100-B.sw-8)} ${r1(B.sy+11)} ${r1(100-B.sw-7)} ${r1(B.at+12)} L${r1(100-B.sw+6)} ${r1(B.at+17)} Q${r1(100-B.sw+5)} ${r1(B.sy+12)} Z" fill="${dark(shirt.c1,8)}"/>
+      <path d="M${r1(100+B.sw-2)} ${r1(B.sy+6)} Q${r1(100+B.sw+8)} ${r1(B.sy+11)} ${r1(100+B.sw+7)} ${r1(B.at+12)} L${r1(100+B.sw-6)} ${r1(B.at+17)} Q${r1(100+B.sw-5)} ${r1(B.sy+12)} Z" fill="${dark(shirt.c1,8)}"/>`;
+    const armL = `<path d="M${r1(100-B.sw-6)} ${r1(B.at+13)} Q${r1(100-B.sw-6)} ${r1(B.at+26)} ${r1(handL-7)} ${r1(B.ae)} L${r1(handL+7)} ${r1(B.ae)} Q${r1(100-B.sw+6)} ${r1(B.at+28)} ${r1(100-B.sw+6)} ${r1(B.at+17)} Z" fill="${skin}"/>`;
+    const armR = `<path d="M${r1(100+B.sw+6)} ${r1(B.at+13)} Q${r1(100+B.sw+6)} ${r1(B.at+26)} ${r1(handR+7)} ${r1(B.ae)} L${r1(handR-7)} ${r1(B.ae)} Q${r1(100+B.sw-6)} ${r1(B.at+28)} ${r1(100+B.sw-6)} ${r1(B.at+17)} Z" fill="${skin}"/>`;
+    const hands = `<circle cx="${handL}" cy="${r1(B.ae+3)}" r="${B.hd}" fill="${skin}"/><circle cx="${handR}" cy="${r1(B.ae+3)}" r="${B.hd}" fill="${skin}"/>`;
+
+    /* ── دستکش / ساعت ── */
+    const gloveSvg = (glove.type === 'none') ? '' :
+      `<circle cx="${handL}" cy="${r1(B.ae+3)}" r="${B.hd+1.4}" fill="${glove.c1 || '#fff'}" stroke="rgba(0,0,0,.2)"/>`;
+    let watchSvg = '';
+    if (watch.type && watch.type !== 'none'){
+      const w1 = watch.c1 || '#2A2F3A', w2 = watch.c2 || '#5FE3B0';
+      watchSvg = `<g><rect x="${r1(handL-8)}" y="${r1(B.ae-13)}" width="16" height="11" rx="4" fill="${w1}" stroke="rgba(0,0,0,.25)"/>
+        <rect x="${r1(handL-4.5)}" y="${r1(B.ae-10.5)}" width="9" height="6" rx="2.4" fill="${w2}" opacity=".95"/></g>`;
     }
 
-    /* ── آستین/بازو ── */
-    const sleeve = `<path d="M62 126 Q46 138 44 164 L58 170 Q60 146 68 138 Z" fill="${dark(shirt.c1,10)}"/>
-      <path d="M138 126 Q154 138 156 164 L142 170 Q140 146 132 138 Z" fill="${dark(shirt.c1,10)}"/>`;
-    const armL = `<path d="M44 164 Q42 186 46 206 L60 204 Q56 184 58 170 Z" fill="${skin}"/>`;
-    const armR = `<path d="M156 164 Q158 186 154 206 L140 204 Q144 184 142 170 Z" fill="${skin}"/>`;
-
-    /* ── دستکش ── */
-    const gloveSvg = (glove.type === 'none') ? '' :
-      `<path d="M44 200 Q42 214 50 220 Q60 222 62 210 L60 200 Z" fill="${glove.c1 || '#fff'}" stroke="rgba(0,0,0,.18)"/>`;
-
-    /* ── پا و شلوار ── */
+    /* ── شلوار / دامن چین‌دار ── */
     let legs = '';
     if (pants.skirt){
-      legs = `<path d="M58 232 Q100 244 146 232 L156 286 Q100 300 48 286 Z" fill="${pants.c1}"/>
-        <path d="M74 288 L78 330 L94 330 L92 288 Z" fill="${skin}"/><path d="M110 288 L112 330 L128 330 L124 288 Z" fill="${skin}"/>`;
+      const hem = B.wy + (isChild ? 50 : 58);
+      const p1 = r1(100 - B.ww * 0.5), p2 = 100, p3 = r1(100 + B.ww * 0.5);
+      legs = `<path d="M${r1(100-B.ww-7)} ${r1(B.wy-2)} L${r1(100+B.ww+7)} ${r1(B.wy-2)} L${r1(100+B.ww+17)} ${r1(hem)} Q100 ${r1(hem+9)} ${r1(100-B.ww-17)} ${r1(hem)} Z" fill="${pants.c1}"/>
+        <g stroke="${dark(pants.c1,18)}" stroke-width="1.7" opacity=".5"><path d="M${p1} ${r1(B.wy+6)} L${r1(p1-5)} ${r1(hem+3)}"/><path d="M${p2} ${r1(B.wy+6)} L${p2} ${r1(hem+5)}"/><path d="M${p3} ${r1(B.wy+6)} L${r1(p3+5)} ${r1(hem+3)}"/></g>
+        <path d="M${r1(100-4)} ${r1(hem-2)} L${r1(100-4)} ${r1(B.ly)} L${r1(100-B.lw-2)} ${r1(B.ly)} L${r1(100-B.lw+1)} ${r1(hem-2)} Z" fill="${skin}"/>
+        <path d="M${r1(100+4)} ${r1(hem-2)} L${r1(100+4)} ${r1(B.ly)} L${r1(100+B.lw+2)} ${r1(B.ly)} L${r1(100+B.lw-1)} ${r1(hem-2)} Z" fill="${skin}"/>`;
     } else {
-      legs = `<path d="M60 230 L56 330 L88 330 L96 244 L104 330 L136 330 L142 230 Q100 244 60 230 Z" fill="${pants.c1}"/>
-        <path d="M96 244 L100 330" stroke="${dark(pants.c1,22)}" stroke-width="2"/>`;
+      legs = `<path d="M${r1(100-B.ww-6)} ${r1(B.wy-2)} L${r1(100-B.ww-9)} ${r1(B.ly)} L${r1(100-B.lw-2)} ${r1(B.ly)} L${r1(100-3)} ${r1(B.cr)} L${r1(100+3)} ${r1(B.cr)} L${r1(100+B.lw+2)} ${r1(B.ly)} L${r1(100+B.ww+9)} ${r1(B.ly)} L${r1(100+B.ww+6)} ${r1(B.wy-2)} Q100 ${r1(B.wy+6)} ${r1(100-B.ww-6)} ${r1(B.wy-2)} Z" fill="${pants.c1}"/>
+        <rect x="${r1(100-B.ww-6)}" y="${r1(B.wy-2)}" width="${r1(B.ww*2+12)}" height="6" fill="${dark(pants.c1,16)}" opacity=".6"/>
+        <path d="M100 ${r1(B.cr+2)} L100 ${r1(B.ly)}" stroke="${dark(pants.c1,20)}" stroke-width="2" opacity=".6"/>`;
     }
+
+    /* ── کفش کتانی (بند + سوزن‌دوخت) ── */
+    const fw = isChild ? 17 : 21;
+    const inL = 100 - 3, inR = 100 + 3;
     const shoesSvg = `<g>
-      <path d="M52 330 L88 330 L92 344 Q70 350 48 344 Q46 334 52 330Z" fill="${shoes.c1}" stroke="rgba(0,0,0,.2)"/>
-      <path d="M108 330 L142 330 L150 344 Q126 350 106 344 Q104 334 108 330Z" fill="${shoes.c1}" stroke="rgba(0,0,0,.2)"/>
-      <path d="M48 344 Q70 350 92 344 L92 348 Q70 354 48 348Z" fill="${shoes.c2}"/>
-      <path d="M106 344 Q128 350 150 344 L150 348 Q128 354 106 348Z" fill="${shoes.c2}"/></g>`;
+      <path d="M${inL} ${r1(B.ly-2)} L${r1(inL-1)} ${r1(B.fy-5)} L${r1(inL-fw-5)} ${r1(B.fy-5)} Q${r1(inL-fw-11)} ${r1(B.fy-5)} ${r1(inL-fw-9)} ${r1(B.fy-11)} Q${r1(inL-fw-5)} ${r1(B.ly+4)} ${r1(inL-fw+2)} ${r1(B.ly-2)} Z" fill="${shoes.c1}" stroke="rgba(0,0,0,.18)"/>
+      <path d="M${inR} ${r1(B.ly-2)} L${r1(inR+1)} ${r1(B.fy-5)} L${r1(inR+fw+5)} ${r1(B.fy-5)} Q${r1(inR+fw+11)} ${r1(B.fy-5)} ${r1(inR+fw+9)} ${r1(B.fy-11)} Q${r1(inR+fw+5)} ${r1(B.ly+4)} ${r1(inR+fw-2)} ${r1(B.ly-2)} Z" fill="${shoes.c1}" stroke="rgba(0,0,0,.18)"/>
+      <path d="M${r1(inL-fw-10)} ${r1(B.fy-6)} L${r1(inL+1)} ${r1(B.fy-6)} L${r1(inL+1)} ${r1(B.fy)} L${r1(inL-fw-9)} ${r1(B.fy)} Q${r1(inL-fw-13)} ${r1(B.fy-2)} ${r1(inL-fw-10)} ${r1(B.fy-6)}Z" fill="${shoes.c2}"/>
+      <path d="M${r1(inR+fw+10)} ${r1(B.fy-6)} L${r1(inR-1)} ${r1(B.fy-6)} L${r1(inR-1)} ${r1(B.fy)} L${r1(inR+fw+9)} ${r1(B.fy)} Q${r1(inR+fw+13)} ${r1(B.fy-2)} ${r1(inR+fw+10)} ${r1(B.fy-6)}Z" fill="${shoes.c2}"/>
+      <g stroke="${dark(shoes.c1,26)}" stroke-width="1.8" stroke-linecap="round">
+        <path d="M${r1(inL-fw+4)} ${r1(B.ly+8)} L${r1(inL-fw+13)} ${r1(B.ly+13)}"/><path d="M${r1(inL-fw+3)} ${r1(B.ly+17)} L${r1(inL-fw+11)} ${r1(B.ly+22)}"/>
+        <path d="M${r1(inR+fw-4)} ${r1(B.ly+8)} L${r1(inR+fw-13)} ${r1(B.ly+13)}"/><path d="M${r1(inR+fw-3)} ${r1(B.ly+17)} L${r1(inR+fw-11)} ${r1(B.ly+22)}"/></g></g>`;
 
     /* ── عینک ── */
     let glassSvg = '';
     if (glass.type === 'sport'){
-      glassSvg = `<path d="M74 90 Q100 82 126 90 Q128 102 116 104 Q100 106 84 104 Q72 102 74 90Z" fill="${glass.c1}" opacity=".92"/>
-        <path d="M74 90 Q100 84 126 90" stroke="rgba(255,255,255,.5)" stroke-width="2" fill="none"/>`;
+      glassSvg = `<path d="M${r1(100-eDX-13)} ${r1(eyeY-8)} Q100 ${r1(eyeY-14)} ${r1(100+eDX+13)} ${r1(eyeY-8)} Q${r1(100+eDX+15)} ${r1(eyeY+8)} ${r1(100+eDX-4)} ${r1(eyeY+10)} Q100 ${r1(eyeY+13)} ${r1(100-eDX+4)} ${r1(eyeY+10)} Q${r1(100-eDX-15)} ${r1(eyeY+8)} ${r1(100-eDX-13)} ${r1(eyeY-8)}Z" fill="${glass.c1}" opacity=".92"/>
+        <path d="M${r1(100-eDX-13)} ${r1(eyeY-8)} Q100 ${r1(eyeY-13)} ${r1(100+eDX+13)} ${r1(eyeY-8)}" stroke="rgba(255,255,255,.45)" stroke-width="2" fill="none"/>`;
     } else if (glass.type === 'classic'){
       glassSvg = `<g fill="none" stroke="${glass.c1}" stroke-width="3.4">
-        <rect x="72" y="86" width="24" height="17" rx="6" fill="rgba(20,26,33,.55)"/>
-        <rect x="104" y="86" width="24" height="17" rx="6" fill="rgba(20,26,33,.55)"/>
-        <path d="M96 93 L104 93"/></g>`;
+        <rect x="${r1(100-eDX-12)}" y="${r1(eyeY-9)}" width="24" height="18" rx="7" fill="rgba(20,26,33,.6)"/>
+        <rect x="${r1(100+eDX-12)}" y="${r1(eyeY-9)}" width="24" height="18" rx="7" fill="rgba(20,26,33,.6)"/>
+        <path d="M${r1(100-eDX+12)} ${r1(eyeY-1)} L${r1(100+eDX-12)} ${r1(eyeY-1)}"/></g>`;
     }
 
-    /* ── چوب/ساک ── */
+    /* ── چوب گلف ── */
     let clubSvg = '';
     if (club.type === 'iron' || club.type === 'putter' || club.type === 'driver'){
       const headW = club.type === 'driver' ? 22 : club.type === 'putter' ? 20 : 14;
@@ -804,7 +854,7 @@
         <circle cx="154" cy="112" r="5" fill="#2A2F3A"/><circle cx="167" cy="108" r="5" fill="#2A2F3A"/><circle cx="182" cy="112" r="5" fill="#2A2F3A"/></g>`;
     }
 
-    /* ── کیف گلف (پشت آواتار) ── */
+    /* ── ساک گلف (پشت بدن) ── */
     let bagSvg = '';
     if (bag.type && bag.type !== 'none'){
       const b1 = bag.c1 || '#1E8F6A', b2 = bag.c2 || light(b1, 18);
@@ -814,7 +864,8 @@
         <g stroke="#C9D4DE" stroke-width="3"><path d="M158 146 L154 106"/><path d="M168 146 L168 102"/><path d="M178 146 L184 106"/></g>
         <circle cx="154" cy="106" r="5" fill="#2A2F3A"/><circle cx="168" cy="102" r="5" fill="#2A2F3A"/><circle cx="184" cy="106" r="5" fill="#2A2F3A"/></g>`;
     }
-    /* ── توپ / فاصله‌یاب کنار پا ── */
+
+    /* ── توپ / فاصله‌یاب ── */
     let ballSvg = '';
     if (ball.type === 'ball'){
       ballSvg = `<g><ellipse cx="34" cy="348" rx="11" ry="4" fill="rgba(0,0,0,.35)"/>
@@ -825,67 +876,59 @@
       ballSvg = `<g><rect x="22" y="326" width="30" height="18" rx="6" fill="${ball.c1 || '#15181C'}" stroke="rgba(0,0,0,.3)"/>
         <circle cx="31" cy="335" r="5" fill="${ball.c2 || '#D4AF37'}" opacity=".9"/><circle cx="45" cy="335" r="3.4" fill="#0B0F14"/></g>`;
     }
-    /* ── ساعت / مچ‌بند ── */
-    let watchSvg = '';
-    if (watch.type && watch.type !== 'none'){
-      const w1 = watch.c1 || '#2A2F3A', w2 = watch.c2 || '#5FE3B0';
-      watchSvg = `<g><rect x="44" y="192" width="16" height="12" rx="4" fill="${w1}" stroke="rgba(0,0,0,.25)"/>
-        <rect x="47" y="194.5" width="10" height="7" rx="2.5" fill="${w2}" opacity=".95"/></g>`;
-    }
-    const eyeShine = eyeIt.shine ? `<circle cx="86" cy="92" r="8" fill="${eyeIt.c1}" opacity=".28"/><circle cx="114" cy="92" r="8" fill="${eyeIt.c1}" opacity=".28"/>` : '';
-    const lips = femAv ? `<path d="M92 112 Q100 118 108 112 Q100 116 92 112Z" fill="#C0546A"/>` : '';
 
-    /* ── فرم بچه: کل بدن (از یقه تا کفش) حول گردن ۷۸٪ فشرده و کمی باریک‌تر می‌شود؛
-       سر دست‌نخورده می‌ماند تا نسبت «سر بزرگ / بدن کوچک» بچه‌گونه شود. لباس‌ها و
-       اکسسوریِ خریداری‌شده چون داخل همان گروه‌اند، خودکار روی بدن کوچک سوار می‌شوند. ── */
-    const bodyOpen  = isChild ? `<g transform="translate(8 24.6) scale(0.92 0.78)">` : '';
-    const bodyClose = isChild ? `</g>` : '';
-    const accOpen   = isChild ? `<g transform="translate(0 -54)">` : '';
-    const accClose  = isChild ? `</g>` : '';
-    const groundY   = isChild ? 297 : 350;
-    const groundRx  = isChild ? 52  : 62;
+    /* ── صورت: چشم بزرگ، ابرو، بینی، لبخند نرم ── */
+    const eyeShine = eyeIt.shine ? `<circle cx="${r1(100-eDX)}" cy="${r1(eyeY)}" r="8" fill="${eyeIt.c1}" opacity=".28"/><circle cx="${r1(100+eDX)}" cy="${r1(eyeY)}" r="8" fill="${eyeIt.c1}" opacity=".28"/>` : '';
+    const lashes = femAv ? `<path d="M${r1(100-eDX-7)} ${r1(eyeY-7)} l-3 -2.6 M${r1(100-eDX-9)} ${r1(eyeY-3)} l-3.4 -1.4" stroke="${dark(hairC,10)}" stroke-width="1.6" stroke-linecap="round"/><path d="M${r1(100+eDX+7)} ${r1(eyeY-7)} l3 -2.6 M${r1(100+eDX+9)} ${r1(eyeY-3)} l3.4 -1.4" stroke="${dark(hairC,10)}" stroke-width="1.6" stroke-linecap="round"/>` : '';
+    const blush = `<ellipse cx="${r1(100-B.hrx+14)}" cy="${r1(eyeY+17)}" rx="6.4" ry="3.6" fill="#E8907A" opacity=".2"/><ellipse cx="${r1(100+B.hrx-14)}" cy="${r1(eyeY+17)}" rx="6.4" ry="3.6" fill="#E8907A" opacity=".2"/>`;
+    const face = `<g>
+        ${eyeShine}
+        <ellipse cx="${r1(100-eDX)}" cy="${r1(eyeY)}" rx="7" ry="8.6" fill="#fff"/>
+        <ellipse cx="${r1(100+eDX)}" cy="${r1(eyeY)}" rx="7" ry="8.6" fill="#fff"/>
+        <circle cx="${r1(100-eDX)}" cy="${r1(eyeY+1)}" r="4.4" fill="${eyeIt.c1}"/><circle cx="${r1(100+eDX)}" cy="${r1(eyeY+1)}" r="4.4" fill="${eyeIt.c1}"/>
+        <circle cx="${r1(100-eDX)}" cy="${r1(eyeY+1)}" r="2.2" fill="#14100c" opacity=".85"/><circle cx="${r1(100+eDX)}" cy="${r1(eyeY+1)}" r="2.2" fill="#14100c" opacity=".85"/>
+        <circle cx="${r1(100-eDX+1.6)}" cy="${r1(eyeY-1.6)}" r="1.7" fill="#fff"/><circle cx="${r1(100+eDX+1.6)}" cy="${r1(eyeY-1.6)}" r="1.7" fill="#fff"/>
+        ${lashes}
+        <path d="M${r1(100-eDX-7)} ${r1(eyeY-13)} Q${r1(100-eDX)} ${r1(eyeY-17)} ${r1(100-eDX+7)} ${r1(eyeY-13)}" stroke="${dark(hairC,10)}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+        <path d="M${r1(100+eDX-7)} ${r1(eyeY-13)} Q${r1(100+eDX)} ${r1(eyeY-17)} ${r1(100+eDX+7)} ${r1(eyeY-13)}" stroke="${dark(hairC,10)}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+        ${blush}
+      </g>
+      <path d="M${r1(100-3.4)} ${r1(B.hy+12)} Q100 ${r1(B.hy+17)} ${r1(100+3.4)} ${r1(B.hy+13)}" stroke="${dark(skin,22)}" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M${r1(100-11)} ${r1(B.hy+23)} Q100 ${r1(B.hy+31)} ${r1(100+11)} ${r1(B.hy+23)}" stroke="${dark(skin,28)}" stroke-width="2.7" fill="none" stroke-linecap="round"/>`
+      + (femAv ? `<path d="M${r1(100-9.5)} ${r1(B.hy+22)} Q100 ${r1(B.hy+30.5)} ${r1(100+9.5)} ${r1(B.hy+22)} Q100 ${r1(B.hy+26)} ${r1(100-9.5)} ${r1(B.hy+22)}Z" fill="#C0546A" opacity=".85"/>` : '');
+
+    /* ── اکسسوری‌ها کنار بدن: برای بچه ۸۴٪ کوچک‌تر، لنگر روی زمین ── */
+    const accOpen  = isChild ? `<g transform="translate(24.3 59.5) scale(0.84)">` : '';
+    const accClose = isChild ? `</g>` : '';
 
     return `<svg class="av-svg" viewBox="0 0 200 360" width="${opt.w || 190}" height="${opt.h || 342}" style="overflow:visible">
       <defs>
-        <clipPath id="${g}body"><path d="${bodyPath}"/></clipPath>
+        <clipPath id="${g}body"><path d="${torsoPath}"/></clipPath>
         <linearGradient id="${g}sh" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="${light(shirt.c1,10)}"/><stop offset="1" stop-color="${dark(shirt.c1,12)}"/></linearGradient>
-        <radialGradient id="${g}fc" cx="38%" cy="30%" r="75%">
-          <stop offset="0" stop-color="${light(skin,10)}"/><stop offset="1" stop-color="${dark(skin,10)}"/></radialGradient>
+          <stop offset="0" stop-color="${light(shirt.c1,10)}"/><stop offset="1" stop-color="${dark(shirt.c1,10)}"/></linearGradient>
+        <radialGradient id="${g}fc" cx="38%" cy="28%" r="78%">
+          <stop offset="0" stop-color="${light(skin,10)}"/><stop offset="1" stop-color="${dark(skin,9)}"/></radialGradient>
       </defs>
-      <ellipse cx="100" cy="${groundY}" rx="${groundRx}" ry="9" fill="rgba(0,0,0,.42)"/>
-      ${accOpen}${bagSvg}${clubSvg}${accClose}
+      <ellipse cx="100" cy="${ground+1}" rx="${isChild ? 48 : 58}" ry="8.5" fill="rgba(0,0,0,.4)"/>
+      ${accOpen}${bagSvg}${accClose}
       ${hairBack}
-      ${bodyOpen}
       ${legs}${shoesSvg}
-      <path d="${bodyPath}" fill="url(#${g}sh)" stroke="rgba(0,0,0,.16)"/>
+      <path d="${torsoPath}" fill="url(#${g}sh)" stroke="rgba(0,0,0,.15)"/>
       ${shirtPat}
-      ${sleeve}${armL}${armR}${gloveSvg}${watchSvg}
-      <path d="M88 108 L112 108 L112 126 Q100 132 88 126 Z" fill="${dark(skin,12)}"/>
-      <path d="M84 118 Q100 136 116 118 L124 124 Q100 146 76 124 Z" fill="${light(shirt.c1,6)}"/>
-      <path d="M100 122 L92 140 L100 136 L108 140 Z" fill="${shirt.c2}"/>
-      ${bodyClose}
-      ${accOpen}${ballSvg}${accClose}
-      <ellipse cx="100" cy="86" rx="38" ry="42" fill="url(#${g}fc)"/>
-      <path d="M62 86 Q56 96 64 106" stroke="${dark(skin,14)}" stroke-width="3" fill="none"/>
-      <path d="M138 86 Q144 96 136 106" stroke="${dark(skin,14)}" stroke-width="3" fill="none"/>
+      ${sleeve}${armL}${armR}${hands}${gloveSvg}${watchSvg}
+      ${accOpen}${clubSvg}${ballSvg}${accClose}
+      <path d="M${r1(100-B.nkw)} ${r1(B.nk0)} L${r1(100+B.nkw)} ${r1(B.nk0)} L${r1(100+B.nkw)} ${r1(B.nk1+6)} Q100 ${r1(B.nk1+12)} ${r1(100-B.nkw)} ${r1(B.nk1+6)} Z" fill="${dark(skin,11)}"/>
+      ${collar}
+      <ellipse cx="100" cy="${B.hy}" rx="${B.hrx}" ry="${B.hry}" fill="url(#${g}fc)"/>
+      <ellipse cx="${r1(100-B.hrx-1)}" cy="${r1(B.hy+3)}" rx="5" ry="6.5" fill="${dark(skin,4)}"/>
+      <ellipse cx="${r1(100+B.hrx+1)}" cy="${r1(B.hy+3)}" rx="5" ry="6.5" fill="${dark(skin,4)}"/>
       ${hairFront}
       ${hatSvg}
-      <g>
-        ${eyeShine}
-        <ellipse cx="86" cy="92" rx="6.5" ry="8" fill="#fff"/>
-        <ellipse cx="114" cy="92" rx="6.5" ry="8" fill="#fff"/>
-        <circle cx="86" cy="93" r="4" fill="${eyeIt.c1}"/><circle cx="114" cy="93" r="4" fill="${eyeIt.c1}"/>
-        <circle cx="87" cy="91.5" r="1.4" fill="#fff"/><circle cx="115" cy="91.5" r="1.4" fill="#fff"/>
-        <path d="M78 80 Q86 75 94 80" stroke="${dark(hairC,10)}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-        <path d="M106 80 Q114 75 122 80" stroke="${dark(hairC,10)}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-      </g>
+      ${face}
       ${glassSvg}
-      <path d="M96 98 Q100 104 104 100" stroke="${dark(skin,22)}" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <path d="M88 110 Q100 120 112 110" stroke="${dark(skin,30)}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-      ${lips}
     </svg>`;
   }
+
   /* روشن/تیره کردن رنگ hex */
   function shade(hex, p){
     const h = String(hex || '#888').replace('#','');

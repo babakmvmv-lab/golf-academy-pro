@@ -670,4 +670,28 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 #spk-page::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(900px 320px at 50% -90px,rgba(212,175,55,.09),transparent)}
 .spk-wrap{max-width:680px;margin:0 auto;padding:18px 16px 46px;min-height:100%}
 .spk-wrap .spk-head{position:sticky;top:0;z-index:5;background:linear-gradient(var(--bg) 78%,transparent);padding:6px 0 12px}
+/* ═══ خروجی PDF گزارش جلسه — پوستهٔ چاپ روشن روی A4 ═══ */
+@media print{
+  body.printing-report{background:#fff!important}
+  body.printing-report > *:not(#spk-page){display:none!important}
+  body.printing-report #spk-page{position:static!important;inset:auto!important;z-index:auto!important;height:auto!important;overflow:visible!important;background:#fff!important}
+  body.printing-report #spk-page::before{display:none!important}
+  body.printing-report .spk-wrap{max-width:100%!important;min-height:0!important;padding:0!important}
+  body.printing-report .spk-head{position:static!important;background:none!important;padding:0 0 10px!important}
+  body.printing-report .spk-x,body.printing-report .spk-end,body.printing-report #spk-pdf,body.printing-report #spk-home{display:none!important}
+  body.printing-report *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.printing-report .glass{background:#fff!important;border:1px solid #dfe3ea!important;border-radius:14px!important;box-shadow:none!important;padding:14px 16px!important}
+  body.printing-report .glass::before{display:none!important}
+  body.printing-report .spk-head .spk-title{color:#141821!important}
+  body.printing-report .spk-sumhero h3,body.printing-report .spk-pcard-h b{color:#141821!important}
+  body.printing-report .spk-resume-meta{color:#3a4150!important}
+  body.printing-report .spk-pcard-kpi span{background:#f4f6fa!important;color:#3a4150!important;border-color:#dfe3ea!important}
+  body.printing-report .spk-pcard-kpi .ok{color:#0f8f66!important}
+  body.printing-report .spk-pcard-kpi .wr{color:#c2611b!important}
+  body.printing-report .spk-best{background:rgba(212,175,55,.1)!important;color:#7a611c!important}
+  body.printing-report .spk-tbl th{color:#6b7280!important;border-bottom-color:#dfe3ea!important}
+  body.printing-report .spk-tbl td{color:#141821!important;border-bottom-color:#e8ebf0!important}
+  body.printing-report .spk-tbl td:first-child{color:#8a6d1c!important}
+  @page{size:A4;margin:12mm}
+}
 @media (max-width:640px){.spk-wrap{padding:12px 12px 90px}}

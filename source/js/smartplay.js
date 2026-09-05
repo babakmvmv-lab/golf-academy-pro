@@ -437,12 +437,32 @@
         + '</div>';
     });
     if (!an.totalShots) h += '<div class="glass" style="padding:24px;text-align:center;color:var(--muted)">در این جلسه ضربه‌ای ثبت نشده بود.</div>';
-    h += '<button type="button" class="btn ghost" id="spk-home" style="width:100%;margin-top:14px">بازگشت به مرکز تمرین</button>';
+    h += '<div style="display:flex;gap:10px;margin-top:14px">'
+      + '<button type="button" class="btn spk-save" id="spk-pdf" style="flex:1.5">📄 خروجی PDF گزارش</button>'
+      + '<button type="button" class="btn ghost" id="spk-home" style="flex:1">بازگشت به مرکز تمرین</button>'
+      + '</div>';
 
     root.innerHTML = h;
     bindCommon();
     var hm = document.getElementById('spk-home');
     if (hm) hm.onclick = function () { view = 'home'; route(); };
+    /* خروجی PDF: حالت چاپِ سبک (سفید/خوانا روی کاغذ A4) روی همین گزارش فعال و سپس دیالوگ چاپ باز می‌شود */
+    var pb = document.getElementById('spk-pdf');
+    if (pb) pb.onclick = function () {
+      var oldTitle = document.title;
+      document.title = 'گزارش جلسهٔ تمرینی ' + fa(s.no) + ' — ' + (TYPE_FA[s.type] || s.type) + ' — ' + s.dateFa;
+      document.body.classList.add('printing-report');
+      var cleaned = false;
+      var cleanup = function () {
+        if (cleaned) return; cleaned = true;
+        document.body.classList.remove('printing-report');
+        document.title = oldTitle;
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      window.print();
+      setTimeout(cleanup, 2500); /* fallback برای مرورگرهایی که afterprint نمی‌دهند */
+    };
   }
 
   /* ══════════ موتور مسیریابی داخلی ══════════ */

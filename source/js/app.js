@@ -254,7 +254,7 @@
     renderMemberMobileNav(rec, page);
     $('#view').innerHTML = '';
     const p = PAGES[page];
-    $('#top-title').textContent = `${p.i} ${p.t}`;
+    $('#top-title').innerHTML = `${p.i} ${esc(p.t)}`;
     $('#top-crumb').textContent = page.startsWith('a') ? 'ابزار طراح / ' + p.t : L('group.dashboard','داشبورد') + ' / ' + p.t;
     RENDERERS[page]();
     // برای اعضا، دکمه‌های مدیریتی صفحات نمایشی مخفی می‌شوند

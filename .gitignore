@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .DS_Store
 source/GolfAcademy_PRO.html
+analytics/out/

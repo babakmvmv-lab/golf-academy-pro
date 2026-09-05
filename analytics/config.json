@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "units": { "distance": "yard" },
+  "training_types": {
+    "Range":    { "fa": "رنج" },
+    "Putting":  { "fa": "پاتینگ" },
+    "Chipping": { "fa": "چیپینگ" },
+    "Approach": { "fa": "اپروچ" },
+    "On-Course":{ "fa": "روی زمین" }
+  },
+  "clubs": [
+    "Driver", "3 Wood", "5 Wood", "Hybrid",
+    "Iron 3", "Iron 4", "Iron 5", "Iron 6", "Iron 7", "Iron 8", "Iron 9",
+    "Pitching Wedge", "Gap Wedge", "Sand Wedge", "Lob Wedge", "Putter"
+  ],
+  "results": {
+    "straight": { "fa": "صاف",      "color": "#1EBB8A", "is_success": true  },
+    "slice":    { "fa": "سمت راست", "color": "#2E86DE", "is_success": false },
+    "hook":     { "fa": "سمت چپ",   "color": "#E67E22", "is_success": false },
+    "miss":     { "fa": "ضربه خراب","color": "#E74C3C", "is_success": false }
+  },
+  "thresholds": {
+    "straight_rate_good_pct": 60,
+    "recent_window": 15,
+    "trend_ma_window": 5
+  }
+}

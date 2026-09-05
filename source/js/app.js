@@ -608,6 +608,9 @@
   /* ── بازیکن هوشمند — اسکلت صفحه (قابلیت‌ها به‌زودی تزریق می‌شوند) ── */
   function renderSmartPlayer(v, p, cards, TABS){
     const SPARK = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M12 3l1.9 5.2L19.2 10l-5.3 1.8L12 17l-1.9-5.2L4.8 10 12 3z"/><path d="M18.5 14.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z"/><path d="M6 15.5l.6 1.6 1.6.6-1.6.6L6 19.9l-.6-1.6-1.6-.6 1.6-.6.6-1.6z"/></svg>';
+    const CHART_SVG = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>';
+    const SP_TYPE_FA = { Range:'رنج', Putting:'پاتینگ', Chipping:'چیپینگ', Approach:'اپروچ', 'On-Course':'روی زمین' };
+    const SP_RES_FA = { straight:'صاف', slice:'سمت راست', hook:'سمت چپ', miss:'ضربه خراب' };
     const FEATS = [
       ['trend', 'تحلیل نقاط قوت و ضعف', 'استخراج خودکار الگوی بازی از روی کارت‌ها'],
       ['flag',  'پیشنهاد تمرین هوشمند', 'برنامه تمرینی شخصی‌سازی‌شده بر پایه آخرین عملکرد'],
@@ -637,6 +640,10 @@
       <h2>بازیکن هوشمند <span class="seg-new">آلفا</span></h2>
       <p>دستیار تحلیل هوشمند <b style="color:var(--gold-l)">${esc(p.name)}</b> — این بخش آماده‌سازی شده و قابلیت‌های آن مرحله‌به‌مرحله فعال می‌شوند. داده‌های فعلی (امتیاز، کارت‌ها و روند فصل) به محض اتصال قابلیت‌ها، اینجا تحلیل می‌شوند.</p>
     </div>
+    <div class="glass" id="sp-live">
+      <div class="card-head"><span class="ic">${CHART_SVG}</span><h3>آنالیز آخرین ضربه‌ها — ${esc(p.name)}</h3><span class="tag gold">Live</span></div>
+      <div id="sp-live-body"></div>
+    </div>
     <div class="grid cols-4 sp-grid">
       ${FEATS.map(([ic, t, d]) => `
       <div class="glass sp-feat">
@@ -660,6 +667,40 @@
     const back = $('#sp-back');
     if (back) back.addEventListener('click', () => { playerTab = 'classic'; go('player'); });
     bindPlayerTabs();
+    renderSmartChart(p);
+  }
+  /* ── نمودار زندهٔ «آنالیز آخرین ضربه‌ها» — فیلتر: بازیکن انتخابی ← آخرین کلاب او ← آخرین ۱۵ ضربه ── */
+  function renderSmartChart(p){
+    const box = $('#sp-live-body'); if (!box) return;
+    let shots = []; try { shots = JSON.parse(localStorage.getItem('ga_sp_shots') || '[]'); } catch(e){}
+    let ssn = {};  try { ssn = JSON.parse(localStorage.getItem('ga_sp_sessions') || '{}'); } catch(e){}
+    const mine = shots.filter(x => x.pid === p.pid).sort((a, b) => a.t - b.t);
+    if (!mine.length){
+      box.innerHTML = `<div style="padding:28px 16px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1">
+        هنوز ضربه‌ای برای <b style="color:var(--gold-l)">${esc(p.name)}</b> ثبت نشده است.<br>
+        از دکمهٔ «ثبت رکورد» بالای صفحه، جلسه را شروع کنید — این نمودار بلافاصله زنده می‌شود ⛳</div>`;
+      return;
+    }
+    const last = mine[mine.length - 1];
+    const ses = ssn[last.sid];
+    const typeMap = { Range:'رنج', Putting:'پاتینگ', Chipping:'چیپینگ', Approach:'اپروچ', 'On-Course':'روی زمین' };
+    const resMap = { straight:'صاف', slice:'سمت راست', hook:'سمت چپ', miss:'ضربه خراب' };
+    const ofClub = mine.filter(x => x.club === last.club).slice(-15);
+    const vals = ofClub.map(x => x.yds);
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    box.innerHTML = `<div class="chart-box short"><canvas id="sp-live-cv"></canvas></div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:11px;font-size:11px;color:var(--muted)">
+        <span style="background:rgba(233,199,102,.1);border:1px solid rgba(233,199,102,.3);border-radius:99px;padding:5px 12px">آخرین ضربه: <b style="color:var(--gold-l)">${esc(last.club)}</b> — ${D.fa(D.faNum(last.yds,0))} یارد (${esc(resMap[last.res] || last.res)})</span>
+        <span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">میانگین ${esc(last.club)}: <b>${D.fa(D.faNum(avg,1))}</b> یارد</span>
+        <span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">${D.fa(ofClub.length)} ضربه اخیر</span>
+        ${ses ? `<span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">${esc(typeMap[ses.type] || ses.type)} — جلسه ${D.fa(ses.no)}</span>` : ''}
+      </div>`;
+    setTimeout(() => {
+      const cv = $('#sp-live-cv'); if (!cv || !window.Charts) return;
+      const avgLine = ofClub.map(() => Math.round(avg));
+      Charts.line(cv, [vals, avgLine], ofClub.map((x, i) => D.fa(i + 1)),
+        { colors: ['#E9C766', 'rgba(132,144,163,.75)'], fill: true, points: true, fmt: v => D.faNum(v, 0) });
+    }, 70);
   }
   function renderHoles(p){
     const card = (A.CARDS[p.pid]||[]).find(c => c.tour === matchSel);

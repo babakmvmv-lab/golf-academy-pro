@@ -2926,8 +2926,40 @@ const Charts = (() => {
     ctx.setTransform(DPR(), 0, 0, DPR(), 0, 0);
     return { ctx, w: r.width, h: r.height };
   }
+  /* سنجش زندهٔ ابعاد کانوس در هر فریم انیمیشن: کارت‌های نمودار در حین انیمیشن ورود صفحه
+     رفته‌رفته پهن/بلند می‌شوند؛ prep یک‌بارهٔ قدیمی ابعاد وسط-انیمیشن را قفل می‌کرد و نتیجه «نمودار
+     کش‌آمده/نیم‌رسم» یا (در ارتفاع نزدیک‌صفر) ارتفاع منفی و کرش roundRect بود. با livePrep هر فریم
+     با ابعاد تازه رسم می‌شود و تا لایه‌نشدن لایه‌بندی، فریم به‌تأخیر می‌افتد. */
+  function livePrep(canvas, box){
+    const r = canvas.getBoundingClientRect();
+    const w = r.width, h = r.height;
+    if (w < 2 || h < 2) return null;
+    if (!box.set || Math.abs(box.w - w) > .5 || Math.abs(box.h - h) > .5){
+      canvas.width = Math.round(w * DPR()); canvas.height = Math.round(h * DPR());
+      box.w = w; box.h = h; box.set = true;
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(DPR(), 0, 0, DPR(), 0, 0);
+    return { ctx, w, h };
+  }
+  /* اجرای انیمیشن با draw(p); اگر تا پایان انیمیشن ابعاد لایه نشده بود، تا زمان لایه‌شدن هر ۱۲۰ms رسمِ نهایی */
+  function animateLive(cb, dur){
+    let drew = false;
+    return animate(p => { if (cb(p)) drew = true; }, dur).then(() => {
+      let tries = 0;
+      (function finalTry(){
+        if (drew || ++tries > 30) return;
+        if (cb(1)){ drew = true; return; }
+        setTimeout(finalTry, 120);
+      })();
+    });
+  }
   function roundRect(ctx, x, y, w, h, r){
-    r = Math.min(r, w/2, h/2);
+    /* هاردنینگ: ابعاد منفی نرمال شود و شعاع هرگز منفی نگردد — در غیر این صورت arcTo با
+       IndexSizeError می‌ترکد و چون animate ابتدا cb را صدا می‌زند، کل انیمیشن نمودار برای همیشه فریز می‌شد */
+    if (w < 0){ x += w; w = -w; }
+    if (h < 0){ y += h; h = -h; }
+    r = Math.max(0, Math.min(r, w/2, h/2));
     ctx.beginPath();
     ctx.moveTo(x+r, y);
     ctx.arcTo(x+w, y, x+w, y+h, r);
@@ -2960,38 +2992,36 @@ const Charts = (() => {
 
   /* ── بار عمودی ── */
   function barsV(canvas, cats, vals, opts={}){
-    const P = prep(canvas); if (!P) return; const { ctx, w, h } = P;
     const color = opts.color || '#D4AF37';
     const colArr = Array.isArray(opts.color); /* پشتیبانی از رنگ به‌ازای هر ستون */
     const glow = opts.glow !== undefined ? opts.glow : true;
     const padL = opts.padL || 26, padB = opts.padB || 22, padT = opts.padT || 8, padR = opts.padR || 6;
     const max = opts.max || Math.max(...vals, 1) * 1.12;
     const n = vals.length;
-    const bw = (w - padL - padR) / n * (opts.gap !== undefined ? opts.gap : 0.62);
-    const x0 = padL + (w - padL - padR) / n / 2;
-    ctx.clearRect(0,0,w,h);
-    // gridlines
-    ctx.strokeStyle = 'rgba(255,255,255,.06)';
-    ctx.lineWidth = 1;
-    ctx.fillStyle = '#8A93A6'; ctx.font = '10px Tahoma';
-    for (let g = 0; g <= 4; g++){
-      const y = padT + (h - padT - padB) * g / 4;
-      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w-padR, y); ctx.stroke();
-      const v = max * (1 - g/4);
-      ctx.textAlign = 'left';
-      ctx.fillText(opts.fmt ? opts.fmt(v) : Math.round(v), w-padR-2, y+3);
-    }
-    animate(p => {
-      ctx.clearRect(0,0,w,h);
-      ctx.strokeStyle = 'rgba(255,255,255,.06)';
-      for (let g = 0; g <= 4; g++){
-        const y = padT + (h - padT - padB) * g / 4;
-        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w-padR, y); ctx.stroke();
-      }
+    if (!n) return;
+    const box = {};
+    /* هندسه هر فریم با ابعاد زندهٔ کانوس محاسبه می‌شود — نه یک‌بار در آغاز */
+    function draw(p){
+      const P = livePrep(canvas, box); if (!P) return false;
+      const { ctx, w, h } = P;
       const H = h - padT - padB;
+      if (H < 14) return false; /* کارت هنوز لایه نشده — فریم بعد */
+      const bw = (w - padL - padR) / n * (opts.gap !== undefined ? opts.gap : 0.62);
+      const x0 = padL + (w - padL - padR) / n / 2;
+      ctx.clearRect(0,0,w,h);
+      // gridlines + اعداد محور
+      ctx.strokeStyle = 'rgba(255,255,255,.06)';
+      ctx.lineWidth = 1;
+      for (let g = 0; g <= 4; g++){
+        const y = padT + H * g / 4;
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w-padR, y); ctx.stroke();
+        const v = max * (1 - g/4);
+        ctx.fillStyle = '#8A93A6'; ctx.font = '10px Tahoma'; ctx.textAlign = 'left';
+        ctx.fillText(opts.fmt ? opts.fmt(v) : Math.round(v), w-padR-2, y+3);
+      }
       for (let i = 0; i < n; i++){
         const v = vals[i] || 0;
-        const bh = (v / max) * H * p;
+        const bh = Math.max(0, (v / max) * H * p);
         const x = x0 + (i - (n-1)/2) * (w - padL - padR) / n;
         const y = h - padB - bh;
         const col = colArr ? (opts.color[i] || '#D4AF37') : color;
@@ -3002,11 +3032,11 @@ const Charts = (() => {
         roundRect(ctx, x-bw/2, y, bw, bh, 4);
         ctx.fill();
         ctx.restore();
-        // label
+        // label محور
         ctx.fillStyle = '#8A93A6'; ctx.font = '10px Tahoma';
         ctx.textAlign = 'center';
         ctx.fillText(String(cats[i]), x, h - padB + 15);
-        // value on top
+        // مقدار روی ستون
         if (opts.showVal){
           ctx.fillStyle = '#F8FAFC'; ctx.font = 'bold 9.5px Tahoma';
           ctx.fillText(opts.valFmt ? opts.valFmt(v) : Math.round(v), x, y - 5);
@@ -3014,7 +3044,7 @@ const Charts = (() => {
       }
       /* خط راهنمای افقی روی میله‌ها — مثل «میانگین ضربه‌های صاف» */
       if (opts.hline && typeof opts.hline.value === 'number'){
-        const hy = h - padB - (opts.hline.value / max) * H * p;
+        const hy = h - padB - Math.max(0, (opts.hline.value / max) * H * p);
         const hc = opts.hline.color || '#E9C766';
         ctx.save();
         ctx.setLineDash([6, 5]);
@@ -3028,24 +3058,29 @@ const Charts = (() => {
         }
         ctx.restore();
       }
-    }, opts.dur);
+      return true;
+    }
+    animateLive(draw, opts.dur);
   }
 
   /* ── بار افقی (فهرستی) ── */
   function barsH(canvas, cats, vals, opts={}){
-    const P = prep(canvas); if (!P) return; const { ctx, w, h } = P;
     const color = opts.color || '#1EBB8A';
     const max = opts.max || Math.max(...vals, 1) * 1.1;
     const n = vals.length;
-    const rowH = Math.min((h - 8) / n, 26);
-    const padT = 6, padB = 6, padL = opts.padL || 96, padR = 8;
-    ctx.clearRect(0,0,w,h);
-    animate(p => {
+    if (!n) return;
+    const padT = 6, padL = opts.padL || 96, padR = 8;
+    const box = {};
+    function draw(p){
+      const P = livePrep(canvas, box); if (!P) return false;
+      const { ctx, w, h } = P;
+      const rowH = Math.min((h - 8) / n, 26);
+      if (rowH - 6 < 4) return false; /* ارتفاع کارت هنوز لایه نشده */
       ctx.clearRect(0,0,w,h);
       for (let i = 0; i < n; i++){
         const v = vals[i] || 0;
         const y = padT + i * rowH + 3;
-        const bw = (v / max) * (w - padL - padR) * p;
+        const bw = Math.max(0, (v / max) * (w - padL - padR) * p);
         ctx.fillStyle = 'rgba(255,255,255,.05)';
         roundRect(ctx, padL, y, w - padL - padR, rowH - 6, 6);
         ctx.fill();
@@ -3064,7 +3099,9 @@ const Charts = (() => {
           ctx.fillText(opts.valFmt ? opts.valFmt(v) : Math.round(v), padL + bw - 8, y + (rowH-6)/2 + 3.5);
         }
       }
-    }, opts.dur);
+      return true;
+    }
+    animateLive(draw, opts.dur);
   }
 
   /* ── نمودار خطی ── */

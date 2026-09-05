@@ -97,6 +97,22 @@ const Charts = (() => {
           ctx.fillText(opts.valFmt ? opts.valFmt(v) : Math.round(v), x, y - 5);
         }
       }
+      /* خط راهنمای افقی روی میله‌ها — مثل «میانگین ضربه‌های صاف» */
+      if (opts.hline && typeof opts.hline.value === 'number'){
+        const hy = h - padB - (opts.hline.value / max) * H * p;
+        const hc = opts.hline.color || '#E9C766';
+        ctx.save();
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = hc; ctx.lineWidth = 2;
+        ctx.shadowColor = hc; ctx.shadowBlur = 9;
+        ctx.beginPath(); ctx.moveTo(padL, hy); ctx.lineTo(w - padR, hy); ctx.stroke();
+        ctx.setLineDash([]); ctx.shadowBlur = 0;
+        if (opts.hline.label){
+          ctx.fillStyle = hc; ctx.font = 'bold 10.5px Vazirmatn,Tahoma'; ctx.textAlign = 'left';
+          ctx.fillText(opts.hline.label, padL + 5, hy - 6);
+        }
+        ctx.restore();
+      }
     }, opts.dur);
   }
 

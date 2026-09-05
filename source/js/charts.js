@@ -107,7 +107,9 @@ const Charts = (() => {
       for (let i = 0; i < n; i++){
         const v = vals[i] || 0;
         const bh = Math.max(0, (v / max) * H * p);
-        const x = x0 + (i - (n-1)/2) * (w - padL - padR) / n;
+        /* x0 مرکز خانهٔ اول است؛ بار iام دقیقاً i خانه جلوتر — در غیر این صورت نیمی از بارها
+           (i < (n-1)/2) با x منفی بیرون از کانوس رسم و «گم» می‌شدند ← علت «فقط ۸ تا نشون میده» */
+        const x = x0 + i * (w - padL - padR) / n;
         const y = h - padB - bh;
         const col = colArr ? (opts.color[i] || '#D4AF37') : color;
         const grd = grad(ctx, x, y, x, h-padB, hexA(col,.95), hexA(col,.25));

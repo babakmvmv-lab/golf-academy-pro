@@ -37,7 +37,10 @@
     'ga_cloud_cfg': 1,
     'ga_cloud_dirty': 1,
     'ga_cloud_ts': 1,
-    '__ga_t': 1
+    '__ga_t': 1,
+    /* امنیت: یوزر/رمز هرگز روی ابر نرود — فقط محلی نگه داشته می‌شود */
+    'ga_users': 1,
+    'ga_player_users': 1
   };
 
   var inBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';

@@ -1348,7 +1348,7 @@
       </div>
     </div>`;
     setTimeout(() => {
-      if (window.Charts) Charts.barsH($('#bt-chart'), teams.map(t=>t.name), teams.map(t=>t.pts), { color:'#E9C766', showVal:true, valFmt:v=>D.faNum(v,0) });
+      if (typeof Charts !== 'undefined') Charts.barsH($('#bt-chart'), teams.map(t=>t.name), teams.map(t=>t.pts), { color:'#E9C766', showVal:true, valFmt:v=>D.faNum(v,0) });
     }, 80);
   }
 

@@ -821,21 +821,34 @@
   function renderSmartChart(p){
     const box = $('#sp-live-body'); if (!box) return;
     const shots = spShots(), ssn = spSessions();
-    const mine = shots.filter(x => x.pid === p.pid).sort((a, b) => a.t - b.t);
-    if (!mine.length){
+    /* قانون جدید: تحلیل لحظه‌ای فقط وقتی جلسه‌ای باز است و فقط دیتای همان جلسه */
+    const open = Object.keys(ssn).map(k => ssn[k]).find(x => x && x.status === 'open');
+    const ttl = $('#sp-live h3');
+    const tg = $('#sp-live .tag');
+    if (!open){
+      if (ttl) ttl.textContent = `تحلیل لحظه‌ای جلسهٔ باز — ${p.name}`;
+      if (tg){ tg.textContent = 'بدون جلسهٔ باز'; tg.classList.remove('gold'); }
       box.innerHTML = `<div style="padding:28px 16px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1">
-        هنوز ضربه‌ای برای <b style="color:var(--gold-l)">${esc(p.name)}</b> ثبت نشده است.<br>
-        از دکمهٔ «ثبت رکورد» بالای صفحه، جلسه را شروع کنید — این نمودار بلافاصله زنده می‌شود ⛳</div>`;
+        در حال حاضر جلسهٔ تمرینیِ بازی وجود ندارد.<br>
+        از دکمهٔ «ثبت رکورد» بالای صفحه جلسه را شروع کنید — تحلیل لحظه‌ای همین‌جا زنده می‌شود ⛳</div>`;
+      return;
+    }
+    /* فقط ضربه‌های همین جلسهٔ باز، برای همین بازیکن */
+    const mine = shots.filter(x => x.pid === p.pid && x.sid === open.id).sort((a, b) => a.t - b.t);
+    if (!mine.length){
+      if (ttl) ttl.textContent = `تحلیل لحظه‌ای جلسهٔ ${D.fa(open.no)} — ${p.name}`;
+      if (tg){ tg.textContent = '۰ ضربه در این جلسه'; tg.classList.remove('gold'); }
+      box.innerHTML = `<div style="padding:28px 16px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1">
+        جلسهٔ ${D.fa(open.no)} (${esc(SP_TYPE_LBL[open.type] || open.type)}) باز است،<br>
+        ولی هنوز ضربه‌ای برای <b style="color:var(--gold-l)">${esc(p.name)}</b> در این جلسه ثبت نشده است.</div>`;
       return;
     }
     const last = mine[mine.length - 1];
-    const ses = ssn[last.sid];
-    /* تگ سربرگ = کلاب تحت تحلیل — عنوان کارت هم به‌روز می‌شود */
-    const ttl = $('#sp-live h3'); if (ttl) ttl.textContent = `آنالیز ضربه‌های ${last.club} — ${p.name}`;
     const ofClub = mine.filter(x => x.club === last.club);
-    const sesChip = ses ? `<span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">${esc(SP_TYPE_LBL[ses.type] || ses.type)} — جلسه ${D.fa(ses.no)}</span>` : '';
+    if (ttl) ttl.textContent = `آنالیز ضربه‌های ${last.club} — ${p.name}`;
+    const sesChip = `<span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">${esc(SP_TYPE_LBL[open.type] || open.type)} — جلسه ${D.fa(open.no)}</span>`;
     const o = shotChartBody(ofClub, 'sp-live-cv', sesChip);
-    const tg = $('#sp-live .tag'); if (tg){ tg.textContent = o.tag; tg.classList.add('gold'); }
+    if (tg){ tg.textContent = o.tag; tg.classList.add('gold'); }
     box.innerHTML = o.html;
     drawShotChart(o);
   }

@@ -670,6 +670,9 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 #spk-page::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(900px 320px at 50% -90px,rgba(212,175,55,.09),transparent)}
 .spk-wrap{max-width:680px;margin:0 auto;padding:18px 16px 46px;min-height:100%}
 .spk-wrap .spk-head{position:sticky;top:0;z-index:5;background:linear-gradient(var(--bg) 78%,transparent);padding:6px 0 12px}
+/* هنگام کپچر PDF گزارش جلسه — دکمه‌ها و هدر چسبان حذف می‌شوند تا خروجی تمیز باشد */
+.pdf-capture .spk-x,.pdf-capture .spk-end,.pdf-capture #spk-pdf,.pdf-capture #spk-home{display:none!important}
+.pdf-capture .spk-head{position:static!important;background:none!important}
 /* ═══ خروجی PDF گزارش جلسه — پوستهٔ چاپ روشن روی A4 ═══ */
 @media print{
   body.printing-report{background:#fff!important}

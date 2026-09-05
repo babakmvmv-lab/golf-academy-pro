@@ -342,6 +342,80 @@
     route();
   }
 
+  /* ══════════ لودر تنبل کتابخانه‌های PDF (فقط هنگام نیاز — html2canvas + jsPDF) ══════════ */
+  var _pdfLibsP = null;
+  function loadScriptOnce(src) {
+    return new Promise(function (res, rej) {
+      var sc = document.createElement('script');
+      sc.src = src; sc.async = true;
+      sc.onload = function () { res(); };
+      sc.onerror = function () { rej(new Error('load-fail ' + src)); };
+      document.head.appendChild(sc);
+    });
+  }
+  function loadPdfLibs() {
+    if (window.html2canvas && window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
+    if (!_pdfLibsP) {
+      _pdfLibsP = loadScriptOnce('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js')
+        .then(function () { return loadScriptOnce('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'); });
+      _pdfLibsP.catch(function () { _pdfLibsP = null; }); /* شکست ← تلاش دوباره در کلیک بعدی */
+    }
+    return _pdfLibsP;
+  }
+  /* ساخت و دانلود مستقیم PDF از روی گزارش (بدون دیالوگ چاپ) — fallback: چاپ */
+  function exportSummaryPdf(s) {
+    var pb = document.getElementById('spk-pdf');
+    var oldTxt = pb ? pb.textContent : '';
+    function restore() { if (pb) { pb.disabled = false; pb.textContent = oldTxt; } }
+    function legacyPrint() {
+      var oldTitle = document.title;
+      document.title = 'گزارش جلسهٔ تمرینی ' + fa(s.no) + ' — ' + (TYPE_FA[s.type] || s.type) + ' — ' + s.dateFa;
+      document.body.classList.add('printing-report');
+      var cleaned = false;
+      var cleanup = function () {
+        if (cleaned) return; cleaned = true;
+        document.body.classList.remove('printing-report');
+        document.title = oldTitle;
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      window.print();
+      setTimeout(cleanup, 2500);
+    }
+    if (pb) { pb.disabled = true; pb.textContent = '⏳ در حال ساخت PDF…'; }
+    loadPdfLibs()
+      .then(function () {
+        var el = document.getElementById('spk-wrap');
+        if (!el) throw new Error('wrap-missing');
+        document.body.classList.add('pdf-capture');
+        return window.html2canvas(el, { backgroundColor: '#0b0f14', scale: 2, useCORS: true, logging: false })
+          .then(function (cv) { document.body.classList.remove('pdf-capture'); return cv; },
+                function (e2) { document.body.classList.remove('pdf-capture'); throw e2; });
+      })
+      .then(function (cv) {
+        var PDF = window.jspdf.jsPDF;
+        var pdf = new PDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
+        var MG = 10, pageW = 210 - 2 * MG, pageH = 297 - 2 * MG;
+        var pxPerMm = cv.width / pageW, pagePx = Math.floor(pageH * pxPerMm);
+        var pages = Math.max(1, Math.ceil(cv.height / pagePx));
+        for (var i = 0; i < pages; i++) {
+          var slice = document.createElement('canvas');
+          slice.width = cv.width;
+          slice.height = Math.min(pagePx, cv.height - i * pagePx);
+          slice.getContext('2d').drawImage(cv, 0, i * pagePx, cv.width, slice.height, 0, 0, cv.width, slice.height);
+          if (i) pdf.addPage();
+          pdf.addImage(slice.toDataURL('image/jpeg', .93), 'JPEG', MG, MG, pageW, slice.height / pxPerMm);
+        }
+        pdf.save('گزارش-جلسه-' + fa(s.no) + '-' + String(s.dateFa || '').replace(/[\\/]/g, '.') + '.pdf');
+        toast('PDF گزارش دانلود شد ✓', 'gold');
+      })
+      .catch(function () {
+        legacyPrint();
+        toast('اتصال به سرویس PDF ممکن نشد — دیالوگ چاپ باز شد', 'ok');
+      })
+      .then(restore);
+  }
+
   /* ══════════ پایان جلسه + تحلیل ══════════ */
   function askEndSession() {
     var ss = openSession(); if (!ss) return;
@@ -447,23 +521,9 @@
     bindCommon();
     var hm = document.getElementById('spk-home');
     if (hm) hm.onclick = function () { view = 'home'; route(); };
-    /* خروجی PDF: حالت چاپِ سبک (سفید/خوانا روی کاغذ A4) روی همین گزارش فعال و سپس دیالوگ چاپ باز می‌شود */
+    /* خروجی PDF: دانلود مستقیم فایل (html2canvas+jsPDF) — اگر CDN در دسترس نبود، به دیالوگ چاپ برمی‌گردد */
     var pb = document.getElementById('spk-pdf');
-    if (pb) pb.onclick = function () {
-      var oldTitle = document.title;
-      document.title = 'گزارش جلسهٔ تمرینی ' + fa(s.no) + ' — ' + (TYPE_FA[s.type] || s.type) + ' — ' + s.dateFa;
-      document.body.classList.add('printing-report');
-      var cleaned = false;
-      var cleanup = function () {
-        if (cleaned) return; cleaned = true;
-        document.body.classList.remove('printing-report');
-        document.title = oldTitle;
-        window.removeEventListener('afterprint', cleanup);
-      };
-      window.addEventListener('afterprint', cleanup);
-      window.print();
-      setTimeout(cleanup, 2500); /* fallback برای مرورگرهایی که afterprint نمی‌دهند */
-    };
+    if (pb) pb.onclick = function () { exportSummaryPdf(s); };
   }
 
   /* ══════════ موتور مسیریابی داخلی ══════════ */

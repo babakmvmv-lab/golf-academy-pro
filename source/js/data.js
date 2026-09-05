@@ -96,7 +96,9 @@
   }
   /* ISO میلادی → رشته شمسی (۱۴۰۵/۰۶/۱۰) */
   function isoToShamsi(iso){
-    const d = dateFrom(iso);
+    /* پذیرش Date یا رشتهٔ ISO — قبلاً Date می‌گرفت (مثل D.TODAY) و ورودی نامعتبر،
+       خروجی خراب «-100722/07/NaN» می‌داد */
+    const d = iso instanceof Date ? iso : dateFrom(iso);
     const [jy, jm, jd] = toJalaali(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate());
     return jy + '/' + String(jm).padStart(2,'0') + '/' + String(jd).padStart(2,'0');
   }

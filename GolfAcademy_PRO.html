@@ -2318,7 +2318,9 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   }
   /* ISO میلادی → رشته شمسی (۱۴۰۵/۰۶/۱۰) */
   function isoToShamsi(iso){
-    const d = dateFrom(iso);
+    /* پذیرش Date یا رشتهٔ ISO — قبلاً Date می‌گرفت (مثل D.TODAY) و ورودی نامعتبر،
+       خروجی خراب «-100722/07/NaN» می‌داد */
+    const d = iso instanceof Date ? iso : dateFrom(iso);
     const [jy, jm, jd] = toJalaali(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate());
     return jy + '/' + String(jm).padStart(2,'0') + '/' + String(jd).padStart(2,'0');
   }
@@ -9201,7 +9203,8 @@ window.__L3D = {
     return mx + 1;
   }
   function todayFa() {
-    try { return ctx.D.isoToShamsi(ctx.D.TODAY); } catch (e) { return ''; }
+    /* جلسهٔ تمرینی رویدادِ واقعیِ «همین امروز» است — نه تاریخ فریزشدهٔ فصل (D.TODAY) */
+    try { return ctx.D.isoToShamsi(new Date().toISOString().slice(0, 10)); } catch (e) { return ''; }
   }
 
   /* ══════════ هدر صفحهٔ مجزا: ✕ بستن صفحه + ⏹ بستن جلسه ══════════ */

@@ -9503,10 +9503,12 @@ window.__L3D = {
     };
     const mkIc = k => '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">' + ICON[k] + '</svg>';
     /* نام بازیکن انتخاب‌شده در تولبار در این حالت هم معنادار است */
+    const PLUS_SVG = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
     const selBar = `
     <div class="toolbar">
       <span class="lbl">🏌️ بازیکن:</span>
       <select class="sel" id="pl-sel-smart">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===p.pid?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+      <button type="button" class="btn sm" id="sp-record">${PLUS_SVG} ثبت رکورد</button>
       <div style="flex:1"></div>
       ${honorChip(p.pid)}
     </div>`;
@@ -9531,6 +9533,11 @@ window.__L3D = {
     </div>`;
     const sel = $('#pl-sel-smart');
     if (sel) sel.addEventListener('change', e => { playerSel = +e.target.value; go('player'); });
+    const rec = $('#sp-record');
+    if (rec) rec.addEventListener('click', () => {
+      /* نقطه اتصال قابلیت «ثبت رکورد» — منطق نهایی در مرحلهٔ بعد تزریق می‌شود */
+      if (window.APP && APP.toast) APP.toast(`ثبت رکورد برای «${p.name}» — این قابلیت مرحلهٔ بعد فعال می‌شود`, 'gold');
+    });
     const back = $('#sp-back');
     if (back) back.addEventListener('click', () => { playerTab = 'classic'; go('player'); });
     bindPlayerTabs();

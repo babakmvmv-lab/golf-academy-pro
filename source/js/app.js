@@ -205,6 +205,7 @@
   let currentPage = 'cmd';
   let playerSel = 8, matchSel = 1, courseSel = 1, coursePlayerSel = 8;
   let playerTab = 'classic'; /* classic | smart — تب «بازیکن هوشمند» */
+  let spOpen = false;      /* صفحهٔ داخلی «ثبت رکورد» باز است؟ (جلسه با بستن صفحه بسته نمی‌شود) */
 
   const MEM_PAGE_KEY = { cmd:'memCmd', race:'memRace', player:'memPlayer', match:'memMatch',
     course:'memCourse', records:'memRecords', cal:'memCal', tv:'memTv', avatarland:'memAvatarLand' };
@@ -607,6 +608,16 @@
   }
   /* ── بازیکن هوشمند — اسکلت صفحه (قابلیت‌ها به‌زودی تزریق می‌شوند) ── */
   function renderSmartPlayer(v, p, cards, TABS){
+    /* صفحهٔ مجزای درون‌اپ «ثبت رکورد» — ✕ فقط صفحه را می‌بندد، نه جلسه */
+    if (spOpen && window.SMARTPLAY){
+      v.innerHTML = TABS + '<div id="sp-zone"></div>';
+      SMARTPLAY.renderInto($('#sp-zone'), {
+        A: A, S: S, D: D,
+        onExit: function(){ spOpen = false; go('player'); }
+      });
+      bindPlayerTabs();
+      return;
+    }
     const SPARK = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M12 3l1.9 5.2L19.2 10l-5.3 1.8L12 17l-1.9-5.2L4.8 10 12 3z"/><path d="M18.5 14.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z"/><path d="M6 15.5l.6 1.6 1.6.6-1.6.6L6 19.9l-.6-1.6-1.6-.6 1.6-.6.6-1.6z"/></svg>';
     const FEATS = [
       ['trend', 'تحلیل نقاط قوت و ضعف', 'استخراج خودکار الگوی بازی از روی کارت‌ها'],
@@ -654,8 +665,8 @@
     if (sel) sel.addEventListener('change', e => { playerSel = +e.target.value; go('player'); });
     const rec = $('#sp-record');
     if (rec) rec.addEventListener('click', () => {
-      /* نقطه اتصال قابلیت «ثبت رکورد» — منطق نهایی در مرحلهٔ بعد تزریق می‌شود */
-      if (window.APP && APP.toast) APP.toast(`ثبت رکورد برای «${p.name}» — این قابلیت مرحلهٔ بعد فعال می‌شود`, 'gold');
+      /* ورود به صفحهٔ «ثبت رکورد» — اگر جلسهٔ باز باشد، مستقیم ادامهٔ همان جلسه */
+      spOpen = true; go('player');
     });
     const back = $('#sp-back');
     if (back) back.addEventListener('click', () => { playerTab = 'classic'; go('player'); });

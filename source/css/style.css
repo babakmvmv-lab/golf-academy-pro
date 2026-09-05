@@ -528,3 +528,22 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* ── بازیکن هوشمند: سوییچ تب + اسکلت صفحه ── */
+.seg{display:inline-flex;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line-soft);border-radius:14px;padding:4px;gap:4px;margin-bottom:16px}
+.seg-btn{display:inline-flex;align-items:center;gap:8px;border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:13px;font-weight:700;padding:10px 18px;min-height:44px;border-radius:10px;cursor:pointer;transition:background .2s,color .2s}
+.seg-btn.on{background:linear-gradient(135deg,rgba(212,175,55,.22),rgba(212,175,55,.08));color:var(--gold-l);box-shadow:inset 0 0 0 1px rgba(212,175,55,.35)}
+.seg-btn:not(.on):hover{color:var(--white)}
+.seg-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.seg-new{background:var(--gold);color:#1a1405;font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;line-height:1.6}
+.sp-hero{text-align:center;padding:38px 22px;background:radial-gradient(560px 200px at 50% -50px,rgba(212,175,55,.16),transparent),var(--panel)}
+.sp-hero h2{color:var(--gold-l);margin:12px 0 8px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;font-size:22px}
+.sp-hero p{color:var(--muted);max-width:540px;margin:0 auto;font-size:13.5px;line-height:2.1}
+.sp-icon{width:74px;height:74px;margin:0 auto;border-radius:22px;display:flex;align-items:center;justify-content:center;color:var(--gold-l);background:linear-gradient(145deg,rgba(212,175,55,.22),rgba(212,175,55,.05));box-shadow:0 0 34px rgba(212,175,55,.28),inset 0 0 0 1px rgba(212,175,55,.4)}
+.sp-icon svg.si{width:36px;height:36px}
+.sp-feat{min-height:150px;padding:16px}
+.sp-feat .ic{display:inline-flex;width:36px;height:36px;border-radius:11px;align-items:center;justify-content:center;color:var(--gold-l);background:rgba(212,175,55,.12);box-shadow:inset 0 0 0 1px rgba(212,175,55,.3);margin-bottom:10px}
+.sp-feat h4{margin:0 0 5px;font-size:13.5px}
+.sp-feat p{margin:0;font-size:11.5px;color:var(--muted);line-height:1.9}
+.sp-soon{display:inline-block;margin-top:12px;font-size:10.5px;color:var(--dim);border:1px dashed var(--line-soft);border-radius:99px;padding:3px 11px}
+@media (max-width:640px){.seg{display:flex}.seg-btn{flex:1;justify-content:center}}

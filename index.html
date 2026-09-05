@@ -543,6 +543,25 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* ── بازیکن هوشمند: سوییچ تب + اسکلت صفحه ── */
+.seg{display:inline-flex;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line-soft);border-radius:14px;padding:4px;gap:4px;margin-bottom:16px}
+.seg-btn{display:inline-flex;align-items:center;gap:8px;border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:13px;font-weight:700;padding:10px 18px;min-height:44px;border-radius:10px;cursor:pointer;transition:background .2s,color .2s}
+.seg-btn.on{background:linear-gradient(135deg,rgba(212,175,55,.22),rgba(212,175,55,.08));color:var(--gold-l);box-shadow:inset 0 0 0 1px rgba(212,175,55,.35)}
+.seg-btn:not(.on):hover{color:var(--white)}
+.seg-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.seg-new{background:var(--gold);color:#1a1405;font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;line-height:1.6}
+.sp-hero{text-align:center;padding:38px 22px;background:radial-gradient(560px 200px at 50% -50px,rgba(212,175,55,.16),transparent),var(--panel)}
+.sp-hero h2{color:var(--gold-l);margin:12px 0 8px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;font-size:22px}
+.sp-hero p{color:var(--muted);max-width:540px;margin:0 auto;font-size:13.5px;line-height:2.1}
+.sp-icon{width:74px;height:74px;margin:0 auto;border-radius:22px;display:flex;align-items:center;justify-content:center;color:var(--gold-l);background:linear-gradient(145deg,rgba(212,175,55,.22),rgba(212,175,55,.05));box-shadow:0 0 34px rgba(212,175,55,.28),inset 0 0 0 1px rgba(212,175,55,.4)}
+.sp-icon svg.si{width:36px;height:36px}
+.sp-feat{min-height:150px;padding:16px}
+.sp-feat .ic{display:inline-flex;width:36px;height:36px;border-radius:11px;align-items:center;justify-content:center;color:var(--gold-l);background:rgba(212,175,55,.12);box-shadow:inset 0 0 0 1px rgba(212,175,55,.3);margin-bottom:10px}
+.sp-feat h4{margin:0 0 5px;font-size:13.5px}
+.sp-feat p{margin:0;font-size:11.5px;color:var(--muted);line-height:1.9}
+.sp-soon{display:inline-block;margin-top:12px;font-size:10.5px;color:var(--dim);border:1px dashed var(--line-soft);border-radius:99px;padding:3px 11px}
+@media (max-width:640px){.seg{display:flex}.seg-btn{flex:1;justify-content:center}}
 </style>
     <style>
 /* ═══════════════ پنل مدیریت جامع + تنظیمات نمایش ═══════════════ */
@@ -9066,6 +9085,7 @@ window.__L3D = {
   updatePageLabels();
   let currentPage = 'cmd';
   let playerSel = 8, matchSel = 1, courseSel = 1, coursePlayerSel = 8;
+  let playerTab = 'classic'; /* classic | smart — تب «بازیکن هوشمند» */
 
   const MEM_PAGE_KEY = { cmd:'memCmd', race:'memRace', player:'memPlayer', match:'memMatch',
     course:'memCourse', records:'memRecords', cal:'memCal', tv:'memTv', avatarland:'memAvatarLand' };
@@ -9364,10 +9384,11 @@ window.__L3D = {
   /* ═══════════ صفحه: مرکز بازیکن ═══════════ */
   function pagePlayer(){
 
-  if (!MGMT.getSettings().chPlayer){
+  const v = $('#view');
+    if (!MGMT.getSettings().chPlayer){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🏌️ نمودارهای ${esc(L('nav.player','مرکز بازیکن'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
-    }    const v = $('#view');
+    }
     const p = A.LB.find(r => r.pid === playerSel) || A.LB[0];
     const cards = A.CARDS[playerSel] || [];
     const sk = A.SKILLS[playerSel] || {scoring:0,birdie:0,consistency:0,practice:0,experience:0};
@@ -9376,7 +9397,16 @@ window.__L3D = {
     cards.forEach(c => { dist.w += c.birdies; dist.p += c.pars; dist.b += c.bogeys; dist.d += c.dbog; });
     const tot = Math.max(1, dist.w + dist.p + dist.b + dist.d);
     const goldP = Math.min(100, p.pts / D.GOLD_ELITE * 100);
-    v.innerHTML = `
+    /* ── سوییچ «مرکز بازیکن / بازیکن هوشمند» ── */
+    const SPARK_SVG = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M12 3l1.9 5.2L19.2 10l-5.3 1.8L12 17l-1.9-5.2L4.8 10 12 3z"/><path d="M18.5 14.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z"/><path d="M6 15.5l.6 1.6 1.6.6-1.6.6L6 19.9l-.6-1.6-1.6-.6 1.6-.6.6-1.6z"/></svg>';
+    const BARS_SVG = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>';
+    const TABS = `
+    <div class="seg" role="tablist" aria-label="بخش‌های مرکز بازیکن">
+      <button type="button" class="seg-btn ${playerTab==='classic'?'on':''}" id="pl-tab-classic" role="tab" aria-selected="${playerTab==='classic'}">${BARS_SVG}<span>مرکز بازیکن</span></button>
+      <button type="button" class="seg-btn ${playerTab==='smart'?'on':''}" id="pl-tab-smart" role="tab" aria-selected="${playerTab==='smart'}">${SPARK_SVG}<span>بازیکن هوشمند</span><span class="seg-new">جدید</span></button>
+    </div>`;
+    if (playerTab === 'smart'){ renderSmartPlayer(v, p, cards, TABS); return; }
+    v.innerHTML = TABS + `
     <div class="toolbar">
       <span class="lbl">🏌️ بازیکن:</span>
       <select class="sel" id="pl-sel">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===playerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
@@ -9448,6 +9478,62 @@ window.__L3D = {
     }, 80);
     $('#pl-sel').addEventListener('change', e => { playerSel = +e.target.value; go('player'); });
     $('#pl-tour').addEventListener('change', e => { matchSel = +e.target.value; go('player'); });
+    bindPlayerTabs();
+  }
+  /* هندلر مشترک دو تب مرکز بازیکن */
+  function bindPlayerTabs(){
+    const bc = $('#pl-tab-classic'), bs = $('#pl-tab-smart');
+    if (bc) bc.addEventListener('click', () => { if (playerTab !== 'classic'){ playerTab = 'classic'; go('player'); } });
+    if (bs) bs.addEventListener('click', () => { if (playerTab !== 'smart'){ playerTab = 'smart'; go('player'); } });
+  }
+  /* ── بازیکن هوشمند — اسکلت صفحه (قابلیت‌ها به‌زودی تزریق می‌شوند) ── */
+  function renderSmartPlayer(v, p, cards, TABS){
+    const SPARK = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M12 3l1.9 5.2L19.2 10l-5.3 1.8L12 17l-1.9-5.2L4.8 10 12 3z"/><path d="M18.5 14.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z"/><path d="M6 15.5l.6 1.6 1.6.6-1.6.6L6 19.9l-.6-1.6-1.6-.6 1.6-.6.6-1.6z"/></svg>';
+    const FEATS = [
+      ['trend', 'تحلیل نقاط قوت و ضعف', 'استخراج خودکار الگوی بازی از روی کارت‌ها'],
+      ['flag',  'پیشنهاد تمرین هوشمند', 'برنامه تمرینی شخصی‌سازی‌شده بر پایه آخرین عملکرد'],
+      ['shield','مقایسه با رقبا', 'سنجش عملکرد در برابر هم‌رده‌های فصل'],
+      ['clip',  'گزارش مربی خودکار', 'خلاصه آماده ارائه برای جلسات مربیگری'],
+    ];
+    const ICON = {
+      trend:'<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+      flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
+      shield:'<path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/>',
+      clip:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
+    };
+    const mkIc = k => '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">' + ICON[k] + '</svg>';
+    /* نام بازیکن انتخاب‌شده در تولبار در این حالت هم معنادار است */
+    const selBar = `
+    <div class="toolbar">
+      <span class="lbl">🏌️ بازیکن:</span>
+      <select class="sel" id="pl-sel-smart">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===p.pid?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+      <div style="flex:1"></div>
+      ${honorChip(p.pid)}
+    </div>`;
+    v.innerHTML = TABS + selBar + `
+    <div class="glass sp-hero">
+      <div class="sp-icon">${SPARK}</div>
+      <h2>بازیکن هوشمند <span class="seg-new">آلفا</span></h2>
+      <p>دستیار تحلیل هوشمند <b style="color:var(--gold-l)">${esc(p.name)}</b> — این بخش آماده‌سازی شده و قابلیت‌های آن مرحله‌به‌مرحله فعال می‌شوند. داده‌های فعلی (امتیاز، کارت‌ها و روند فصل) به محض اتصال قابلیت‌ها، اینجا تحلیل می‌شوند.</p>
+    </div>
+    <div class="grid cols-4 sp-grid">
+      ${FEATS.map(([ic, t, d]) => `
+      <div class="glass sp-feat">
+        <span class="ic">${mkIc(ic)}</span>
+        <h4>${t}</h4>
+        <p>${d}</p>
+        <span class="sp-soon">به‌زودی</span>
+      </div>`).join('')}
+    </div>
+    <div class="glass" style="padding:18px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between">
+      <div style="color:var(--muted);font-size:12.5px;line-height:1.9">💡 قابلیت موردنظرتان برای «بازیکن هوشمند» را به مدیر آکادمی اعلام کنید تا در اولویت فعال‌سازی قرار گیرد.</div>
+      <button type="button" class="btn sm" id="sp-back">مشاهده تحلیل کلاسیک</button>
+    </div>`;
+    const sel = $('#pl-sel-smart');
+    if (sel) sel.addEventListener('change', e => { playerSel = +e.target.value; go('player'); });
+    const back = $('#sp-back');
+    if (back) back.addEventListener('click', () => { playerTab = 'classic'; go('player'); });
+    bindPlayerTabs();
   }
   function renderHoles(p){
     const card = (A.CARDS[p.pid]||[]).find(c => c.tour === matchSel);

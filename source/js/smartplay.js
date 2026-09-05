@@ -456,7 +456,33 @@
     var b = document.getElementById('spk-back');
     if (b) b.onclick = function () { stepBack(Math.max(1, step - 1)); };
   }
-  function exit() { if (ctx && ctx.onExit) ctx.onExit(); }
+  function exit() { closePage(); }
+
+  /* ══════════ صفحهٔ تمام‌صفحهٔ مجزا (فقط ورود دیتا) ══════════ */
+  var page = null;
+  function openPage(context) {
+    ctx = context || {};
+    if (page && page.parentNode) page.parentNode.removeChild(page);
+    page = document.createElement('div');
+    page.id = 'spk-page';
+    page.setAttribute('dir', 'rtl');
+    page.setAttribute('role', 'dialog');
+    page.setAttribute('aria-modal', 'true');
+    page.setAttribute('aria-label', 'ثبت رکورد — ورود دادهٔ تمرین');
+    page.innerHTML = '<div class="spk-wrap" id="spk-wrap"></div>';
+    document.body.appendChild(page);
+    try { document.body.style.overflow = 'hidden'; } catch (e) { }
+    root = page.querySelector('#spk-wrap') || page;
+    view = 'home';
+    route();
+  }
+  function closePage() {
+    if (page && page.parentNode) page.parentNode.removeChild(page);
+    page = null; root = null;
+    try { document.body.style.overflow = ''; } catch (e) { }
+    if (ctx && ctx.onExit) ctx.onExit();
+  }
+
   function route() {
     if (!root) return;
     if (view === 'entry') renderEntry();
@@ -467,6 +493,8 @@
 
   /* API عمومی */
   window.SMARTPLAY = {
+    open: openPage,
+    close: closePage,
     renderInto: function (el, context) { ctx = context || {}; root = el; view = 'home'; route(); },
     hasOpenSession: function () { return !!openSession(); }
   };

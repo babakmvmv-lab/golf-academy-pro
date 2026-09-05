@@ -646,7 +646,7 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 .spk-hist b{font-size:13.5px}
 .spk-hist span{color:var(--muted);font-size:11.5px;flex:1}
 .spk-hist svg.si{width:16px;height:16px;color:var(--dim)}
-.spk-modal{position:fixed;inset:0;z-index:200;background:rgba(4,7,11,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px}
+.spk-modal{position:fixed;inset:0;z-index:910;background:rgba(4,7,11,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px}
 .spk-modal-in{max-width:430px;width:100%;padding:26px;text-align:center}
 .spk-modal-in h3{margin:0 0 10px;color:var(--gold-l)}
 .spk-modal-in p{color:var(--muted);font-size:13px;line-height:2;margin:0 0 18px}
@@ -669,6 +669,13 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 .spk-tbl td{padding:9px 6px;text-align:center;border-bottom:1px dashed var(--line-soft)}
 .spk-tbl td:first-child{direction:ltr;text-align:left;font-weight:700;color:var(--gold-l)}
 .spk-tbl tr:last-child td{border-bottom:none}
+
+/* ── صفحهٔ تمام‌صفحهٔ «ثبت رکورد» — جدا از صفحهٔ اصلی، فقط برای ورود دیتا ── */
+#spk-page{position:fixed;inset:0;z-index:400;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#spk-page::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(900px 320px at 50% -90px,rgba(212,175,55,.09),transparent)}
+.spk-wrap{max-width:680px;margin:0 auto;padding:18px 16px 46px;min-height:100%}
+.spk-wrap .spk-head{position:sticky;top:0;z-index:5;background:linear-gradient(var(--bg) 78%,transparent);padding:6px 0 12px}
+@media (max-width:640px){.spk-wrap{padding:12px 12px 90px}}
 </style>
     <style>
 /* ═══════════════ پنل مدیریت جامع + تنظیمات نمایش ═══════════════ */
@@ -9444,7 +9451,33 @@ window.__L3D = {
     var b = document.getElementById('spk-back');
     if (b) b.onclick = function () { stepBack(Math.max(1, step - 1)); };
   }
-  function exit() { if (ctx && ctx.onExit) ctx.onExit(); }
+  function exit() { closePage(); }
+
+  /* ══════════ صفحهٔ تمام‌صفحهٔ مجزا (فقط ورود دیتا) ══════════ */
+  var page = null;
+  function openPage(context) {
+    ctx = context || {};
+    if (page && page.parentNode) page.parentNode.removeChild(page);
+    page = document.createElement('div');
+    page.id = 'spk-page';
+    page.setAttribute('dir', 'rtl');
+    page.setAttribute('role', 'dialog');
+    page.setAttribute('aria-modal', 'true');
+    page.setAttribute('aria-label', 'ثبت رکورد — ورود دادهٔ تمرین');
+    page.innerHTML = '<div class="spk-wrap" id="spk-wrap"></div>';
+    document.body.appendChild(page);
+    try { document.body.style.overflow = 'hidden'; } catch (e) { }
+    root = page.querySelector('#spk-wrap') || page;
+    view = 'home';
+    route();
+  }
+  function closePage() {
+    if (page && page.parentNode) page.parentNode.removeChild(page);
+    page = null; root = null;
+    try { document.body.style.overflow = ''; } catch (e) { }
+    if (ctx && ctx.onExit) ctx.onExit();
+  }
+
   function route() {
     if (!root) return;
     if (view === 'entry') renderEntry();
@@ -9455,6 +9488,8 @@ window.__L3D = {
 
   /* API عمومی */
   window.SMARTPLAY = {
+    open: openPage,
+    close: closePage,
     renderInto: function (el, context) { ctx = context || {}; root = el; view = 'home'; route(); },
     hasOpenSession: function () { return !!openSession(); }
   };
@@ -9667,7 +9702,6 @@ window.__L3D = {
   let currentPage = 'cmd';
   let playerSel = 8, matchSel = 1, courseSel = 1, coursePlayerSel = 8;
   let playerTab = 'classic'; /* classic | smart — تب «بازیکن هوشمند» */
-  let spOpen = false;      /* صفحهٔ داخلی «ثبت رکورد» باز است؟ (جلسه با بستن صفحه بسته نمی‌شود) */
 
   const MEM_PAGE_KEY = { cmd:'memCmd', race:'memRace', player:'memPlayer', match:'memMatch',
     course:'memCourse', records:'memRecords', cal:'memCal', tv:'memTv', avatarland:'memAvatarLand' };
@@ -10070,16 +10104,6 @@ window.__L3D = {
   }
   /* ── بازیکن هوشمند — اسکلت صفحه (قابلیت‌ها به‌زودی تزریق می‌شوند) ── */
   function renderSmartPlayer(v, p, cards, TABS){
-    /* صفحهٔ مجزای درون‌اپ «ثبت رکورد» — ✕ فقط صفحه را می‌بندد، نه جلسه */
-    if (spOpen && window.SMARTPLAY){
-      v.innerHTML = TABS + '<div id="sp-zone"></div>';
-      SMARTPLAY.renderInto($('#sp-zone'), {
-        A: A, S: S, D: D,
-        onExit: function(){ spOpen = false; go('player'); }
-      });
-      bindPlayerTabs();
-      return;
-    }
     const SPARK = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M12 3l1.9 5.2L19.2 10l-5.3 1.8L12 17l-1.9-5.2L4.8 10 12 3z"/><path d="M18.5 14.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z"/><path d="M6 15.5l.6 1.6 1.6.6-1.6.6L6 19.9l-.6-1.6-1.6-.6 1.6-.6.6-1.6z"/></svg>';
     const FEATS = [
       ['trend', 'تحلیل نقاط قوت و ضعف', 'استخراج خودکار الگوی بازی از روی کارت‌ها'],
@@ -10127,8 +10151,8 @@ window.__L3D = {
     if (sel) sel.addEventListener('change', e => { playerSel = +e.target.value; go('player'); });
     const rec = $('#sp-record');
     if (rec) rec.addEventListener('click', () => {
-      /* ورود به صفحهٔ «ثبت رکورد» — اگر جلسهٔ باز باشد، مستقیم ادامهٔ همان جلسه */
-      spOpen = true; go('player');
+      /* صفحهٔ تمام‌صفحهٔ مجزا برای ورود دیتا — ✕ فقط صفحه را می‌بندد، جلسهٔ باز پابرجاست */
+      if (window.SMARTPLAY) SMARTPLAY.open({ A: A, S: S, D: D });
     });
     const back = $('#sp-back');
     if (back) back.addEventListener('click', () => { playerTab = 'classic'; go('player'); });

@@ -670,8 +670,13 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 #spk-page::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(900px 320px at 50% -90px,rgba(212,175,55,.09),transparent)}
 .spk-wrap{max-width:680px;margin:0 auto;padding:18px 16px 46px;min-height:100%}
 .spk-wrap .spk-head{position:sticky;top:0;z-index:5;background:linear-gradient(var(--bg) 78%,transparent);padding:6px 0 12px}
+/* دکمه‌های حذف سه‌سطحی در گزارش جلسه */
+.spk-del{background:transparent;border:1px solid var(--line-soft);color:var(--muted);cursor:pointer;border-radius:9px;padding:4px 8px;font-size:11.5px;line-height:1.4;transition:.2s;white-space:nowrap}
+.spk-del:hover{color:#ff8f82;border-color:rgba(231,76,60,.45);background:rgba(231,76,60,.1)}
+.btn.spk-danger{background:rgba(231,76,60,.12);border:1px solid rgba(231,76,60,.5);color:#ff8f82;font-weight:700}
+.btn.spk-danger:hover{background:rgba(231,76,60,.22);color:#fff;box-shadow:0 8px 22px rgba(231,76,60,.25)}
 /* هنگام کپچر PDF گزارش جلسه — دکمه‌ها و هدر چسبان حذف می‌شوند تا خروجی تمیز باشد */
-.pdf-capture .spk-x,.pdf-capture .spk-end,.pdf-capture #spk-pdf,.pdf-capture #spk-home{display:none!important}
+.pdf-capture .spk-x,.pdf-capture .spk-end,.pdf-capture #spk-pdf,.pdf-capture #spk-home,.pdf-capture #spk-del-session,.pdf-capture .spk-del{display:none!important}
 .pdf-capture .spk-head{position:static!important;background:none!important}
 /* ═══ خروجی PDF گزارش جلسه — پوستهٔ چاپ روشن روی A4 ═══ */
 @media print{
@@ -681,7 +686,7 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   body.printing-report #spk-page::before{display:none!important}
   body.printing-report .spk-wrap{max-width:100%!important;min-height:0!important;padding:0!important}
   body.printing-report .spk-head{position:static!important;background:none!important;padding:0 0 10px!important}
-  body.printing-report .spk-x,body.printing-report .spk-end,body.printing-report #spk-pdf,body.printing-report #spk-home{display:none!important}
+  body.printing-report .spk-x,body.printing-report .spk-end,body.printing-report #spk-pdf,body.printing-report #spk-home,body.printing-report #spk-del-session,body.printing-report .spk-del{display:none!important}
   body.printing-report *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body.printing-report .glass{background:#fff!important;border:1px solid #dfe3ea!important;border-radius:14px!important;box-shadow:none!important;padding:14px 16px!important}
   body.printing-report .glass::before{display:none!important}

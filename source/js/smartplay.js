@@ -457,6 +457,48 @@
       resCount: sh.reduce(function (a, s) { a[s.res] = (a[s.res] || 0) + 1; return a; }, {}) };
   }
 
+  /* ══════════ حذف سه‌سطحی: کل جلسه / بازیکن در جلسه / کلابِ بازیکن در جلسه ══════════ */
+  function confirmAsk(title, textHtml, yesLbl, onYes) {
+    closeModal();
+    modal = document.createElement('div');
+    modal.className = 'spk-modal';
+    modal.innerHTML = '<div class="glass spk-modal-in">'
+      + '<h3>' + esc(title) + '</h3>'
+      + '<p>' + textHtml + '</p>'
+      + '<div style="display:flex;gap:10px">'
+      + '<button type="button" class="btn ghost" id="spk-cno" style="flex:1">انصراف</button>'
+      + '<button type="button" class="btn spk-danger" id="spk-cyes" style="flex:1.5">' + esc(yesLbl) + '</button>'
+      + '</div></div>';
+    document.body.appendChild(modal);
+    var cNo = document.getElementById('spk-cno');
+    if (cNo) cNo.onclick = closeModal;
+    modal.onclick = function (e) { if (e.target === modal) closeModal(); };
+    var cYes = document.getElementById('spk-cyes');
+    if (cYes) cYes.onclick = function () { closeModal(); onYes(); };
+  }
+  /* حذف ضربه‌هایی که pred برقرار است + بی‌اعتبارسازی تحلیل کش‌شدهٔ جلسه */
+  function deleteShotsWhere(pred, msgFn) {
+    var arr = allShots();
+    var left = arr.filter(function (x) { return !pred(x); });
+    var n = arr.length - left.length;
+    if (!n) { toast('چیزی برای حذف نبود', 'ok'); return; }
+    saveShots(left);
+    var ss = sessions();
+    if (ss[sumSid]) { ss[sumSid].analysis = null; saveSessions(ss); }
+    toast(msgFn(n), 'ok');
+    route();
+  }
+  function deleteWholeSession() {
+    var sid = sumSid;
+    var arr = allShots().filter(function (x) { return x.sid !== sid; });
+    saveShots(arr);
+    var ss = sessions();
+    if (ss[sid]) { delete ss[sid]; saveSessions(ss); }
+    view = 'home';
+    toast('جلسه به‌همراه همهٔ ضربه‌هایش حذف شد 🗑', 'ok');
+    route();
+  }
+
   function finishSession(sid) {
     var ss = sessions(); var s = ss[sid]; if (!s) return;
     s.status = 'closed';
@@ -502,19 +544,24 @@
       var stP = Math.round(o.straight / Math.max(1, o.n) * 100);
       var rows = Object.keys(o.clubs).sort(function (a, b) { return o.clubs[b].n - o.clubs[a].n; }).map(function (c) {
         var cc = o.clubs[c];
-        return '<tr><td>' + esc(c) + '</td><td>' + fa(cc.n) + '</td><td>' + fa(Math.round(cc.sum / cc.n * 10) / 10) + '</td><td>' + fa(cc.max) + '</td><td>' + fa(Math.round(cc.st / cc.n * 100)) + '٪</td></tr>';
+        return '<tr><td>' + esc(c) + '</td><td>' + fa(cc.n) + '</td><td>' + fa(Math.round(cc.sum / cc.n * 10) / 10) + '</td><td>' + fa(cc.max) + '</td><td>' + fa(Math.round(cc.st / cc.n * 100)) + '٪</td>'
+          + '<td style="width:34px"><button type="button" class="spk-del spk-del-row" data-pid="' + pid + '" data-club="' + esc(c) + '" title="حذف ضربه‌های این کلاب برای این بازیکن در این جلسه" aria-label="حذف ضربه‌های این کلاب">🗑</button></td></tr>';
       }).join('');
       h += '<div class="glass spk-pcard">'
         + '<div class="spk-pcard-h"><b>' + esc(p ? p.name : 'بازیکن ' + fa(pid)) + '</b>'
-        + '<div class="spk-pcard-kpi"><span>' + fa(o.n) + ' ضربه</span><span class="' + (stP >= 60 ? 'ok' : 'wr') + '">' + fa(stP) + '٪ صاف</span></div></div>'
+        + '<div style="display:flex;align-items:center;gap:8px">'
+        + '<div class="spk-pcard-kpi"><span>' + fa(o.n) + ' ضربه</span><span class="' + (stP >= 60 ? 'ok' : 'wr') + '">' + fa(stP) + '٪ صاف</span></div>'
+        + '<button type="button" class="spk-del spk-del-player" data-pid="' + pid + '" title="حذف همهٔ ضربه‌های ' + esc(p ? p.name : ('بازیکن ' + fa(pid))) + ' در این جلسه" aria-label="حذف بازیکن از جلسه">🗑 <span style="font-size:10px">حذف بازیکن</span></button>'
+        + '</div></div>'
         + (o.best ? '<div class="spk-best">🏆 بهترین ضربه: <b>' + fa(o.best.yds) + ' یارد</b> با ' + esc(o.best.club) + '</div>' : '')
-        + '<table class="spk-tbl"><thead><tr><th>کلاب</th><th>تعداد</th><th>میانگین یارد</th><th>بیشینه</th><th>٪ صاف</th></tr></thead><tbody>' + rows + '</tbody></table>'
+        + '<table class="spk-tbl"><thead><tr><th>کلاب</th><th>تعداد</th><th>میانگین یارد</th><th>بیشینه</th><th>٪ صاف</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
         + '</div>';
     });
     if (!an.totalShots) h += '<div class="glass" style="padding:24px;text-align:center;color:var(--muted)">در این جلسه ضربه‌ای ثبت نشده بود.</div>';
     h += '<div style="display:flex;gap:10px;margin-top:14px">'
       + '<button type="button" class="btn spk-save" id="spk-pdf" style="flex:1.5">📄 خروجی PDF گزارش</button>'
-      + '<button type="button" class="btn ghost" id="spk-home" style="flex:1">بازگشت به مرکز تمرین</button>'
+      + '<button type="button" class="btn ghost" id="spk-home" style="flex:1">بازگشت</button>'
+      + '<button type="button" class="btn spk-danger" id="spk-del-session" title="حذف کامل این جلسه به‌همراه همهٔ ضربه‌ها">🗑 حذف جلسه</button>'
       + '</div>';
 
     root.innerHTML = h;
@@ -524,6 +571,32 @@
     /* خروجی PDF: دانلود مستقیم فایل (html2canvas+jsPDF) — اگر CDN در دسترس نبود، به دیالوگ چاپ برمی‌گردد */
     var pb = document.getElementById('spk-pdf');
     if (pb) pb.onclick = function () { exportSummaryPdf(s); };
+
+    /* ── حذف سه‌سطحی با تأیید مدال ── */
+    var delSes = document.getElementById('spk-del-session');
+    if (delSes) delSes.onclick = function () {
+      confirmAsk('حذف کامل جلسه؟', 'جلسهٔ شماره ' + fa(s.no) + ' (' + esc(TYPE_FA[s.type] || s.type) + ') با همهٔ ' + fa(an.totalShots) + ' ضربه‌اش برای همیشه پاک می‌شود. برگشت‌ناپذیر است!', 'حذف کل جلسه 🗑', deleteWholeSession);
+    };
+    Array.prototype.forEach.call(document.querySelectorAll('.spk-del-player'), function (b) {
+      b.onclick = function () {
+        var pid = +b.dataset.pid;
+        var nm = (playerByPid(pid) || {}).name || ('بازیکن ' + fa(pid));
+        var o2 = an.byPlayer[pid] || { n: 0 };
+        confirmAsk('حذف بازیکن از جلسه؟', 'همهٔ ' + fa(o2.n) + ' ضربهٔ «' + esc(nm) + '» در این جلسه حذف می‌شود.', 'حذف ضربه‌های ' + esc(nm), function () {
+          deleteShotsWhere(function (x) { return x.sid === sumSid && x.pid === pid; }, function (n) { return fa(n) + ' ضربهٔ «' + nm + '» حذف شد ✓'; });
+        });
+      };
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.spk-del-row'), function (b) {
+      b.onclick = function () {
+        var pid = +b.dataset.pid, cn = b.dataset.club;
+        var nm = (playerByPid(pid) || {}).name || ('بازیکن ' + fa(pid));
+        var o2 = (an.byPlayer[pid] && an.byPlayer[pid].clubs[cn]) || { n: 0 };
+        confirmAsk('حذف ضربه‌های این کلاب؟', 'همهٔ ' + fa(o2.n) + ' ضربهٔ «' + esc(cn) + '» متعلق به «' + esc(nm) + '» در این جلسه حذف می‌شود.', 'حذف ' + esc(cn), function () {
+          deleteShotsWhere(function (x) { return x.sid === sumSid && x.pid === pid && x.club === cn; }, function (n) { return fa(n) + ' ضربهٔ ' + cn + ' «' + nm + '» حذف شد ✓'; });
+        });
+      };
+    });
   }
 
   /* ══════════ موتور مسیریابی داخلی ══════════ */

@@ -705,7 +705,7 @@
         ${ses ? `<span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">${esc(typeMap[ses.type] || ses.type)} — جلسه ${D.fa(ses.no)}</span>` : ''}
       </div>`;
     setTimeout(() => {
-      const cv = $('#sp-live-cv'); if (!cv || !window.Charts) return;
+      const cv = $('#sp-live-cv'); if (!cv || typeof Charts === 'undefined') return;
       Charts.barsV(cv, ofClub.map((x, i) => D.fa(i + 1)), vals,
         { color: cols, showVal: true, fmt: v => D.faNum(v, 0), gap: Math.max(0.28, 0.62 - ofClub.length * 0.006) });
     }, 70);

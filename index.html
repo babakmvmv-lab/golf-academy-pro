@@ -1631,7 +1631,11 @@ input[type=color].asa-in{padding:2px;width:38px;height:28px}
           state.pulled += applied;
           primeSweep();
           setPhase('idle', applied ? (applied + ' کلید از ابر اعمال شد') : 'داده محلی تازه است');
-          if (applied) toast(applied + ' کلید از ابر به‌روز شد', 'ok');
+          if (applied){
+            toast(applied + ' کلید از ابر به‌روز شد', 'ok');
+            /* رویداد برای صفحه‌ها: دیتا عوض شد — نمودارها/آرشیو خودشان را تازه کنند */
+            try { window.dispatchEvent(new CustomEvent('ga-cloud-applied', { detail: { count: applied } })); } catch (e) {}
+          }
         } finally { applying = false; }
         return true;
       })
@@ -10368,6 +10372,7 @@ window.__L3D = {
       const t0 = Date.now();
       const done = (pulled) => setTimeout(() => {
         renderSmartChart(p);
+        renderSmartHist(); /* آرشیو هم با همان دکمه تازه شود */
         rf.classList.remove('spin');
         toast(pulled ? 'نمودار با آخرین داده‌های ابر تازه شد ✓' : 'نمودار تازه شد ✓', 'ok');
       }, Math.max(0, 650 - (Date.now() - t0))); /* حداقل چرخش برای فیدبک لمس‌پذیر */
@@ -10390,7 +10395,8 @@ window.__L3D = {
     const pidS = $('#sph-player'), typS = $('#sph-type'), clbS = $('#sph-club');
     const pid = pidS ? +pidS.value : 0, typ = typS ? typS.value : 'all', clb = clbS ? clbS.value : 'all';
     const shots = spShots(), ssn = spSessions();
-    const done = Object.keys(ssn).map(k => ssn[k]).filter(x => x && x.status === 'closed')
+    const isClosed = x => x && (x.status === 'closed' || (x.status == null && (x.closedAt || x.analysis)) && !!(x.closedAt || x.analysis));
+    const done = Object.keys(ssn).map(k => ssn[k]).filter(isClosed)
       .sort((a, b) => String(b.closedAt || '').localeCompare(String(a.closedAt || '')) || ((b.no || 0) - (a.no || 0)));
     const mine = shots.filter(x => x.pid === pid);
     /* آپشن‌های کلاب از دیتای واقعی همان بازیکن+نوع — انتخاب فعلی در صورت معتبر بودن حفظ می‌شود */
@@ -10415,8 +10421,15 @@ window.__L3D = {
         .forEach(cn => groups.push({ sn, cn, shots: byClub[cn] }));
     });
     const tg = $('#sp-hist .tag'); if (tg) tg.textContent = groups.length ? `${D.fa(groups.length)} نمودار` : 'بدون مورد';
+    /* جلسهٔ بازِ مطابق فیلتر: دیتاش ذخیره است ولی طبق قانون «فقط تمرین‌های تمام‌شده» هنوز کارت نمی‌گیرد — اطلاع‌رسانی شود */
+    const open = Object.keys(ssn).map(k => ssn[k]).find(x => x && x.status === 'open' && (typ === 'all' || x.type === typ));
+    const openN = open ? mine.filter(x => x.sid === open.id && (club === 'all' || x.club === club)).length : 0;
+    const openHint = open ? `<div class="glass" style="padding:13px 16px;margin-bottom:12px;border:1px dashed rgba(233,199,102,.45);background:rgba(233,199,102,.05)">
+      ⏳ <b>جلسهٔ باز فعال است</b> (جلسهٔ ${D.fa(open.no)} — ${esc(SP_TYPE_LBL[open.type] || open.type)}): ${D.fa(openN)} ضربهٔ همین بازیکن/کلاب تا این لحظه داخلش ذخیره شده.
+      بعد از «⏹ بستن جلسهٔ تمرینی»، نمودارش به‌صورت خودکار همین‌جا می‌آید.
+    </div>` : '';
     if (!groups.length){
-      body.innerHTML = `<div style="padding:24px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1">
+      body.innerHTML = openHint + `<div style="padding:24px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1">
         با این فیلترها جلسهٔ تمام‌شده‌ای پیدا نشد.<br>از «ثبت رکورد» جلسه بزنید و «بستن جلسه» کنید — آرشیو اینجا انباشته می‌شود 📚</div>`;
       return;
     }
@@ -10425,7 +10438,7 @@ window.__L3D = {
     if (shown < SP_HIST_PAGE) shown = SP_HIST_PAGE;
     const part = groups.slice(0, shown);
     part.forEach(g => { g._o = shotChartBody(g.shots, 'sph-cv-' + part.indexOf(g), ''); });
-    body.innerHTML = part.map((g, i) => `
+    body.innerHTML = openHint + part.map((g, i) => `
       <div class="glass sp-hist-item" style="padding:14px 16px;margin-bottom:12px">
         <div class="card-head" style="margin-bottom:6px">
           <span class="ic">⛳</span>
@@ -12013,6 +12026,13 @@ window.__L3D = {
   }
 
   window.addEventListener('ga:labels-changed', refreshLabels);
+  /* وقتی pull ابری دیتا را عوض کرد و کاربر روی تب هوشمند است، نمودارها خودشان تازه شوند (بدون نیاز به رفرش دستی) */
+  const __cloudApplied = () => { if (currentPage === 'player' && playerTab === 'smart') go('player'); };
+  let __cloudT = null;
+  window.addEventListener('ga-cloud-applied', () => {
+    clearTimeout(__cloudT); __cloudT = setTimeout(__cloudApplied, 700); /* دبونسِ پول‌های پشت‌سرهم */
+  });
+
   document.addEventListener('DOMContentLoaded', () => {
     if (window.UI_LABELS) UI_LABELS.apply(document);
     seedUsers();

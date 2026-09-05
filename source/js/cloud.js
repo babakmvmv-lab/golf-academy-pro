@@ -209,7 +209,11 @@
           state.pulled += applied;
           primeSweep();
           setPhase('idle', applied ? (applied + ' کلید از ابر اعمال شد') : 'داده محلی تازه است');
-          if (applied) toast(applied + ' کلید از ابر به‌روز شد', 'ok');
+          if (applied){
+            toast(applied + ' کلید از ابر به‌روز شد', 'ok');
+            /* رویداد برای صفحه‌ها: دیتا عوض شد — نمودارها/آرشیو خودشان را تازه کنند */
+            try { window.dispatchEvent(new CustomEvent('ga-cloud-applied', { detail: { count: applied } })); } catch (e) {}
+          }
         } finally { applying = false; }
         return true;
       })

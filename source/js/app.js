@@ -669,7 +669,7 @@
     bindPlayerTabs();
     renderSmartChart(p);
   }
-  /* ── نمودار زندهٔ «آنالیز آخرین ضربه‌ها» — فیلتر: بازیکن انتخابی ← آخرین کلاب او ← آخرین ۱۵ ضربه ── */
+  /* ── نمودار «آنالیز ضربه‌های کلاب» — همهٔ ضربه‌های بازیکن انتخابی با آخرین کلاب او؛ هر ستون رنگِ نتیجهٔ خودش ── */
   function renderSmartChart(p){
     const box = $('#sp-live-body'); if (!box) return;
     let shots = []; try { shots = JSON.parse(localStorage.getItem('ga_sp_shots') || '[]'); } catch(e){}
@@ -685,21 +685,29 @@
     const ses = ssn[last.sid];
     const typeMap = { Range:'رنج', Putting:'پاتینگ', Chipping:'چیپینگ', Approach:'اپروچ', 'On-Course':'روی زمین' };
     const resMap = { straight:'صاف', slice:'سمت راست', hook:'سمت چپ', miss:'ضربه خراب' };
-    const ofClub = mine.filter(x => x.club === last.club).slice(-15);
+    const resColor = { straight:'#1EBB8A', slice:'#2E86DE', hook:'#E67E22', miss:'#E74C3C' };
+    /* همهٔ ضربه‌های این بازیکن با همین کلاب (بدون سقف) */
+    const ofClub = mine.filter(x => x.club === last.club);
     const vals = ofClub.map(x => x.yds);
+    const cols = ofClub.map(x => resColor[x.res] || '#8490A3');
     const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    /* تگ سربرگ = کلاب تحت تحلیل */
+    const ttl = $('#sp-live h3'); if (ttl) ttl.textContent = `آنالیز ضربه‌های ${last.club} — ${p.name}`;
+    const tg = $('#sp-live .tag'); if (tg){ tg.textContent = `${ofClub.length} ضربه`; tg.classList.add('gold'); }
     box.innerHTML = `<div class="chart-box short"><canvas id="sp-live-cv"></canvas></div>
-      <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:11px;font-size:11px;color:var(--muted)">
-        <span style="background:rgba(233,199,102,.1);border:1px solid rgba(233,199,102,.3);border-radius:99px;padding:5px 12px">آخرین ضربه: <b style="color:var(--gold-l)">${esc(last.club)}</b> — ${D.fa(D.faNum(last.yds,0))} یارد (${esc(resMap[last.res] || last.res)})</span>
-        <span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">میانگین ${esc(last.club)}: <b>${D.fa(D.faNum(avg,1))}</b> یارد</span>
-        <span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">${D.fa(ofClub.length)} ضربه اخیر</span>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:9px;font-size:10.5px;color:var(--muted)">
+        ${Object.keys(resMap).map(k => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${resColor[k]};margin-left:4px;vertical-align:-1px"></i>${resMap[k]}</span>`).join('')}
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:10px;font-size:11px;color:var(--muted)">
+        <span style="background:rgba(233,199,102,.1);border:1px solid rgba(233,199,102,.3);border-radius:99px;padding:5px 12px">آخرین ضربه: <b style="color:var(--gold-l)">${esc(last.club)}</b> — ${D.faNum(last.yds,0)} یارد (${esc(resMap[last.res] || last.res)})</span>
+        <span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">میانگین ${esc(last.club)}: <b>${D.faNum(avg,1)}</b> یارد</span>
+        <span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">بیشینه: <b>${D.fa(Math.max(...vals))}</b> یارد</span>
         ${ses ? `<span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">${esc(typeMap[ses.type] || ses.type)} — جلسه ${D.fa(ses.no)}</span>` : ''}
       </div>`;
     setTimeout(() => {
       const cv = $('#sp-live-cv'); if (!cv || !window.Charts) return;
-      const avgLine = ofClub.map(() => Math.round(avg));
-      Charts.line(cv, [vals, avgLine], ofClub.map((x, i) => D.fa(i + 1)),
-        { colors: ['#E9C766', 'rgba(132,144,163,.75)'], fill: true, points: true, fmt: v => D.faNum(v, 0) });
+      Charts.barsV(cv, ofClub.map((x, i) => D.fa(i + 1)), vals,
+        { color: cols, showVal: true, fmt: v => D.faNum(v, 0), gap: Math.max(0.28, 0.62 - ofClub.length * 0.006) });
     }, 70);
   }
   function renderHoles(p){

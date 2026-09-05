@@ -47,6 +47,7 @@ const Charts = (() => {
   function barsV(canvas, cats, vals, opts={}){
     const P = prep(canvas); if (!P) return; const { ctx, w, h } = P;
     const color = opts.color || '#D4AF37';
+    const colArr = Array.isArray(opts.color); /* پشتیبانی از رنگ به‌ازای هر ستون */
     const glow = opts.glow !== undefined ? opts.glow : true;
     const padL = opts.padL || 26, padB = opts.padB || 22, padT = opts.padT || 8, padR = opts.padR || 6;
     const max = opts.max || Math.max(...vals, 1) * 1.12;
@@ -78,9 +79,10 @@ const Charts = (() => {
         const bh = (v / max) * H * p;
         const x = x0 + (i - (n-1)/2) * (w - padL - padR) / n;
         const y = h - padB - bh;
-        const grd = grad(ctx, x, y, x, h-padB, hexA(color,.95), hexA(color,.25));
+        const col = colArr ? (opts.color[i] || '#D4AF37') : color;
+        const grd = grad(ctx, x, y, x, h-padB, hexA(col,.95), hexA(col,.25));
         ctx.save();
-        if (glow){ ctx.shadowColor = color; ctx.shadowBlur = 14; }
+        if (glow){ ctx.shadowColor = col; ctx.shadowBlur = 14; }
         ctx.fillStyle = grd;
         roundRect(ctx, x-bw/2, y, bw, bh, 4);
         ctx.fill();

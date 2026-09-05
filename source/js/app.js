@@ -641,7 +641,7 @@
       <p>دستیار تحلیل هوشمند <b style="color:var(--gold-l)">${esc(p.name)}</b> — این بخش آماده‌سازی شده و قابلیت‌های آن مرحله‌به‌مرحله فعال می‌شوند. داده‌های فعلی (امتیاز، کارت‌ها و روند فصل) به محض اتصال قابلیت‌ها، اینجا تحلیل می‌شوند.</p>
     </div>
     <div class="glass" id="sp-live">
-      <div class="card-head"><span class="ic">${CHART_SVG}</span><h3>آنالیز آخرین ضربه‌ها — ${esc(p.name)}</h3><span class="tag gold">Live</span></div>
+      <div class="card-head"><span class="ic">${CHART_SVG}</span><h3>آنالیز آخرین ضربه‌ها — ${esc(p.name)}</h3><span class="tag gold">Live</span><button type="button" class="sp-refresh" id="sp-live-refresh" title="تازه‌سازی نمودار" aria-label="تازه‌سازی نمودار"><svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button></div>
       <div id="sp-live-body"></div>
     </div>
     <div class="grid cols-4 sp-grid">
@@ -666,6 +666,20 @@
     });
     const back = $('#sp-back');
     if (back) back.addEventListener('click', () => { playerTab = 'classic'; go('player'); });
+    /* آیتم تازه‌سازی نمودار (کنار تگ تعداد ضربه): آخرین دیتا از ابر پول می‌شود و نمودار بازرسم می‌گردد */
+    const rf = $('#sp-live-refresh');
+    if (rf) rf.addEventListener('click', () => {
+      if (rf.classList.contains('spin')) return;
+      rf.classList.add('spin');
+      const t0 = Date.now();
+      const done = (pulled) => setTimeout(() => {
+        renderSmartChart(p);
+        rf.classList.remove('spin');
+        toast(pulled ? 'نمودار با آخرین داده‌های ابر تازه شد ✓' : 'نمودار تازه شد ✓', 'ok');
+      }, Math.max(0, 650 - (Date.now() - t0))); /* حداقل چرخش برای فیدبک لمس‌پذیر */
+      if (window.GA_CLOUD && GA_CLOUD.pull) GA_CLOUD.pull().then(done, () => done(false));
+      else done(false);
+    });
     bindPlayerTabs();
     renderSmartChart(p);
   }

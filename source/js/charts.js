@@ -193,16 +193,18 @@ const Charts = (() => {
 
   /* ── نمودار خطی ── */
   function line(canvas, series, cats, opts={}){
-    const P = prep(canvas); if (!P) return; const { ctx, w, h } = P;
     const colors = opts.colors || ['#E9C766','#2E86DE','#1EBB8A'];
     const padL = opts.padL || 34, padB = opts.padB || 24, padT = opts.padT || 12, padR = 10;
     const allVals = series.flat().filter(v => v !== null && v !== undefined);
     const max = opts.max || Math.max(...allVals, 1) * 1.15;
     const min = opts.min !== undefined ? opts.min : Math.min(0, ...allVals);
-    const X = i => padL + (i / Math.max(1, cats.length - 1)) * (w - padL - padR);
-    const Y = v => padT + (1 - (v - min) / (max - min || 1)) * (h - padT - padB);
-    ctx.clearRect(0,0,w,h);
-    animate(p => {
+    const box = {};
+    function draw(p){
+      const P = livePrep(canvas, box); if (!P) return false;
+      const { ctx, w, h } = P;
+      if (h - padT - padB < 14) return false;
+      const X = i => padL + (i / Math.max(1, cats.length - 1)) * (w - padL - padR);
+      const Y = v => padT + (1 - (v - min) / (max - min || 1)) * (h - padT - padB);
       ctx.clearRect(0,0,w,h);
       ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 1;
       for (let g = 0; g <= 4; g++){
@@ -255,41 +257,46 @@ const Charts = (() => {
           });
         }
       });
-    }, opts.dur);
+      return true;
+    }
+    animateLive(draw, opts.dur);
   }
 
   /* ── رادار ── */
   function radar(canvas, labels, vals, opts={}){
-    const PR = prep(canvas); if (!PR) return; const { ctx, w, h } = PR;
     const color = opts.color || '#D4AF37';
-    const cx = w/2, cy = h/2 + 6;
-    const R = Math.min(w, h) / 2 - 34;
     const n = labels.length;
+    if (!n) return;
     const ang = i => -Math.PI/2 + i * 2*Math.PI/n;
-    const P = (i, r) => [cx + Math.cos(ang(i))*r, cy + Math.sin(ang(i))*r];
-    ctx.clearRect(0,0,w,h);
-    animate(p => {
+    const box = {};
+    function draw(p){
+      const P = livePrep(canvas, box); if (!P) return false;
+      const { ctx, w, h } = P;
+      const cx = w/2, cy = h/2 + 6;
+      const R = Math.min(w, h) / 2 - 34;
+      if (R < 12) return false; /* هنوز لایه نشده / خیلی کوچک — arc با شعاع منفی نترکد */
+      const Pt = (i, r) => [cx + Math.cos(ang(i))*r, cy + Math.sin(ang(i))*r];
       ctx.clearRect(0,0,w,h);
       // rings
       for (let ring = 1; ring <= 4; ring++){
         ctx.strokeStyle = 'rgba(255,255,255,.07)';
         ctx.beginPath();
         for (let i = 0; i <= n; i++){
-          const [x,y] = P(i % n, R*ring/4);
+          const [x,y] = Pt(i % n, R*ring/4);
           i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
         }
         ctx.stroke();
       }
       // spokes
       for (let i = 0; i < n; i++){
-        const [x,y] = P(i, R);
+        const [x,y] = Pt(i, R);
         ctx.strokeStyle = 'rgba(255,255,255,.05)';
         ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x,y); ctx.stroke();
       }
       // shape
       const rr = vals.map(v => Math.max(0, Math.min(100, v)) / 100 * R * p);
       ctx.beginPath();
-      rr.forEach((r2, i) => { const [x,y] = P(i, r2); i ? ctx.lineTo(x,y) : ctx.moveTo(x,y); });
+      rr.forEach((r2, i) => { const [x,y] = Pt(i, r2); i ? ctx.lineTo(x,y) : ctx.moveTo(x,y); });
       ctx.closePath();
       ctx.save();
       ctx.shadowColor = color; ctx.shadowBlur = 22;
@@ -297,29 +304,33 @@ const Charts = (() => {
       ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
       ctx.restore();
       rr.forEach((r2, i) => {
-        const [x,y] = P(i, r2);
+        const [x,y] = Pt(i, r2);
         ctx.beginPath(); ctx.arc(x, y, 3.4, 0, 7);
         ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 10; ctx.fill();
         ctx.shadowBlur = 0;
       });
       // labels
       labels.forEach((lb, i) => {
-        const [x,y] = P(i, R + 22);
+        const [x,y] = Pt(i, R + 22);
         ctx.fillStyle = '#8A93A6'; ctx.font = '11px Tahoma'; ctx.textAlign = 'center';
         ctx.fillText(lb, x, y + 4);
       });
-    }, opts.dur);
+      return true;
+    }
+    animateLive(draw, opts.dur);
   }
 
   /* ── دونات ── */
   function donut(canvas, segments, opts={}){
-    const P = prep(canvas); if (!P) return; const { ctx, w, h } = P;
-    const cx = w/2, cy = h/2;
-    const R = (Math.min(w, h) / 2 - 6) * (opts.size || 0.78);
-    const inner = R * (opts.inner || 0.62);
-    const total = opts.total || segments.reduce((s, x) => s + x.value, 0) || 1;
-    ctx.clearRect(0,0,w,h);
-    animate(p => {
+    const total = opts.total || segments.reduce((s2, x) => s2 + x.value, 0) || 1;
+    const box = {};
+    function draw(p){
+      const P = livePrep(canvas, box); if (!P) return false;
+      const { ctx, w, h } = P;
+      const cx = w/2, cy = h/2;
+      const R = (Math.min(w, h) / 2 - 6) * (opts.size || 0.78);
+      if (R < 3) return false; /* شعاع منفی/صفر ← سدِّ کرش arc */
+      const inner = Math.max(0, R * (opts.inner || 0.62));
       ctx.clearRect(0,0,w,h);
       let a0 = -Math.PI/2;
       segments.forEach(seg => {
@@ -339,32 +350,42 @@ const Charts = (() => {
       // hole shading
       ctx.beginPath(); ctx.arc(cx, cy, inner, 0, 7);
       ctx.fillStyle = 'rgba(11,15,20,.55)'; ctx.fill();
-    }, opts.dur);
+      return true;
+    }
+    animateLive(draw, opts.dur);
   }
 
   /* ── اسپارک‌لاین ── */
   function spark(canvas, vals, color='#E9C766'){
-    const P = prep(canvas); if (!P) return; const { ctx, w, h } = P;
-    ctx.clearRect(0,0,w,h);
     if (!vals.length) return;
     const max = Math.max(...vals), min = Math.min(...vals);
-    const X = i => i/(vals.length-1) * (w-2) + 1;
-    const Y = v => h - 2 - (v - min)/(max - min || 1) * (h - 4);
-    ctx.save();
-    ctx.shadowColor = color; ctx.shadowBlur = 6;
-    ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.lineJoin = 'round';
-    ctx.beginPath();
-    vals.forEach((v,i) => i ? ctx.lineTo(X(i),Y(v)) : ctx.moveTo(X(i),Y(v)));
-    ctx.stroke();
-    ctx.restore();
-    const lg = ctx.createLinearGradient(0,0,0,h);
-    lg.addColorStop(0, ChartsHexA(color,.3)); lg.addColorStop(1, 'transparent');
-    ctx.beginPath();
-    ctx.moveTo(X(0), h);
-    vals.forEach((v,i) => ctx.lineTo(X(i),Y(v)));
-    ctx.lineTo(X(vals.length-1), h);
-    ctx.closePath(); ctx.fillStyle = lg; ctx.fill();
+    const box = {};
+    function draw(){
+      const P = livePrep(canvas, box); if (!P) return false;
+      const { ctx, w, h } = P;
+      if (w < 10 || h < 8) return false;
+      const X = i => vals.length > 1 ? i/(vals.length-1) * (w-2) + 1 : w/2;
+      const Y = v => h - 2 - (v - min)/(max - min || 1) * (h - 4);
+      ctx.clearRect(0,0,w,h);
+      ctx.save();
+      ctx.shadowColor = color; ctx.shadowBlur = 6;
+      ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      vals.forEach((v,i) => i ? ctx.lineTo(X(i),Y(v)) : ctx.moveTo(X(i),Y(v)));
+      ctx.stroke();
+      ctx.restore();
+      const lg = ctx.createLinearGradient(0,0,0,h);
+      lg.addColorStop(0, ChartsHexA(color,.3)); lg.addColorStop(1, 'transparent');
+      ctx.beginPath();
+      ctx.moveTo(X(0), h);
+      vals.forEach((v,i) => ctx.lineTo(X(i),Y(v)));
+      ctx.lineTo(X(vals.length-1), h);
+      ctx.closePath(); ctx.fillStyle = lg; ctx.fill();
+      return true;
+    }
+    animateLive(draw, 320); /* سبک: ۳۲۰ms تا لایه‌بندی جا بیفتد */
   }
+
   function ChartsHexA(hex, a){
     const n = parseInt(hex.replace('#',''), 16);
     return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;

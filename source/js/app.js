@@ -500,6 +500,53 @@
     });
   }
 
+  /* ═══════════ نقشه‌ها/ثابت‌های مشترک اسمارت‌پلی (بدون هاردکدِ تکراری) ═══════════ */
+  const SP_RES_LABEL = { straight:'صاف', slice:'سمت راست', hook:'سمت چپ', miss:'ضربه خراب' };
+  const SP_RES_COLOR = { straight:'#1EBB8A', slice:'#2E86DE', hook:'#E67E22', miss:'#E74C3C' };
+  const SP_TYPE_LBL  = { Range:'رنج', Putting:'پاتینگ', Chipping:'چیپینگ', Approach:'اپروچ', 'On-Course':'روی زمین' };
+  const SP_MAX_BARS  = 20;  /* پنجرهٔ نمایش: تا ۲۰ همه — بیشتر شد ۲۰ تای آخر؛ تحلیل‌ها همیشه روی کل */
+  const SP_HIST_PAGE = 10;  /* صفحه‌بندی آرشیو نمودار جلسات */
+
+  /* خواندن دیتای خام اسمارت‌پلی از حافظهٔ محلی */
+  function spShots(){ try { return JSON.parse(localStorage.getItem('ga_sp_shots') || '[]'); } catch(e){ return []; } }
+  function spSessions(){ try { return JSON.parse(localStorage.getItem('ga_sp_sessions') || '{}'); } catch(e){ return {}; } }
+
+  /* بدنهٔ مشترک نمودار ستونیِ یک مجموعه‌ضربه (مرتب‌شده بر زمان) — کارت زنده و آیتم‌های آرشیو هر دو از این */
+  function shotChartBody(shotsAll, uid, extraChip){
+    const off = Math.max(0, shotsAll.length - SP_MAX_BARS);
+    const view = shotsAll.slice(off);
+    const vals = view.map(x => x.yds);
+    const cols = view.map(x => SP_RES_COLOR[x.res] || '#8490A3');
+    const allVals = shotsAll.map(x => x.yds);
+    const avg = allVals.reduce((a, b) => a + b, 0) / allVals.length;
+    const st = shotsAll.filter(x => x.res === 'straight');
+    const stAvg = st.length ? st.reduce((a, b) => a + b.yds, 0) / st.length : null;
+    const last = shotsAll[shotsAll.length - 1];
+    const tagWd = off > 0 ? `${D.fa(shotsAll.length)} ضربه • نمایش ${D.fa(SP_MAX_BARS)} تای آخر` : `${D.fa(shotsAll.length)} ضربه`;
+    const html = `<div class="chart-box short"><canvas id="${uid}"></canvas></div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:9px;font-size:10.5px;color:var(--muted)">
+        ${Object.keys(SP_RES_LABEL).map(k => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${SP_RES_COLOR[k]};margin-left:4px;vertical-align:-1px"></i>${SP_RES_LABEL[k]}</span>`).join('')}
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:10px;font-size:11px;color:var(--muted)">
+        <span style="background:rgba(233,199,102,.1);border:1px solid rgba(233,199,102,.3);border-radius:99px;padding:5px 12px">آخرین ضربه: <b style="color:var(--gold-l)">${esc(last.club)}</b> — ${D.faNum(last.yds,0)} یارد (${esc(SP_RES_LABEL[last.res] || last.res)})</span>
+        <span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">میانگین ${esc(last.club)}: <b>${D.faNum(avg,1)}</b> یارد</span>
+        <span style="background:rgba(30,187,138,.1);border:1px solid rgba(30,187,138,.35);border-radius:99px;padding:5px 12px">میانگین صاف‌ها (${D.fa(st.length)} ضربه): <b style="color:var(--green-l)">${stAvg != null ? D.faNum(stAvg,1) : '—'}</b> یارد</span>
+        <span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">بیشینه: <b>${D.faNum(Math.max(...allVals),0)}</b> یارد</span>
+        ${extraChip || ''}
+      </div>`;
+    return { html, uid, vals, cols, catOff: off, stAvg, tag: tagWd, nAll: shotsAll.length };
+  }
+  /* رسم خود نمودار (پس از لایه‌شدن DOM) */
+  function drawShotChart(o){
+    setTimeout(() => {
+      const cv = document.getElementById(o.uid); if (!cv || typeof Charts === 'undefined') return;
+      Charts.barsV(cv, o.vals.map((_, i) => D.fa(o.catOff + i + 1)), o.vals,
+        { color: o.cols, showVal: true, valFmt: v => D.faNum(v, 0), fmt: v => D.faNum(v, 0),
+          gap: Math.max(0.28, 0.62 - o.vals.length * 0.006),
+          hline: o.stAvg != null ? { value: o.stAvg, color: '#1EBB8A', label: 'میانگین صاف‌ها: ' + D.faNum(o.stAvg, 0) + ' یارد' } : null });
+    }, 70);
+  }
+
   /* ═══════════ صفحه: مرکز بازیکن ═══════════ */
   function pagePlayer(){
 
@@ -609,6 +656,7 @@
   function renderSmartPlayer(v, p, cards, TABS){
     const SPARK = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M12 3l1.9 5.2L19.2 10l-5.3 1.8L12 17l-1.9-5.2L4.8 10 12 3z"/><path d="M18.5 14.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z"/><path d="M6 15.5l.6 1.6 1.6.6-1.6.6L6 19.9l-.6-1.6-1.6-.6 1.6-.6.6-1.6z"/></svg>';
     const CHART_SVG = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>';
+    const ARCHIVE_SVG = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>';
     const SP_TYPE_FA = { Range:'رنج', Putting:'پاتینگ', Chipping:'چیپینگ', Approach:'اپروچ', 'On-Course':'روی زمین' };
     const SP_RES_FA = { straight:'صاف', slice:'سمت راست', hook:'سمت چپ', miss:'ضربه خراب' };
     const FEATS = [
@@ -643,6 +691,20 @@
     <div class="glass" id="sp-live">
       <div class="card-head"><span class="ic">${CHART_SVG}</span><h3>آنالیز آخرین ضربه‌ها — ${esc(p.name)}</h3><span class="tag gold">Live</span><button type="button" class="sp-refresh" id="sp-live-refresh" title="تازه‌سازی نمودار" aria-label="تازه‌سازی نمودار"><svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button></div>
       <div id="sp-live-body"></div>
+    </div>
+    <div class="glass" id="sp-hist">
+      <div class="card-head"><span class="ic">${ARCHIVE_SVG}</span><h3>آرشیو نمودار جلسات تمام‌شده</h3><span class="tag"></span></div>
+      <div class="toolbar" style="margin-bottom:4px">
+        <span class="lbl">🏌️ بازیکن:</span>
+        <select class="sel" id="sph-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===p.pid?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+        <span class="lbl">🎯 نوع تمرین:</span>
+        <select class="sel" id="sph-type"><option value="all">همهٔ تمرین‌ها</option>${Object.keys(SP_TYPE_LBL).map(t => `<option value="${t}">${SP_TYPE_LBL[t]}</option>`).join('')}</select>
+        <span class="lbl">⛳ کلاب:</span>
+        <select class="sel" id="sph-club"><option value="all">همهٔ کلاب‌ها</option></select>
+        <div style="flex:1"></div>
+        ${Object.keys(SP_RES_LABEL).map(k => `<span style="font-size:10.5px;color:var(--muted)"><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${SP_RES_COLOR[k]};margin-left:4px;vertical-align:-1px"></i>${SP_RES_LABEL[k]}</span>`).join('')}
+      </div>
+      <div id="sph-body"></div>
     </div>
     <div class="grid cols-4 sp-grid">
       ${FEATS.map(([ic, t, d]) => `
@@ -682,12 +744,74 @@
     });
     bindPlayerTabs();
     renderSmartChart(p);
+    /* فیلترهای آرشیو نمودار جلسات */
+    ['sph-player', 'sph-type', 'sph-club'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', () => { const b = $('#sph-body'); if (b) b.dataset.shown = ''; renderSmartHist(); });
+    });
+    renderSmartHist();
+  }
+
+  /* ── آرشیو نمودار جلسات تمام‌شده: از جدیدترین جلسه به قدیمی‌ترین؛ گروه (جلسه × کلاب) مطابق فیلتر بازیکن/نوع/کلاب ── */
+  function renderSmartHist(){
+    const body = $('#sph-body'); if (!body) return;
+    const pidS = $('#sph-player'), typS = $('#sph-type'), clbS = $('#sph-club');
+    const pid = pidS ? +pidS.value : 0, typ = typS ? typS.value : 'all', clb = clbS ? clbS.value : 'all';
+    const shots = spShots(), ssn = spSessions();
+    const done = Object.keys(ssn).map(k => ssn[k]).filter(x => x && x.status === 'closed')
+      .sort((a, b) => String(b.closedAt || '').localeCompare(String(a.closedAt || '')) || ((b.no || 0) - (a.no || 0)));
+    const mine = shots.filter(x => x.pid === pid);
+    /* آپشن‌های کلاب از دیتای واقعی همان بازیکن+نوع — انتخاب فعلی در صورت معتبر بودن حفظ می‌شود */
+    const clubSeen = {}, clubList = [];
+    done.forEach(sn => {
+      if (typ !== 'all' && sn.type !== typ) return;
+      shots.filter(x => x.sid === sn.id && x.pid === pid).forEach(x => { if (!clubSeen[x.club]){ clubSeen[x.club] = 1; clubList.push(x.club); } });
+    });
+    if (clbS){
+      clbS.innerHTML = `<option value="all">همهٔ کلاب‌ها</option>` + clubList.map(c => `<option value="${esc(c)}" ${c === clb ? 'selected' : ''}>${esc(c)}</option>`).join('');
+    }
+    const club = clbS ? clbS.value : 'all';
+    /* گروه‌ها: برای هر جلسهٔ سازگار، یک نمودار به‌ازای هر کلاب (آخرین‌ضربهٔ دیرتر، جلوتر) */
+    const groups = [];
+    done.forEach(sn => {
+      if (typ !== 'all' && sn.type !== typ) return;
+      const inSes = mine.filter(x => x.sid === sn.id && (club === 'all' || x.club === club)).sort((a, b) => a.t - b.t);
+      if (!inSes.length) return;
+      const byClub = {};
+      inSes.forEach(x => { (byClub[x.club] = byClub[x.club] || []).push(x); });
+      Object.keys(byClub).sort((a, b) => byClub[b][byClub[b].length - 1].t - byClub[a][byClub[a].length - 1].t)
+        .forEach(cn => groups.push({ sn, cn, shots: byClub[cn] }));
+    });
+    const tg = $('#sp-hist .tag'); if (tg) tg.textContent = groups.length ? `${D.fa(groups.length)} نمودار` : 'بدون مورد';
+    if (!groups.length){
+      body.innerHTML = `<div style="padding:24px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1">
+        با این فیلترها جلسهٔ تمام‌شده‌ای پیدا نشد.<br>از «ثبت رکورد» جلسه بزنید و «بستن جلسه» کنید — آرشیو اینجا انباشته می‌شود 📚</div>`;
+      return;
+    }
+    /* صفحه‌بندی: هر بار ۱۰ نمودار از جدیدترین */
+    let shown = +body.dataset.shown || SP_HIST_PAGE;
+    if (shown < SP_HIST_PAGE) shown = SP_HIST_PAGE;
+    const part = groups.slice(0, shown);
+    part.forEach(g => { g._o = shotChartBody(g.shots, 'sph-cv-' + part.indexOf(g), ''); });
+    body.innerHTML = part.map((g, i) => `
+      <div class="glass sp-hist-item" style="padding:14px 16px;margin-bottom:12px">
+        <div class="card-head" style="margin-bottom:6px">
+          <span class="ic">⛳</span>
+          <h3>جلسه ${D.fa(g.sn.no)} — ${esc(SP_TYPE_LBL[g.sn.type] || g.sn.type)} • ${esc(g.cn)}</h3>
+          <span class="tag gold">${esc(g._o.tag)}</span>
+          <span class="tag" style="margin-right:0">${esc(g.sn.dateFa || '')}</span>
+        </div>
+        ${g._o.html}
+      </div>`).join('')
+      + (groups.length > shown ? `<button type="button" class="btn ghost" id="sph-more" style="width:100%">نمایش ${D.fa(Math.min(SP_HIST_PAGE, groups.length - shown))} نمودار دیگر — ${D.fa(groups.length - shown)} مانده</button>` : '');
+    part.forEach(g => drawShotChart(g._o));
+    const more = $('#sph-more');
+    if (more) more.addEventListener('click', () => { body.dataset.shown = shown + SP_HIST_PAGE; renderSmartHist(); });
   }
   /* ── نمودار «آنالیز ضربه‌های کلاب» — همهٔ ضربه‌های بازیکن انتخابی با آخرین کلاب او؛ هر ستون رنگِ نتیجهٔ خودش ── */
   function renderSmartChart(p){
     const box = $('#sp-live-body'); if (!box) return;
-    let shots = []; try { shots = JSON.parse(localStorage.getItem('ga_sp_shots') || '[]'); } catch(e){}
-    let ssn = {};  try { ssn = JSON.parse(localStorage.getItem('ga_sp_sessions') || '{}'); } catch(e){}
+    const shots = spShots(), ssn = spSessions();
     const mine = shots.filter(x => x.pid === p.pid).sort((a, b) => a.t - b.t);
     if (!mine.length){
       box.innerHTML = `<div style="padding:28px 16px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1">
@@ -697,44 +821,16 @@
     }
     const last = mine[mine.length - 1];
     const ses = ssn[last.sid];
-    const typeMap = { Range:'رنج', Putting:'پاتینگ', Chipping:'چیپینگ', Approach:'اپروچ', 'On-Course':'روی زمین' };
-    const resMap = { straight:'صاف', slice:'سمت راست', hook:'سمت چپ', miss:'ضربه خراب' };
-    const resColor = { straight:'#1EBB8A', slice:'#2E86DE', hook:'#E67E22', miss:'#E74C3C' };
-    /* پنجرهٔ نمایش: تا ۲۰ ضربه همه — بیشتر شد فقط ۲۰ ضربهٔ آخر */
-    /* تحلیل‌ها (میانگین/میانگین‌صاف‌ها/بیشینه) همیشه روی کل ضربه‌ها */
-    const ofClubAll = mine.filter(x => x.club === last.club);
-    const MAX_BARS = 20;
-    const off = Math.max(0, ofClubAll.length - MAX_BARS);
-    const ofClub = ofClubAll.slice(off);
-    const vals = ofClub.map(x => x.yds);
-    const cols = ofClub.map(x => resColor[x.res] || '#8490A3');
-    const allVals = ofClubAll.map(x => x.yds);
-    const avg = allVals.reduce((a, b) => a + b, 0) / allVals.length;
-    /* میانگین فقط ضربه‌های صاف — خط راهنمای طلایی روی همان نمودار */
-    const st = ofClubAll.filter(x => x.res === 'straight');
-    const stAvg = st.length ? st.reduce((a, b) => a + b.yds, 0) / st.length : null;
-    /* تگ سربرگ = کلاب تحت تحلیل */
+    /* تگ سربرگ = کلاب تحت تحلیل — عنوان کارت هم به‌روز می‌شود */
     const ttl = $('#sp-live h3'); if (ttl) ttl.textContent = `آنالیز ضربه‌های ${last.club} — ${p.name}`;
-    const tg = $('#sp-live .tag'); if (tg){ tg.textContent = off > 0 ? `${D.fa(ofClubAll.length)} ضربه • نمایش ${D.fa(MAX_BARS)} تای آخر` : `${D.fa(ofClubAll.length)} ضربه`; tg.classList.add('gold'); }
-    box.innerHTML = `<div class="chart-box short"><canvas id="sp-live-cv"></canvas></div>
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:9px;font-size:10.5px;color:var(--muted)">
-        ${Object.keys(resMap).map(k => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${resColor[k]};margin-left:4px;vertical-align:-1px"></i>${resMap[k]}</span>`).join('')}
-      </div>
-      <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:10px;font-size:11px;color:var(--muted)">
-        <span style="background:rgba(233,199,102,.1);border:1px solid rgba(233,199,102,.3);border-radius:99px;padding:5px 12px">آخرین ضربه: <b style="color:var(--gold-l)">${esc(last.club)}</b> — ${D.faNum(last.yds,0)} یارد (${esc(resMap[last.res] || last.res)})</span>
-        <span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">میانگین ${esc(last.club)}: <b>${D.faNum(avg,1)}</b> یارد</span>
-        <span style="background:rgba(30,187,138,.1);border:1px solid rgba(30,187,138,.35);border-radius:99px;padding:5px 12px">میانگین صاف‌ها (${D.fa(st.length)} ضربه): <b style="color:var(--green-l)">${stAvg != null ? D.faNum(stAvg,1) : '—'}</b> یارد</span>
-        <span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">بیشینه: <b>${D.faNum(Math.max(...allVals),0)}</b> یارد</span>
-        ${ses ? `<span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">${esc(typeMap[ses.type] || ses.type)} — جلسه ${D.fa(ses.no)}</span>` : ''}
-      </div>`;
-    setTimeout(() => {
-      const cv = $('#sp-live-cv'); if (!cv || typeof Charts === 'undefined') return;
-      Charts.barsV(cv, ofClub.map((x, i) => D.fa(off + i + 1)), vals,
-        { color: cols, showVal: true, valFmt: v => D.faNum(v, 0), fmt: v => D.faNum(v, 0),
-          gap: Math.max(0.28, 0.62 - ofClub.length * 0.006),
-          hline: stAvg != null ? { value: stAvg, color: '#1EBB8A', label: 'میانگین صاف‌ها: ' + D.faNum(stAvg, 0) + ' یارد' } : null });
-    }, 70);
+    const ofClub = mine.filter(x => x.club === last.club);
+    const sesChip = ses ? `<span style="background:rgba(132,144,163,.08);border:1px solid var(--line-soft);border-radius:99px;padding:5px 12px">${esc(SP_TYPE_LBL[ses.type] || ses.type)} — جلسه ${D.fa(ses.no)}</span>` : '';
+    const o = shotChartBody(ofClub, 'sp-live-cv', sesChip);
+    const tg = $('#sp-live .tag'); if (tg){ tg.textContent = o.tag; tg.classList.add('gold'); }
+    box.innerHTML = o.html;
+    drawShotChart(o);
   }
+
   function renderHoles(p){
     const card = (A.CARDS[p.pid]||[]).find(c => c.tour === matchSel);
     const t = S.tournaments.find(t => t[0] === matchSel);

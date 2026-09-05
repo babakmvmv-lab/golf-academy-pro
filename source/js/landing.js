@@ -381,6 +381,15 @@ function photoOf(pid){
 /* ─────────── سکانس افتتاحیه — لایو-اکشن MARVEL (~۱۰ ثانیه) ─────────── */
 var introTimers = [];
 function playIntro(){
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches){
+    STATE.introDone = true; sndHint(false);
+    intro.classList.add('l3d-hide');
+    renderDock();
+    try { var appEl = document.getElementById('app');
+      if (localStorage.getItem('ga_session') && appEl && appEl.classList.contains('on') && root.parentNode) root.parentNode.removeChild(root);
+    } catch(e){}
+    return;
+  }
   initAudio();
   // سیاست مرورگرها: تا اولین لمس، صدا اجرا نمی‌شود → راهنمای کوچک نمایش داده می‌شود
   setTimeout(function(){ if (!audioOn() && !STATE.introDone) sndHint(true); }, 500);

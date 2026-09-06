@@ -8478,13 +8478,16 @@ window.__L3D = {
   function tourReport(t, onChange){
     const pars = (D.parsOf(t[3]) || []).slice(0, t[4] || 18);
     const tourPar = pars.reduce((a, b) => a + b, 0);
+    const pr = D.prizesOf(t); /* امتیازهای طراحی‌شدهٔ مسابقه: اول/دوم/سوم/شرکت */
+    const ptsOfRank = k => k === 1 ? pr[0] : k === 2 ? pr[1] : k === 3 ? pr[2] : pr[3];
     const nameOf = pid => { const pl = gstate().S.players.find(p => p[0] === pid); return pl ? pl[1] : ('بازیکن ' + D.fa(pid)); };
     const rows = () => extraCards().filter(c => c.tour === t[0]).map(c => {
       const holes = Object.keys(c.strokes || {});
       const total = holes.reduce((a, h) => a + (c.strokes[h] | 0), 0);
       const par = holes.reduce((a, h) => a + (pars[+h - 1] || 0), 0);
       return { pid: c.pid, name: nameOf(c.pid), total, par, diff: total - par, nH: holes.length };
-    }).sort((a, b) => a.diff - b.diff || a.total - b.total);
+    }).sort((a, b) => a.diff - b.diff || a.total - b.total)
+      .map((r, i, arr) => { r.rank = (i > 0 && arr[i-1].diff === r.diff && arr[i-1].total === r.total) ? arr[i-1].rank : i + 1; r.pts = ptsOfRank(r.rank); return r; });
     const pending = () => Object.entries(scDraftTour(t[0]))
       .filter(([, d]) => !d.final && Object.keys(d.holes || {}).length >= (t[4] || 18))
       .map(([pid]) => +pid);
@@ -8508,7 +8511,7 @@ window.__L3D = {
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
           <div style="flex:1">
             <div style="font-weight:900;font-size:17px">🏁 گزارش پایانی — ${esc(t[1])}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:4px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(t[4] || 18)} میدان • <b style="color:var(--gold-l)">مجموع پار: ${D.fa(tourPar)}</b> • تاریخ ${D.isoToShamsi ? D.fa(D.isoToShamsi(String((t[5] || '')).slice(0, 10))) : ''}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(t[4] || 18)} میدان • <b style="color:var(--gold-l)">مجموع پار: ${D.fa(tourPar)}</b> • 🏆${D.fa(pr[0])} 🥈${D.fa(pr[1])} 🥉${D.fa(pr[2])} 🎟 شرکت ${D.fa(pr[3])} امتیاز • تاریخ ${D.isoToShamsi ? D.fa(D.isoToShamsi(String((t[5] || '')).slice(0, 10))) : ''}</div>
           </div>
           <button class="btn sm ghost" id="tr-x" title="بستن گزارش" data-no-pdf>✕</button>
           ${D.loadResults()[t[0]]
@@ -8523,23 +8526,25 @@ window.__L3D = {
           ${[list[1], list[0], list[2]].filter(Boolean).map(r => {
             const idx = list.indexOf(r);
             return `<div class="glass ${idx === 0 ? 'gold-border' : ''}" style="text-align:center;padding:${idx === 0 ? '20px 16px' : '14px 12px'};min-width:112px;border-radius:14px;transform:translateY(${idx === 0 ? '-8px' : '0'})">
-              <div style="font-size:${idx === 0 ? '30px' : '22px'}">${medals[idx]}</div>
+              <div style="font-size:${idx === 0 ? '30px' : '22px'}">${medals[r.rank - 1] || medals[idx]}</div>
               <div style="font-weight:800;font-size:13px;margin-top:5px">${esc(r.name)}</div>
               <div style="font-size:19px;font-weight:900;margin-top:4px;direction:ltr">${D.fa(r.total)}</div>
               <div style="margin-top:4px">${diffChip(r.diff)}</div>
+              <div style="margin-top:5px"><span class="chip gold" style="font-weight:800">${D.fa(r.pts)} امتیاز</span></div>
             </div>`;
           }).join('')}
         </div>` : ''}
         <table class="tbl" style="width:100%;margin-top:14px">
-          <thead><tr><th style="width:54px">رتبه</th><th>بازیکن</th><th>میدان</th><th>مجموع ضربه</th><th>مجموع پار</th><th>نسبت به پار</th><th data-no-pdf style="width:158px">اقدام (بعد ثبت)</th></tr></thead>
+          <thead><tr><th style="width:54px">رتبه</th><th>بازیکن</th><th>میدان</th><th>مجموع ضربه</th><th>مجموع پار</th><th>نسبت به پار</th><th>امتیاز</th><th data-no-pdf style="width:158px">اقدام (بعد ثبت)</th></tr></thead>
           <tbody>
           ${list.map((r, i) => `<tr${i === 0 ? ' style="background:rgba(212,175,55,.06)"' : ''}>
-            <td style="text-align:center;font-weight:800">${medals[i] || D.fa(i + 1)}</td>
-            <td style="font-weight:${i < 3 ? 800 : 500}">${esc(r.name)}</td>
+            <td style="text-align:center;font-weight:800">${medals[r.rank - 1] || D.fa(r.rank)}</td>
+            <td style="font-weight:${r.rank <= 3 ? 800 : 500}">${esc(r.name)}</td>
             <td class="num" style="text-align:center">${D.fa(r.nH)}</td>
             <td class="num" style="text-align:center;font-weight:900">${D.fa(r.total)}</td>
             <td class="num" style="text-align:center;color:var(--muted)">${D.fa(r.par)}</td>
             <td style="text-align:center">${diffChip(r.diff)}</td>
+            <td style="text-align:center"><span class="chip ${r.rank <= 3 ? 'gold' : ''}" style="font-weight:800">${D.fa(r.pts)} امتیاز</span></td>
             <td data-no-pdf style="text-align:center;white-space:nowrap">
               <button class="btn sm ghost" data-pen="${r.pid}" title="افزودن ضربه جریمه بعد از ثبت" style="font-size:10px;padding:4px 8px">⚠️ +جریمه</button>
               <button class="btn sm danger" data-rem="${r.pid}" title="حذف ${esc(r.name)} از این مسابقه" style="font-size:10px;padding:4px 7px">🗑</button>
@@ -8547,7 +8552,7 @@ window.__L3D = {
           </tr>`).join('')}
           </tbody>
         </table>
-        <div style="font-size:10px;color:var(--muted);margin-top:8px">کمترین مجموع ضربه = نفر اول • − = زیر پار • + = بالای پار • نمرهٔ هر بازیکن = ضربه + جریمهٔ حفره‌ها</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px">کمترین مجموع ضربه = نفر اول • − = زیر پار • + = بالای پار • نمرهٔ هر بازیکن = ضربه + جریمهٔ حفره‌ها • امتیاز طبق جوایز طراحی‌شدهٔ مسابقه</div>
       </div>
       <div style="position:sticky;bottom:0;display:flex;gap:9px;justify-content:center;padding:12px 0 18px" data-no-pdf>
         <button class="btn" id="tr-pdf" style="background:linear-gradient(135deg,var(--gold),#b08a28);font-weight:900;min-width:200px">⬇ دانلود PDF گزارش</button>

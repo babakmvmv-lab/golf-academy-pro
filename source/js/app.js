@@ -424,6 +424,37 @@
     Charts.barsV(cv, labels, vals, { color:'#E9C766', fmt:v=>D.faNum(v,0), title:'امتیاز ' + m });
   }
 
+  /* مجموعِ همهٔ امتیازهای سال شمسی جاری (نمایش تلویزیونی): مسابقات + دوره‌ها (کلاس/تمرین/اردو) + بتل + هر آیتم امتیازی — فقط اعضای ثبت‌نام‌شده با حداقل ۱ امتیاز */
+  function tvYearPoints(){
+    const yr = D.jalaliInfo(new Date()).yy;
+    const inYr = iso => { try { return D.jalaliInfo(D.dateFrom(iso)).yy === yr; } catch(e){ return false; } };
+    const pts = {};
+    const addPts = (pid, p) => { if (typeof pid === 'number' && isFinite(p) && p > 0) pts[pid] = (pts[pid] || 0) + p; };
+    /* ⛳ مسابقات */
+    const results = D.loadResults();
+    S.tournaments.forEach(t => {
+      if (D.isTourHidden && D.isTourHidden(t[0])) return;
+      if (!inYr(t[5])) return;
+      const r = results[t[0]];
+      if (!r || !Array.isArray(r.participants)) return;
+      const pr = D.prizesOf(t);
+      const top = r.top || {};
+      r.participants.forEach(pid => addPts(pid, top['1'] === pid ? (pr[0] | 0) : top['2'] === pid ? (pr[1] | 0) : top['3'] === pid ? (pr[2] | 0) : (pr[3] | 0)));
+    });
+    /* 📅 دوره‌ها: کلاس/تمرین/اردو — هر آیتم امتیازی تعریف‌شده */
+    (D.loadPrograms ? D.loadPrograms() : []).forEach(pr => {
+      if (!pr || !pr.start || !inYr(pr.start) || !Array.isArray(pr.participants)) return;
+      const top = pr.top || {};
+      pr.participants.forEach(pid => addPts(pid, top['1'] === pid ? (+pr.p1 || 0) : top['2'] === pid ? (+pr.p2 || 0) : top['3'] === pid ? (+pr.p3 || 0) : (+pr.entry || 0)));
+    });
+    /* ⚔️ نبرد میدانها: امتیاز فصل تیمی */
+    try {
+      const bt = (window.Battle && window.Battle.computeSeasonBonus) ? window.Battle.computeSeasonBonus() : {};
+      Object.keys(bt).forEach(pid => addPts(+pid, +bt[pid] || 0));
+    } catch(e){}
+    return { pts, yr };
+  }
+
   /* ═══════════ صفحه: رقابت فصل ═══════════ */
   /* جمع امتیاز «مسابقات» سال شمسی جاری — فقط اعضای ثبت‌نام‌شده؛ بازیکنِ بدون حداقل ۱ امتیاز نمی‌آید */
   function raceYearPoints(){
@@ -1463,6 +1494,11 @@
       return;
     }    const v = $('#view');
     const next = A.NEXT_T;
+    const { pts: tvPts, yr: tvYr } = tvYearPoints();
+    const TV = A.LB.filter(r => (tvPts[r.pid] || 0) >= 1)
+      .map(r => Object.assign({}, r, { pts: tvPts[r.pid] }))
+      .sort((a, b) => b.pts - a.pts || (A.LB.indexOf(a) - A.LB.indexOf(b)))
+      .map((r, i) => { r.rank = i + 1; return r; });
     v.innerHTML = `
     <div class="tv-wrap">
       <div class="glass" style="border-color:var(--line)">
@@ -1472,7 +1508,7 @@
           <div class="content">
             <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
               <span class="live-badge">● LIVE</span>
-              <span style="font-size:13px;color:var(--muted)">GolfAcademy 1405 • Season Broadcast</span>
+              <span style="font-size:13px;color:var(--muted)">GolfAcademy ${D.fa(tvYr)} • Season Broadcast</span>
               <div style="margin-right:auto;display:flex;gap:14px;flex-wrap:wrap">
                 <span style="color:var(--muted);font-size:12px">🌬️ باد <b style="color:var(--white)">۱۲ km/h</b></span>
                 <span style="color:var(--muted);font-size:12px">🌡️ دما <b style="color:var(--white)">۲۸°</b></span>
@@ -1486,7 +1522,7 @@
             <table class="tbl" style="font-size:14px">
               <thead><tr><th>رتبه</th><th>بازیکن</th><th>رنک</th><th>امتیاز</th><th>بهترین دور</th><th>پرنده</th><th>فرم</th></tr></thead>
               <tbody>
-              ${A.LB.slice(0,10).map(r => `<tr class="top${r.rank<=3?r.rank:0}" style="font-size:14px">
+              ${(TV.length ? TV.slice(0,10).map(r => `<tr class="top${r.rank<=3?r.rank:0}" style="font-size:14px">
                 <td style="font-size:17px;font-weight:900">${medal(r.rank)} ${D.fa(r.rank)}</td>
                 <td><b style="font-size:15px">${esc(r.name)}</b>${r.streak>=2?' 🔥':''}</td>
                 <td>${rankPill(r.color)}</td>
@@ -1494,7 +1530,7 @@
                 <td class="num">${r.best_vspar===null?'—':(r.best_vspar>0?'+':'')+D.fa(r.best_vspar)}</td>
                 <td class="num" style="color:var(--green-l)">${D.fa(r.bird)}</td>
                 <td>${formChips(r.form)}</td>
-              </tr>`).join('')}
+              </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px">📺 هنوز در ' + D.fa(tvYr) + ' کسی حداقل ۱ امتیاز دریافت نکرده است</td></tr>')}
               </tbody>
             </table>
           </div>
@@ -1502,7 +1538,7 @@
       </div>
       <div class="ticker" style="margin-top:16px">
         <div class="track">
-          ⚡ اخبار آکادمی: &nbsp; ${next ? esc(next[1]) + ' ' + D.fa(A.COUNTDOWN) + ' روز دیگر •' : ''} &nbsp; کلاس پوتینگ چهارشنبه • &nbsp; اردوی آمادهسازی جام بزرگ ۱۶ مهر • &nbsp; پرندهساز هفته: ${esc(A.LB[0].name)} • &nbsp; ${esc(A.LB[1].name)} با روند صعودی به صدر نزدیک میشود • &nbsp; فصل ۱۴۰۵ — رقابت تا جام بزرگ فصل ادامه دارد
+          ⚡ اخبار آکادمی: &nbsp; ${next ? esc(next[1]) + ' ' + D.fa(A.COUNTDOWN) + ' روز دیگر •' : ''} &nbsp; کلاس پوتینگ چهارشنبه • &nbsp; اردوی آمادهسازی جام بزرگ ۱۶ مهر • &nbsp; پرندهساز هفته: ${TV[0] ? esc(TV[0].name) : '—'} • &nbsp; ${TV[1] ? esc(TV[1].name) + ' با روند صعودی به صدر نزدیک میشود' : ''} • &nbsp; فصل ${D.fa(tvYr)} — امتیاز = مجموع همهٔ آیتم‌های امتیازی امسال
         </div>
       </div>
       <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--dim)">📺 این صفحه برای نمایش روی تلویزیون آکادمی طراحی شده است — برای حالت تمامصفحه F11 را بزنید</div>

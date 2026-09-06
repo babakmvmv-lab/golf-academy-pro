@@ -8006,11 +8006,14 @@ window.__L3D = {
       </div>` : '';
     m.innerHTML = `
     <div class="glass gold-border" style="width:min(860px,95vw);padding:20px;max-height:92vh;overflow:auto">
-      <div class="card-head"><span class="ic">🎯</span><h3>${opts.title}</h3><span class="tag">دبل‌کلیک برای جابه‌جایی</span></div>
+      <div class="card-head"><span class="ic">🎯</span><h3>${opts.title}</h3><span class="tag">یک ✋ لمس/کلیک = جابه‌جایی</span></div>
       ${prizeRow}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px">
         <div>
-          <div class="lbl">👥 همهٔ بازیکنان</div>
+          <div class="lbl" style="display:flex;align-items:center;gap:8px">👥 همهٔ بازیکنان
+            <button type="button" class="btn sm ghost" id="rp-allin" style="font-size:10px;padding:3px 9px">✓ همه</button>
+            <button type="button" class="btn sm ghost" id="rp-none" style="font-size:10px;padding:3px 9px">✕ هیچ</button>
+          </div>
           <input class="input" id="rp-search" placeholder="🔍 جستجو..." style="width:100%;margin:6px 0;padding:7px 10px">
           <div id="rp-all" class="rp-list" style="max-height:240px;overflow:auto"></div>
         </div>
@@ -8040,7 +8043,7 @@ window.__L3D = {
       allBox.innerHTML = all.filter(p => !partSet.has(p.pid) && (!q || p.name.includes(q))).map(p =>
         `<div class="rp-item" data-pid="${p.pid}">${esc(p.name)}</div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">—</div>';
       partBox.innerHTML = part.map(pid =>
-        `<div class="rp-item sel" data-pid="${pid}">${esc(nameOf(pid))}</div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">دبل‌کلیک روی بازیکنان تا اینجا بیایند</div>';
+        `<div class="rp-item sel" data-pid="${pid}">${esc(nameOf(pid))} ✕</div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">با یک لمس روی نام‌های ستون چپ اینجا اضافه می‌شوند</div>';
       ['1','2','3'].forEach(k => {
         const sel = m.querySelector('#rp-' + k);
         const cur = top[k];
@@ -8051,16 +8054,18 @@ window.__L3D = {
       const header = lbl.previousElementSibling;
       if (header) header.textContent = '✅ شرکت‌کنندگان (' + D.fa(part.length) + ' نفر)';
     }
-    allBox.addEventListener('dblclick', e => {
+    allBox.addEventListener('click', e => {
       const it = e.target.closest('.rp-item'); if (!it) return;
       part.push(+it.dataset.pid); render();
     });
-    partBox.addEventListener('dblclick', e => {
+    partBox.addEventListener('click', e => {
       const it = e.target.closest('.rp-item'); if (!it) return;
       part = part.filter(p => p !== +it.dataset.pid);
       ['1','2','3'].forEach(k => { if (+top[k] === +it.dataset.pid) delete top[k]; });
       render();
     });
+    m.querySelector('#rp-allin').addEventListener('click', () => { part = all.map(p => p.pid); render(); });
+    m.querySelector('#rp-none').addEventListener('click', () => { part = []; top = {}; render(); });
     m.querySelector('#rp-search').addEventListener('input', render);
     ['1','2','3'].forEach(k => m.querySelector('#rp-' + k).addEventListener('change', e => {
       if (e.target.value) top[k] = +e.target.value; else delete top[k];

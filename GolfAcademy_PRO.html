@@ -2429,6 +2429,16 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   function isTourHidden(id){ return loadHiddenTours().indexOf(+id) >= 0; }
   function visibleTours(){ return TOURNAMENTS.filter(t => !isTourHidden(t[0])); }
 
+  /* ── قانون مسابقه: «عادی» = همهٔ ضربه‌ها • «فول» = سقف ضربهٔ هر حفره (پار۳≤۷، پار۴≤۹، پار۵≤۱۱) ── */
+  function holeCap(par){ return par === 3 ? 7 : par === 4 ? 9 : par === 5 ? 11 : 0; }
+  function tourRuleOf(id){
+    id = +id;
+    if (id >= 1000){
+      try { const ex = loadExtraTours()[id - 1000]; return (ex && ex.rule === 'full') ? 'full' : 'normal'; } catch(e){}
+    }
+    return 'normal';
+  }
+
   /* ── قوانین امتیازدهی قابل ویرایش + نتایج ثبت‌شده + دوره‌ها ── */
   function loadTourRules(){
     try {
@@ -2891,11 +2901,23 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
       players, active: ACTIVE_EXT,
       courses: COURSES.concat(extra.courses.map((c, i) => [1000+i, c.name, c.loc, c.holes])),
       tournaments: visibleTours().concat(extra.tournaments.map((t, i) => [1000+i, t.name, +t.lvl, +t.course, +t.holes, t.date])),
-      scorecards: genScorecards(players).concat(extra.scorecards.map(s => ({
-        tour: +s.tour, pid: +s.pid,
-        strokes: Object.fromEntries(Object.entries(s.strokes).map(([h,v]) => [+h, +v])),
-        total: Object.values(s.strokes).reduce((a,b)=>a+(+b),0),
-      }))),
+      scorecards: genScorecards(players).concat(extra.scorecards.map(s => {
+        const tour = +s.tour, pid = +s.pid;
+        const ex = extra.tournaments[tour - 1000];
+        const rule = ex && ex.rule === 'full' ? 'full' : 'normal';   /* قانون فول: سقف ضربهٔ هر حفره (پار۳≤۷ • پار۴≤۹ • پار۵≤۱۱) */
+        const parsL = ex ? parsOf(+ex.course) : [];
+        const raw = Object.fromEntries(Object.entries(s.strokes).map(([h,v]) => [+h, +v]));
+        const st = {}; const caps = {};
+        let total = 0;
+        Object.keys(raw).forEach(hk => {
+          const h = +hk; let v = raw[h];
+          if (rule === 'full'){ const cap = holeCap(parsL[h-1]); if (cap && v > cap){ caps[h] = v; v = cap; } }
+          st[h] = v; total += v;
+        });
+        const cappedN = Object.keys(caps).length;
+        return { tour, pid, strokes: st, total, rule, capped: cappedN, caps,
+          rawTotal: cappedN ? Object.values(raw).reduce((a,b)=>a+(+b),0) : undefined };
+      })),
       activities: genActivities(players).filter((a, i) => !loadDelActs().includes(i)),
     };
   }
@@ -2979,7 +3001,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     PLAYERS, PLAYER_NAME, ACTIVE, COURSES, COURSE_PARS, COURSE_NAME, TOURNAMENTS,
     PTS_RULE, RESULT_LABEL, MONTHS_FA, RANK_DEF, RANK_TEXT, rankOf, FORM_META, GOLD_ELITE,
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
-    loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours,
+    loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
     parsOf, compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
@@ -7758,7 +7780,7 @@ window.__L3D = {
     const S = gstate().S;
     const rules = D.loadTourRules ? D.loadTourRules() : D.PTS_RULE;
     const base = D.TOURNAMENTS.filter(t => !D.isTourHidden(t[0])).map(t => ({ t, base:true }));
-    const extra = extraTours().map((t,i) => ({ t: [1000+i, t.name, +t.lvl, +t.course, +t.holes, t.date], base:false, idx:i }));
+    const extra = extraTours().map((t,i) => ({ t: [1000+i, t.name, +t.lvl, +t.course, +t.holes, t.date], base:false, idx:i, rule: t.rule || 'normal' }));
     const rows = base.concat(extra);
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
@@ -7777,6 +7799,10 @@ window.__L3D = {
       <div class="field-grid" style="margin-top:10px">
         <div class="span2"><label>نام مسابقه</label><input class="input" id="mt-name" style="width:100%" placeholder="جام جدید"></div>
         <div><label>سطح</label><select class="sel" id="mt-lvl" style="width:100%"><option value="1">سطح ۱ (حرفه‌ای)</option><option value="2" selected>سطح ۲ (نیمه‌حرفه‌ای)</option><option value="3">سطح ۳ (آماتور)</option></select></div>
+        <div class="span2"><label>⚖️ قانون مسابقه</label><select class="sel" id="mt-rule" style="width:100%">
+          <option value="normal" selected>قانون عادی — همهٔ ضربه‌ها محاسبه می‌شود</option>
+          <option value="full">قانون فول — سقف ضربهٔ هر حفره: پار۳ حداکثر ۷ • پار۴ حداکثر ۹ • پار۵ حداکثر ۱۱</option>
+        </select></div>
         <div><label>زمین</label><select class="sel" id="mt-crs" style="width:100%">${S.courses.map(c=>`<option value="${c[0]}">${esc(c[1])}</option>`).join('')}</select></div>
         <div><label>حفره</label><select class="sel" id="mt-holes" style="width:100%"><option>9</option><option selected>18</option></select></div>
         <div><label>🏆 امتیاز نفر اول</label><input class="input" id="mt-p1" type="number" min="0" value="20" style="width:100%"></div>
@@ -7799,12 +7825,12 @@ window.__L3D = {
       </tr></thead><tbody id="mt-rows"></tbody></table></div>
       <div id="mt-hidden"></div>
     </div>`;
-    $('#mt-rows').innerHTML = rows.map(({t, base, idx}, ri) => {
+    $('#mt-rows').innerHTML = rows.map(({t, base, idx, rule}, ri) => {
       const pr = D.prizesOf(t);
       const past = D.dateFrom(t[5]) < D.TODAY;
       const j = D.jalaliInfo(D.dateFrom(t[5]));
       return `<tr>
-        <td class="num">${D.fa(t[0])}</td><td><b>${esc(t[1])}</b> ${base?'<span class="chip dim">پایه</span>':'<span class="chip purple">سفارشی</span>'}
+        <td class="num">${D.fa(t[0])}</td><td><b>${esc(t[1])}</b> ${base?'<span class="chip dim">پایه</span>':'<span class="chip purple">سفارشی</span>'}${!base && rule==='full'?' <span class="chip gold" title="سقف ضربهٔ هر حفره: پار۳≤۷، پار۴≤۹، پار۵≤۱۱">⚖️ فول</span>':''}
           <div style="font-size:10px;color:var(--muted);margin-top:3px">🏆${D.fa(pr[0])} 🥈${D.fa(pr[1])} 🥉${D.fa(pr[2])} 🎟${D.fa(pr[3])}</div></td>
         <td><span class="chip ${t[2]===1?'gold':t[2]===2?'green':'blue'}">سطح ${D.fa(t[2])}</span></td>
         <td style="color:var(--muted)">${esc(D.COURSE_NAME[t[3]]||'—')}</td>
@@ -7867,6 +7893,7 @@ window.__L3D = {
       const schedule = [];
       $$('.mt-day-sel').forEach(s => schedule.push({ offset: +s.dataset.i, label: s.value }));
       extra.push({ name: name || 'مسابقه ' + D.fa(extra.length+1), lvl: +$('#mt-lvl').value, course: +$('#mt-crs').value, holes: +$('#mt-holes').value, date: start, end, time: $('#mt-time').value,
+        rule: ($('#mt-rule') ? $('#mt-rule').value : 'normal'),
         p1: +($('#mt-p1').value||0), p2: +($('#mt-p2').value||0), p3: +($('#mt-p3').value||0), entry: +($('#mt-entry').value||0), schedule });
       saveTours(extra); APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
       APP.toast('مسابقه «' + (name||'بدون نام') + '» ثبت شد ✓', 'green');
@@ -7918,6 +7945,10 @@ window.__L3D = {
         <div><label>سطح</label><select class="sel" id="et-lvl" style="width:100%"><option value="1" ${t[2]===1?'selected':''}>سطح ۱</option><option value="2" ${t[2]===2?'selected':''}>سطح ۲</option><option value="3" ${t[2]===3?'selected':''}>سطح ۳</option></select></div>
         <div><label>زمین</label><select class="sel" id="et-crs" style="width:100%">${S.courses.map(c=>`<option value="${c[0]}" ${c[0]===t[3]?'selected':''}>${esc(c[1])}</option>`).join('')}</select></div>
         <div><label>حفره</label><select class="sel" id="et-holes" style="width:100%"><option ${t[4]===9?'selected':''}>9</option><option ${t[4]===18?'selected':''}>18</option></select></div>
+        <div class="span2"><label>⚖️ قانون مسابقه</label><select class="sel" id="et-rule" style="width:100%" ${base?'disabled title="فقط برای مسابقات سفارشی"':''}>
+          ${(() => { const cr = base ? 'normal' : ((extraTours()[idx] && extraTours()[idx].rule) || 'normal');
+            return `<option value="normal" ${cr==='normal'?'selected':''}>قانون عادی — همهٔ ضربه‌ها محاسبه</option><option value="full" ${cr==='full'?'selected':''}>قانون فول — سقف ضربهٔ حفره (پار۳≤۷ • پار۴≤۹ • پار۵≤۱۱)</option>`; })()}
+        </select></div>
       </div>
       <div class="form-section" style="margin-top:10px">🏆 امتیازهای مسابقه</div>
       <div class="field-grid">
@@ -7946,7 +7977,7 @@ window.__L3D = {
         localStorage.setItem('ga_tour_override', JSON.stringify(ov));
       } else {
         const lst = extraTours();
-        if (lst[idx]) Object.assign(lst[idx], data);
+        if (lst[idx]){ Object.assign(lst[idx], data); lst[idx].rule = ($('#et-rule') ? $('#et-rule').value : lst[idx].rule) || 'normal'; }
         saveTours(lst);
       }
       APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
@@ -8338,17 +8369,23 @@ window.__L3D = {
     const cards = S.scorecards.filter(sc => +sc.tour === t[0])
       .map(sc => ({ sc, name: D.nameOf(+sc.pid) }))
       .sort((a,b) => a.sc.total - b.sc.total);
+    const rule = D.tourRuleOf ? D.tourRuleOf(t[0]) : 'normal';
     const holeCell = (sc, hi) => {
       const v = sc.strokes[hi+1];
       if (v == null) return '<td class="num" style="opacity:.35">—</td>';
       const p = pars[hi];
-      const style = v < p ? 'color:#7ee8b8;font-weight:700' : (v > p ? 'color:#ff9d9d' : '');
-      return `<td class="num" style="${style}">${D.fa(v)}</td>`;
+      const wasCapped = sc.caps && sc.caps[hi+1] !== undefined;
+      const style = wasCapped ? 'color:#ffcf6b;font-weight:700'
+        : (v < p ? 'color:#7ee8b8;font-weight:700' : (v > p ? 'color:#ff9d9d' : ''));
+      const title = wasCapped ? ` title="ضربهٔ واقعی: ${D.fa(sc.caps[hi+1])} — سقف قانون فول اعمال شد"` : '';
+      return `<td class="num" style="${style}"${title}>${D.fa(v)}${wasCapped ? '<span style="color:#ffcf6b">*</span>' : ''}</td>`;
     };
+    const capN = cards.reduce((a,c) => a + (c.sc.capped || 0), 0);
     m.innerHTML = `
     <div class="glass gold-border" style="width:min(920px,96vw);max-height:92vh;overflow:auto;padding:20px 22px">
       <div class="card-head"><span class="ic">📋</span><h3>اسکورکارت «${esc(t[1])}»</h3>
-        <span class="tag">${D.fa(j.dd)} ${j.monthFa} • ${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(t[4] || pars.length)} حفره • پار ${D.fa(parTotal)}</span></div>
+        <span class="tag">${D.fa(j.dd)} ${j.monthFa} • ${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(t[4] || pars.length)} حفره • پار ${D.fa(parTotal)}${rule === 'full' ? ' • ⚖️ قانون فول' : ''}</span></div>
+      ${rule === 'full' ? `<div style="margin-top:8px;font-size:11px;color:#ffcf6b;background:rgba(255,207,107,.06);border:1px dashed rgba(255,207,107,.35);border-radius:9px;padding:7px 10px">⚖️ قانون فول فعال: سقف ضربهٔ هر حفره — پار۳ حداکثر ۷ • پار۴ حداکثر ۹ • پار۵ حداکثر ۱۱${capN ? ` • ${D.fa(capN)} ضربه اصلاح شد (*دار)` : ''}</div>` : ''}
       ${cards.length ? `
       <div style="overflow-x:auto;margin-top:12px"><table class="tbl" style="min-width:560px">
         <thead><tr><th>#</th><th>بازیکن</th>${pars.map((p,i) => `<th class="num" title="پار حفره ${D.fa(i+1)}: ${D.fa(p)}">${D.fa(i+1)}</th>`).join('')}<th class="num">جمع</th><th class="num">±</th></tr>

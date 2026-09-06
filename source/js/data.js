@@ -177,6 +177,16 @@
   function isTourHidden(id){ return loadHiddenTours().indexOf(+id) >= 0; }
   function visibleTours(){ return TOURNAMENTS.filter(t => !isTourHidden(t[0])); }
 
+  /* ── قانون مسابقه: «عادی» = همهٔ ضربه‌ها • «فول» = سقف ضربهٔ هر حفره (پار۳≤۷، پار۴≤۹، پار۵≤۱۱) ── */
+  function holeCap(par){ return par === 3 ? 7 : par === 4 ? 9 : par === 5 ? 11 : 0; }
+  function tourRuleOf(id){
+    id = +id;
+    if (id >= 1000){
+      try { const ex = loadExtraTours()[id - 1000]; return (ex && ex.rule === 'full') ? 'full' : 'normal'; } catch(e){}
+    }
+    return 'normal';
+  }
+
   /* ── قوانین امتیازدهی قابل ویرایش + نتایج ثبت‌شده + دوره‌ها ── */
   function loadTourRules(){
     try {
@@ -639,11 +649,23 @@
       players, active: ACTIVE_EXT,
       courses: COURSES.concat(extra.courses.map((c, i) => [1000+i, c.name, c.loc, c.holes])),
       tournaments: visibleTours().concat(extra.tournaments.map((t, i) => [1000+i, t.name, +t.lvl, +t.course, +t.holes, t.date])),
-      scorecards: genScorecards(players).concat(extra.scorecards.map(s => ({
-        tour: +s.tour, pid: +s.pid,
-        strokes: Object.fromEntries(Object.entries(s.strokes).map(([h,v]) => [+h, +v])),
-        total: Object.values(s.strokes).reduce((a,b)=>a+(+b),0),
-      }))),
+      scorecards: genScorecards(players).concat(extra.scorecards.map(s => {
+        const tour = +s.tour, pid = +s.pid;
+        const ex = extra.tournaments[tour - 1000];
+        const rule = ex && ex.rule === 'full' ? 'full' : 'normal';   /* قانون فول: سقف ضربهٔ هر حفره (پار۳≤۷ • پار۴≤۹ • پار۵≤۱۱) */
+        const parsL = ex ? parsOf(+ex.course) : [];
+        const raw = Object.fromEntries(Object.entries(s.strokes).map(([h,v]) => [+h, +v]));
+        const st = {}; const caps = {};
+        let total = 0;
+        Object.keys(raw).forEach(hk => {
+          const h = +hk; let v = raw[h];
+          if (rule === 'full'){ const cap = holeCap(parsL[h-1]); if (cap && v > cap){ caps[h] = v; v = cap; } }
+          st[h] = v; total += v;
+        });
+        const cappedN = Object.keys(caps).length;
+        return { tour, pid, strokes: st, total, rule, capped: cappedN, caps,
+          rawTotal: cappedN ? Object.values(raw).reduce((a,b)=>a+(+b),0) : undefined };
+      })),
       activities: genActivities(players).filter((a, i) => !loadDelActs().includes(i)),
     };
   }
@@ -727,7 +749,7 @@
     PLAYERS, PLAYER_NAME, ACTIVE, COURSES, COURSE_PARS, COURSE_NAME, TOURNAMENTS,
     PTS_RULE, RESULT_LABEL, MONTHS_FA, RANK_DEF, RANK_TEXT, rankOf, FORM_META, GOLD_ELITE,
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
-    loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours,
+    loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
     parsOf, compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,

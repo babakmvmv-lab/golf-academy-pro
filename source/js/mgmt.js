@@ -241,7 +241,6 @@
     const tabs = [
       ['players','👥',L('admin.players','بازیکنان')], ['courses','🗺️',L('admin.courses','زمین‌ها')], ['tournaments','🏆',L('admin.tournaments','مسابقات')],
       ['programs','🎓',L('admin.programs','دوره‌ها')], ['results','⛳',L('admin.results','نتایج')], ['calendar','📅',L('admin.calendar','تقویم')],
-      ['messages','📨',L('admin.messages','ارسال پیام')],
       ['contact','📞',L('admin.contact','تماس با ما')], ['info','ℹ️',L('admin.info','اطلاعات')], ['users','🔐',L('admin.users','یوزرها')],
       ['coins','🪙',L('admin.coins','درخواست سکه')], ['honor','🏅',L('admin.honor','رنک و آواتار')], ['shop','🛍️',L('admin.shop','فروشگاه آواتار')],
       ['battle','⚔️',L('admin.battle','نبرد میدان‌ها')], ['avatars','🌸',L('admin.avatars','سرزمین آواتارها')], ['labels','✏️',L('admin.labels','ویرایش آیتم‌ها')],
@@ -274,7 +273,6 @@
     else if (mgmtTab === 'tournaments') mgmtTournaments(body);
     else if (mgmtTab === 'programs') mgmtPrograms(body);
     else if (mgmtTab === 'results') mgmtResults(body);
-    else if (mgmtTab === 'messages') mgmtMessages(body);
     else if (mgmtTab === 'calendar') mgmtCalendar(body);
     else if (mgmtTab === 'coins') mgmtCoins(body);
     else if (mgmtTab === 'honor') mgmtHonor(body);
@@ -2014,6 +2012,16 @@
     $('#sc-close').addEventListener('click', () => m.style.display = 'none');
   }
 
+  /* ── صفحهٔ مستقل «ارسال پیام» — آیتم منوی گروه «مدیریت» (کنار پنل مدیریت/یوزرها/تنظیمات نمایش) ── */
+  function pageMessages(){
+    const v = $('#view');
+    v.innerHTML = `<div class="card-head" style="margin-bottom:14px"><span class="ic">📨</span>
+      <h2 style="font-size:16px">${esc(L('nav.messages','ارسال پیام'))}</h2>
+      <span class="tag">پیام به اعضا • نمایش اجباری با تأیید «خواندم»</span></div>
+      <div id="pm-root"></div>`;
+    mgmtMessages($('#pm-root'));
+  }
+
   /* ── تب ارسال پیام: فرم + انتخاب مخاطب + تاریخچه با وضعیت خواندن هر عضو ── */
   function mgmtMessages(body){
     const users = APP.users.list().filter(u => u && u.active && u.role === 'member');
@@ -2141,7 +2149,7 @@
       };
       const list = GA_MSG.load(); list.push(msg); GA_MSG.save(list);
       APP.toast(`پیام «${subject}» برای ${D.fa(picked.length)} عضو ارسال شد 📨`, 'green');
-      APP.reloadData(); APP.go('mgmt'); mgmtTab = 'messages';
+      APP.reloadData(); APP.go('messages'); /* صفحهٔ مستقل در منوی گروه مدیریت */
     });
   }
 
@@ -2989,7 +2997,7 @@
 
   /* ═══════════════ API ═══════════════ */
   window.MGMT = {
-    pageSettings, pageMgmt, pageUsers, renderMgmtTab, customEvents, saveEvents,
+    pageSettings, pageMgmt, pageUsers, pageMessages, renderMgmtTab, customEvents, saveEvents,
     customPlayers, saveCustomPlayers, playerEdits, savePlayerEdits,
     playerUsers, savePlayerUsers, playerFull,
     getSettings, saveSettings, DEFAULTS,

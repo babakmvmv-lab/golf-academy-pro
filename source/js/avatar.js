@@ -144,7 +144,7 @@
 
   /* ═════════ ۳) برندها و فروشگاه ═════════ */
   const BRANDS = {
-    academy:  { name:'Putt Club',        tier:'پایه',   c:'#d4af37' },
+    academy:  { name:'GolfAcademy',        tier:'پایه',   c:'#d4af37' },
     essential:{ name:'Amazon Essentials',  tier:'اقتصادی', c:'#8A93A6' },
     quince:   { name:'Quince',             tier:'اقتصادی', c:'#8A93A6' },
     skechers: { name:'Skechers Go Golf',   tier:'میان‌رده', c:'#2E86DE' },
@@ -255,7 +255,7 @@
     /* ── کلاه ── */
     { id:'ht_no',  cat:'hat',   b:'academy',   n:'بدون کلاه',                   price:0,   g:'a', type:'none' },
     { id:'ht_sc',  cat:'hat',   b:'academy',   n:'روسری ورزشی آکادمی',          price:0,   g:'f', type:'scarf', c1:'#F4F6F8', c2:'#D4AF37' },
-    { id:'ht_ac',  cat:'hat',   b:'academy',   n:'کپ پات کلاب',               price:15,  g:'a', type:'cap',   c1:'#1E8F6A', c2:'#D4AF37' },
+    { id:'ht_ac',  cat:'hat',   b:'academy',   n:'کپ آکادمی گلف',               price:15,  g:'a', type:'cap',   c1:'#1E8F6A', c2:'#D4AF37' },
     { id:'ht_scg', cat:'hat',   b:'galvin',    n:'روسری تکنیکال گالوین',        price:70,  g:'f', type:'scarf', c1:'#0E3B2E', c2:'#5FE3B0' },
     { id:'ht_cw',  cat:'hat',   b:'callaway',  n:'ویزور تور',                   price:30,  g:'a', type:'visor', c1:'#FFFFFF', c2:'#2E86DE' },
     { id:'ht_ti',  cat:'hat',   b:'titleist',  n:'کپ تور پرفورمنس',             price:35,  g:'a', type:'cap',   c1:'#101C33', c2:'#FFFFFF' },

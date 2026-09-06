@@ -194,10 +194,9 @@
     battle:['nav.battle','میدان نبرد'], academy:['nav.academy','پنل آکادمی'], acourses:['nav.acourses','طراح زمین'],
     atournaments:['nav.atournaments','طراح مسابقه'], ascorecards:['nav.ascorecards','ثبت نتایج'],
     mgmt:['nav.mgmt','پنل مدیریت'], users:['nav.users','یوزرها'], settings:['nav.settings','تنظیمات نمایش'],
-    messages:['nav.messages','ارسال پیام'],
     avatarland:['nav.avatarland','سرزمین آواتارها'],
   };
-  const PAGE_ICONS = { memberzone:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',cmd:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',race:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>',player:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',match:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',course:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M9 3 3 5.5v15L9 18l6 2.5 6-2.5v-15L15 5.5 9 3z"/><path d="M9 3v15"/><path d="M15 5.5v15"/></svg>',records:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>',cal:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',tv:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',battle:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/></svg>',academy:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>',acourses:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',atournaments:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>',ascorecards:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>',mgmt:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',users:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',settings:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',messages:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',avatarland:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' };
+  const PAGE_ICONS = { memberzone:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',cmd:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',race:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>',player:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',match:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',course:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M9 3 3 5.5v15L9 18l6 2.5 6-2.5v-15L15 5.5 9 3z"/><path d="M9 3v15"/><path d="M15 5.5v15"/></svg>',records:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>',cal:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',tv:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',battle:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/></svg>',academy:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>',acourses:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',atournaments:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>',ascorecards:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>',mgmt:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',users:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',settings:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',avatarland:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' };
   const PAGES = {};
   function updatePageLabels(){
     Object.keys(PAGE_LABELS).forEach(pg => { PAGES[pg] = { t:L(PAGE_LABELS[pg][0], PAGE_LABELS[pg][1]), i:PAGE_ICONS[pg] }; });
@@ -247,7 +246,7 @@
         const key = MEM_PAGE_KEY[page];
         if (!key || !settings[key]) page = 'memberzone';
       }
-      if (page === 'users' || page === 'mgmt' || page === 'settings' || page === 'messages') page = 'memberzone';
+      if (page === 'users' || page === 'mgmt' || page === 'settings') page = 'memberzone';
     }
     if (page === 'users' && !isMain(currentUser)) page = 'cmd';
     if (page === 'memberzone' && rec && rec.role !== 'member') page = 'cmd';
@@ -285,14 +284,14 @@
   function pageCmd(){
     const v = $('#view');
     const g = A.GOLD_COUNT;
-    const top = raceLB().LB.slice(0, 3); /* از دیتای جدول رقابت فصل (مسابقات امسال) */
+    const top = A.LB.slice(0, 3);
     v.innerHTML = `
     <div class="glass gold-border" style="padding:0;overflow:hidden;margin-bottom:18px">
       <img src="assets/hero_main.webp" class="hero-pano" alt="">
       <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(11,15,20,.92));display:flex;flex-direction:column;justify-content:flex-end;padding:26px">
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div>
-            <h1 style="font-size:26px;font-weight:900" class="gold-text">آکادمی گلف پات کلاب — ${esc(L('nav.cmd','فرماندهی'))}</h1>
+            <h1 style="font-size:26px;font-weight:900" class="gold-text">آکادمی گلف ۱۴۰۵ — ${esc(L('nav.cmd','فرماندهی'))}</h1>
             <div style="color:var(--muted);font-size:12.5px;margin-top:4px">فصل قهرمانی ۱۴۰۵ • ${D.fa(A.MATCHES_HELD)} مسابقه برگزار شده • ${D.fa(A.LB.length)} بازیکن فعال</div>
           </div>
           <div style="margin-right:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -357,14 +356,14 @@
       <div class="glass">
         <div class="card-head"><span class="ic">🏁</span><h3>رقابت زنده — ده نفر برتر</h3><span class="tag">Live</span></div>
         <table class="tbl"><thead><tr><th>#</th><th>بازیکن</th><th>رنک</th><th>امتیاز</th><th>تغییر</th><th>فرم</th></tr></thead><tbody>
-        ${(() => { const T = tvLB().LB; return (T.length ? T.slice(0,10).map(r => `<tr class="top${r.rank<=3?r.rank:0}">
+        ${A.LB.slice(0,10).map(r => `<tr class="top${r.rank<=3?r.rank:0}">
           <td>${medal(r.rank)} ${D.fa(r.rank)}</td>
           <td><b>${esc(r.name)}</b>${r.streak>=2?' 🔥':''}</td>
           <td>${rankPill(r.color)}</td>
           <td class="num" style="color:var(--gold-l);font-weight:800">${D.faNum(r.pts,0)}</td>
           <td>${changeBadge(r.change)}</td>
           <td>${formChips(r.form)}</td>
-        </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">🏁 هنوز کسی در امسال امتیازی دریافت نکرده است</td></tr>'); })()}
+        </tr>`).join('')}
         </tbody></table>
       </div>
     </div>`;
@@ -424,91 +423,16 @@
     Charts.barsV(cv, labels, vals, { color:'#E9C766', fmt:v=>D.faNum(v,0), title:'امتیاز ' + m });
   }
 
-  /* مجموعِ همهٔ امتیازهای سال شمسی جاری (نمایش تلویزیونی): مسابقات + دوره‌ها (کلاس/تمرین/اردو) + بتل + هر آیتم امتیازی — فقط اعضای ثبت‌نام‌شده با حداقل ۱ امتیاز */
-  function tvYearPoints(){
-    const yr = D.jalaliInfo(new Date()).yy;
-    const inYr = iso => { try { return D.jalaliInfo(D.dateFrom(iso)).yy === yr; } catch(e){ return false; } };
-    const pts = {};
-    const addPts = (pid, p) => { if (typeof pid === 'number' && isFinite(p) && p > 0) pts[pid] = (pts[pid] || 0) + p; };
-    /* ⛳ مسابقات */
-    const results = D.loadResults();
-    S.tournaments.forEach(t => {
-      if (D.isTourHidden && D.isTourHidden(t[0])) return;
-      if (!inYr(t[5])) return;
-      const r = results[t[0]];
-      if (!r || !Array.isArray(r.participants)) return;
-      const pr = D.prizesOf(t);
-      const top = r.top || {};
-      r.participants.forEach(pid => addPts(pid, top['1'] === pid ? (pr[0] | 0) : top['2'] === pid ? (pr[1] | 0) : top['3'] === pid ? (pr[2] | 0) : (pr[3] | 0)));
-    });
-    /* 📅 دوره‌ها: کلاس/تمرین/اردو — هر آیتم امتیازی تعریف‌شده */
-    (D.loadPrograms ? D.loadPrograms() : []).forEach(pr => {
-      if (!pr || !pr.start || !inYr(pr.start) || !Array.isArray(pr.participants)) return;
-      const top = pr.top || {};
-      pr.participants.forEach(pid => addPts(pid, top['1'] === pid ? (+pr.p1 || 0) : top['2'] === pid ? (+pr.p2 || 0) : top['3'] === pid ? (+pr.p3 || 0) : (+pr.entry || 0)));
-    });
-    /* ⚔️ نبرد میدانها: امتیاز فصل تیمی */
-    try {
-      const bt = (window.Battle && window.Battle.computeSeasonBonus) ? window.Battle.computeSeasonBonus() : {};
-      Object.keys(bt).forEach(pid => addPts(+pid, +bt[pid] || 0));
-    } catch(e){}
-    return { pts, yr };
-  }
-  /* مرجع مشترک «سبک تلویزیونی»: مرتب‌شده — همهٔ امتیازهای امسال، حداقل ۱ */
-  function tvLB(){
-    const { pts, yr } = tvYearPoints();
-    const LB = A.LB.filter(r => (pts[r.pid] || 0) >= 1)
-      .map(r => Object.assign({}, r, { pts: pts[r.pid] }))
-      .sort((a, b) => b.pts - a.pts || (A.LB.indexOf(a) - A.LB.indexOf(b)))
-      .map((r, i) => { r.rank = i + 1; return r; });
-    return { LB, yr };
-  }
-
   /* ═══════════ صفحه: رقابت فصل ═══════════ */
-  /* جمع امتیاز «مسابقات» سال شمسی جاری — فقط اعضای ثبت‌نام‌شده؛ بازیکنِ بدون حداقل ۱ امتیاز نمی‌آید */
-  function raceYearPoints(){
-    const yr = D.jalaliInfo(new Date()).yy;
-    const results = D.loadResults();
-    const pts = {};
-    S.tournaments.forEach(t => {
-      if (D.isTourHidden && D.isTourHidden(t[0])) return;
-      const jt = D.jalaliInfo(D.dateFrom(t[5]));
-      if (jt.yy !== yr) return;
-      const r = results[t[0]];
-      if (!r || !Array.isArray(r.participants)) return;
-      const pr = D.prizesOf(t);
-      r.participants.forEach(pid => {
-        if (typeof pid !== 'number') return; /* بازیکن آزاد در این جدول حساب نمی‌شود */
-        const top = r.top || {};
-        const p = top['1'] === pid ? (pr[0] | 0) : top['2'] === pid ? (pr[1] | 0) : top['3'] === pid ? (pr[2] | 0) : (pr[3] | 0);
-        pts[pid] = (pts[pid] || 0) + p;
-      });
-    });
-    return { pts, yr };
-  }
-  /* جدول مرتب‌شدهٔ رقابت فصل (مسابقات سال جاری، حداقل ۱ امتیاز) — مرجع سکوها و نبرد صدر */
-  function raceLB(){
-    const { pts, yr } = raceYearPoints();
-    const LB = A.LB.filter(r => (pts[r.pid] || 0) >= 1)
-      .map(r => Object.assign({}, r, { pts: pts[r.pid] }))
-      .sort((a, b) => b.pts - a.pts || (A.LB.indexOf(a) - A.LB.indexOf(b)))
-      .map((r, i) => { r.rank = i + 1; return r; });
-    return { LB, yr };
-  }
   function pageRace(){
     const v = $('#view');
     if (!MGMT.getSettings().chRace){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🏁 نمودار ${esc(L('nav.race','رقابت فصل'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
     }
-    const { LB, yr } = raceLB();
-    if (!LB.length){
-      v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🏁 هنوز در ${D.fa(yr)} هیچ بازیکنی حداقل ۱ امتیاز از مسابقات امسال را دریافت نکرده است.</div>`;
-      return;
-    }
-    const gold = LB.filter(r => r.rank <= 3).length;
-    const play = LB.filter(r => r.rank > 3 && r.rank <= 8).length;
-    const dev = LB.length - gold - play;
+    const gold = A.LB.filter(r => r.rank <= 3).length;
+    const play = A.LB.filter(r => r.rank > 3 && r.rank <= 8).length;
+    const dev = A.LB.length - gold - play;
     v.innerHTML = `
     <div class="toolbar">
       <span class="lbl">🔍 جستجوی بازیکن:</span>
@@ -520,7 +444,7 @@
     </div>
     <div class="grid cols-3">
       <div class="glass tilt" style="grid-column:span 2">
-        <div class="card-head"><span class="ic">🏁</span><h3>جدول ${esc(L('nav.race','رقابت فصل'))} ${D.fa(yr)}</h3><div style="font-size:10px;color:var(--muted);margin-top:2px">فقط جمع امتیاز مسابقاتِ ${D.fa(yr)} — با آغاز سال جدید، جدول تازه می‌شود</div><span class="tag">FedEx Cup</span></div>
+        <div class="card-head"><span class="ic">🏁</span><h3>جدول ${esc(L('nav.race','رقابت فصل'))} ۱۴۰۵</h3><span class="tag">FedEx Cup</span></div>
         <div style="overflow-x:auto"><table class="tbl" id="race-tbl"><thead><tr>
           <th>#</th><th>بازیکن</th><th>رنک</th><th>امتیاز</th><th>پیشرفت طلایی</th><th>تغییر</th><th>برد</th><th>میانگین</th><th>پرنده</th><th>فرم</th>
         </tr></thead><tbody></tbody></table></div>
@@ -531,7 +455,7 @@
           ${[
             {n:'منطقه قهرمانی', c:'gold', v:gold, mx:3},
             {n:'منطقه پلیآف', c:'blue', v:play, mx:5},
-            {n:'منطقه توسعه', c:'', v:dev, mx:Math.max(1, LB.length - 8)},
+            {n:'منطقه توسعه', c:'', v:dev, mx:A.LB.length-8},
           ].map(z => `<div style="margin-bottom:12px">
             <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><b>${z.n}</b><b>${D.fa(z.v)}</b></div>
             ${pbar(z.v/z.mx*100, z.c)}
@@ -541,7 +465,7 @@
         <div class="glass">
           <div class="card-head"><span class="ic">⚔️</span><h3>نبرد صدر جدول</h3><span class="tag">Top Race</span></div>
           <div style="display:flex;align-items:flex-end;gap:16px;justify-content:center;padding-top:8px">
-            ${LB.slice(0,3).map(r => `
+            ${A.LB.slice(0,3).map(r => `
               <div style="text-align:center;flex:1">
                 <img src="${avatar(r.pid)}" class="floaty" style="width:52px;height:52px;border-radius:50%;border:2px solid ${r.colorHex};box-shadow:0 0 18px ${r.colorHex}66;object-fit:cover">
                 <div style="font-size:11.5px;font-weight:800;margin-top:6px">${esc(r.name)}</div>
@@ -552,8 +476,8 @@
       </div>
     </div>`;
     const tbody = $('#race-tbl tbody');
-    const rows = LB.map(r => {
-      const maxPts = LB[0].pts;
+    const rows = A.LB.map(r => {
+      const maxPts = A.LB[0].pts;
       return `<tr class="top${r.rank<=3?r.rank:0}" data-name="${esc(r.name)}">
         <td>${medal(r.rank)} ${D.fa(r.rank)}</td>
         <td><b>${esc(r.name)}</b>${r.streak>=2?' 🔥':''}<div style="margin-top:3px">${honorChip(r.pid, true)}</div></td>
@@ -1251,9 +1175,8 @@
       <div class="glass">
         <div class="card-head"><span class="ic">🏆</span><h3>سکوی فصل</h3><span class="tag">Champions</span></div>
         <div class="podium" style="transform:scale(.85);transform-origin:top center;padding:8px 0 0">
-          ${(() => { const RLB = raceLB().LB; return [1,0,2].map(k => {
-            const r = RLB[k];
-            if (!r) return '';
+          ${[1,0,2].map(k => {
+            const r = A.LB[k];
             const hs = k===0?70:46;
             return `<div class="step">
               <div class="medal">${['🥇','🥈','🥉'][k]}</div>
@@ -1262,7 +1185,7 @@
                 <div class="pname">${esc(r.name)}</div><div class="ppts">${D.faNum(r.pts,0)}</div>
               </div>
             </div>`;
-          }).join(''); })()}
+          }).join('')}
         </div>
         <div style="text-align:center;font-size:11.5px;color:var(--dim);margin-top:6px">🥇🥈🥉 — مدالهای فصل</div>
       </div>
@@ -1509,7 +1432,6 @@
       return;
     }    const v = $('#view');
     const next = A.NEXT_T;
-    const { LB: TV, yr: tvYr } = tvLB();
     v.innerHTML = `
     <div class="tv-wrap">
       <div class="glass" style="border-color:var(--line)">
@@ -1519,26 +1441,29 @@
           <div class="content">
             <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
               <span class="live-badge">● LIVE</span>
-              <span style="font-size:13px;color:var(--muted)">Putt Club ${D.fa(tvYr)} • Season Broadcast</span>
+              <span style="font-size:13px;color:var(--muted)">GolfAcademy 1405 • Season Broadcast</span>
               <div style="margin-right:auto;display:flex;gap:14px;flex-wrap:wrap">
-                <span style="color:var(--muted);font-size:12px">🌬️ باد اهواز <b style="color:var(--white)" id="tv-wind">…</b></span>
-                <span style="color:var(--muted);font-size:12px">🌡️ دمای اهواز <b style="color:var(--white)" id="tv-temp">…</b></span>
+                <span style="color:var(--muted);font-size:12px">🌬️ باد <b style="color:var(--white)">۱۲ km/h</b></span>
+                <span style="color:var(--muted);font-size:12px">🌡️ دما <b style="color:var(--white)">۲۸°</b></span>
                 <span style="color:var(--muted);font-size:12px">⛳ حفره <b style="color:var(--white)">۱۴</b></span>
               </div>
             </div>
-            <div style="text-align:center;margin:22px 0 8px">
-              <div style="font-size:32px;font-weight:900;line-height:1.5" class="gold-text">برترین‌های آکادمی گلف پات کلاب</div>
-              <div style="color:var(--muted);font-size:11.5px;margin-top:2px">مجموع امتیازهای فصل ${D.fa(tvYr)}</div>
+            <div style="text-align:center;margin:26px 0 6px">
+              <div style="font-size:34px;font-weight:900" class="gold-text">${next ? esc(next[1]) : 'جام بزرگ فصل'}</div>
+              <div style="color:var(--muted);font-size:13px;margin-top:4px">${next ? esc(D.COURSE_NAME[next[3]]) + ' • ' + D.fa(next[4]) + ' حفره' : ''}</div>
             </div>
             <table class="tbl" style="font-size:14px">
-              <thead><tr><th>رتبه</th><th>بازیکن</th><th>رنگ</th><th>امتیاز</th></tr></thead>
+              <thead><tr><th>رتبه</th><th>بازیکن</th><th>رنک</th><th>امتیاز</th><th>بهترین دور</th><th>پرنده</th><th>فرم</th></tr></thead>
               <tbody>
-              ${(TV.length ? TV.slice(0,10).map(r => `<tr class="top${r.rank<=3?r.rank:0}" style="font-size:14px">
+              ${A.LB.slice(0,10).map(r => `<tr class="top${r.rank<=3?r.rank:0}" style="font-size:14px">
                 <td style="font-size:17px;font-weight:900">${medal(r.rank)} ${D.fa(r.rank)}</td>
                 <td><b style="font-size:15px">${esc(r.name)}</b>${r.streak>=2?' 🔥':''}</td>
                 <td>${rankPill(r.color)}</td>
                 <td class="num" style="color:var(--gold-l);font-weight:900;font-size:16px">${D.faNum(r.pts,0)}</td>
-              </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:18px">📺 هنوز در ' + D.fa(tvYr) + ' کسی حداقل ۱ امتیاز دریافت نکرده است</td></tr>')}
+                <td class="num">${r.best_vspar===null?'—':(r.best_vspar>0?'+':'')+D.fa(r.best_vspar)}</td>
+                <td class="num" style="color:var(--green-l)">${D.fa(r.bird)}</td>
+                <td>${formChips(r.form)}</td>
+              </tr>`).join('')}
               </tbody>
             </table>
           </div>
@@ -1546,24 +1471,11 @@
       </div>
       <div class="ticker" style="margin-top:16px">
         <div class="track">
-          ⚡ اخبار آکادمی: &nbsp; ${next ? esc(next[1]) + ' ' + D.fa(A.COUNTDOWN) + ' روز دیگر •' : ''} &nbsp; کلاس پوتینگ چهارشنبه • &nbsp; اردوی آمادهسازی جام بزرگ ۱۶ مهر • &nbsp; پرندهساز هفته: ${TV[0] ? esc(TV[0].name) : '—'} • &nbsp; ${TV[1] ? esc(TV[1].name) + ' با روند صعودی به صدر نزدیک میشود' : ''} • &nbsp; فصل ${D.fa(tvYr)} — امتیاز = مجموع همهٔ آیتم‌های امتیازی امسال
+          ⚡ اخبار آکادمی: &nbsp; ${next ? esc(next[1]) + ' ' + D.fa(A.COUNTDOWN) + ' روز دیگر •' : ''} &nbsp; کلاس پوتینگ چهارشنبه • &nbsp; اردوی آمادهسازی جام بزرگ ۱۶ مهر • &nbsp; پرندهساز هفته: ${esc(A.LB[0].name)} • &nbsp; ${esc(A.LB[1].name)} با روند صعودی به صدر نزدیک میشود • &nbsp; فصل ۱۴۰۵ — رقابت تا جام بزرگ فصل ادامه دارد
         </div>
       </div>
       <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--dim)">📺 این صفحه برای نمایش روی تلویزیون آکادمی طراحی شده است — برای حالت تمامصفحه F11 را بزنید</div>
     </div>`;
-    /* 🌤️ دما و بادِ لحظه‌ای اهواز (Open-Meteo، بدون کلید) — اگر آفلاین بود … می‌ماند */
-    try {
-      fetch('https://api.open-meteo.com/v1/forecast?latitude=31.3183&longitude=48.6706&current=temperature_2m,wind_speed_10m', { signal: (AbortSignal.timeout ? AbortSignal.timeout(9000) : undefined) })
-        .then(r => r.json())
-        .then(d => {
-          const c = d && d.current;
-          if (!c) return;
-          const t = $('#tv-temp'), w = $('#tv-wind');
-          if (t) t.textContent = D.fa(Math.round(c.temperature_2m)) + '°';
-          if (w) w.textContent = D.fa(Math.round(c.wind_speed_10m)) + ' km/h';
-        })
-        .catch(() => {});
-    } catch(e){}
   }
 
   /* ═══════════ صفحه: میدان نبرد ═══════════ */
@@ -1886,7 +1798,7 @@
   const spentCoins = (u, a, s, n) => AV.spendCoins(u, a, s, n);
 
   const COIN_RULES = [
-    { id:'story',    ic:'📱', title:'استوری اینستاگرام با تگ کردن پیج آکادمی', amount:10, desc:'استوری خود را با @puttclub تگ کنید و لینک/توضیح را در درخواست بنویسید', every:1 },
+    { id:'story',    ic:'📱', title:'استوری اینستاگرام با تگ کردن پیج آکادمی', amount:10, desc:'استوری خود را با @golfacademy.sa تگ کنید و لینک/توضیح را در درخواست بنویسید', every:1 },
     { id:'post1k',   ic:'🎬', title:'پست / ریلز اینستاگرام — ویدیو با ۱۰۰۰+ بازدید', amount:30, desc:'پست ویدیویی با تگ آکادمی (تک یا مشترک با پیج آکادمی)', every:1 },
     { id:'post2k',   ic:'🎥', title:'پست / ریلز اینستاگرام — ویدیو با ۲۰۰۰+ بازدید', amount:50, desc:'ویدیو بالای ۲۰۰۰ بازدید با تگ آکادمی', every:1 },
     { id:'refer',    ic:'🤝', title:'معرفی عضو جدید به آکادمی', amount:50, desc:'نام عضو معرفی‌شده را در توضیح درخواست بنویسید', every:0 },
@@ -2472,7 +2384,6 @@
     battle: pageBattle, academy: pageAcademy, avatarland: pageAvatarLand,
     acourses: pageACourses, atournaments: pageATours, ascorecards: pageAScorecards,
     mgmt: () => MGMT.pageMgmt(), users: () => MGMT.pageUsers(), settings: () => MGMT.pageSettings(),
-    messages: () => MGMT.pageMessages(),
   };
 
   /* ═══════════ بارگذاری مجدد ═══════════ */
@@ -2548,7 +2459,6 @@
     reloadData();
     go(rec && rec.role === 'member' ? 'memberzone' : 'cmd');
     tickClock(); setInterval(tickClock, 1000);
-    msgGate(); /* پیام خوانده‌نشده؟ → گیت اجباری قبل از ورود به پنل */
   }
 
   function logout(){
@@ -2571,72 +2481,7 @@
 
   window.addEventListener('ga:labels-changed', refreshLabels);
   /* وقتی pull ابری دیتا را عوض کرد و کاربر روی تب هوشمند است، نمودارها خودشان تازه شوند (بدون نیاز به رفرش دستی) */
-  /* ═══ پیام‌رسانی مدیریت ↔ اعضا (نمایش اجباری تا «خواندم») — ساختار قابل‌توسعه ═══
-     ga_messages: پیام‌ها { id, subject, body, sender, senderUser, createdAt, targets:[userKey],
-                            channel:'popup', priority:'normal'|'urgent', scheduleAt:null, groupKey:null }
-     ga_msg_reads: وضعیت مستقل خواندن { msgId: { userKey: isoReadAt } } — هر دو با پیشوند ga_ ابری سینک می‌شوند */
-  function loadMsgs(){ try { const a = JSON.parse(localStorage.getItem('ga_messages') || '[]'); return Array.isArray(a) ? a : []; } catch(e){ return []; } }
-  function saveMsgs(a){ try { localStorage.setItem('ga_messages', JSON.stringify(a)); } catch(e){} }
-  function loadMsgReads(){ try { const r = JSON.parse(localStorage.getItem('ga_msg_reads') || '{}'); return (r && typeof r === 'object' && !Array.isArray(r)) ? r : {}; } catch(e){ return {} } }
-  function saveMsgReads(o){ try { localStorage.setItem('ga_msg_reads', JSON.stringify(o)); } catch(e){} }
-  function msgUserKey(u){ const r = userRec(u); return String(r ? r.user : u || '').toLowerCase(); }
-  function unreadMsgsFor(u){
-    if (!u) return [];
-    const key = msgUserKey(u);
-    const reads = loadMsgReads();
-    const now = Date.now();
-    return loadMsgs()
-      .filter(m => m && Array.isArray(m.targets) && m.targets.includes(key))
-      .filter(m => m.status !== 'draft')                                   /* آینده: پیش‌نویس */
-      .filter(m => !m.scheduleAt || new Date(m.scheduleAt).getTime() <= now) /* آینده: ارسال زمان‌بندی‌شده */
-      .filter(m => !(reads[m.id] && reads[m.id][key]))
-      .sort((a,b) => ((b.priority === 'urgent') - (a.priority === 'urgent')) || String(b.createdAt).localeCompare(String(a.createdAt)));
-  }
-  /* گیت اجباری: پاپ‌آپ بدون ✕ و بدون بستن با کلیک بیرون/ESC — فقط «خواندم» */
-  function msgGate(){
-    const list = unreadMsgsFor(currentUser);
-    let g = $('#msg-gate');
-    if (!list.length){ if (g) g.style.display = 'none'; return; }
-    if (!g){
-      g = document.createElement('div');
-      g.id = 'msg-gate';
-      g.style.cssText = 'position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:rgba(3,7,12,.9);backdrop-filter:blur(10px);padding:14px;overflow:auto';
-      document.body.appendChild(g);
-    }
-    const msg = list[0];
-    const dIso = D.isoToShamsi(String(msg.createdAt).slice(0, 10));
-    const tm = new Date(msg.createdAt).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
-    const urgent = msg.priority === 'urgent';
-    g.innerHTML = `<div class="glass gold-border" style="width:min(560px,94vw);padding:0;overflow:hidden;box-shadow:0 22px 70px rgba(0,0,0,.6)${urgent ? ';border-color:rgba(231,76,60,.65)' : ''}">
-      <div style="background:linear-gradient(135deg,${urgent ? 'rgba(231,76,60,.2)' : 'rgba(212,175,55,.16)'},transparent);padding:16px 20px;border-bottom:1px solid rgba(212,175,55,.25)">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:24px">${urgent ? '🚨' : '📨'}</span>
-          <div style="flex:1">
-            <div style="font-weight:800;font-size:15.5px;color:var(--gold-l)">${esc(msg.subject)}</div>
-            <div style="font-size:10.5px;color:var(--muted);margin-top:3px">از: ${esc(msg.sender || 'مدیریت')} • ${D.fa(dIso)} ساعت ${D.fa(tm)}</div>
-          </div>
-          ${list.length > 1 ? `<span class="chip gold">پیام ${D.fa(1)} از ${D.fa(list.length)}</span>` : ''}
-        </div>
-      </div>
-      <div style="padding:18px 20px;font-size:13.5px;line-height:2.1;white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow:auto">${esc(msg.body)}</div>
-      <div style="padding:13px 20px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px">
-        <button class="btn" id="msg-gate-read" style="flex:1;padding:12px;font-weight:800;font-size:14px">✓ خواندم</button>
-        <span style="font-size:10px;color:var(--muted);max-width:150px;line-height:1.7">تا تأیید خواندن، امکان استفاده از پنل وجود ندارد</span>
-      </div>
-    </div>`;
-    g.style.display = 'flex';
-    $('#msg-gate-read').addEventListener('click', () => {
-      const reads = loadMsgReads();
-      if (!reads[msg.id]) reads[msg.id] = {};
-      reads[msg.id][msgUserKey(currentUser)] = new Date().toISOString();
-      saveMsgReads(reads);
-      toast('پیام به‌عنوان خوانده‌شده ثبت شد ✓', 'green');
-      msgGate(); /* پیام بعدی در صف — یا بستن گیت */
-    });
-  }
-  window.GA_MSG = { load: loadMsgs, save: saveMsgs, reads: loadMsgReads, saveReads: saveMsgReads, gate: msgGate, unreadFor: unreadMsgsFor };
-
-  const __cloudApplied = () => { if (currentPage === 'player' && playerTab === 'smart') go('player'); msgGate(); };
+  const __cloudApplied = () => { if (currentPage === 'player' && playerTab === 'smart') go('player'); };
   let __cloudT = null;
   window.addEventListener('ga-cloud-applied', () => {
     clearTimeout(__cloudT); __cloudT = setTimeout(__cloudApplied, 700); /* دبونسِ پول‌های پشت‌سرهم */

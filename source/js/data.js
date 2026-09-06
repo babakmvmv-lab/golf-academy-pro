@@ -168,24 +168,8 @@
     [9,'جام آذر',1,1,18,'2026-12-18'],[10,'جام دی',1,1,18,'2027-01-15'],
     [11,'جام بهمن',1,1,18,'2027-02-19'],[12,'جام اسفند',1,1,18,'2027-03-19'],
   ];
-  const PTS_RULE = {1:[20,15,10,5], 2:[15,10,7,3], 3:[10,7,5,2]};
-    const RESULT_LABEL = ['اول','دوم','سوم','شرکت‌کننده'];
-
-  /* ── پنهان‌سازی (حذف نرم) مسابقات پایهٔ فصل — از پنل مدیریت؛ بازیابی‌پذیر ── */
-  function loadHiddenTours(){ try { return JSON.parse(localStorage.getItem('ga_tour_hidden') || '[]').map(x => +x).filter(x => !isNaN(x)); } catch(e){ return []; } }
-  function saveHiddenTours(a){ try { localStorage.setItem('ga_tour_hidden', JSON.stringify(a)); } catch(e){} }
-  function isTourHidden(id){ return loadHiddenTours().indexOf(+id) >= 0; }
-  function visibleTours(){ return TOURNAMENTS.filter(t => !isTourHidden(t[0])); }
-
-  /* ── قانون مسابقه: «عادی» = همهٔ ضربه‌ها • «فول» = سقف ضربهٔ هر حفره (پار۳≤۷، پار۴≤۹، پار۵≤۱۱) ── */
-  function holeCap(par){ return par === 3 ? 7 : par === 4 ? 9 : par === 5 ? 11 : 0; }
-  function tourRuleOf(id){
-    id = +id;
-    if (id >= 1000){
-      try { const ex = loadExtraTours()[id - 1000]; return (ex && ex.rule === 'full') ? 'full' : 'normal'; } catch(e){}
-    }
-    return 'normal';
-  }
+    const PTS_RULE = {1:[20,15,10,5], 2:[15,10,7,3], 3:[10,7,5,2]};
+  const RESULT_LABEL = ['اول','دوم','سوم','شرکت‌کننده'];
 
   /* ── قوانین امتیازدهی قابل ویرایش + نتایج ثبت‌شده + دوره‌ها ── */
   function loadTourRules(){
@@ -229,7 +213,6 @@
     const cards = [];
     const ACT = players ? players.filter(p => p[5]) : ACTIVE;
     TOURNAMENTS.forEach((t, ti) => {
-      if (isTourHidden(t[0])) return;  /* مسابقهٔ حذف‌شده (پنهان) — امتیاز/کارت تولید نمی‌کند */
       const [code, name, lvl, cid, holes, dstr] = t;
       const d = dateFrom(dstr);
       if (d >= TODAY) return;
@@ -648,24 +631,12 @@
     return {
       players, active: ACTIVE_EXT,
       courses: COURSES.concat(extra.courses.map((c, i) => [1000+i, c.name, c.loc, c.holes])),
-      tournaments: visibleTours().concat(extra.tournaments.map((t, i) => [1000+i, t.name, +t.lvl, +t.course, +t.holes, t.date])),
-      scorecards: genScorecards(players).concat(extra.scorecards.map(s => {
-        const tour = +s.tour, pid = +s.pid;
-        const ex = extra.tournaments[tour - 1000];
-        const rule = ex && ex.rule === 'full' ? 'full' : 'normal';   /* قانون فول: سقف ضربهٔ هر حفره (پار۳≤۷ • پار۴≤۹ • پار۵≤۱۱) */
-        const parsL = ex ? parsOf(+ex.course) : [];
-        const raw = Object.fromEntries(Object.entries(s.strokes).map(([h,v]) => [+h, +v]));
-        const st = {}; const caps = {};
-        let total = 0;
-        Object.keys(raw).forEach(hk => {
-          const h = +hk; let v = raw[h];
-          if (rule === 'full'){ const cap = holeCap(parsL[h-1]); if (cap && v > cap){ caps[h] = v; v = cap; } }
-          st[h] = v; total += v;
-        });
-        const cappedN = Object.keys(caps).length;
-        return { tour, pid, strokes: st, total, rule, capped: cappedN, caps,
-          rawTotal: cappedN ? Object.values(raw).reduce((a,b)=>a+(+b),0) : undefined };
-      })),
+      tournaments: TOURNAMENTS.concat(extra.tournaments.map((t, i) => [1000+i, t.name, +t.lvl, +t.course, +t.holes, t.date])),
+      scorecards: genScorecards(players).concat(extra.scorecards.map(s => ({
+        tour: +s.tour, pid: +s.pid,
+        strokes: Object.fromEntries(Object.entries(s.strokes).map(([h,v]) => [+h, +v])),
+        total: Object.values(s.strokes).reduce((a,b)=>a+(+b),0),
+      }))),
       activities: genActivities(players).filter((a, i) => !loadDelActs().includes(i)),
     };
   }
@@ -706,7 +677,7 @@
   function seedSeason(force){
     try {
       if (!force && localStorage.getItem('ga_seed_v2') === '1405') return;
-      const keys = ['ga_tour_rules','ga_results','ga_tour_override','ga_tour_hidden','ga_programs','ga_courses','ga_tournaments','ga_scorecards','ga_del_acts','ga_events','ga_custom_players','ga_player_users','ga_players'];
+      const keys = ['ga_tour_rules','ga_results','ga_tour_override','ga_programs','ga_courses','ga_tournaments','ga_scorecards','ga_del_acts','ga_events','ga_custom_players','ga_player_users','ga_players'];
       keys.forEach(k => { try { localStorage.removeItem(k); } catch(e){} });
       // تولد اعضا (برای نمایش سن/تولد در مدیریت)
       const births = {1:'1987-03-21',2:'2009-03-21',3:'2009-08-01',4:'2008-09-01',5:'2011-04-15',6:'2010-05-10',7:'2010-08-20',8:'2017-03-21'};
@@ -717,7 +688,6 @@
       const ALL = [1,2,3,4,5,6,7,8];
       const res = {};
       TOURNAMENTS.forEach((t, ti) => {
-        if (isTourHidden(t[0])) return;
         if (dateFrom(t[5]) >= TODAY) return;
         res[t[0]] = { participants: ALL.slice(), top: { 1: 1, 2: 2, 3: (ti % 2 === 0 ? 6 : 7) } };
       });
@@ -749,7 +719,6 @@
     PLAYERS, PLAYER_NAME, ACTIVE, COURSES, COURSE_PARS, COURSE_NAME, TOURNAMENTS,
     PTS_RULE, RESULT_LABEL, MONTHS_FA, RANK_DEF, RANK_TEXT, rankOf, FORM_META, GOLD_ELITE,
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
-    loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
     parsOf, compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,

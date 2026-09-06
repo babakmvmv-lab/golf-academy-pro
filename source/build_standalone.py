@@ -17,8 +17,6 @@ SIZES = {
     'flag_3d.webp':     (420, 82),
     'avatar_m.webp':    (280, 84),
     'avatar_f.webp':    (280, 84),
-    'puttclub_favicon.png': (128, 92),
-    'puttclub_logo.png':   (340, 84),
     'lobby_bg_v3.webp': (1536, 92),
     'shop_hero.webp':   (1280, 78),
     'open_tee.webp':    (1100, 84),

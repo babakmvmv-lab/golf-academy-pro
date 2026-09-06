@@ -207,7 +207,7 @@ root.innerHTML =
     '<div class="fr" style="background-image:url(assets/open_sky.webp)"></div>' +
     '<div class="fr" style="background-image:url(assets/open_hole.webp)"></div>' +
     '<div class="vin"></div>' +
-    '<div id="l3d-logo"><div class="lg-letters" id="l3d-lg"></div><div class="lg-sub" id="l3d-lgsub">آکادمی گلف پات کلاب — puttclub.ir</div><div class="lg-line" id="l3d-lgline"></div></div>' +
+    '<div id="l3d-logo"><div class="lg-letters" id="l3d-lg"></div><div class="lg-sub" id="l3d-lgsub">آکادمی گلف ۱۴۰۵ — GolfAcademy.sa</div><div class="lg-line" id="l3d-lgline"></div></div>' +
     '<div id="l3d-flash"></div><div id="l3d-wave"></div><div id="l3d-sndhint">🔊 برای شنیدن صدای افتتاحیه، صفحه را لمس کنید</div>' +
     '<div class="l3d-brand">GOLFACADEMY</div>' +
   '</div>' +
@@ -354,7 +354,7 @@ function siteInfo(){
     if (window.MGMT && MGMT.getSiteInfo) return MGMT.getSiteInfo();
   } catch(e){}
   return {
-    contact: { phone:'۰۶۱-۳۲۴۴۵۶۷۸', email:'info@puttclub.ir', address:'زمین گلف مسجدسلیمان، خیابان ورزش', website:'puttclub.ir', social:'اینستاگرام · تلگرام · واتساپ', hours:'شنبه تا پنجشنبه ۸ تا ۲۰', qr:'https://puttclub.ir' },
+    contact: { phone:'۰۶۱-۳۲۴۴۵۶۷۸', email:'info@golfacademy.sa', address:'زمین گلف مسجدسلیمان، خیابان ورزش', website:'GolfAcademy.sa', social:'اینستاگرام · تلگرام · واتساپ', hours:'شنبه تا پنجشنبه ۸ تا ۲۰', qr:'https://golfacademy.sa' },
     info: { intro:'', address:'', hours:'' }
   };
 }
@@ -557,13 +557,13 @@ function panelReception(){
   var navHtml = '<div class="l3d-nav">' + navs.map(function(n){
     return '<button data-nav="' + n[0] + '" class="' + (panelNav === n[0] ? 'on' : '') + '">' + esc(n[1]) + '</button>';
   }).join('') + '</div>';
-  return '<div class="hd"><span class="ic">🛎️</span><h3>' + esc(L('landing.reception','رسپشن')) + ' آکادمی گلف پات کلاب</h3><span class="tg">puttclub.ir</span></div>' + navHtml + receptionTab(panelNav);
+  return '<div class="hd"><span class="ic">🛎️</span><h3>' + esc(L('landing.reception','رسپشن')) + ' آکادمی گلف ۱۴۰۵</h3><span class="tg">GolfAcademy.sa</span></div>' + navHtml + receptionTab(panelNav);
 }
 function receptionTab(tab){
   if (tab === 'intro'){
     var SI = siteInfo();
     var introTxt = SI.info.intro ? SI.info.intro : 'آکادمی تخصصی گلف با زمین ۱۸ حفره‌ای «مسجدسلیمان» (پار ۷۲) — دوره‌های آموزشی، اردوهای گروهی، تمرین‌های هفتگی و مسابقات ماهانه برای همهٔ سنین. تمرین‌های گروهی هر پنجشنبه · مسابقات آخرین جمعهٔ هر ماه · دوره‌های ۲ روزه در خرداد و آذر.';
-    return '<div class="sub"><b>به آکادمی گلف پات کلاب خوش آمدید.</b><br>' + esc(introTxt).replace(/\n/g, '<br>') + '<br><br>گلف ورزش دقت و آرامش است — ثبت‌نام در هر فصل از همین رسپشن انجام می‌شود.</div>';
+    return '<div class="sub"><b>به آکادمی گلف ۱۴۰۵ خوش آمدید.</b><br>' + esc(introTxt).replace(/\n/g, '<br>') + '<br><br>گلف ورزش دقت و آرامش است — ثبت‌نام در هر فصل از همین رسپشن انجام می‌شود.</div>';
   }
   if (tab === 'signup'){
     return '<div class="sub">ثبت‌نام اعضای جدید — فرم در ' + esc(L('nav.mgmt','پنل مدیریت')) + ' «' + esc(L('admin.players','بازیکنان')) + '» تکمیل می‌شود.<br>برای ثبت‌نام حضوری به ' + esc(L('landing.reception','رسپشن')) + ' آکادمی مراجعه کنید یا با شمارهٔ تماس هماهنگ کنید.</div>' +
@@ -613,15 +613,15 @@ function panelInfo(){
   var navHtml = '<div class="l3d-nav">' + navs.map(function(n){
     return '<button data-nav="' + n[0] + '" class="' + (panelNav === n[0] ? 'on' : '') + '">' + esc(n[1]) + '</button>';
   }).join('') + '</div>';
-  return '<div class="hd"><span class="ic">ℹ️</span><h3>' + esc(L('landing.info','اطلاعات')) + ' آکادمی</h3><span class="tg">puttclub.ir</span></div>' + navHtml + infoTab(panelNav);
+  return '<div class="hd"><span class="ic">ℹ️</span><h3>' + esc(L('landing.info','اطلاعات')) + ' آکادمی</h3><span class="tg">GolfAcademy.sa</span></div>' + navHtml + infoTab(panelNav);
 }
 function infoTab(tab){
   if (tab === 'intro'){
     var SIi = siteInfo().info;
-    var introTxt = SIi.intro ? SIi.intro : 'آکادمی گلف پات کلاب — مرکز تخصصی گلف مسجدسلیمان. زمین رسمی ۱۸ حفره‌ای (پار ۷۲) با چمن استاندارد · باشگاه با امکانات کامل · مربیان رسمی فدراسیون گلف. تمرین گروهی اعضا هر پنجشنبه · مسابقهٔ ماهانه آخرین جمعهٔ هر ماه · دوره‌های ۲ روزه در خرداد و آذر.';
+    var introTxt = SIi.intro ? SIi.intro : 'آکادمی گلف ۱۴۰۵ — مرکز تخصصی گلف مسجدسلیمان. زمین رسمی ۱۸ حفره‌ای (پار ۷۲) با چمن استاندارد · باشگاه با امکانات کامل · مربیان رسمی فدراسیون گلف. تمرین گروهی اعضا هر پنجشنبه · مسابقهٔ ماهانه آخرین جمعهٔ هر ماه · دوره‌های ۲ روزه در خرداد و آذر.';
     var addr = SIi.address ? SIi.address : 'زمین گلف مسجدسلیمان، خیابان ورزش';
     var hours = SIi.hours ? SIi.hours : 'شنبه تا پنجشنبه، ۸ تا ۲۰';
-    return '<div class="sub"><b>آکادمی گلف پات کلاب — مرکز تخصصی گلف مسجدسلیمان.</b><br><br>' +
+    return '<div class="sub"><b>آکادمی گلف ۱۴۰۵ — مرکز تخصصی گلف مسجدسلیمان.</b><br><br>' +
       esc(introTxt).replace(/\n/g, '<br>') + '<br><br>' +
       '📍 آدرس: ' + esc(addr) + '<br>⏰ پذیرش: ' + esc(hours) + '</div>';
   }
@@ -640,7 +640,7 @@ function panelCal(){
   var mm = String(monthSel + 1).padStart(2, '0');
   var rows = [];
   var tours = [];
-  try { tours = (D.visibleTours ? D.visibleTours() : D.TOURNAMENTS) || []; } catch(e){}
+  try { tours = D.TOURNAMENTS || []; } catch(e){}
   tours.forEach(function(t){ if (t[5] && t[5].slice(5,7) === mm) rows.push({ ic: '🏆', txt: esc(t[1]) + ' — مسابقه', dt: esc(t[5]) }); });
   var thu = [];
   try { thu = D.thursdaysSeason ? D.thursdaysSeason() : []; } catch(e){}
@@ -702,7 +702,7 @@ function panelContact(){
   try {
     setTimeout(function(){
       var host = $('#l3d-qr'); if (!host || typeof qrcode === 'undefined') return;
-      var qr = qrcode(0, 'M'); qr.addData(c.qr || 'https://puttclub.ir'); qr.make();
+      var qr = qrcode(0, 'M'); qr.addData(c.qr || 'https://golfacademy.sa'); qr.make();
       var img = document.createElement('img');
       img.src = qr.createDataURL(5, 8); img.style.cssText = 'width:110px;height:110px;border-radius:10px';
       host.appendChild(img);

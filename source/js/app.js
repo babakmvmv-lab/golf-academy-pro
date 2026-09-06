@@ -425,15 +425,45 @@
   }
 
   /* ═══════════ صفحه: رقابت فصل ═══════════ */
+  /* جمع امتیاز «مسابقات» سال شمسی جاری — فقط اعضای ثبت‌نام‌شده؛ بازیکنِ بدون حداقل ۱ امتیاز نمی‌آید */
+  function raceYearPoints(){
+    const yr = D.jalaliInfo(new Date()).yy;
+    const results = D.loadResults();
+    const pts = {};
+    S.tournaments.forEach(t => {
+      if (D.isTourHidden && D.isTourHidden(t[0])) return;
+      const jt = D.jalaliInfo(D.dateFrom(t[5]));
+      if (jt.yy !== yr) return;
+      const r = results[t[0]];
+      if (!r || !Array.isArray(r.participants)) return;
+      const pr = D.prizesOf(t);
+      r.participants.forEach(pid => {
+        if (typeof pid !== 'number') return; /* بازیکن آزاد در این جدول حساب نمی‌شود */
+        const top = r.top || {};
+        const p = top['1'] === pid ? (pr[0] | 0) : top['2'] === pid ? (pr[1] | 0) : top['3'] === pid ? (pr[2] | 0) : (pr[3] | 0);
+        pts[pid] = (pts[pid] || 0) + p;
+      });
+    });
+    return { pts, yr };
+  }
   function pageRace(){
     const v = $('#view');
     if (!MGMT.getSettings().chRace){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🏁 نمودار ${esc(L('nav.race','رقابت فصل'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
     }
-    const gold = A.LB.filter(r => r.rank <= 3).length;
-    const play = A.LB.filter(r => r.rank > 3 && r.rank <= 8).length;
-    const dev = A.LB.length - gold - play;
+    const { pts: rPts, yr } = raceYearPoints();
+    const LB = A.LB.filter(r => (rPts[r.pid] || 0) >= 1)
+      .map(r => Object.assign({}, r, { pts: rPts[r.pid] }))
+      .sort((a, b) => b.pts - a.pts || (A.LB.indexOf(a) - A.LB.indexOf(b)))
+      .map((r, i) => { r.rank = i + 1; return r; });
+    if (!LB.length){
+      v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🏁 هنوز در ${D.fa(yr)} هیچ بازیکنی حداقل ۱ امتیاز از مسابقات امسال را دریافت نکرده است.</div>`;
+      return;
+    }
+    const gold = LB.filter(r => r.rank <= 3).length;
+    const play = LB.filter(r => r.rank > 3 && r.rank <= 8).length;
+    const dev = LB.length - gold - play;
     v.innerHTML = `
     <div class="toolbar">
       <span class="lbl">🔍 جستجوی بازیکن:</span>
@@ -445,7 +475,7 @@
     </div>
     <div class="grid cols-3">
       <div class="glass tilt" style="grid-column:span 2">
-        <div class="card-head"><span class="ic">🏁</span><h3>جدول ${esc(L('nav.race','رقابت فصل'))} ۱۴۰۵</h3><span class="tag">FedEx Cup</span></div>
+        <div class="card-head"><span class="ic">🏁</span><h3>جدول ${esc(L('nav.race','رقابت فصل'))} ${D.fa(yr)}</h3><div style="font-size:10px;color:var(--muted);margin-top:2px">فقط جمع امتیاز مسابقاتِ ${D.fa(yr)} — با آغاز سال جدید، جدول تازه می‌شود</div><span class="tag">FedEx Cup</span></div>
         <div style="overflow-x:auto"><table class="tbl" id="race-tbl"><thead><tr>
           <th>#</th><th>بازیکن</th><th>رنک</th><th>امتیاز</th><th>پیشرفت طلایی</th><th>تغییر</th><th>برد</th><th>میانگین</th><th>پرنده</th><th>فرم</th>
         </tr></thead><tbody></tbody></table></div>
@@ -456,7 +486,7 @@
           ${[
             {n:'منطقه قهرمانی', c:'gold', v:gold, mx:3},
             {n:'منطقه پلیآف', c:'blue', v:play, mx:5},
-            {n:'منطقه توسعه', c:'', v:dev, mx:A.LB.length-8},
+            {n:'منطقه توسعه', c:'', v:dev, mx:Math.max(1, LB.length - 8)},
           ].map(z => `<div style="margin-bottom:12px">
             <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><b>${z.n}</b><b>${D.fa(z.v)}</b></div>
             ${pbar(z.v/z.mx*100, z.c)}
@@ -466,7 +496,7 @@
         <div class="glass">
           <div class="card-head"><span class="ic">⚔️</span><h3>نبرد صدر جدول</h3><span class="tag">Top Race</span></div>
           <div style="display:flex;align-items:flex-end;gap:16px;justify-content:center;padding-top:8px">
-            ${A.LB.slice(0,3).map(r => `
+            ${LB.slice(0,3).map(r => `
               <div style="text-align:center;flex:1">
                 <img src="${avatar(r.pid)}" class="floaty" style="width:52px;height:52px;border-radius:50%;border:2px solid ${r.colorHex};box-shadow:0 0 18px ${r.colorHex}66;object-fit:cover">
                 <div style="font-size:11.5px;font-weight:800;margin-top:6px">${esc(r.name)}</div>
@@ -477,8 +507,8 @@
       </div>
     </div>`;
     const tbody = $('#race-tbl tbody');
-    const rows = A.LB.map(r => {
-      const maxPts = A.LB[0].pts;
+    const rows = LB.map(r => {
+      const maxPts = LB[0].pts;
       return `<tr class="top${r.rank<=3?r.rank:0}" data-name="${esc(r.name)}">
         <td>${medal(r.rank)} ${D.fa(r.rank)}</td>
         <td><b>${esc(r.name)}</b>${r.streak>=2?' 🔥':''}<div style="margin-top:3px">${honorChip(r.pid, true)}</div></td>

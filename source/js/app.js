@@ -2459,6 +2459,7 @@
     reloadData();
     go(rec && rec.role === 'member' ? 'memberzone' : 'cmd');
     tickClock(); setInterval(tickClock, 1000);
+    msgGate(); /* پیام خوانده‌نشده؟ → گیت اجباری قبل از ورود به پنل */
   }
 
   function logout(){
@@ -2481,7 +2482,72 @@
 
   window.addEventListener('ga:labels-changed', refreshLabels);
   /* وقتی pull ابری دیتا را عوض کرد و کاربر روی تب هوشمند است، نمودارها خودشان تازه شوند (بدون نیاز به رفرش دستی) */
-  const __cloudApplied = () => { if (currentPage === 'player' && playerTab === 'smart') go('player'); };
+  /* ═══ پیام‌رسانی مدیریت ↔ اعضا (نمایش اجباری تا «خواندم») — ساختار قابل‌توسعه ═══
+     ga_messages: پیام‌ها { id, subject, body, sender, senderUser, createdAt, targets:[userKey],
+                            channel:'popup', priority:'normal'|'urgent', scheduleAt:null, groupKey:null }
+     ga_msg_reads: وضعیت مستقل خواندن { msgId: { userKey: isoReadAt } } — هر دو با پیشوند ga_ ابری سینک می‌شوند */
+  function loadMsgs(){ try { const a = JSON.parse(localStorage.getItem('ga_messages') || '[]'); return Array.isArray(a) ? a : []; } catch(e){ return []; } }
+  function saveMsgs(a){ try { localStorage.setItem('ga_messages', JSON.stringify(a)); } catch(e){} }
+  function loadMsgReads(){ try { const r = JSON.parse(localStorage.getItem('ga_msg_reads') || '{}'); return (r && typeof r === 'object' && !Array.isArray(r)) ? r : {}; } catch(e){ return {} } }
+  function saveMsgReads(o){ try { localStorage.setItem('ga_msg_reads', JSON.stringify(o)); } catch(e){} }
+  function msgUserKey(u){ const r = userRec(u); return String(r ? r.user : u || '').toLowerCase(); }
+  function unreadMsgsFor(u){
+    if (!u) return [];
+    const key = msgUserKey(u);
+    const reads = loadMsgReads();
+    const now = Date.now();
+    return loadMsgs()
+      .filter(m => m && Array.isArray(m.targets) && m.targets.includes(key))
+      .filter(m => m.status !== 'draft')                                   /* آینده: پیش‌نویس */
+      .filter(m => !m.scheduleAt || new Date(m.scheduleAt).getTime() <= now) /* آینده: ارسال زمان‌بندی‌شده */
+      .filter(m => !(reads[m.id] && reads[m.id][key]))
+      .sort((a,b) => ((b.priority === 'urgent') - (a.priority === 'urgent')) || String(b.createdAt).localeCompare(String(a.createdAt)));
+  }
+  /* گیت اجباری: پاپ‌آپ بدون ✕ و بدون بستن با کلیک بیرون/ESC — فقط «خواندم» */
+  function msgGate(){
+    const list = unreadMsgsFor(currentUser);
+    let g = $('#msg-gate');
+    if (!list.length){ if (g) g.style.display = 'none'; return; }
+    if (!g){
+      g = document.createElement('div');
+      g.id = 'msg-gate';
+      g.style.cssText = 'position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:rgba(3,7,12,.9);backdrop-filter:blur(10px);padding:14px;overflow:auto';
+      document.body.appendChild(g);
+    }
+    const msg = list[0];
+    const dIso = D.isoToShamsi(String(msg.createdAt).slice(0, 10));
+    const tm = new Date(msg.createdAt).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+    const urgent = msg.priority === 'urgent';
+    g.innerHTML = `<div class="glass gold-border" style="width:min(560px,94vw);padding:0;overflow:hidden;box-shadow:0 22px 70px rgba(0,0,0,.6)${urgent ? ';border-color:rgba(231,76,60,.65)' : ''}">
+      <div style="background:linear-gradient(135deg,${urgent ? 'rgba(231,76,60,.2)' : 'rgba(212,175,55,.16)'},transparent);padding:16px 20px;border-bottom:1px solid rgba(212,175,55,.25)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:24px">${urgent ? '🚨' : '📨'}</span>
+          <div style="flex:1">
+            <div style="font-weight:800;font-size:15.5px;color:var(--gold-l)">${esc(msg.subject)}</div>
+            <div style="font-size:10.5px;color:var(--muted);margin-top:3px">از: ${esc(msg.sender || 'مدیریت')} • ${D.fa(dIso)} ساعت ${D.fa(tm)}</div>
+          </div>
+          ${list.length > 1 ? `<span class="chip gold">پیام ${D.fa(1)} از ${D.fa(list.length)}</span>` : ''}
+        </div>
+      </div>
+      <div style="padding:18px 20px;font-size:13.5px;line-height:2.1;white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow:auto">${esc(msg.body)}</div>
+      <div style="padding:13px 20px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px">
+        <button class="btn" id="msg-gate-read" style="flex:1;padding:12px;font-weight:800;font-size:14px">✓ خواندم</button>
+        <span style="font-size:10px;color:var(--muted);max-width:150px;line-height:1.7">تا تأیید خواندن، امکان استفاده از پنل وجود ندارد</span>
+      </div>
+    </div>`;
+    g.style.display = 'flex';
+    $('#msg-gate-read').addEventListener('click', () => {
+      const reads = loadMsgReads();
+      if (!reads[msg.id]) reads[msg.id] = {};
+      reads[msg.id][msgUserKey(currentUser)] = new Date().toISOString();
+      saveMsgReads(reads);
+      toast('پیام به‌عنوان خوانده‌شده ثبت شد ✓', 'green');
+      msgGate(); /* پیام بعدی در صف — یا بستن گیت */
+    });
+  }
+  window.GA_MSG = { load: loadMsgs, save: saveMsgs, reads: loadMsgReads, saveReads: saveMsgReads, gate: msgGate, unreadFor: unreadMsgsFor };
+
+  const __cloudApplied = () => { if (currentPage === 'player' && playerTab === 'smart') go('player'); msgGate(); };
   let __cloudT = null;
   window.addEventListener('ga-cloud-applied', () => {
     clearTimeout(__cloudT); __cloudT = setTimeout(__cloudApplied, 700); /* دبونسِ پول‌های پشت‌سرهم */

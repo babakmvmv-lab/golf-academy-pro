@@ -241,6 +241,7 @@
     const tabs = [
       ['players','👥',L('admin.players','بازیکنان')], ['courses','🗺️',L('admin.courses','زمین‌ها')], ['tournaments','🏆',L('admin.tournaments','مسابقات')],
       ['programs','🎓',L('admin.programs','دوره‌ها')], ['results','⛳',L('admin.results','نتایج')], ['calendar','📅',L('admin.calendar','تقویم')],
+      ['messages','📨',L('admin.messages','ارسال پیام')],
       ['contact','📞',L('admin.contact','تماس با ما')], ['info','ℹ️',L('admin.info','اطلاعات')], ['users','🔐',L('admin.users','یوزرها')],
       ['coins','🪙',L('admin.coins','درخواست سکه')], ['honor','🏅',L('admin.honor','رنک و آواتار')], ['shop','🛍️',L('admin.shop','فروشگاه آواتار')],
       ['battle','⚔️',L('admin.battle','نبرد میدان‌ها')], ['avatars','🌸',L('admin.avatars','سرزمین آواتارها')], ['labels','✏️',L('admin.labels','ویرایش آیتم‌ها')],
@@ -273,6 +274,7 @@
     else if (mgmtTab === 'tournaments') mgmtTournaments(body);
     else if (mgmtTab === 'programs') mgmtPrograms(body);
     else if (mgmtTab === 'results') mgmtResults(body);
+    else if (mgmtTab === 'messages') mgmtMessages(body);
     else if (mgmtTab === 'calendar') mgmtCalendar(body);
     else if (mgmtTab === 'coins') mgmtCoins(body);
     else if (mgmtTab === 'honor') mgmtHonor(body);
@@ -2010,6 +2012,137 @@
     </div>`;
     m.style.display = 'flex';
     $('#sc-close').addEventListener('click', () => m.style.display = 'none');
+  }
+
+  /* ── تب ارسال پیام: فرم + انتخاب مخاطب + تاریخچه با وضعیت خواندن هر عضو ── */
+  function mgmtMessages(body){
+    const users = APP.users.list().filter(u => u && u.active && u.role === 'member');
+    let picked = [];
+    const escU = s => esc(String(s || ''));
+    body.innerHTML = `
+    <div class="glass gold-border" style="margin-bottom:16px">
+      <div class="card-head"><span class="ic">📨</span><h3>ارسال پیام به اعضا</h3><span class="tag">نمایش اجباری روی پنل عضو تا تأیید «خواندم»</span></div>
+      <div class="field-grid" style="margin-top:12px">
+        <div class="span2"><label>عنوان پیام</label><input class="input" id="pm-subject" maxlength="90" style="width:100%" placeholder="مثلاً: تغییر ساعت کلاس پنجشنبه"></div>
+        <div class="span2"><label>متن پیام</label><textarea class="input" id="pm-body" rows="4" maxlength="1200" style="width:100%;resize:vertical;line-height:1.9" placeholder="متن پیام برای اعضا…"></textarea></div>
+      </div>
+      <div class="form-section" style="margin-top:14px">👥 انتخاب مخاطبین</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn sm ghost" id="pm-all">☑ انتخاب همه (${D.fa(users.length)} عضو)</button>
+        <button class="btn sm ghost" id="pm-none">☐ هیچ‌کدام</button>
+        <input class="input" id="pm-search" placeholder="🔍 جست‌وجوی عضو (نام یا یوزرنیم)…" style="flex:1;min-width:170px">
+      </div>
+      <div id="pm-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:7px;margin:10px 0"></div>
+      <div id="pm-picked" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-height:34px;padding:8px 10px;border:1px dashed var(--line-soft);border-radius:10px;font-size:11.5px"></div>
+      <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;align-items:center">
+        <span id="pm-count" style="font-size:11.5px;color:var(--muted)"></span>
+        <button class="btn" id="pm-send" style="min-width:180px;font-weight:800">📤 ارسال پیام</button>
+      </div>
+    </div>
+    <div class="glass">
+      <div class="card-head"><span class="ic">🗂</span><h3>تاریخچه پیام‌های ارسال‌شده</h3><span class="tag" id="pm-hcount">${D.fa(GA_MSG.load().length)} پیام</span></div>
+      <div id="pm-history" style="margin-top:8px;display:grid;gap:8px"></div>
+    </div>`;
+
+    function drawList(){
+      const q = ($('#pm-search').value || '').trim().toLowerCase();
+      $('#pm-list').innerHTML = users.filter(u => !q || (u.name + ' @' + u.user).toLowerCase().includes(q)).map(u => {
+        const on = picked.some(x => x.user === u.user);
+        return `<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;border:1px solid ${on ? 'rgba(212,175,55,.55)' : 'var(--line-soft)'};background:${on ? 'rgba(212,175,55,.08)' : 'rgba(255,255,255,.02)'};font-size:12px;transition:.15s" data-pmu="${escU(u.user)}">
+          <input type="checkbox" ${on ? 'checked' : ''} style="accent-color:var(--gold);pointer-events:none">
+          <span style="flex:1">${escU(u.name)}<small style="color:var(--muted)"> @${escU(u.user)}</small></span>
+        </label>`;
+      }).join('') || '<div style="color:var(--muted);font-size:11.5px;padding:8px">عضویی با این جست‌وجو پیدا نشد</div>';
+      $$('#pm-list [data-pmu]').forEach(el => el.addEventListener('click', ev => {
+        ev.preventDefault();
+        const u = users.find(x => String(x.user).toLowerCase() === el.dataset.pmu.toLowerCase());
+        if (!u) return;
+        if (picked.some(x => x.user === u.user)) picked = picked.filter(x => x.user !== u.user);
+        else picked.push(u);
+        drawList(); drawPicked();
+      }));
+    }
+    function drawPicked(){
+      const box = $('#pm-picked');
+      box.innerHTML = picked.length
+        ? `<span style="color:var(--muted)">مخاطبین انتخاب‌شده (${D.fa(picked.length)}):</span>` + picked.map(u =>
+            `<span class="chip gold" style="display:inline-flex;align-items:center;gap:6px">${escU(u.name)}<b data-pmx="${escU(u.user)}" style="cursor:pointer" title="حذف از مخاطبین">✕</b></span>`).join('')
+        : '<span style="color:var(--muted)">هنوز مخاطبی انتخاب نشده — بالا انتخاب کنید (همه / تکی / جست‌وجو)</span>';
+      box.querySelectorAll('[data-pmx]').forEach(x => x.addEventListener('click', () => {
+        picked = picked.filter(u => u.user !== x.dataset.pmx); drawList(); drawPicked();
+      }));
+      const c = $('#pm-count'); if (c) c.textContent = picked.length ? `مجموعاً ${D.fa(picked.length)} مخاطب` : '';
+    }
+    drawList(); drawPicked();
+    $('#pm-search').addEventListener('input', drawList);
+    $('#pm-all').addEventListener('click', () => { picked = users.slice(); drawList(); drawPicked(); });
+    $('#pm-none').addEventListener('click', () => { picked = []; drawList(); drawPicked(); });
+
+    const fmtAt = iso => `${D.fa(D.isoToShamsi(String(iso).slice(0, 10)))} ${D.fa(new Date(iso).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }))}`;
+    function drawHistory(){
+      const reads = GA_MSG.reads();
+      const arr = GA_MSG.load().slice().sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+      const hc = $('#pm-hcount'); if (hc) hc.textContent = D.fa(arr.length) + ' پیام';
+      $('#pm-history').innerHTML = arr.length ? arr.map(m => {
+        const n = (m.targets || []).length;
+        const rd = reads[m.id] || {};
+        const okN = (m.targets || []).filter(k => rd[k]).length;
+        return `<div class="glass" style="padding:11px 14px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer" data-pmopen="${escU(m.id)}" title="کلیک: لیست کامل مخاطبین و وضعیت خواندن">
+            <span style="color:var(--gold-l)">${m.priority === 'urgent' ? '🚨' : '📨'}</span><b style="font-size:13px">${escU(m.subject)}</b>
+            <span class="chip dim">${fmtAt(m.createdAt)}</span>
+            <span class="chip dim">از: ${escU(m.sender || 'مدیریت')}</span>
+            <span style="flex:1"></span>
+            <span class="chip blue" title="تعداد مخاطبین">👥 ${D.fa(n)}</span>
+            <span class="chip green" title="خوانده‌شده">✓ ${D.fa(okN)}</span>
+            <span class="chip ${n - okN ? 'gold' : 'dim'}" title="خوانده‌نشده">● ${D.fa(n - okN)}</span>
+          </div>
+          <div data-pmd="${escU(m.id)}" style="display:none;margin-top:10px;border-top:1px dashed var(--line-soft);padding-top:10px"></div>
+        </div>`;
+      }).join('') : '<div style="padding:18px;text-align:center;color:var(--muted);font-size:12.5px">هنوز پیامی ارسال نشده است.</div>';
+      $$('#pm-history [data-pmopen]').forEach(el => el.addEventListener('click', () => {
+        const m = GA_MSG.load().find(x => x.id === el.dataset.pmopen);
+        const d = body.querySelector(`[data-pmd="${CSS.escape(el.dataset.pmopen)}"]`);
+        if (!m || !d) return;
+        if (d.style.display === 'block'){ d.style.display = 'none'; return; }
+        d.style.display = 'block';
+        const rd = (GA_MSG.reads() || {})[m.id] || {};
+        d.innerHTML = `<div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;line-height:2;white-space:pre-wrap;background:rgba(255,255,255,.02);border-radius:9px;padding:8px 10px">${escU(m.body)}</div>` +
+          (m.targets || []).map(k => {
+            const u = users.find(x => String(x.user).toLowerCase() === String(k).toLowerCase());
+            const at = rd[k];
+            return `<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.04);flex-wrap:wrap">
+              <span style="flex:1;min-width:130px">${escU(u ? u.name : k)} <small style="color:var(--muted)">@${escU(k)}</small></span>
+              <span class="chip dim">📤 ارسال‌شده</span>
+              ${at ? `<span class="chip green">✓ خوانده شد</span><span class="chip dim" style="font-size:10px">${fmtAt(at)}</span>`
+                   : `<span class="chip gold">● خوانده نشده</span>`}
+            </div>`;
+          }).join('') || '<div style="color:var(--muted);font-size:11px">مخاطبی ثبت نشده</div>';
+      }));
+    }
+    drawHistory();
+
+    $('#pm-send').addEventListener('click', () => {
+      const subject = ($('#pm-subject').value || '').trim();
+      const text = ($('#pm-body').value || '').trim();
+      if (!subject){ APP.toast('عنوان پیام را وارد کنید', 'red'); return; }
+      if (!text){ APP.toast('متن پیام را وارد کنید', 'red'); return; }
+      if (!picked.length){ APP.toast('حداقل یک مخاطب انتخاب کنید', 'red'); return; }
+      const cur = APP.currentUser();
+      const msg = {
+        id: 'm' + Date.now().toString(36),
+        subject, body: text,
+        sender: APP.users.label(cur),
+        senderUser: cur,
+        createdAt: new Date().toISOString(),
+        targets: picked.map(u => String(u.user).toLowerCase()),
+        /* ساختار آماده برای توسعهٔ آینده — بدون بازنویسی */
+        channel: 'popup', priority: 'normal', scheduleAt: null, groupKey: null,
+      };
+      const list = GA_MSG.load(); list.push(msg); GA_MSG.save(list);
+      APP.toast(`پیام «${subject}» برای ${D.fa(picked.length)} عضو ارسال شد 📨`, 'green');
+      APP.reloadData(); APP.go('mgmt'); mgmtTab = 'messages';
+    });
   }
 
   function mgmtResults(body){

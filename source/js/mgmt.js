@@ -1661,7 +1661,7 @@
       <div id="rp-extra"></div>
       <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;flex-wrap:wrap">
         <button class="btn sm ghost" id="rp-cancel">بستن</button>
-        <button class="btn sm" id="rp-save">🎯 ثبت نتایج و امتیازدهی خودکار</button>
+        <button class="btn sm" id="rp-save">${opts.hideTop ? '✔ ثبت شرکت‌کنندگان' : '🎯 ثبت نتایج و امتیازدهی خودکار'}</button>
       </div>
     </div>`;
     m.style.display = 'flex';
@@ -2035,7 +2035,7 @@
       const par = hs.reduce((a, h) => a + (pars2[+h - 1] || 0), 0);
       return { pid: c.pid, diff: tot - par, total: tot };
     }).sort((a, b) => a.diff - b.diff || a.total - b.total);
-    r[t[0]].participants = list.map(x => x.pid);
+    r[t[0]].participants = list.map(x => x.pid).filter(p => typeof p === 'number'); /* آزادها در free[] */
     r[t[0]].top = {};
     if (list[0]) r[t[0]].top['1'] = list[0].pid;
     if (list[1]) r[t[0]].top['2'] = list[1].pid;
@@ -2045,7 +2045,7 @@
   /* 🏁 ثبت نهایی مسابقه: کارت‌های آماده نهایی می‌شوند، نتیجه به «نتایج ثبت‌شده» می‌رود و امتیازها بر اساس جوایز طراحی‌شده محاسبه می‌گردند */
   function finalizeTournament(t){
     Object.entries(scDraftTour(t[0])).forEach(([pid, d]) => {
-      if (!d.final && Object.keys(d.holes || {}).length >= (t[4] || 18)) scFinalize(t, +pid);
+      if (!d.final && Object.keys(d.holes || {}).length >= (t[4] || 18)) scFinalize(t, pid.startsWith('free:') ? pid : +pid);
     });
     if (!extraCards().some(c => c.tour === t[0])){ APP.toast('هنوز هیچ کارت نهایی برای این مسابقه نیست', 'red'); return false; }
     const metaS = ((scDraftLoad()[t[0]] || {}).__meta) || {};
@@ -2131,17 +2131,21 @@
     const tourPar = pars.reduce((a, b) => a + b, 0);
     const pr = D.prizesOf(t); /* امتیازهای طراحی‌شدهٔ مسابقه: اول/دوم/سوم/شرکت */
     const ptsOfRank = k => k === 1 ? pr[0] : k === 2 ? pr[1] : k === 3 ? pr[2] : pr[3];
-    const nameOf = pid => { const pl = gstate().S.players.find(p => p[0] === pid); return pl ? pl[1] : ('بازیکن ' + D.fa(pid)); };
+    const nameOf = pid => {
+      const s = String(pid);
+      if (s.startsWith('free:')) return s.slice(5);
+      const pl = gstate().S.players.find(p => p[0] === pid); return pl ? pl[1] : ('بازیکن ' + D.fa(pid));
+    };
     const rows = () => extraCards().filter(c => c.tour === t[0]).map(c => {
       const holes = Object.keys(c.strokes || {});
       const total = holes.reduce((a, h) => a + (c.strokes[h] | 0), 0);
       const par = holes.reduce((a, h) => a + (pars[+h - 1] || 0), 0);
-      return { pid: c.pid, name: nameOf(c.pid), total, par, diff: total - par, nH: holes.length };
+      return { pid: c.pid, name: nameOf(c.pid), total, par, diff: total - par, nH: holes.length, free: String(c.pid).startsWith('free:') };
     }).sort((a, b) => a.diff - b.diff || a.total - b.total)
       .map((r, i, arr) => { r.rank = (i > 0 && arr[i-1].diff === r.diff && arr[i-1].total === r.total) ? arr[i-1].rank : i + 1; r.pts = ptsOfRank(r.rank); return r; });
     const pending = () => Object.entries(scDraftTour(t[0]))
       .filter(([, d]) => !d.final && Object.keys(d.holes || {}).length >= (t[4] || 18))
-      .map(([pid]) => +pid);
+      .map(([pid]) => pid.startsWith('free:') ? pid : +pid);
     const diffChip = d => d === 0
       ? '<span class="chip dim" style="font-weight:800">E</span>'
       : `<span class="chip ${d < 0 ? 'green' : ''}" style="font-weight:800;${d > 0 ? 'background:rgba(229,57,53,.14);border:1px solid rgba(229,57,53,.4);color:#ffb0b0' : ''}">${d > 0 ? '+' : '−'}${D.fa(Math.abs(d))}</span>`;
@@ -2192,7 +2196,7 @@
           <tbody>
           ${list.map((r, i) => `<tr${i === 0 ? ' style="background:rgba(212,175,55,.06)"' : ''}>
             <td style="text-align:center;font-weight:800">${medals[r.rank - 1] || D.fa(r.rank)}</td>
-            <td style="font-weight:${r.rank <= 3 ? 800 : 500}">${esc(r.name)}</td>
+            <td style="font-weight:${r.rank <= 3 ? 800 : 500}">${esc(r.name)}${r.free ? ' <span style="font-size:10px;color:var(--muted)">— بازیکن آزاد</span>' : ''}</td>
             <td class="num" style="text-align:center">${D.fa(r.nH)}</td>
             <td class="num" style="text-align:center;font-weight:900">${D.fa(r.total)}</td>
             <td class="num" style="text-align:center;color:var(--muted)">${D.fa(r.par)}</td>
@@ -2203,7 +2207,7 @@
               <button class="btn sm danger" data-rem="${r.pid}" title="حذف ${esc(r.name)} از این مسابقه" style="font-size:10px;padding:4px 7px">🗑</button>
             </td>
           </tr>`).join('')}
-          ${freeList.map(n => `<tr style="opacity:.85">
+          ${freeList.filter(n => !list.some(r => String(r.pid) === 'free:' + n)).map(n => `<tr style="opacity:.85">
             <td style="text-align:center;color:var(--muted)">🆓</td>
             <td>${esc(n)} <span style="font-size:10px;color:var(--muted)">— بازیکن آزاد</span></td>
             <td class="num" style="text-align:center;color:var(--muted)">—</td>
@@ -2234,7 +2238,7 @@
       if (fbt) fbt.addEventListener('click', () => { if (finalizeTournament(t)){ if (onChange) onChange(); render(); } });
       const toENr = s => String(s || '').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[^\d]/g, '');
       $$('#tour-report [data-pen]').forEach(b => b.addEventListener('click', () => {
-        const pid = +b.dataset.pen;
+        const pid = b.dataset.pen.startsWith('free:') ? b.dataset.pen : +b.dataset.pen;
         const v = prompt(`تعداد ضربه جریمه برای «${nameOf(pid)}» (روی آخرین میدان اعمال می‌شود):`, '1');
         const n = +toENr(v);
         if (!n || n < 1 || n > 10){ if (v != null) APP.toast('عدد جریمه نامعتبر است', 'red'); return; }
@@ -2246,7 +2250,7 @@
         }
       }));
       $$('#tour-report [data-rem]').forEach(b => b.addEventListener('click', () => {
-        const pid = +b.dataset.rem;
+        const pid = b.dataset.rem.startsWith('free:') ? b.dataset.rem : +b.dataset.rem;
         if (!confirm(`حذف «${nameOf(pid)}» از این مسابقه؟\nکارت او پاک و رتبه‌ها و امتیازها به‌روز می‌شوند.`)) return;
         scRemovePlayer(t, pid);
         APP.reloadData();
@@ -2285,10 +2289,11 @@
     const curU = APP.currentUser();
 
     const playersOf = () => {
-      if (res && Array.isArray(res.participants) && res.participants.length){
-        return S2players().filter(p => res.participants.includes(p.pid));
-      }
-      return S2players();
+      const base = (res && Array.isArray(res.participants) && res.participants.length)
+        ? S2players().filter(p => res.participants.includes(p.pid))
+        : S2players();
+      const freeN = (res && res.free) || [];
+      return base.concat(freeN.map(n => ({ pid: 'free:' + n, name: n + ' — بازیکن آزاد', free: true })));
     };
     function S2players(){ return activePlayersList(); }
 
@@ -2409,7 +2414,7 @@
       $('#sw-report').addEventListener('click', () => tourReport(t, () => render()));
       $$('#sw-body [data-swback]').forEach(b => b.addEventListener('click', () => { state.step = +b.dataset.swback; render(); }));
       if (state.step === 1){
-        $$('#sw-body .sw-player').forEach(b => b.addEventListener('click', () => { state.pid = +b.dataset.pid; state.step = 2; render(); }));
+        $$('#sw-body .sw-player').forEach(b => b.addEventListener('click', () => { const raw = b.dataset.pid; state.pid = raw.startsWith('free:') ? raw : +raw; state.step = 2; render(); }));
       } else if (state.step === 2){
         $$('#sw-body .sw-hole').forEach(b => b.addEventListener('click', () => { state.hole = +b.dataset.hole; state.step = 3; render(); }));
         const fz = $('#sw-finalize');
@@ -2464,7 +2469,7 @@
       m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
     }
     const cards = S.scorecards.filter(sc => +sc.tour === t[0])
-      .map(sc => ({ sc, name: D.nameOf(+sc.pid) }))
+      .map(sc => ({ sc, name: String(sc.pid).startsWith('free:') ? String(sc.pid).slice(5) + ' — بازیکن آزاد' : D.nameOf(+sc.pid) }))
       .sort((a,b) => a.sc.total - b.sc.total);
     const rule = D.tourRuleOf ? D.tourRuleOf(t[0]) : 'normal';
     const holeCell = (sc, hi) => {

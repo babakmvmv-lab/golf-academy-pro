@@ -8398,8 +8398,9 @@ window.__L3D = {
       if (!d.final && Object.keys(d.holes || {}).length >= (t[4] || 18)) scFinalize(t, +pid);
     });
     if (!extraCards().some(c => c.tour === t[0])){ APP.toast('هنوز هیچ کارت نهایی برای این مسابقه نیست', 'red'); return false; }
+    const metaS = ((scDraftLoad()[t[0]] || {}).__meta) || {};
     const r = D.loadResults();
-    r[t[0]] = Object.assign(r[t[0]] || {}, { participants: [], top: {}, auto: true, ts: new Date().toISOString().slice(0, 10) });
+    r[t[0]] = Object.assign(r[t[0]] || {}, { participants: [], top: {}, auto: true, ts: new Date().toISOString().slice(0, 10), startedAt: r[t[0]] && r[t[0]].startedAt || metaS.startedAt || null, endedAt: new Date().toISOString() });
     D.saveResults(r);
     syncResultsFromCards(t);
     APP.reloadData();
@@ -8601,6 +8602,11 @@ window.__L3D = {
 
 
   function openScoreWizard(t){
+    /* 🕒 ساعت شروع = نخستین باری که اسکورکارت این مسابقه باز می‌شود */
+    const _dA = scDraftLoad();
+    if (!_dA[t[0]]) _dA[t[0]] = {};
+    if (!_dA[t[0]].__meta) _dA[t[0]].__meta = {};
+    if (!_dA[t[0]].__meta.startedAt){ _dA[t[0]].__meta.startedAt = new Date().toISOString(); scDraftSave(_dA); }
     let w = $('#score-wizard');
     if (!w){
       w = document.createElement('div');
@@ -9103,19 +9109,16 @@ window.__L3D = {
         if (!t) return '';
         const pr = D.prizesOf(t);
         const res = r[tid]; const top = res.top || {};
-        const rows = (res.participants||[]).map(pid => {
-          let place = 'شرکت‌کننده', pts = pr[3];
-          if (top['1'] === pid){ place = '🥇 اول'; pts = pr[0]; }
-          else if (top['2'] === pid){ place = '🥈 دوم'; pts = pr[1]; }
-          else if (top['3'] === pid){ place = '🥉 سوم'; pts = pr[2]; }
-          return `<div class="h-item"><span style="flex:1">${esc(D.nameOf(pid)||'—')}</span><span class="chip gold">${place}</span><span class="chip green">${D.fa(pts)} امتیاز</span></div>`;
-        }).join('');
-        return `<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px;margin-bottom:10px">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b>${esc(t[1])}</b><span class="chip green">ثبت شده</span><span style="font-size:10.5px;color:var(--muted)">${D.fa(res.participants.length)} شرکت‌کننده</span>
-            <span style="flex:1"></span>
-            <button class="btn sm ghost" data-mrrep="${tid}" title="گزارش مسابقه + جریمه/حذف بازیکن">📊 گزارش</button>
-          </div>
-          <div style="margin-top:8px">${rows}</div>
+        const fmtT = iso => { try { if (!iso) return '—'; const d = new Date(iso); return D.fa(String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')); } catch(e){ return '—'; } };
+        const tDate = D.isoToShamsi ? D.fa(D.isoToShamsi(String(t[5] || '').slice(0, 10))) : '—';
+        return `<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px 13px;margin-bottom:8px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:11.5px">
+          <b style="font-size:12.5px">${esc(t[1])}</b>
+          <span class="chip dim">👥 ${D.fa((res.participants || []).length)} شرکت‌کننده</span>
+          <span class="chip dim">📅 ${tDate}</span>
+          <span class="chip dim">🕒 شروع ${fmtT(res.startedAt)}</span>
+          <span class="chip gold">🏁 پایان ${fmtT(res.endedAt)}</span>
+          <span style="flex:1"></span>
+          <button class="btn sm ghost" data-mrrep="${tid}" title="گزارش مسابقه + جریمه/حذف بازیکن">✏️ ویرایش</button>
         </div>`;
       }).join('') : '<div style="color:var(--muted);font-size:12.5px;padding:8px">هنوز نتیجه‌ای ثبت نشده است — از کادر بالا شروع کنید.</div>';
       $$('#mr-list [data-mrrep]').forEach(b => b.addEventListener('click', () => {

@@ -1510,27 +1510,24 @@
               <span class="live-badge">● LIVE</span>
               <span style="font-size:13px;color:var(--muted)">GolfAcademy ${D.fa(tvYr)} • Season Broadcast</span>
               <div style="margin-right:auto;display:flex;gap:14px;flex-wrap:wrap">
-                <span style="color:var(--muted);font-size:12px">🌬️ باد <b style="color:var(--white)">۱۲ km/h</b></span>
-                <span style="color:var(--muted);font-size:12px">🌡️ دما <b style="color:var(--white)">۲۸°</b></span>
+                <span style="color:var(--muted);font-size:12px">🌬️ باد اهواز <b style="color:var(--white)" id="tv-wind">…</b></span>
+                <span style="color:var(--muted);font-size:12px">🌡️ دمای اهواز <b style="color:var(--white)" id="tv-temp">…</b></span>
                 <span style="color:var(--muted);font-size:12px">⛳ حفره <b style="color:var(--white)">۱۴</b></span>
               </div>
             </div>
-            <div style="text-align:center;margin:26px 0 6px">
-              <div style="font-size:34px;font-weight:900" class="gold-text">${next ? esc(next[1]) : 'جام بزرگ فصل'}</div>
-              <div style="color:var(--muted);font-size:13px;margin-top:4px">${next ? esc(D.COURSE_NAME[next[3]]) + ' • ' + D.fa(next[4]) + ' حفره' : ''}</div>
+            <div style="text-align:center;margin:22px 0 8px">
+              <div style="font-size:32px;font-weight:900;line-height:1.5" class="gold-text">برترین‌های آکادمی گلف پات کلاب</div>
+              <div style="color:var(--muted);font-size:11.5px;margin-top:2px">مجموع امتیازهای فصل ${D.fa(tvYr)}</div>
             </div>
             <table class="tbl" style="font-size:14px">
-              <thead><tr><th>رتبه</th><th>بازیکن</th><th>رنک</th><th>امتیاز</th><th>بهترین دور</th><th>پرنده</th><th>فرم</th></tr></thead>
+              <thead><tr><th>رتبه</th><th>بازیکن</th><th>رنگ</th><th>امتیاز</th></tr></thead>
               <tbody>
               ${(TV.length ? TV.slice(0,10).map(r => `<tr class="top${r.rank<=3?r.rank:0}" style="font-size:14px">
                 <td style="font-size:17px;font-weight:900">${medal(r.rank)} ${D.fa(r.rank)}</td>
                 <td><b style="font-size:15px">${esc(r.name)}</b>${r.streak>=2?' 🔥':''}</td>
                 <td>${rankPill(r.color)}</td>
                 <td class="num" style="color:var(--gold-l);font-weight:900;font-size:16px">${D.faNum(r.pts,0)}</td>
-                <td class="num">${r.best_vspar===null?'—':(r.best_vspar>0?'+':'')+D.fa(r.best_vspar)}</td>
-                <td class="num" style="color:var(--green-l)">${D.fa(r.bird)}</td>
-                <td>${formChips(r.form)}</td>
-              </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px">📺 هنوز در ' + D.fa(tvYr) + ' کسی حداقل ۱ امتیاز دریافت نکرده است</td></tr>')}
+              </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:18px">📺 هنوز در ' + D.fa(tvYr) + ' کسی حداقل ۱ امتیاز دریافت نکرده است</td></tr>')}
               </tbody>
             </table>
           </div>
@@ -1543,6 +1540,19 @@
       </div>
       <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--dim)">📺 این صفحه برای نمایش روی تلویزیون آکادمی طراحی شده است — برای حالت تمامصفحه F11 را بزنید</div>
     </div>`;
+    /* 🌤️ دما و بادِ لحظه‌ای اهواز (Open-Meteo، بدون کلید) — اگر آفلاین بود … می‌ماند */
+    try {
+      fetch('https://api.open-meteo.com/v1/forecast?latitude=31.3183&longitude=48.6706&current=temperature_2m,wind_speed_10m', { signal: (AbortSignal.timeout ? AbortSignal.timeout(9000) : undefined) })
+        .then(r => r.json())
+        .then(d => {
+          const c = d && d.current;
+          if (!c) return;
+          const t = $('#tv-temp'), w = $('#tv-wind');
+          if (t) t.textContent = D.fa(Math.round(c.temperature_2m)) + '°';
+          if (w) w.textContent = D.fa(Math.round(c.wind_speed_10m)) + ' km/h';
+        })
+        .catch(() => {});
+    } catch(e){}
   }
 
   /* ═══════════ صفحه: میدان نبرد ═══════════ */

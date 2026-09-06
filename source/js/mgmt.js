@@ -1588,6 +1588,28 @@
   }
 
   /* ── مودال مشترک: انتخاب شرکت‌کنندگان (دبل‌کلیک) + نفرات اول تا سوم + امتیاز خودکار ── */
+  /* 👥 مودال انتخاب شرکت‌کنندگان یک مسابقه (با بازیکن آزاد، بدون نفرات برتر) */
+  function openParticipantsModal(t, after){
+    const results = D.loadResults();
+    openResultsModal({
+      title: 'شرکت‌کنندگان «' + t[1] + '»',
+      prizes: D.prizesOf(t),
+      hideTop: true,
+      freePlayers: true,
+      players: activePlayersList(),
+      participants: results[t[0]] ? (results[t[0]].participants || []) : [],
+      top: results[t[0]] ? (results[t[0]].top || {}) : {},
+      freeList: results[t[0]] ? (results[t[0]].free || []) : [],
+      onSave: (participants, top, free) => {
+        const r = D.loadResults();
+        r[t[0]] = Object.assign(r[t[0]] || {}, { participants, free: free || [] });
+        D.saveResults(r); APP.reloadData();
+        APP.toast('شرکت‌کنندگان «' + t[1] + '» ثبت شدند ✓', 'green');
+        if (after) after();
+      }
+    });
+  }
+
   function openResultsModal(opts){
     const all = opts.players; // [{pid, name}]
     let part = (opts.participants || []).slice();
@@ -1596,7 +1618,7 @@
     if (!m){
       m = document.createElement('div');
       m.id = 'modal-results';
-      m.style.cssText = 'position:fixed;inset:0;z-index:210;display:flex;align-items:center;justify-content:center;background:rgba(4,8,14,.78);backdrop-filter:blur(6px)';
+      m.style.cssText = 'position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;background:rgba(4,8,14,.78);backdrop-filter:blur(6px)';
       document.body.appendChild(m);
       m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
     }
@@ -2143,6 +2165,7 @@
             <div style="font-weight:900;font-size:17px">🏁 گزارش پایانی — ${esc(t[1])}</div>
             <div style="font-size:11px;color:var(--muted);margin-top:4px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(t[4] || 18)} میدان • <b style="color:var(--gold-l)">مجموع پار: ${D.fa(tourPar)}</b> • 🏆${D.fa(pr[0])} 🥈${D.fa(pr[1])} 🥉${D.fa(pr[2])} 🎟 شرکت ${D.fa(pr[3])} امتیاز • تاریخ ${D.isoToShamsi ? D.fa(D.isoToShamsi(String((t[5] || '')).slice(0, 10))) : ''}</div>
           </div>
+          <button class="btn sm ghost" id="tr-part" data-no-pdf title="ویرایش لیست شرکت‌کنندگان (شامل بازیکن آزاد)">👥 شرکت‌کنندگان</button>
           <button class="btn sm ghost" id="tr-x" title="بستن گزارش" data-no-pdf>✕</button>
           ${D.loadResults()[t[0]]
             ? `<span class="chip green" data-no-pdf>✔ در «نتایج ثبت‌شده» ثبت شد</span><button class="btn sm ghost" id="tr-finalize" data-no-pdf title="رتبه‌ها و نتایج با کارت‌های فعلی به‌روز شود">🔄 همگام‌سازی نتایج</button>`
@@ -2198,6 +2221,8 @@
         <button class="btn" id="tr-pdf" style="background:linear-gradient(135deg,var(--gold),#b08a28);font-weight:900;min-width:200px">⬇ دانلود PDF گزارش</button>
       </div>`;
       $('#tr-x').addEventListener('click', () => { rp.style.display = 'none'; if (onChange) onChange(); });
+      const tp = $('#tr-part');
+      if (tp) tp.addEventListener('click', () => openParticipantsModal(t, () => render()));
       const fz = $('#tr-finall');
       if (fz) fz.addEventListener('click', () => {
         pend.forEach(pid => scFinalize(t, pid));
@@ -2476,7 +2501,7 @@
         }).join('')}</tbody>
       </table></div>
       <div style="font-size:11px;color:var(--muted);margin-top:9px">⛳ قانون گلف: برنده = کمترین ضربه • ${D.fa(cards.length)} کارت ثبت‌شده • <span style="color:#7ee8b8">سبز: زیر پار</span> • <span style="color:#ff9d9d">قرمز: بالای پار</span></div>`
-      : `<div style="padding:30px 14px;text-align:center;color:var(--muted)">📋 هنوز اسکورکارتی برای این مسابقه ثبت نشده است.<div style="font-size:11.5px;margin-top:8px">از بخش «کارت ضربات هر میدان» در همین صفحه ثبت کنید.</div></div>`}
+      : `<div style="padding:30px 14px;text-align:center;color:var(--muted)">📋 هنوز اسکورکارتی برای این مسابقه ثبت نشده است.<div style="font-size:11.5px;margin-top:8px">از دکمهٔ «📋 اسکورکارت» (ویزارد ثبت) کارت‌های بازیکنان را وارد کنید.</div></div>`}
       <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn sm ghost" id="sc-close">بستن</button></div>
     </div>`;
     m.style.display = 'flex';
@@ -2631,17 +2656,8 @@
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">⛳</span><h3>نتایج مسابقات</h3><span class="tag">ثبت شرکت‌کنندگان + نفرات برتر + امتیاز خودکار</span></div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding:9px 12px;border-radius:10px;border:1px solid rgba(212,175,55,.4);background:rgba(212,175,55,.07);font-size:12px">⛳ <b style="color:#f0d989">قانون گلف:</b> هر مسابقه ۱۸ حفره و پار ۷۲ است؛ برنده <b style="color:#7ee8b8">کمترین ضربه</b> را دارد — مثلاً ۶۵ نسبت به ۷۰ ضربه برنده است.</div>
-      <div style="font-size:11.5px;color:var(--muted);margin-top:6px">از لیست پایین مسابقه را انتخاب کنید و دکمهٔ «🎯 ثبت نتایج» را بزنید — با دبل‌کلیک بازیکنان را به شرکت‌کنندگان اضافه/حذف کنید، نفرات اول تا سوم را انتخاب کنید و امتیازها خودکار داده می‌شود.</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:6px">جریان هر مسابقه: «👥 انتخاب شرکت‌کنندگان» ← «📋 اسکورکارت» (ویزارد ثبت) ← «🏁 ثبت نهایی» ← به «نتایج ثبت‌شده» می‌رود و از این لیست ناپدید می‌شود. برای جریمه/حذف/ویرایش بعدی، رديف همان مسابقه در «نتایج ثبت‌شده» → ✏️ ویرایش.</div>
       <div id="mr-tours" style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px"></div>
-    </div>
-    <div class="glass" style="margin-bottom:16px">
-      <div class="card-head"><span class="ic">🏌️</span><h3>کارت ضربات هر میدان</h3><span class="tag">ورود با کیبورد — Enter میدان بعدی</span></div>
-      <div class="toolbar" style="margin-top:10px">
-        <span class="lbl">مسابقه:</span><select class="sel" id="mr-tour" style="min-width:180px">${S.tournaments.map(t=>`<option value="${t[0]}">${esc(t[1])}</option>`).join('')}</select>
-        <span class="lbl">بازیکن:</span><select class="sel" id="mr-pl" style="min-width:160px">${S.players.filter(p=>p[5]).map(p=>`<option value="${p[0]}">${esc(p[1])}</option>`).join('')}</select>
-      </div>
-      <div id="mr-holes" style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"></div>
-      <button class="btn sm" id="mr-add">💾 ثبت کارت ضربات</button>
     </div>
     <div class="glass">
       <div class="card-head"><span class="ic">📋</span><h3>نتایج ثبت‌شده</h3><span class="tag">${D.fa(Object.keys(results).length)} مسابقه</span></div>
@@ -2650,7 +2666,8 @@
 
     // ── ۱) لیست همهٔ مسابقات با دکمهٔ نتایج ──
     const toursBox = $('#mr-tours');
-    toursBox.innerHTML = S.tournaments.map(t => {
+    const openTours = S.tournaments.filter(t => !(results[t[0]] && results[t[0]].endedAt)); /* ثبت‌نهایی‌شده‌ها فقط در «نتایج ثبت‌شده» */
+    toursBox.innerHTML = openTours.length ? openTours.map(t => {
       const pr = D.prizesOf(t);
       const j = D.jalaliInfo(D.dateFrom(t[5]));
       const has = results[t[0]];
@@ -2667,27 +2684,10 @@
           ${has ? `<button class="btn sm danger" data-mrdel="${t[0]}">🗑</button>` : ''}
         </div>
       </div>`;
-    }).join('');
+    }).join('') : '<div style="color:var(--muted);font-size:12.5px;padding:10px">✔ همهٔ مسابقات این فصل ثبت نهایی شده‌اند — در بخش «نتایج ثبت‌شده» پایین ببینید.</div>';
     $$('#mr-tours [data-mrset]').forEach(b => b.addEventListener('click', () => {
-      const tour = +b.dataset.mrset;
-      const t = S.tournaments.find(x => x[0] === tour);
-      if (!t) return;
-      openResultsModal({
-        title: 'شرکت‌کنندگان «' + t[1] + '»',
-        prizes: D.prizesOf(t),
-        hideTop: true, /* نفرات برتر = خودکار از گزارش/ثبت نهایی */
-        freePlayers: true,
-        players: activePlayersList(),
-        participants: results[tour] ? (results[tour].participants || []) : [],
-        top: results[tour] ? (results[tour].top || {}) : {},
-        freeList: results[tour] ? (results[tour].free || []) : [],
-        onSave: (participants, top, free) => {
-          const r = D.loadResults();
-          r[tour] = Object.assign(r[tour] || {}, { participants, free: free || [] }); /* top/startedAt/endedAt حفظ می‌شوند */
-          D.saveResults(r); APP.reloadData(); APP.go('mgmt'); mgmtTab='results';
-          APP.toast('شرکت‌کنندگان «' + t[1] + '» ثبت شدند ✓', 'green');
-        }
-      });
+      const t = S.tournaments.find(x => x[0] === +b.dataset.mrset);
+      if (t) openParticipantsModal(t, () => { APP.go('mgmt'); mgmtTab = 'results'; });
     }));
     $$('#mr-tours [data-mrcard]').forEach(b => b.addEventListener('click', () => {
       const t = S.tournaments.find(x => x[0] === +b.dataset.mrcard);
@@ -2696,50 +2696,6 @@
     $$('#mr-tours [data-mrdel]').forEach(b => b.addEventListener('click', () => {
       const r = D.loadResults(); delete r[+b.dataset.mrdel]; D.saveResults(r); APP.reloadData(); APP.go('mgmt'); mgmtTab='results'; APP.toast('نتیجه حذف شد 🗑','orange');
     }));
-
-    // ── ۲) کارت ضربات هر میدان: بزرگ + کیبورد (Enter → بعدی، ارقام فارسی) ──
-    function toEN(str){ return String(str||'').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)); }
-    function drawHoles(){
-      const t = S.tournaments.find(x => x[0] === +$('#mr-tour').value);
-      if (!t) return;
-      const n = t[4], pars = D.parsOf(t[3]);
-      $('#mr-holes').innerHTML = Array.from({length:n}, (_,i) => `
-        <div class="hole-box">
-          <div class="hole-lbl">ح${D.fa(i+1)} <small style="color:var(--gold-l)">پ${D.fa(pars[i])}</small></div>
-          <input class="input hole-inp" type="text" inputmode="numeric" autocomplete="off" data-i="${i}" style="width:64px;height:48px;font-size:20px;font-weight:800;text-align:center;direction:ltr" placeholder="—">
-        </div>`).join('');
-      const ins = $$('#mr-holes .hole-inp');
-      ins.forEach(inp => {
-        inp.addEventListener('input', () => {
-          inp.value = toEN(inp.value).replace(/[^0-9]/g, '').slice(0,2);
-        });
-        inp.addEventListener('keydown', e => {
-          if (e.key === 'Enter'){
-            e.preventDefault();
-            const next = ins[+inp.dataset.i + 1];
-            if (next) next.focus(); else ins[0].focus();
-          }
-        });
-      });
-      if (ins[0]) ins[0].focus();
-    }
-    drawHoles();
-    $('#mr-tour').addEventListener('change', drawHoles);
-    $('#mr-add').addEventListener('click', () => {
-      const tour = +$('#mr-tour').value, pid = +$('#mr-pl').value;
-      const strokes = {};
-      $$('#mr-holes .hole-inp').forEach(inp => {
-        const v = +inp.value;
-        if (v > 0 && v <= 30) strokes[+inp.dataset.i + 1] = v;
-      });
-      if (!Object.keys(strokes).length){ APP.toast('حداقل ضربات یک میدان را وارد کنید', 'red'); return; }
-      const lst = extraCards();
-      const i = lst.findIndex(c => c.tour === tour && c.pid === pid);
-      const card = { tour, pid, strokes };
-      if (i >= 0) lst[i] = card; else lst.push(card);
-      saveCards(lst); APP.reloadData(); APP.go('mgmt'); mgmtTab='results';
-      APP.toast('کارت ضربات ثبت شد ✓', 'green');
-    });
 
     // ── ۳) نمایش نتایج ثبت‌شده ──
     renderSavedResults();

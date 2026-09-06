@@ -7911,12 +7911,17 @@ window.__L3D = {
       const row = rows[+b.dataset.idx];
       if (!row) return;
       if (act === 'delt'){
+        /* 🧹 حذف از همه‌جا: پیش‌نویس ابری اسکورکارت + کارت‌های ضربه + نتایج ثبت‌شده */
+        const _tid = row.t[0];
+        const _dd = scDraftLoad(); if (_dd[_tid]){ delete _dd[_tid]; scDraftSave(_dd); }
+        if (extraCards().some(c => c.tour === _tid)) saveCards(extraCards().filter(c => c.tour !== _tid));
+        const _rr = D.loadResults(); if (_rr[_tid]){ delete _rr[_tid]; D.saveResults(_rr); }
         if (row.base){
-          /* حذف نرم مسابقهٔ پایه: فقط از فصل پنهان می‌شود و قابل‌بازیابی است */
+          /* حذف نرم مسابقهٔ پایه: از فصل پنهان می‌شود و قابل‌بازیابی است (داده‌ها بازنمی‌گردند) */
           const hid = D.loadHiddenTours();
           if (hid.indexOf(row.t[0]) < 0){ hid.push(row.t[0]); D.saveHiddenTours(hid); }
           APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
-          APP.toast('«' + row.t[1] + '» از فصل حذف شد 🗑 — برای بازیابی، زیر همین جدول', 'orange');
+          APP.toast('«' + row.t[1] + '» و همهٔ داده‌هایش (پیش‌نویس/کارت/نتیجه) حذف شد 🗑 — بازیابی‌پذیر از زیر جدول', 'orange');
         } else {
           const lst = extraTours(); lst.splice(row.idx,1); saveTours(lst);
           APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
@@ -8674,7 +8679,11 @@ window.__L3D = {
     const _dA = scDraftLoad();
     if (!_dA[t[0]]) _dA[t[0]] = {};
     if (!_dA[t[0]].__meta) _dA[t[0]].__meta = {};
-    if (!_dA[t[0]].__meta.startedAt){ _dA[t[0]].__meta.startedAt = new Date().toISOString(); scDraftSave(_dA); }
+    /* 🔒 پیش‌نویس به «نام» مسابقه هم بسته است: اگر این آی‌دی بعد از حذف یک مسابقه برای مسابقهٔ دیگری بازاستفاده شده باشد، پیش‌نویس کهنه پاک می‌شود */
+    if (_dA[t[0]].__meta.name && _dA[t[0]].__meta.name !== t[1]){ _dA[t[0]] = { __meta: {} }; }
+    _dA[t[0]].__meta.name = t[1];
+    if (!_dA[t[0]].__meta.startedAt){ _dA[t[0]].__meta.startedAt = new Date().toISOString(); }
+    scDraftSave(_dA);
     let w = $('#score-wizard');
     if (!w){
       w = document.createElement('div');

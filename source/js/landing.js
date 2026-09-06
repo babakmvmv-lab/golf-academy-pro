@@ -640,7 +640,7 @@ function panelCal(){
   var mm = String(monthSel + 1).padStart(2, '0');
   var rows = [];
   var tours = [];
-  try { tours = D.TOURNAMENTS || []; } catch(e){}
+  try { tours = (D.visibleTours ? D.visibleTours() : D.TOURNAMENTS) || []; } catch(e){}
   tours.forEach(function(t){ if (t[5] && t[5].slice(5,7) === mm) rows.push({ ic: '🏆', txt: esc(t[1]) + ' — مسابقه', dt: esc(t[5]) }); });
   var thu = [];
   try { thu = D.thursdaysSeason ? D.thursdaysSeason() : []; } catch(e){}

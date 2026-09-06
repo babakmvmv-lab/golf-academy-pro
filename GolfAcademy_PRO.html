@@ -2420,8 +2420,14 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     [9,'جام آذر',1,1,18,'2026-12-18'],[10,'جام دی',1,1,18,'2027-01-15'],
     [11,'جام بهمن',1,1,18,'2027-02-19'],[12,'جام اسفند',1,1,18,'2027-03-19'],
   ];
-    const PTS_RULE = {1:[20,15,10,5], 2:[15,10,7,3], 3:[10,7,5,2]};
-  const RESULT_LABEL = ['اول','دوم','سوم','شرکت‌کننده'];
+  const PTS_RULE = {1:[20,15,10,5], 2:[15,10,7,3], 3:[10,7,5,2]};
+    const RESULT_LABEL = ['اول','دوم','سوم','شرکت‌کننده'];
+
+  /* ── پنهان‌سازی (حذف نرم) مسابقات پایهٔ فصل — از پنل مدیریت؛ بازیابی‌پذیر ── */
+  function loadHiddenTours(){ try { return JSON.parse(localStorage.getItem('ga_tour_hidden') || '[]').map(x => +x).filter(x => !isNaN(x)); } catch(e){ return []; } }
+  function saveHiddenTours(a){ try { localStorage.setItem('ga_tour_hidden', JSON.stringify(a)); } catch(e){} }
+  function isTourHidden(id){ return loadHiddenTours().indexOf(+id) >= 0; }
+  function visibleTours(){ return TOURNAMENTS.filter(t => !isTourHidden(t[0])); }
 
   /* ── قوانین امتیازدهی قابل ویرایش + نتایج ثبت‌شده + دوره‌ها ── */
   function loadTourRules(){
@@ -2465,6 +2471,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     const cards = [];
     const ACT = players ? players.filter(p => p[5]) : ACTIVE;
     TOURNAMENTS.forEach((t, ti) => {
+      if (isTourHidden(t[0])) return;  /* مسابقهٔ حذف‌شده (پنهان) — امتیاز/کارت تولید نمی‌کند */
       const [code, name, lvl, cid, holes, dstr] = t;
       const d = dateFrom(dstr);
       if (d >= TODAY) return;
@@ -2883,7 +2890,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     return {
       players, active: ACTIVE_EXT,
       courses: COURSES.concat(extra.courses.map((c, i) => [1000+i, c.name, c.loc, c.holes])),
-      tournaments: TOURNAMENTS.concat(extra.tournaments.map((t, i) => [1000+i, t.name, +t.lvl, +t.course, +t.holes, t.date])),
+      tournaments: visibleTours().concat(extra.tournaments.map((t, i) => [1000+i, t.name, +t.lvl, +t.course, +t.holes, t.date])),
       scorecards: genScorecards(players).concat(extra.scorecards.map(s => ({
         tour: +s.tour, pid: +s.pid,
         strokes: Object.fromEntries(Object.entries(s.strokes).map(([h,v]) => [+h, +v])),
@@ -2929,7 +2936,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   function seedSeason(force){
     try {
       if (!force && localStorage.getItem('ga_seed_v2') === '1405') return;
-      const keys = ['ga_tour_rules','ga_results','ga_tour_override','ga_programs','ga_courses','ga_tournaments','ga_scorecards','ga_del_acts','ga_events','ga_custom_players','ga_player_users','ga_players'];
+      const keys = ['ga_tour_rules','ga_results','ga_tour_override','ga_tour_hidden','ga_programs','ga_courses','ga_tournaments','ga_scorecards','ga_del_acts','ga_events','ga_custom_players','ga_player_users','ga_players'];
       keys.forEach(k => { try { localStorage.removeItem(k); } catch(e){} });
       // تولد اعضا (برای نمایش سن/تولد در مدیریت)
       const births = {1:'1987-03-21',2:'2009-03-21',3:'2009-08-01',4:'2008-09-01',5:'2011-04-15',6:'2010-05-10',7:'2010-08-20',8:'2017-03-21'};
@@ -2940,6 +2947,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
       const ALL = [1,2,3,4,5,6,7,8];
       const res = {};
       TOURNAMENTS.forEach((t, ti) => {
+        if (isTourHidden(t[0])) return;
         if (dateFrom(t[5]) >= TODAY) return;
         res[t[0]] = { participants: ALL.slice(), top: { 1: 1, 2: 2, 3: (ti % 2 === 0 ? 6 : 7) } };
       });
@@ -2971,6 +2979,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     PLAYERS, PLAYER_NAME, ACTIVE, COURSES, COURSE_PARS, COURSE_NAME, TOURNAMENTS,
     PTS_RULE, RESULT_LABEL, MONTHS_FA, RANK_DEF, RANK_TEXT, rankOf, FORM_META, GOLD_ELITE,
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
+    loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
     parsOf, compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
@@ -4240,7 +4249,7 @@ function panelCal(){
   var mm = String(monthSel + 1).padStart(2, '0');
   var rows = [];
   var tours = [];
-  try { tours = D.TOURNAMENTS || []; } catch(e){}
+  try { tours = (D.visibleTours ? D.visibleTours() : D.TOURNAMENTS) || []; } catch(e){}
   tours.forEach(function(t){ if (t[5] && t[5].slice(5,7) === mm) rows.push({ ic: '🏆', txt: esc(t[1]) + ' — مسابقه', dt: esc(t[5]) }); });
   var thu = [];
   try { thu = D.thursdaysSeason ? D.thursdaysSeason() : []; } catch(e){}
@@ -7748,7 +7757,7 @@ window.__L3D = {
   function mgmtTournaments(body){
     const S = gstate().S;
     const rules = D.loadTourRules ? D.loadTourRules() : D.PTS_RULE;
-    const base = D.TOURNAMENTS.map((t,i) => ({ t, base:true }));
+    const base = D.TOURNAMENTS.filter(t => !D.isTourHidden(t[0])).map(t => ({ t, base:true }));
     const extra = extraTours().map((t,i) => ({ t: [1000+i, t.name, +t.lvl, +t.course, +t.holes, t.date], base:false, idx:i }));
     const rows = base.concat(extra);
     body.innerHTML = `
@@ -7788,8 +7797,9 @@ window.__L3D = {
       <div style="overflow-x:auto"><table class="tbl"><thead><tr>
         <th>#</th><th>نام</th><th>سطح</th><th>زمین</th><th>حفره</th><th>تاریخ</th><th>وضعیت</th><th>عملیات</th>
       </tr></thead><tbody id="mt-rows"></tbody></table></div>
+      <div id="mt-hidden"></div>
     </div>`;
-    $('#mt-rows').innerHTML = rows.map(({t, base, idx}) => {
+    $('#mt-rows').innerHTML = rows.map(({t, base, idx}, ri) => {
       const pr = D.prizesOf(t);
       const past = D.dateFrom(t[5]) < D.TODAY;
       const j = D.jalaliInfo(D.dateFrom(t[5]));
@@ -7802,10 +7812,14 @@ window.__L3D = {
         <td class="ltr" style="color:var(--muted);font-size:11.5px">${D.fa(j.dd)} ${j.monthFa}</td>
         <td><span class="chip ${past?'dim':'green'}">${past?'برگزار شده':'آینده'}</span></td>
         <td><div class="row-actions">
-          <button class="btn sm ghost" data-act="editt" data-idx="${rows.indexOf(rows.find(r=>r.t[0]===t[0]))}">✏️</button>
-          ${base ? '' : `<button class="btn sm danger" data-act="delt" data-idx="${idx}">🗑</button>`}
+          <button class="btn sm ghost" data-act="editt" data-idx="${ri}" title="ویرایش مسابقه">✏️</button>
+          <button class="btn sm danger" data-act="delt" data-idx="${ri}" title="حذف مسابقه${base ? ' (بازیابی‌پذیر — از فصل پنهان می‌شود)' : ''}">🗑</button>
         </div></td></tr>`;
     }).join('');
+    /* ردیف بازیابی مسابقات پایهٔ حذف‌شده (حذف نرم) — زیر جدول */
+    const hidTours = D.loadHiddenTours().map(id => D.TOURNAMENTS.find(t => t[0] === id)).filter(Boolean);
+    const hb = $('#mt-hidden');
+    if (hb) hb.innerHTML = hidTours.length ? `<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);margin-top:10px;border-top:1px dashed var(--line-soft);padding-top:10px"><span>🗑 حذف‌شده از فصل:</span>${hidTours.map(t => `<span class="chip dim" style="display:inline-flex;align-items:center;gap:6px">${esc(t[1])}<button class="btn sm ghost" data-act="unhide" data-id="${t[0]}" style="padding:2px 8px;font-size:10px">↩ بازیابی</button></span>`).join('')}</div>` : '';
     JDate.render($('#mt-start'), { value: D.shamsiToISO(1405,7,4), onChange(){ renderTourSch(); } });
     JDate.render($('#mt-end'),   { value: D.shamsiToISO(1405,7,4), onChange(){ renderTourSch(); } });
     function tourDays(){
@@ -7858,10 +7872,28 @@ window.__L3D = {
       APP.toast('مسابقه «' + (name||'بدون نام') + '» ثبت شد ✓', 'green');
     });
     body.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
-      const act = b.dataset.act, idx = +b.dataset.idx;
-      const row = rows[idx];
+      const act = b.dataset.act;
+      if (act === 'unhide'){
+        const id = +b.dataset.id;
+        D.saveHiddenTours(D.loadHiddenTours().filter(x => x !== id));
+        APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
+        APP.toast('مسابقه بازیابی شد ✓', 'green');
+        return;
+      }
+      const row = rows[+b.dataset.idx];
+      if (!row) return;
       if (act === 'delt'){
-        const lst = extraTours(); lst.splice(row.idx,1); saveTours(lst); APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments'; APP.toast('مسابقه حذف شد 🗑','orange');
+        if (row.base){
+          /* حذف نرم مسابقهٔ پایه: فقط از فصل پنهان می‌شود و قابل‌بازیابی است */
+          const hid = D.loadHiddenTours();
+          if (hid.indexOf(row.t[0]) < 0){ hid.push(row.t[0]); D.saveHiddenTours(hid); }
+          APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
+          APP.toast('«' + row.t[1] + '» از فصل حذف شد 🗑 — برای بازیابی، زیر همین جدول', 'orange');
+        } else {
+          const lst = extraTours(); lst.splice(row.idx,1); saveTours(lst);
+          APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
+          APP.toast('مسابقه حذف شد 🗑','orange');
+        }
       }
       if (act === 'editt') editTourModal(row.t, row.base, row.idx);
     }));

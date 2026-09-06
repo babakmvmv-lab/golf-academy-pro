@@ -1380,7 +1380,7 @@
   function mgmtTournaments(body){
     const S = gstate().S;
     const rules = D.loadTourRules ? D.loadTourRules() : D.PTS_RULE;
-    const base = D.TOURNAMENTS.map((t,i) => ({ t, base:true }));
+    const base = D.TOURNAMENTS.filter(t => !D.isTourHidden(t[0])).map(t => ({ t, base:true }));
     const extra = extraTours().map((t,i) => ({ t: [1000+i, t.name, +t.lvl, +t.course, +t.holes, t.date], base:false, idx:i }));
     const rows = base.concat(extra);
     body.innerHTML = `
@@ -1420,8 +1420,9 @@
       <div style="overflow-x:auto"><table class="tbl"><thead><tr>
         <th>#</th><th>نام</th><th>سطح</th><th>زمین</th><th>حفره</th><th>تاریخ</th><th>وضعیت</th><th>عملیات</th>
       </tr></thead><tbody id="mt-rows"></tbody></table></div>
+      <div id="mt-hidden"></div>
     </div>`;
-    $('#mt-rows').innerHTML = rows.map(({t, base, idx}) => {
+    $('#mt-rows').innerHTML = rows.map(({t, base, idx}, ri) => {
       const pr = D.prizesOf(t);
       const past = D.dateFrom(t[5]) < D.TODAY;
       const j = D.jalaliInfo(D.dateFrom(t[5]));
@@ -1434,10 +1435,14 @@
         <td class="ltr" style="color:var(--muted);font-size:11.5px">${D.fa(j.dd)} ${j.monthFa}</td>
         <td><span class="chip ${past?'dim':'green'}">${past?'برگزار شده':'آینده'}</span></td>
         <td><div class="row-actions">
-          <button class="btn sm ghost" data-act="editt" data-idx="${rows.indexOf(rows.find(r=>r.t[0]===t[0]))}">✏️</button>
-          ${base ? '' : `<button class="btn sm danger" data-act="delt" data-idx="${idx}">🗑</button>`}
+          <button class="btn sm ghost" data-act="editt" data-idx="${ri}" title="ویرایش مسابقه">✏️</button>
+          <button class="btn sm danger" data-act="delt" data-idx="${ri}" title="حذف مسابقه${base ? ' (بازیابی‌پذیر — از فصل پنهان می‌شود)' : ''}">🗑</button>
         </div></td></tr>`;
     }).join('');
+    /* ردیف بازیابی مسابقات پایهٔ حذف‌شده (حذف نرم) — زیر جدول */
+    const hidTours = D.loadHiddenTours().map(id => D.TOURNAMENTS.find(t => t[0] === id)).filter(Boolean);
+    const hb = $('#mt-hidden');
+    if (hb) hb.innerHTML = hidTours.length ? `<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);margin-top:10px;border-top:1px dashed var(--line-soft);padding-top:10px"><span>🗑 حذف‌شده از فصل:</span>${hidTours.map(t => `<span class="chip dim" style="display:inline-flex;align-items:center;gap:6px">${esc(t[1])}<button class="btn sm ghost" data-act="unhide" data-id="${t[0]}" style="padding:2px 8px;font-size:10px">↩ بازیابی</button></span>`).join('')}</div>` : '';
     JDate.render($('#mt-start'), { value: D.shamsiToISO(1405,7,4), onChange(){ renderTourSch(); } });
     JDate.render($('#mt-end'),   { value: D.shamsiToISO(1405,7,4), onChange(){ renderTourSch(); } });
     function tourDays(){
@@ -1490,10 +1495,28 @@
       APP.toast('مسابقه «' + (name||'بدون نام') + '» ثبت شد ✓', 'green');
     });
     body.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
-      const act = b.dataset.act, idx = +b.dataset.idx;
-      const row = rows[idx];
+      const act = b.dataset.act;
+      if (act === 'unhide'){
+        const id = +b.dataset.id;
+        D.saveHiddenTours(D.loadHiddenTours().filter(x => x !== id));
+        APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
+        APP.toast('مسابقه بازیابی شد ✓', 'green');
+        return;
+      }
+      const row = rows[+b.dataset.idx];
+      if (!row) return;
       if (act === 'delt'){
-        const lst = extraTours(); lst.splice(row.idx,1); saveTours(lst); APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments'; APP.toast('مسابقه حذف شد 🗑','orange');
+        if (row.base){
+          /* حذف نرم مسابقهٔ پایه: فقط از فصل پنهان می‌شود و قابل‌بازیابی است */
+          const hid = D.loadHiddenTours();
+          if (hid.indexOf(row.t[0]) < 0){ hid.push(row.t[0]); D.saveHiddenTours(hid); }
+          APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
+          APP.toast('«' + row.t[1] + '» از فصل حذف شد 🗑 — برای بازیابی، زیر همین جدول', 'orange');
+        } else {
+          const lst = extraTours(); lst.splice(row.idx,1); saveTours(lst);
+          APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
+          APP.toast('مسابقه حذف شد 🗑','orange');
+        }
       }
       if (act === 'editt') editTourModal(row.t, row.base, row.idx);
     }));

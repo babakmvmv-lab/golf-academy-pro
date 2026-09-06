@@ -10869,14 +10869,14 @@ window.__L3D = {
       <div class="glass">
         <div class="card-head"><span class="ic">🏁</span><h3>رقابت زنده — ده نفر برتر</h3><span class="tag">Live</span></div>
         <table class="tbl"><thead><tr><th>#</th><th>بازیکن</th><th>رنک</th><th>امتیاز</th><th>تغییر</th><th>فرم</th></tr></thead><tbody>
-        ${A.LB.slice(0,10).map(r => `<tr class="top${r.rank<=3?r.rank:0}">
+        ${(() => { const T = tvLB().LB; return (T.length ? T.slice(0,10).map(r => `<tr class="top${r.rank<=3?r.rank:0}">
           <td>${medal(r.rank)} ${D.fa(r.rank)}</td>
           <td><b>${esc(r.name)}</b>${r.streak>=2?' 🔥':''}</td>
           <td>${rankPill(r.color)}</td>
           <td class="num" style="color:var(--gold-l);font-weight:800">${D.faNum(r.pts,0)}</td>
           <td>${changeBadge(r.change)}</td>
           <td>${formChips(r.form)}</td>
-        </tr>`).join('')}
+        </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">🏁 هنوز کسی در امسال امتیازی دریافت نکرده است</td></tr>'); })()}
         </tbody></table>
       </div>
     </div>`;
@@ -10965,6 +10965,15 @@ window.__L3D = {
       Object.keys(bt).forEach(pid => addPts(+pid, +bt[pid] || 0));
     } catch(e){}
     return { pts, yr };
+  }
+  /* مرجع مشترک «سبک تلویزیونی»: مرتب‌شده — همهٔ امتیازهای امسال، حداقل ۱ */
+  function tvLB(){
+    const { pts, yr } = tvYearPoints();
+    const LB = A.LB.filter(r => (pts[r.pid] || 0) >= 1)
+      .map(r => Object.assign({}, r, { pts: pts[r.pid] }))
+      .sort((a, b) => b.pts - a.pts || (A.LB.indexOf(a) - A.LB.indexOf(b)))
+      .map((r, i) => { r.rank = i + 1; return r; });
+    return { LB, yr };
   }
 
   /* ═══════════ صفحه: رقابت فصل ═══════════ */
@@ -12012,11 +12021,7 @@ window.__L3D = {
       return;
     }    const v = $('#view');
     const next = A.NEXT_T;
-    const { pts: tvPts, yr: tvYr } = tvYearPoints();
-    const TV = A.LB.filter(r => (tvPts[r.pid] || 0) >= 1)
-      .map(r => Object.assign({}, r, { pts: tvPts[r.pid] }))
-      .sort((a, b) => b.pts - a.pts || (A.LB.indexOf(a) - A.LB.indexOf(b)))
-      .map((r, i) => { r.rank = i + 1; return r; });
+    const { LB: TV, yr: tvYr } = tvLB();
     v.innerHTML = `
     <div class="tv-wrap">
       <div class="glass" style="border-color:var(--line)">

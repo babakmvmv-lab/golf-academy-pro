@@ -1959,6 +1959,152 @@
   function scDraftLoad(){ try { return JSON.parse(localStorage.getItem('ga_score_draft') || '{}'); } catch(e){ return {} } }
   function scDraftSave(d){ try { localStorage.setItem('ga_score_draft', JSON.stringify(d)); } catch(e){} }
   function scDraftTour(tid){ const d = scDraftLoad(); return d[tid] || {}; }
+  /* ثبت نهایی یک کارت پیش‌نویس: رفتن به ga_scorecards (ضربه+جریمه) */
+  function scFinalize(t, pid){
+    const dr = (scDraftTour(t[0]) || {})[pid];
+    if (!dr || !Object.keys(dr.holes || {}).length) return false;
+    const strokes = {};
+    Object.entries(dr.holes).forEach(([h, e]) => { strokes[h] = e.s + (e.pen || 0); });
+    const lst = extraCards();
+    const i = lst.findIndex(c => c.tour === t[0] && c.pid === pid);
+    const card = { tour: t[0], pid, strokes };
+    if (i >= 0) lst[i] = card; else lst.push(card);
+    saveCards(lst);
+    const d = scDraftLoad(); if (d[t[0]] && d[t[0]][pid]){ d[t[0]][pid].final = true; }
+    scDraftSave(d);
+    return true;
+  }
+  /* ── موتور PDF (الگوی smartplay: CDN تنبل + html2canvas + jsPDF، دانلود مستقیم) ── */
+  let _pdfLibsP2 = null;
+  function mgPdfLibs(){
+    if (window.html2canvas && window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
+    if (!_pdfLibsP2){
+      const once = src => new Promise((res, rej) => {
+        if ([...document.scripts].some(s => s.src === src)) return res();
+        const sc = document.createElement('script'); sc.src = src; sc.async = true;
+        sc.onload = () => res(); sc.onerror = () => rej(new Error('cdn'));
+        document.head.appendChild(sc);
+      });
+      _pdfLibsP2 = once('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js')
+        .then(() => once('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'));
+      _pdfLibsP2.catch(() => { _pdfLibsP2 = null; });
+    }
+    return _pdfLibsP2;
+  }
+  function mgPdfFromEl(el, fileName, btn){
+    const old = btn ? btn.textContent : '';
+    const restore = () => { if (btn){ btn.disabled = false; btn.textContent = old; } };
+    if (btn){ btn.disabled = true; btn.textContent = '⏳ در حال ساخت PDF…'; }
+    mgPdfLibs().then(() => window.html2canvas(el, { backgroundColor: '#0b0f14', scale: 2, useCORS: true, logging: false }))
+      .then(cv => {
+        const PDF = window.jspdf.jsPDF;
+        const pdf = new PDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
+        const MG = 10, pageW = 200, pageH = 277;
+        const pxPerMm = cv.width / pageW, pagePx = Math.floor(pageH * pxPerMm);
+        const pages = Math.max(1, Math.ceil(cv.height / pagePx));
+        for (let i = 0; i < pages; i++){
+          const slice = document.createElement('canvas');
+          slice.width = cv.width; slice.height = Math.min(pagePx, cv.height - i * pagePx);
+          slice.getContext('2d').drawImage(cv, 0, i * pagePx, cv.width, slice.height, 0, 0, cv.width, slice.height);
+          if (i) pdf.addPage();
+          pdf.addImage(slice.toDataURL('image/jpeg', .93), 'JPEG', MG, MG, pageW, slice.height / pxPerMm);
+        }
+        pdf.save(fileName);
+        APP.toast('📄 PDF گزارش دانلود شد ✓', 'green');
+      })
+      .catch(() => APP.toast('سرویس PDF در دسترس نیست — اتصال اینترنت را بررسی و دوباره تلاش کنید', 'red'))
+      .then(restore);
+  }
+
+  /* ── گزارش پایانی مسابقه: سکو + رتبه‌بندی بر اساس کمترین ضربه (نسبت به مجموع پار) ── */
+  function tourReport(t, onChange){
+    const pars = (D.parsOf(t[3]) || []).slice(0, t[4] || 18);
+    const tourPar = pars.reduce((a, b) => a + b, 0);
+    const nameOf = pid => { const pl = gstate().S.players.find(p => p[0] === pid); return pl ? pl[1] : ('بازیکن ' + D.fa(pid)); };
+    const rows = () => extraCards().filter(c => c.tour === t[0]).map(c => {
+      const holes = Object.keys(c.strokes || {});
+      const total = holes.reduce((a, h) => a + (c.strokes[h] | 0), 0);
+      const par = holes.reduce((a, h) => a + (pars[+h - 1] || 0), 0);
+      return { pid: c.pid, name: nameOf(c.pid), total, par, diff: total - par, nH: holes.length };
+    }).sort((a, b) => a.diff - b.diff || a.total - b.total);
+    const pending = () => Object.entries(scDraftTour(t[0]))
+      .filter(([, d]) => !d.final && Object.keys(d.holes || {}).length >= (t[4] || 18))
+      .map(([pid]) => +pid);
+    const diffChip = d => d === 0
+      ? '<span class="chip dim" style="font-weight:800">E</span>'
+      : `<span class="chip ${d < 0 ? 'green' : ''}" style="font-weight:800;${d > 0 ? 'background:rgba(229,57,53,.14);border:1px solid rgba(229,57,53,.4);color:#ffb0b0' : ''}">${d > 0 ? '+' : '−'}${D.fa(Math.abs(d))}</span>`;
+
+    let rp = $('#tour-report');
+    if (!rp){ rp = document.createElement('div'); rp.id = 'tour-report'; document.body.appendChild(rp); }
+    rp.style.cssText = 'position:fixed;inset:0;z-index:9100;background:rgba(10,15,22,.97);display:flex;flex-direction:column;overflow:auto';
+
+    function render(){
+      const list = rows(), pend = pending();
+      const medals = ['🥇','🥈','🥉'];
+      if (!list.length && !pend.length){
+        rp.innerHTML = `<div style="margin:auto;text-align:center;padding:30px"><div style="font-size:40px">🏁</div><div class="glass gold-border" style="padding:20px;margin-top:12px;font-size:13px">هنوز هیچ کارتی ثبت نهایی نشده —<br>کارت بازیکنان را در ویزارد کامل کنید.</div><button class="btn ghost" id="tr-x" style="margin-top:14px">بستن</button></div>`;
+        $('#tr-x').onclick = () => { rp.style.display = 'none'; if (onChange) onChange(); };
+        return;
+      }
+      rp.innerHTML = `<div style="max-width:760px;width:100%;margin:0 auto;padding:18px 14px 24px" id="tr-capture">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <div style="flex:1">
+            <div style="font-weight:900;font-size:17px">🏁 گزارش پایانی — ${esc(t[1])}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(t[4] || 18)} میدان • <b style="color:var(--gold-l)">مجموع پار: ${D.fa(tourPar)}</b> • تاریخ ${D.isoToShamsi ? D.fa(D.isoToShamsi(String((t[5] || '')).slice(0, 10))) : ''}</div>
+          </div>
+          <button class="btn sm ghost" id="tr-x" title="بستن گزارش" data-no-pdf>✕</button>
+        </div>
+        ${pend.length ? `<div class="glass" style="border:1px dashed rgba(212,175,55,.5);padding:10px 13px;display:flex;align-items:center;gap:10px;margin:10px 0" data-no-pdf>
+          <span style="flex:1;font-size:11.5px">⏳ ${D.fa(pend.length)} کارت کامل در انتظار «ثبت نهایی» است — ثبت نشوند، در گزارش نمی‌آیند.</span>
+          <button class="btn sm" id="tr-finall" style="background:linear-gradient(135deg,#1ebb8a,#15996f);color:#fff;font-weight:800">✅ ثبت نهایی ${D.fa(pend.length)} کارت</button>
+        </div>` : ''}
+        ${list.length ? `<div style="display:flex;gap:9px;justify-content:center;align-items:flex-end;margin:16px 0 6px">
+          ${[list[1], list[0], list[2]].filter(Boolean).map(r => {
+            const idx = list.indexOf(r);
+            return `<div class="glass ${idx === 0 ? 'gold-border' : ''}" style="text-align:center;padding:${idx === 0 ? '20px 16px' : '14px 12px'};min-width:112px;border-radius:14px;transform:translateY(${idx === 0 ? '-8px' : '0'})">
+              <div style="font-size:${idx === 0 ? '30px' : '22px'}">${medals[idx]}</div>
+              <div style="font-weight:800;font-size:13px;margin-top:5px">${esc(r.name)}</div>
+              <div style="font-size:19px;font-weight:900;margin-top:4px;direction:ltr">${D.fa(r.total)}</div>
+              <div style="margin-top:4px">${diffChip(r.diff)}</div>
+            </div>`;
+          }).join('')}
+        </div>` : ''}
+        <table class="tbl" style="width:100%;margin-top:14px">
+          <thead><tr><th style="width:54px">رتبه</th><th>بازیکن</th><th>میدان</th><th>مجموع ضربه</th><th>مجموع پار</th><th>نسبت به پار</th></tr></thead>
+          <tbody>
+          ${list.map((r, i) => `<tr${i === 0 ? ' style="background:rgba(212,175,55,.06)"' : ''}>
+            <td style="text-align:center;font-weight:800">${medals[i] || D.fa(i + 1)}</td>
+            <td style="font-weight:${i < 3 ? 800 : 500}">${esc(r.name)}</td>
+            <td class="num" style="text-align:center">${D.fa(r.nH)}</td>
+            <td class="num" style="text-align:center;font-weight:900">${D.fa(r.total)}</td>
+            <td class="num" style="text-align:center;color:var(--muted)">${D.fa(r.par)}</td>
+            <td style="text-align:center">${diffChip(r.diff)}</td>
+          </tr>`).join('')}
+          </tbody>
+        </table>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px">کمترین مجموع ضربه = نفر اول • − = زیر پار • + = بالای پار • نمرهٔ هر بازیکن = ضربه + جریمهٔ حفره‌ها</div>
+      </div>
+      <div style="position:sticky;bottom:0;display:flex;gap:9px;justify-content:center;padding:12px 0 18px" data-no-pdf>
+        <button class="btn" id="tr-pdf" style="background:linear-gradient(135deg,var(--gold),#b08a28);font-weight:900;min-width:200px">⬇ دانلود PDF گزارش</button>
+      </div>`;
+      $('#tr-x').addEventListener('click', () => { rp.style.display = 'none'; if (onChange) onChange(); });
+      const fz = $('#tr-finall');
+      if (fz) fz.addEventListener('click', () => {
+        pend.forEach(pid => scFinalize(t, pid));
+        APP.toast(`📥 ${D.fa(pend.length)} کارت ثبت نهایی شد`, 'green');
+        if (onChange) onChange();
+        render();
+      });
+      const pb = $('#tr-pdf');
+      if (pb) pb.addEventListener('click', () => {
+        $$('#tour-report [data-no-pdf]').forEach(e => { e.style.visibility = 'hidden'; });
+        mgPdfFromEl($('#tr-capture'), `گزارش-مسابقه-${String(t[1]).replace(/\s+/g, '-')}.pdf`, pb);
+        setTimeout(() => $$('#tour-report [data-no-pdf]').forEach(e => { e.style.visibility = ''; }), 1200);
+      });
+    }
+    render();
+  }
+
 
   function openScoreWizard(t){
     let w = $('#score-wizard');
@@ -2006,6 +2152,7 @@
         </div>
         <span class="chip ${done ? 'green' : 'gold'}">${D.fa(done)} کارت نهایی</span>
         <button class="btn sm ghost" id="sw-peek" title="جدول اسکورکارت (نمایش)">👁 جدول</button>
+        <button class="btn sm" id="sw-report" style="background:linear-gradient(135deg,var(--gold),#b08a28);color:#1a1407;font-weight:800" title="ثبت نهایی و گزارش پایانی مسابقه">🏁 گزارش مسابقه</button>
       </div>
       <div style="display:flex;gap:6px;padding:9px 16px;font-size:10.5px;color:var(--muted);border-bottom:1px solid var(--line-soft)">
         ${['۱. انتخاب بازیکن','۲. انتخاب میدان','۳. ثبت ضربه'].map((s,i) => `<span style="padding:3px 10px;border-radius:99px;${state.step === i+1 ? 'background:rgba(212,175,55,.15);color:var(--gold-l);border:1px solid rgba(212,175,55,.4);font-weight:700' : 'background:rgba(255,255,255,.03)'}">${s}</span>`).join('')}
@@ -2095,6 +2242,7 @@
       w.style.display = 'flex';
       $('#sw-close').addEventListener('click', () => { w.style.display = 'none'; mgmtTab = 'results'; APP.go('mgmt'); });
       $('#sw-peek').addEventListener('click', () => openScorecardModal(t));
+      $('#sw-report').addEventListener('click', () => tourReport(t, () => render()));
       $$('#sw-body [data-swback]').forEach(b => b.addEventListener('click', () => { state.step = +b.dataset.swback; render(); }));
       if (state.step === 1){
         $$('#sw-body .sw-player').forEach(b => b.addEventListener('click', () => { state.pid = +b.dataset.pid; state.step = 2; render(); }));
@@ -2102,17 +2250,10 @@
         $$('#sw-body .sw-hole').forEach(b => b.addEventListener('click', () => { state.hole = +b.dataset.hole; state.step = 3; render(); }));
         const fz = $('#sw-finalize');
         if (fz) fz.addEventListener('click', () => {
-          const dr = draftFor(state.pid);
-          const strokes = {};
-          Object.entries(dr.holes).forEach(([h, e]) => { strokes[h] = e.s + (e.pen || 0); });
-          const lst = extraCards();
-          const i = lst.findIndex(c => c.tour === t[0] && c.pid === state.pid);
-          const card = { tour: t[0], pid: state.pid, strokes };
-          if (i >= 0) lst[i] = card; else lst.push(card);
-          saveCards(lst);
-          dr.final = true; savePid(state.pid, dr);
+          scFinalize(t, state.pid);
           APP.toast(`کارت «${esc((playersOf().find(x => x.pid === state.pid) || {}).name || '')}» ثبت نهایی شد ✅`, 'green');
-          render();
+          if (confirm('ثبت نهایی شد ✔ گزارش مسابقه را ببینید؟')) tourReport(t, () => render());
+          else render();
         });
       } else {
         const toEN = s => String(s || '').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[^\d]/g, '');

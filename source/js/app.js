@@ -285,7 +285,7 @@
   function pageCmd(){
     const v = $('#view');
     const g = A.GOLD_COUNT;
-    const top = A.LB.slice(0, 3);
+    const top = raceLB().LB.slice(0, 3); /* از دیتای جدول رقابت فصل (مسابقات امسال) */
     v.innerHTML = `
     <div class="glass gold-border" style="padding:0;overflow:hidden;margin-bottom:18px">
       <img src="assets/hero_main.webp" class="hero-pano" alt="">
@@ -477,17 +477,22 @@
     });
     return { pts, yr };
   }
+  /* جدول مرتب‌شدهٔ رقابت فصل (مسابقات سال جاری، حداقل ۱ امتیاز) — مرجع سکوها و نبرد صدر */
+  function raceLB(){
+    const { pts, yr } = raceYearPoints();
+    const LB = A.LB.filter(r => (pts[r.pid] || 0) >= 1)
+      .map(r => Object.assign({}, r, { pts: pts[r.pid] }))
+      .sort((a, b) => b.pts - a.pts || (A.LB.indexOf(a) - A.LB.indexOf(b)))
+      .map((r, i) => { r.rank = i + 1; return r; });
+    return { LB, yr };
+  }
   function pageRace(){
     const v = $('#view');
     if (!MGMT.getSettings().chRace){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🏁 نمودار ${esc(L('nav.race','رقابت فصل'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
     }
-    const { pts: rPts, yr } = raceYearPoints();
-    const LB = A.LB.filter(r => (rPts[r.pid] || 0) >= 1)
-      .map(r => Object.assign({}, r, { pts: rPts[r.pid] }))
-      .sort((a, b) => b.pts - a.pts || (A.LB.indexOf(a) - A.LB.indexOf(b)))
-      .map((r, i) => { r.rank = i + 1; return r; });
+    const { LB, yr } = raceLB();
     if (!LB.length){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🏁 هنوز در ${D.fa(yr)} هیچ بازیکنی حداقل ۱ امتیاز از مسابقات امسال را دریافت نکرده است.</div>`;
       return;
@@ -1237,8 +1242,9 @@
       <div class="glass">
         <div class="card-head"><span class="ic">🏆</span><h3>سکوی فصل</h3><span class="tag">Champions</span></div>
         <div class="podium" style="transform:scale(.85);transform-origin:top center;padding:8px 0 0">
-          ${[1,0,2].map(k => {
-            const r = A.LB[k];
+          ${(() => { const RLB = raceLB().LB; return [1,0,2].map(k => {
+            const r = RLB[k];
+            if (!r) return '';
             const hs = k===0?70:46;
             return `<div class="step">
               <div class="medal">${['🥇','🥈','🥉'][k]}</div>
@@ -1247,7 +1253,7 @@
                 <div class="pname">${esc(r.name)}</div><div class="ppts">${D.faNum(r.pts,0)}</div>
               </div>
             </div>`;
-          }).join('')}
+          }).join(''); })()}
         </div>
         <div style="text-align:center;font-size:11.5px;color:var(--dim);margin-top:6px">🥇🥈🥉 — مدالهای فصل</div>
       </div>

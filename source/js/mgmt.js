@@ -1953,6 +1953,197 @@
 
 
   /* ── تب نتایج ── */
+  /* ═══ ویزارد ثبت اسکورکارت (مرحله‌ای — سبک «ثبت رکورد») ═══
+     پیش‌نویس اشتراکی همهٔ ادمین‌ها در ga_score_draft (ابری): تا «ثبت نهایی» نخورده، هر زمان ادامه‌پذیر.
+     ساختار: { tourId: { pid: { holes: { hole: { s, pen, note } }, final, by, ts } } } */
+  function scDraftLoad(){ try { return JSON.parse(localStorage.getItem('ga_score_draft') || '{}'); } catch(e){ return {} } }
+  function scDraftSave(d){ try { localStorage.setItem('ga_score_draft', JSON.stringify(d)); } catch(e){} }
+  function scDraftTour(tid){ const d = scDraftLoad(); return d[tid] || {}; }
+
+  function openScoreWizard(t){
+    let w = $('#score-wizard');
+    if (!w){
+      w = document.createElement('div');
+      w.id = 'score-wizard';
+      w.style.cssText = 'position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;background:linear-gradient(160deg,#0a0f16,#0d1420);overflow:hidden';
+      document.body.appendChild(w);
+    }
+    const pars = (D.parsOf(t[3]) || []).slice(0, t[4] || 18);
+    const nHoles = t[4] || 18;
+    const res = (D.loadResults() || {})[t[0]];
+    let state = { step: 1, pid: null, hole: null };
+    const curU = APP.currentUser();
+
+    const playersOf = () => {
+      if (res && Array.isArray(res.participants) && res.participants.length){
+        return S2players().filter(p => res.participants.includes(p.pid));
+      }
+      return S2players();
+    };
+    function S2players(){ return activePlayersList(); }
+
+    function draftFor(pid){
+      const all = scDraftTour(t[0]);
+      if (!all[pid]) all[pid] = { holes: {}, final: false };
+      return all[pid];
+    }
+    function savePid(pid, obj){
+      const d = scDraftLoad();
+      if (!d[t[0]]) d[t[0]] = {};
+      d[t[0]][pid] = Object.assign(obj, { by: (APP.users && APP.users.label ? APP.users.label(curU) : curU), ts: new Date().toISOString() });
+      scDraftSave(d);
+    }
+    const holesDone = p => Object.keys(draftFor(p).holes).length;
+    const isComplete = p => holesDone(p) >= nHoles;
+
+    function headerHtml(){
+      const done = playersOf().filter(p => draftFor(p.pid).final).length;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line-soft);background:rgba(255,255,255,.02)">
+        <button class="btn sm ghost" id="sw-close" title="بستن (پیش‌نویس نگه داشته می‌شود)">✕</button>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:14.5px">📋 ویزارد اسکورکارت — ${esc(t[1])}</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:2px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(nHoles)} حفره • پیش‌نویس ابری — هر ادمین می‌تواند ادامه دهد</div>
+        </div>
+        <span class="chip ${done ? 'green' : 'gold'}">${D.fa(done)} کارت نهایی</span>
+        <button class="btn sm ghost" id="sw-peek" title="جدول اسکورکارت (نمایش)">👁 جدول</button>
+      </div>
+      <div style="display:flex;gap:6px;padding:9px 16px;font-size:10.5px;color:var(--muted);border-bottom:1px solid var(--line-soft)">
+        ${['۱. انتخاب بازیکن','۲. انتخاب میدان','۳. ثبت ضربه'].map((s,i) => `<span style="padding:3px 10px;border-radius:99px;${state.step === i+1 ? 'background:rgba(212,175,55,.15);color:var(--gold-l);border:1px solid rgba(212,175,55,.4);font-weight:700' : 'background:rgba(255,255,255,.03)'}">${s}</span>`).join('')}
+      </div>`;
+    }
+
+    function stepPlayers(){
+      const list = playersOf();
+      return `<div style="padding:16px;overflow:auto;flex:1">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">بازیکن شرکت‌کننده در این مسابقه را انتخاب کنید${res ? '' : ' <span class="chip dim" style="font-size:9.5px">نتایج ثبت نشده — همهٔ اعضای فعال</span>'}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:9px">
+        ${list.map(p => {
+          const dr = draftFor(p.pid);
+          const n = holesDone(p.pid);
+          const full = isComplete(p.pid);
+          return `<button type="button" class="sw-player" data-pid="${p.pid}" style="text-align:right;cursor:pointer;border-radius:13px;padding:12px;border:1px solid ${dr.final ? 'rgba(30,187,138,.5)' : 'var(--line-soft)'};background:${dr.final ? 'rgba(30,187,138,.07)' : 'rgba(255,255,255,.025)'};color:inherit">
+            <div style="font-weight:800;font-size:13px">${esc(p.name)} ${dr.final ? '✔' : ''}</div>
+            <div style="font-size:10px;color:${n ? 'var(--gold-l)' : 'var(--muted)'};margin-top:5px">
+              ${dr.final ? 'ثبت نهایی شد ✔ — برای ویرایش انتخاب کنید' : n ? `پیش‌نویس: ${D.fa(n)} از ${D.fa(nHoles)} میدان` : 'شروع نشده'}
+            </div>
+            <div class="pbar" style="margin-top:6px;height:4px"><i style="background:${dr.final ? '#1ebb8a' : 'var(--gold)'};width:${Math.round(n / nHoles * 100)}%"></i></div>
+          </button>`;
+        }).join('')}
+        </div></div>`;
+    }
+
+    function stepHoles(){
+      const p = playersOf().find(x => x.pid === state.pid);
+      const dr = draftFor(state.pid);
+      return `<div style="padding:16px;overflow:auto;flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <button class="btn sm ghost" data-swback="1">→ بازیکنان</button>
+          <b style="font-size:13.5px">${esc(p ? p.name : '')}</b>
+          <span class="chip dim">${D.fa(holesDone(state.pid))}/${D.fa(nHoles)} میدان</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px">
+        ${Array.from({length:nHoles}, (_,i) => {
+          const h = i + 1, e = dr.holes[h];
+          return `<button type="button" class="sw-hole" data-hole="${h}" style="cursor:pointer;border-radius:12px;padding:10px 8px;text-align:center;border:1px solid ${e ? 'rgba(30,187,138,.45)' : 'var(--line-soft)'};background:${e ? 'rgba(30,187,138,.07)' : 'rgba(255,255,255,.025)'};color:inherit">
+            <div style="font-size:10px;color:var(--muted)">حفره ${D.fa(h)} • پار <b style="color:var(--gold-l)">${D.fa(pars[i] || '—')}</b></div>
+            <div style="font-size:17px;font-weight:800;margin-top:4px;direction:ltr">${e ? D.fa(e.s + (e.pen || 0)) : '—'}</div>
+            ${e && e.pen ? `<div style="font-size:9px;color:#ffb3b3">جریمه +${D.fa(e.pen)}</div>` : (e && e.note ? '<div style="font-size:9px;color:var(--muted)">📝 یادداشت</div>' : '')}
+          </button>`;
+        }).join('')}
+        </div>
+        ${isComplete(state.pid) && !dr.final ? `<div style="margin-top:14px;text-align:left">
+          <button class="btn" id="sw-finalize" style="background:linear-gradient(135deg,#1ebb8a,#15996f);font-weight:800">✅ ثبت نهایی کارت «${esc(p ? p.name : '')}» — مجموع ${D.fa(sumOf(state.pid))}</button>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px">با ثبت نهایی، کارت به اسکورکارت مسابقه می‌رود و برای همه (از جمله اعضا) نمایش داده می‌شود.</div>
+        </div>` : ''}
+        ${dr.final ? `<div style="margin-top:14px" class="chip green">این کارت ثبت نهایی شده — برای اصلاح، هر حفره را باز و دوباره ثبت کن (به‌روزرسانی می‌شود)</div>` : ''}
+      </div>`;
+    }
+
+    function sumOf(pid){
+      const dr = draftFor(pid);
+      return Object.values(dr.holes).reduce((a, e) => a + e.s + (e.pen || 0), 0);
+    }
+
+    function stepHole(){
+      const p = playersOf().find(x => x.pid === state.pid);
+      const h = state.hole, par = pars[h - 1];
+      const dr = draftFor(state.pid);
+      const e = dr.holes[h] || {};
+      return `<div style="padding:16px;overflow:auto;flex:1;display:flex;justify-content:center">
+        <div class="glass gold-border" style="width:min(430px,100%);padding:18px;height:fit-content;margin-top:6px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <button class="btn sm ghost" data-swback="2">→ میدان‌ها</button>
+            <div style="flex:1;text-align:center">
+              <div style="font-weight:800;font-size:15px">حفرهٔ ${D.fa(h)}</div>
+              <div style="font-size:10.5px;color:var(--muted);margin-top:3px">${esc(p ? p.name : '')} • پار این میدان: <b style="color:var(--gold-l)">${D.fa(par || '—')}</b>${D.tourRuleOf && D.tourRuleOf(t[0]) === 'full' ? ` • سقف قانون فول: ${D.fa(D.holeCap(par))}` : ''}</div>
+            </div>
+          </div>
+          <label style="font-size:11px;color:var(--muted)">⛳ تعداد ضربه بازیکن در این میدان</label>
+          <input class="input" id="sw-s" type="text" inputmode="numeric" autocomplete="off" value="${e.s != null ? D.fa(e.s) : ''}" style="width:100%;height:56px;font-size:25px;font-weight:800;text-align:center;direction:ltr;margin:7px 0 12px" placeholder="—">
+          <label style="font-size:11px;color:var(--muted)">⚠️ ضربه جریمه (در صورت نداشتن، خالی بماند)</label>
+          <input class="input" id="sw-pen" type="text" inputmode="numeric" autocomplete="off" value="${e.pen ? D.fa(e.pen) : ''}" style="width:100%;height:46px;font-size:19px;font-weight:800;text-align:center;direction:ltr;margin:7px 0 12px" placeholder="۰">
+          <label style="font-size:11px;color:var(--muted)">📝 توضیحات (اختیاری)</label>
+          <textarea class="input" id="sw-note" maxlength="300" style="width:100%;resize:vertical;min-height:64px;font-size:12px;line-height:1.8;margin:7px 0 14px" placeholder="مثلاً: توپ رفت توی آب — +۱ جریمه">${e.note ? esc(e.note) : ''}</textarea>
+          <button class="btn" id="sw-save" style="width:100%;padding:13px;font-weight:900;font-size:14.5px">✓ ثبت و بازگشت به لیست بازیکن</button>
+        </div></div>`;
+    }
+
+    function render(){
+      w.innerHTML = headerHtml() + `<div id="sw-body" style="flex:1;display:flex;flex-direction:column;min-height:0">${
+        state.step === 1 ? stepPlayers() : state.step === 2 ? stepHoles() : stepHole()
+      }</div>`;
+      w.style.display = 'flex';
+      $('#sw-close').addEventListener('click', () => { w.style.display = 'none'; mgmtTab = 'results'; APP.go('mgmt'); });
+      $('#sw-peek').addEventListener('click', () => openScorecardModal(t));
+      $$('#sw-body [data-swback]').forEach(b => b.addEventListener('click', () => { state.step = +b.dataset.swback; render(); }));
+      if (state.step === 1){
+        $$('#sw-body .sw-player').forEach(b => b.addEventListener('click', () => { state.pid = +b.dataset.pid; state.step = 2; render(); }));
+      } else if (state.step === 2){
+        $$('#sw-body .sw-hole').forEach(b => b.addEventListener('click', () => { state.hole = +b.dataset.hole; state.step = 3; render(); }));
+        const fz = $('#sw-finalize');
+        if (fz) fz.addEventListener('click', () => {
+          const dr = draftFor(state.pid);
+          const strokes = {};
+          Object.entries(dr.holes).forEach(([h, e]) => { strokes[h] = e.s + (e.pen || 0); });
+          const lst = extraCards();
+          const i = lst.findIndex(c => c.tour === t[0] && c.pid === state.pid);
+          const card = { tour: t[0], pid: state.pid, strokes };
+          if (i >= 0) lst[i] = card; else lst.push(card);
+          saveCards(lst);
+          dr.final = true; savePid(state.pid, dr);
+          APP.toast(`کارت «${esc((playersOf().find(x => x.pid === state.pid) || {}).name || '')}» ثبت نهایی شد ✅`, 'green');
+          render();
+        });
+      } else {
+        const toEN = s => String(s || '').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[^\d]/g, '');
+        const si = $('#sw-s'); if (si) si.focus();
+        $('#sw-save').addEventListener('click', () => {
+          const s = +toEN($('#sw-s').value), pen = +toEN($('#sw-pen').value) || 0;
+          const note = ($('#sw-note').value || '').trim();
+          if (!s || s < 1 || s > 30){ APP.toast('تعداد ضربه را درست وارد کنید (۱ تا ۳۰)', 'red'); return; }
+          if (pen < 0 || pen > 10){ APP.toast('ضربه جریمه معتبر نیست', 'red'); return; }
+          const dr = draftFor(state.pid);
+          dr.holes[state.hole] = { s, pen, note };
+          savePid(state.pid, dr);
+          /* اگر قبلاً نهایی شده بود، کارت نهایی هم به‌روزرسانی شود */
+          if (dr.final){
+            const lst = extraCards();
+            const i = lst.findIndex(c => c.tour === t[0] && c.pid === state.pid);
+            if (i >= 0){
+              const strokes = {};
+              Object.entries(dr.holes).forEach(([h, e2]) => { strokes[h] = e2.s + (e2.pen || 0); });
+              lst[i].strokes = strokes; saveCards(lst);
+            }
+          }
+          APP.toast(`حفرهٔ ${D.fa(state.hole)} ثبت شد ✓`, 'green');
+          state = { step: 1, pid: null, hole: null }; /* طبق خواسته: برگشت به لیست بازیکن */
+          render();
+        });
+      }
+    }
+    render();
+  }
+
   /* ── مودال اسکورکارت مسابقه: جدول بازیکن × حفره + جمع + نسبت به پار ── */
   function openScorecardModal(t){
     const S = gstate().S;
@@ -2217,7 +2408,7 @@
     }));
     $$('#mr-tours [data-mrcard]').forEach(b => b.addEventListener('click', () => {
       const t = S.tournaments.find(x => x[0] === +b.dataset.mrcard);
-      if (t) openScorecardModal(t);
+      if (t) openScoreWizard(t);
     }));
     $$('#mr-tours [data-mrdel]').forEach(b => b.addEventListener('click', () => {
       const r = D.loadResults(); delete r[+b.dataset.mrdel]; D.saveResults(r); APP.reloadData(); APP.go('mgmt'); mgmtTab='results'; APP.toast('نتیجه حذف شد 🗑','orange');

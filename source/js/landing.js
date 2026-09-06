@@ -355,6 +355,7 @@ function siteInfo(){
   } catch(e){}
   return {
     contact: { phone:'۰۶۱-۳۲۴۴۵۶۷۸', email:'info@puttclub.ir', address:'زمین گلف مسجدسلیمان، خیابان ورزش', website:'puttclub.ir', social:'اینستاگرام · تلگرام · واتساپ', hours:'شنبه تا پنجشنبه ۸ تا ۲۰', qr:'https://puttclub.ir' },
+    reception: { signup:'', courses:'', tuition:'', rules:'' },
     info: { intro:'', address:'', hours:'' }
   };
 }
@@ -526,7 +527,7 @@ function wirePanel(){
       panelNav = bt.dataset.nav;
       panel.querySelectorAll('.l3d-nav button').forEach(function(x){ x.classList.remove('on'); });
       bt.classList.add('on');
-      var html = STATE.panel === 'reception' ? receptionTab(panelNav) : (STATE.panel === 'info' ? infoTab(panelNav) : '');
+      var html = STATE.panel === 'reception' ? panelReception() : (STATE.panel === 'info' ? panelInfo() : ''); /* رندر کامل پنل — ناوبری تب باید پس از هر سوییچ باقی بماند */
       if (html){ pbody.innerHTML = html; wirePanel(); }
     });
   });
@@ -566,10 +567,14 @@ function receptionTab(tab){
     return '<div class="sub"><b>به آکادمی گلف پات کلاب خوش آمدید.</b><br>' + esc(introTxt).replace(/\n/g, '<br>') + '<br><br>گلف ورزش دقت و آرامش است — ثبت‌نام در هر فصل از همین رسپشن انجام می‌شود.</div>';
   }
   if (tab === 'signup'){
+    var SRs = (siteInfo().reception || {}).signup;
+    if (SRs) return '<div class="sub">' + esc(SRs).replace(/\n/g, '<br>') + '</div>';
     return '<div class="sub">ثبت‌نام اعضای جدید — فرم در ' + esc(L('nav.mgmt','پنل مدیریت')) + ' «' + esc(L('admin.players','بازیکنان')) + '» تکمیل می‌شود.<br>برای ثبت‌نام حضوری به ' + esc(L('landing.reception','رسپشن')) + ' آکادمی مراجعه کنید یا با شمارهٔ تماس هماهنگ کنید.</div>' +
       '<div class="golfrule">همهٔ اعضا باید لباس رسمی گلف (پیراهن سفید با لوگوی آکادمی) داشته باشند.</div>';
   }
   if (tab === 'courses'){
+    var SRc = (siteInfo().reception || {}).courses;
+    if (SRc) return '<div class="sub">دوره‌ها:</div><div class="sub">' + esc(SRc).replace(/\n/g, '<br>') + '</div>';
     var progs = [];
     try { progs = D.loadPrograms ? D.loadPrograms() : []; } catch(e){}
     var h = '<div class="sub">دوره‌ها و کلاس‌های آموزشی فصل ۱۴۰۵:</div>';
@@ -584,6 +589,8 @@ function receptionTab(tab){
     return h;
   }
   if (tab === 'tuition'){
+    var SRt = (siteInfo().reception || {}).tuition;
+    if (SRt) return '<div class="sub">' + esc(SRt).replace(/\n/g, '<br>') + '</div>';
     return '<div class="sub">شهریهٔ فصل ۱۴۰۵:</div>' +
       '<div class="row"><span>عضویت سالانه</span><b>طبق تعرفهٔ رسپشن</b></div>' +
       '<div class="row"><span>تمرین گروهی (هر جلسه)</span><b>شامل عضویت</b></div>' +
@@ -592,6 +599,8 @@ function receptionTab(tab){
       '<div class="note">جزئیات دقیق شهریه از رسپشن آکادمی دریافت می‌شود.</div>';
   }
   if (tab === 'rules'){
+    var SRr = (siteInfo().reception || {}).rules;
+    if (SRr) return '<div class="sub">' + esc(SRr).replace(/\n/g, '<br>') + '</div>';
     return '<div class="sub">قوانین آکادمی:</div>' +
       '<div class="row"><span>کد لباس</span><b>پیراهن سفید + لوگوی آکادمی</b></div>' +
       '<div class="row"><span>زمان تمرین</span><b>پنجشنبه‌ها — حضور همهٔ اعضا</b></div>' +

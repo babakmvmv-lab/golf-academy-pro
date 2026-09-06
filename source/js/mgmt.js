@@ -118,6 +118,7 @@
       hours: 'شنبه تا پنجشنبه ۸ تا ۲۰',
       qr: 'https://puttclub.ir',
     },
+    reception: { signup: '', courses: '', tuition: '', rules: '' }, /* خالی = متن پیش‌فرض صفحهٔ ورود */
     info: {
       intro: 'آکادمی گلف پات کلاب — مرکز تخصصی گلف مسجدسلیمان.\nزمین رسمی ۱۸ حفره‌ای (پار ۷۲) با چمن استاندارد · باشگاه با امکانات کامل · مربیان رسمی فدراسیون گلف.\nتمرین گروهی اعضا هر پنجشنبه · مسابقهٔ ماهانه آخرین جمعهٔ هر ماه · دوره‌های ۲ روزه در خرداد و آذر.',
       address: 'زمین گلف مسجدسلیمان، خیابان ورزش',
@@ -139,9 +140,10 @@
       const s = deepBrand(JSON.parse(localStorage.getItem('ga_siteinfo') || '{}'));
       return {
         contact: deepBrand(Object.assign({}, d.contact, (s.contact || {}))),
+        reception: Object.assign({}, d.reception, (s.reception || {})),
         info: deepBrand(Object.assign({}, d.info, (s.info || {}))),
       };
-    } catch(e){ return d; }
+    } catch(e){ if (!d.reception) d.reception = { signup:'', courses:'', tuition:'', rules:'' }; return d; }
   }
   function saveSiteInfo(o){
     try { localStorage.setItem('ga_siteinfo', JSON.stringify(o)); } catch(e){}
@@ -250,7 +252,7 @@
     const tabs = [
       ['players','👥',L('admin.players','بازیکنان')], ['courses','🗺️',L('admin.courses','زمین‌ها')], ['tournaments','🏆',L('admin.tournaments','مسابقات')],
       ['programs','🎓',L('admin.programs','دوره‌ها')], ['results','⛳',L('admin.results','نتایج')], ['calendar','📅',L('admin.calendar','تقویم')],
-      ['contact','📞',L('admin.contact','تماس با ما')], ['info','ℹ️',L('admin.info','اطلاعات')], ['users','🔐',L('admin.users','یوزرها')],
+      ['reception','🛎️',L('admin.reception','رسپشن')], ['contact','📞',L('admin.contact','تماس با ما')], ['info','ℹ️',L('admin.info','اطلاعات')], ['users','🔐',L('admin.users','یوزرها')],
       ['coins','🪙',L('admin.coins','درخواست سکه')], ['honor','🏅',L('admin.honor','رنک و آواتار')], ['shop','🛍️',L('admin.shop','فروشگاه آواتار')],
       ['battle','⚔️',L('admin.battle','نبرد میدان‌ها')], ['avatars','🌸',L('admin.avatars','سرزمین آواتارها')], ['labels','✏️',L('admin.labels','ویرایش آیتم‌ها')],
     ];
@@ -286,6 +288,7 @@
     else if (mgmtTab === 'coins') mgmtCoins(body);
     else if (mgmtTab === 'honor') mgmtHonor(body);
     else if (mgmtTab === 'shop') { if (window.SHOP && SHOP.renderAdmin) SHOP.renderAdmin(body); else mgmtShop(body); }
+    else if (mgmtTab === 'reception') mgmtReception(body);
     else if (mgmtTab === 'contact') mgmtContact(body);
     else if (mgmtTab === 'info') mgmtInfo(body);
     else if (mgmtTab === 'users') mgmtUsers(body);
@@ -2780,6 +2783,66 @@
   }
 
   /* ── تب تماس با ما (ویرایش اطلاعات تماس صفحهٔ اصلی) ── */
+  /* ── 🛎️ تب رسپشن: ویرایش همهٔ بخش‌های پنل رسپشن صفحهٔ ورود ── */
+  function mgmtReception(body){
+    const si = getSiteInfo();
+    const rc = si.reception || {};
+    const area = (id, ic, label, val, ph, tip) => `
+    <div class="glass" style="margin-bottom:12px">
+      <div class="card-head"><span class="ic">${ic}</span><h3>${label}</h3><span class="tag">${val ? 'متن سفارشی فعال ✔' : 'پیش‌فرض سایت'}</span></div>
+      ${tip ? `<div style="font-size:10.5px;color:var(--muted);margin:2px 0 6px">${tip}</div>` : ''}
+      <textarea class="input" id="${id}" rows="${val ? Math.min(12, val.split('\n').length + 2) : 5}" style="width:100%;line-height:2" placeholder="${ph}">${esc(val || '')}</textarea>
+    </div>`;
+    body.innerHTML = `
+    <div class="glass gold-border" style="margin-bottom:16px">
+      <div class="card-head"><span class="ic">🛎️</span><h3>${esc(L('admin.reception','رسپشن'))} — محتوای صفحهٔ ورود</h3><span class="tag">فوری در سایت اعمال می‌شود</span></div>
+      <div class="sub-note" style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.9">
+        هر بخشی را که بنویسی، جایگزین متن همان بخش در پنل «🛎️ ${esc(L('landing.reception','رسپشن'))}» صفحهٔ ورود می‌شود؛ <b>خالی بگذار = متن فعلی/پیش‌فرض باقی می‌ماند</b>. Enter برای خط تازه. معرفیٔ کلی را هم از همین‌جا می‌توانی عوض کنی (همان فیلد «اطلاعات» است).
+      </div>
+      <button class="btn sm" id="rcp-save" style="margin-top:12px">💾 ذخیرهٔ همهٔ بخش‌های رسپشن</button>
+    </div>
+    ${area('rcp-intro','🏛️', 'معرفی (خوش‌آمد)', si.info.intro, 'خالی = متن معرفی فعلی سایت', 'در تب‌های «معرفی» رسپشن و «اطلاعات» نمایش داده می‌شود')}
+    ${area('rcp-signup','📝', 'ثبت‌نام', rc.signup, 'خالی = متن راهنمای ثبت‌نام فعلی', '')}
+    ${area('rcp-courses','🎓', 'دوره‌ها', rc.courses, 'خالی = لیست خودکار دوره‌های تعریف‌شده در تب «دوره‌ها»', 'اگر بنویسی، لیست خودکار دوره‌ها نمایش داده نمی‌شود و همین متن می‌آید')}
+    ${area('rcp-tuition','💰', 'شهریه', rc.tuition, 'خالی = جدول پیش‌فرض شهریه', '')}
+    ${area('rcp-rules','📜', 'قوانین', rc.rules, 'خالی = قوانین پیش‌فرض آکادمی', '')}
+    <div class="glass" style="margin-bottom:12px">
+      <div class="card-head"><span class="ic">📞</span><h3>تماس با ما</h3><span class="tag">با تب «تماس با ما» یکسان است</span></div>
+      <div class="field-grid" style="margin-top:10px">
+        <div><label>📞 تلفن</label><input class="input" id="rcp-phone" value="${esc(si.contact.phone)}" style="width:100%;direction:ltr"></div>
+        <div><label>✉️ ایمیل</label><input class="input" id="rcp-email" value="${esc(si.contact.email)}" style="width:100%;direction:ltr"></div>
+        <div class="span2"><label>📍 آدرس</label><input class="input" id="rcp-address" value="${esc(si.contact.address)}" style="width:100%"></div>
+        <div><label>🌐 وب‌سایت</label><input class="input" id="rcp-website" value="${esc(si.contact.website)}" style="width:100%;direction:ltr"></div>
+        <div><label>📱 شبکه‌های اجتماعی</label><input class="input" id="rcp-social" value="${esc(si.contact.social)}" style="width:100%"></div>
+        <div><label>⏰ ساعت پاسخ‌گویی</label><input class="input" id="rcp-hours" value="${esc(si.contact.hours)}" style="width:100%"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
+      <button class="btn sm" id="rcp-save2" style="background:linear-gradient(135deg,#1ebb8a,#15996f);font-weight:800">💾 ذخیرهٔ همهٔ بخش‌های رسپشن</button>
+    </div>`;
+    const save = () => {
+      const si2 = getSiteInfo();
+      si2.info.intro = $('#rcp-intro').value.trim();
+      si2.reception = {
+        signup: $('#rcp-signup').value.trim(),
+        courses: $('#rcp-courses').value.trim(),
+        tuition: $('#rcp-tuition').value.trim(),
+        rules: $('#rcp-rules').value.trim(),
+      };
+      si2.contact = {
+        phone: $('#rcp-phone').value.trim(), email: $('#rcp-email').value.trim(),
+        address: $('#rcp-address').value.trim(), website: $('#rcp-website').value.trim(),
+        social: $('#rcp-social').value.trim(), hours: $('#rcp-hours').value.trim(), qr: si2.contact.qr,
+      };
+      if (!si2.info.intro) delete si2.info.intro; /* خالی → پیش‌فرض فایل */
+      saveSiteInfo(si2);
+      APP.toast('محتوای رسپشن ذخیره شد — صفحهٔ ورود هم‌اکنون همین را نشان می‌دهد ✓', 'green');
+      mgmtReception(body);
+    };
+    $('#rcp-save').addEventListener('click', save);
+    $('#rcp-save2').addEventListener('click', save);
+  }
+
   function mgmtContact(body){
     const si = getSiteInfo();
     const c = si.contact;

@@ -111,26 +111,35 @@
   const SITE_DEFAULTS = {
     contact: {
       phone: '۰۶۱-۳۲۴۴۵۶۷۸',
-      email: 'info@golfacademy.sa',
+      email: 'info@puttclub.ir',
       address: 'زمین گلف مسجدسلیمان، خیابان ورزش',
-      website: 'GolfAcademy.sa',
+      website: 'puttclub.ir',
       social: 'اینستاگرام · تلگرام · واتساپ',
       hours: 'شنبه تا پنجشنبه ۸ تا ۲۰',
-      qr: 'https://golfacademy.sa',
+      qr: 'https://puttclub.ir',
     },
     info: {
-      intro: 'آکادمی گلف ۱۴۰۵ — مرکز تخصصی گلف مسجدسلیمان.\nزمین رسمی ۱۸ حفره‌ای (پار ۷۲) با چمن استاندارد · باشگاه با امکانات کامل · مربیان رسمی فدراسیون گلف.\nتمرین گروهی اعضا هر پنجشنبه · مسابقهٔ ماهانه آخرین جمعهٔ هر ماه · دوره‌های ۲ روزه در خرداد و آذر.',
+      intro: 'آکادمی گلف پات کلاب — مرکز تخصصی گلف مسجدسلیمان.\nزمین رسمی ۱۸ حفره‌ای (پار ۷۲) با چمن استاندارد · باشگاه با امکانات کامل · مربیان رسمی فدراسیون گلف.\nتمرین گروهی اعضا هر پنجشنبه · مسابقهٔ ماهانه آخرین جمعهٔ هر ماه · دوره‌های ۲ روزه در خرداد و آذر.',
       address: 'زمین گلف مسجدسلیمان، خیابان ورزش',
       hours: 'شنبه تا پنجشنبه، ۸ تا ۲۰',
     },
   };
+  /* مهاجرت برند: جایگزینی خودکار نام/دامنهٔ قدیمی در مقادیر ذخیره‌شدهٔ کاربر */
+  function brandFix(v){
+    if (typeof v !== 'string') return v;
+    return v.split('info@golfacademy.sa').join('info@puttclub.ir')
+            .split('https://golfacademy.sa').join('https://puttclub.ir')
+            .split('GolfAcademy.sa').join('puttclub.ir').split('golfacademy.sa').join('puttclub.ir')
+            .split('آکادمی گلف ۱۴۰۵').join('آکادمی گلف پات کلاب');
+  }
+  function deepBrand(o){ if (typeof o === 'string') return brandFix(o); if (o && typeof o === 'object'){ Object.keys(o).forEach(k => o[k] = deepBrand(o[k])); } return o; }
   function getSiteInfo(){
     const d = JSON.parse(JSON.stringify(SITE_DEFAULTS));
     try {
-      const s = JSON.parse(localStorage.getItem('ga_siteinfo') || '{}');
+      const s = deepBrand(JSON.parse(localStorage.getItem('ga_siteinfo') || '{}'));
       return {
-        contact: Object.assign({}, d.contact, (s.contact || {})),
-        info: Object.assign({}, d.info, (s.info || {})),
+        contact: deepBrand(Object.assign({}, d.contact, (s.contact || {}))),
+        info: deepBrand(Object.assign({}, d.info, (s.info || {}))),
       };
     } catch(e){ return d; }
   }
@@ -1135,7 +1144,7 @@
     ctx.textAlign = 'left'; ctx.fillText('LAT ' + course.lat.toFixed(5), 14, 24);
     ctx.fillText('LNG ' + course.lng.toFixed(5), 14, 40);
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,.4)';
-    ctx.fillText('© Satellite view — GolfAcademy 1405', W-14, H-12);
+    ctx.fillText('© Satellite view — Putt Club 1405', W-14, H-12);
   }
   function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 

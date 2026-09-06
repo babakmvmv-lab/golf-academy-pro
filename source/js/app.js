@@ -292,7 +292,7 @@
       <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(11,15,20,.92));display:flex;flex-direction:column;justify-content:flex-end;padding:26px">
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div>
-            <h1 style="font-size:26px;font-weight:900" class="gold-text">آکادمی گلف ۱۴۰۵ — ${esc(L('nav.cmd','فرماندهی'))}</h1>
+            <h1 style="font-size:26px;font-weight:900" class="gold-text">آکادمی گلف پات کلاب — ${esc(L('nav.cmd','فرماندهی'))}</h1>
             <div style="color:var(--muted);font-size:12.5px;margin-top:4px">فصل قهرمانی ۱۴۰۵ • ${D.fa(A.MATCHES_HELD)} مسابقه برگزار شده • ${D.fa(A.LB.length)} بازیکن فعال</div>
           </div>
           <div style="margin-right:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -1519,7 +1519,7 @@
           <div class="content">
             <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
               <span class="live-badge">● LIVE</span>
-              <span style="font-size:13px;color:var(--muted)">GolfAcademy ${D.fa(tvYr)} • Season Broadcast</span>
+              <span style="font-size:13px;color:var(--muted)">Putt Club ${D.fa(tvYr)} • Season Broadcast</span>
               <div style="margin-right:auto;display:flex;gap:14px;flex-wrap:wrap">
                 <span style="color:var(--muted);font-size:12px">🌬️ باد اهواز <b style="color:var(--white)" id="tv-wind">…</b></span>
                 <span style="color:var(--muted);font-size:12px">🌡️ دمای اهواز <b style="color:var(--white)" id="tv-temp">…</b></span>
@@ -1886,7 +1886,7 @@
   const spentCoins = (u, a, s, n) => AV.spendCoins(u, a, s, n);
 
   const COIN_RULES = [
-    { id:'story',    ic:'📱', title:'استوری اینستاگرام با تگ کردن پیج آکادمی', amount:10, desc:'استوری خود را با @golfacademy.sa تگ کنید و لینک/توضیح را در درخواست بنویسید', every:1 },
+    { id:'story',    ic:'📱', title:'استوری اینستاگرام با تگ کردن پیج آکادمی', amount:10, desc:'استوری خود را با @puttclub تگ کنید و لینک/توضیح را در درخواست بنویسید', every:1 },
     { id:'post1k',   ic:'🎬', title:'پست / ریلز اینستاگرام — ویدیو با ۱۰۰۰+ بازدید', amount:30, desc:'پست ویدیویی با تگ آکادمی (تک یا مشترک با پیج آکادمی)', every:1 },
     { id:'post2k',   ic:'🎥', title:'پست / ریلز اینستاگرام — ویدیو با ۲۰۰۰+ بازدید', amount:50, desc:'ویدیو بالای ۲۰۰۰ بازدید با تگ آکادمی', every:1 },
     { id:'refer',    ic:'🤝', title:'معرفی عضو جدید به آکادمی', amount:50, desc:'نام عضو معرفی‌شده را در توضیح درخواست بنویسید', every:0 },

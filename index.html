@@ -8022,12 +8022,20 @@ window.__L3D = {
           <div id="rp-part" class="rp-list" style="max-height:240px;overflow:auto"></div>
         </div>
       </div>
+      ${opts.hideTop ? '' : `
       <div class="form-section" style="margin-top:12px">🏆 نفرات برتر (انتخاب از شرکت‌کنندگان — بقیه امتیاز شرکت می‌گیرند)</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
         <label class="lbl">نفر اول:</label><select class="sel" id="rp-1" style="min-width:150px"></select>
         <label class="lbl">نفر دوم:</label><select class="sel" id="rp-2" style="min-width:150px"></select>
         <label class="lbl">نفر سوم:</label><select class="sel" id="rp-3" style="min-width:150px"></select>
+      </div>`}
+      ${opts.freePlayers ? `
+      <div class="form-section" style="margin-top:12px">🆓 بازیکن آزاد</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="input" id="rp-free" placeholder="نام شرکت‌کنندهٔ آزاد..." style="flex:1">
+        <button type="button" class="btn sm" id="rp-freeadd">➕ ثبت</button>
       </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">بعد از ثبت با پسوند «- بازیکن آزاد» به لیست شرکت‌کنندگان اضافه می‌شود</div>` : ''}
       <div id="rp-extra"></div>
       <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;flex-wrap:wrap">
         <button class="btn sm ghost" id="rp-cancel">بستن</button>
@@ -8036,23 +8044,25 @@ window.__L3D = {
     </div>`;
     m.style.display = 'flex';
     const allBox = m.querySelector('#rp-all'), partBox = m.querySelector('#rp-part');
+    let free = (opts.freeList || []).slice(); /* بازیکنان آزاد: آرایهٔ نام‌ها */
     function nameOf(pid){ const x = all.find(p => p.pid === +pid); return x ? x.name : '—'; }
     function render(){
       const q = (m.querySelector('#rp-search').value || '').trim();
       const partSet = new Set(part);
       allBox.innerHTML = all.filter(p => !partSet.has(p.pid) && (!q || p.name.includes(q))).map(p =>
         `<div class="rp-item" data-pid="${p.pid}">${esc(p.name)}</div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">—</div>';
-      partBox.innerHTML = part.map(pid =>
-        `<div class="rp-item sel" data-pid="${pid}">${esc(nameOf(pid))} ✕</div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">با یک لمس روی نام‌های ستون چپ اینجا اضافه می‌شوند</div>';
-      ['1','2','3'].forEach(k => {
+      const freeHtml = free.map((n, fi) => `<div class="rp-item sel" data-free="${fi}" style="border-style:dashed">${esc(n)} - بازیکن آزاد ✕</div>`).join('');
+      partBox.innerHTML = (part.map(pid =>
+        `<div class="rp-item sel" data-pid="${pid}">${esc(nameOf(pid))} ✕</div>`).join('') + freeHtml) || '<div style="color:var(--muted);font-size:12px;padding:8px">با یک لمس روی نام‌های ستون چپ اضافه می‌شوند — یا «بازیکن آزاد» ثبت کنید</div>';
+      if (!opts.hideTop) ['1','2','3'].forEach(k => {
         const sel = m.querySelector('#rp-' + k);
+        if (!sel) return;
         const cur = top[k];
         sel.innerHTML = '<option value="">— انتخاب —</option>' + part.map(pid => `<option value="${pid}" ${+cur === +pid ? 'selected' : ''}>${esc(nameOf(pid))}</option>`).join('');
       });
-      m.querySelector('.lbl + div') && false;
       const lbl = m.querySelector('#rp-part');
       const header = lbl.previousElementSibling;
-      if (header) header.textContent = '✅ شرکت‌کنندگان (' + D.fa(part.length) + ' نفر)';
+      if (header) header.textContent = '✅ شرکت‌کنندگان (' + D.fa(part.length + free.length) + ' نفر)';
     }
     allBox.addEventListener('click', e => {
       const it = e.target.closest('.rp-item'); if (!it) return;
@@ -8060,22 +8070,35 @@ window.__L3D = {
     });
     partBox.addEventListener('click', e => {
       const it = e.target.closest('.rp-item'); if (!it) return;
+      if (it.dataset.free != null){ free.splice(+it.dataset.free, 1); render(); return; }
       part = part.filter(p => p !== +it.dataset.pid);
-      ['1','2','3'].forEach(k => { if (+top[k] === +it.dataset.pid) delete top[k]; });
+      if (!opts.hideTop) ['1','2','3'].forEach(k => { if (+top[k] === +it.dataset.pid) delete top[k]; });
       render();
     });
+    if (opts.freePlayers){
+      const fin = m.querySelector('#rp-free');
+      const addFree = () => {
+        const n = (fin.value || '').trim();
+        if (n.length < 2){ APP.toast('نام شرکت‌کنندهٔ آزاد را بنویسید', 'red'); return; }
+        free.push(n); fin.value = ''; fin.focus(); render();
+      };
+      m.querySelector('#rp-freeadd').addEventListener('click', addFree);
+      fin.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); addFree(); } });
+    }
     m.querySelector('#rp-allin').addEventListener('click', () => { part = all.map(p => p.pid); render(); });
     m.querySelector('#rp-none').addEventListener('click', () => { part = []; top = {}; render(); });
     m.querySelector('#rp-search').addEventListener('input', render);
-    ['1','2','3'].forEach(k => m.querySelector('#rp-' + k).addEventListener('change', e => {
+    if (!opts.hideTop) ['1','2','3'].forEach(k => m.querySelector('#rp-' + k) && m.querySelector('#rp-' + k).addEventListener('change', e => {
       if (e.target.value) top[k] = +e.target.value; else delete top[k];
     }));
     m.querySelector('#rp-cancel').addEventListener('click', () => m.style.display = 'none');
     m.querySelector('#rp-save').addEventListener('click', () => {
-      if (!part.length){ APP.toast('حداقل یک شرکت‌کننده انتخاب کنید', 'red'); return; }
-      const topVals = [top['1'], top['2'], top['3']].filter(v => v);
-      if (new Set(topVals).size !== topVals.length){ APP.toast('یک بازیکن نمی‌تواند همزمان دو رتبه بگیرد — رتبه‌ها را اصلاح کنید', 'red'); return; }
-      opts.onSave(part, top);
+      if (!part.length && !free.length){ APP.toast('حداقل یک شرکت‌کننده انتخاب کنید (یا بازیکن آزاد ثبت کنید)', 'red'); return; }
+      if (!opts.hideTop){
+        const topVals = [top['1'], top['2'], top['3']].filter(v => v);
+        if (new Set(topVals).size !== topVals.length){ APP.toast('یک بازیکن نمی‌تواند همزمان دو رتبه بگیرد — رتبه‌ها را اصلاح کنید', 'red'); return; }
+      }
+      opts.onSave(part, top, free);
       m.style.display = 'none';
     });
     render();
@@ -8508,7 +8531,8 @@ window.__L3D = {
     function render(){
       const list = rows(), pend = pending();
       const medals = ['🥇','🥈','🥉'];
-      if (!list.length && !pend.length){
+      const freeList = ((D.loadResults()[t[0]] || {}).free) || [];
+      if (!list.length && !pend.length && !freeList.length){
         rp.innerHTML = `<div style="margin:auto;text-align:center;padding:30px"><div style="font-size:40px">🏁</div><div class="glass gold-border" style="padding:20px;margin-top:12px;font-size:13px">هنوز هیچ کارتی ثبت نهایی نشده —<br>کارت بازیکنان را در ویزارد کامل کنید.</div><button class="btn ghost" id="tr-x" style="margin-top:14px">بستن</button></div>`;
         $('#tr-x').onclick = () => { rp.style.display = 'none'; if (onChange) onChange(); };
         return;
@@ -8555,6 +8579,16 @@ window.__L3D = {
               <button class="btn sm ghost" data-pen="${r.pid}" title="افزودن ضربه جریمه بعد از ثبت" style="font-size:10px;padding:4px 8px">⚠️ +جریمه</button>
               <button class="btn sm danger" data-rem="${r.pid}" title="حذف ${esc(r.name)} از این مسابقه" style="font-size:10px;padding:4px 7px">🗑</button>
             </td>
+          </tr>`).join('')}
+          ${freeList.map(n => `<tr style="opacity:.85">
+            <td style="text-align:center;color:var(--muted)">🆓</td>
+            <td>${esc(n)} <span style="font-size:10px;color:var(--muted)">— بازیکن آزاد</span></td>
+            <td class="num" style="text-align:center;color:var(--muted)">—</td>
+            <td class="num" style="text-align:center;color:var(--muted)">—</td>
+            <td class="num" style="text-align:center;color:var(--muted)">—</td>
+            <td style="text-align:center;color:var(--muted)">—</td>
+            <td style="text-align:center"><span class="chip" style="font-weight:800">${D.fa(pr[3])} امتیاز</span></td>
+            <td data-no-pdf></td>
           </tr>`).join('')}
           </tbody>
         </table>
@@ -9025,7 +9059,7 @@ window.__L3D = {
           <b>${esc(t[1])}</b>
           <span class="chip ${has?'green':'gold'}">${has?'ثبت شده ✓':'بدون نتیجه'}</span>
         </div>
-        <div style="font-size:10.5px;color:var(--muted);margin-top:4px">${D.fa(j.dd)} ${j.monthFa} • سطح ${D.fa(t[2])} • ${esc(D.COURSE_NAME[t[3]]||'—')}</div>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:4px">${D.fa(j.dd)} ${j.monthFa} • سطح ${D.fa(t[2])} • ${esc(D.COURSE_NAME[t[3]]||'—')}${has ? ` • 👥 ${D.fa((has.participants||[]).length + (has.free||[]).length)} نفر${(has.free||[]).length ? ' (' + D.fa(has.free.length) + ' آزاد)' : ''}` : ''}</div>
         <div style="font-size:10px;color:var(--muted);margin-top:3px">🏆${D.fa(pr[0])} 🥈${D.fa(pr[1])} 🥉${D.fa(pr[2])} 🎟${D.fa(pr[3])}</div>
         <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
           <button class="btn sm" data-mrset="${t[0]}">👥 انتخاب شرکت‌کنندگان</button>
@@ -9039,16 +9073,19 @@ window.__L3D = {
       const t = S.tournaments.find(x => x[0] === tour);
       if (!t) return;
       openResultsModal({
-        title: 'نتایج «' + t[1] + '»',
+        title: 'شرکت‌کنندگان «' + t[1] + '»',
         prizes: D.prizesOf(t),
+        hideTop: true, /* نفرات برتر = خودکار از گزارش/ثبت نهایی */
+        freePlayers: true,
         players: activePlayersList(),
-        participants: results[tour] ? results[tour].participants : [],
-        top: results[tour] ? results[tour].top : {},
-        onSave: (participants, top) => {
+        participants: results[tour] ? (results[tour].participants || []) : [],
+        top: results[tour] ? (results[tour].top || {}) : {},
+        freeList: results[tour] ? (results[tour].free || []) : [],
+        onSave: (participants, top, free) => {
           const r = D.loadResults();
-          r[tour] = { participants, top };
+          r[tour] = Object.assign(r[tour] || {}, { participants, free: free || [] }); /* top/startedAt/endedAt حفظ می‌شوند */
           D.saveResults(r); APP.reloadData(); APP.go('mgmt'); mgmtTab='results';
-          APP.toast('نتایج «' + t[1] + '» ثبت شد — امتیازها خودکار محاسبه شد ✓', 'green');
+          APP.toast('شرکت‌کنندگان «' + t[1] + '» ثبت شدند ✓', 'green');
         }
       });
     }));
@@ -9118,7 +9155,7 @@ window.__L3D = {
         const tDate = D.isoToShamsi ? D.fa(D.isoToShamsi(String(t[5] || '').slice(0, 10))) : '—';
         return `<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px 13px;margin-bottom:8px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:11.5px">
           <b style="font-size:12.5px">${esc(t[1])}</b>
-          <span class="chip dim">👥 ${D.fa((res.participants || []).length)} شرکت‌کننده</span>
+          <span class="chip dim">👥 ${D.fa((res.participants || []).length + (res.free || []).length)} شرکت‌کننده${(res.free || []).length ? ` +${D.fa(res.free.length)} آزاد` : ''}</span>
           <span class="chip dim">📅 ${tDate}</span>
           <span class="chip dim">🕒 شروع ${fmtT(res.startedAt)}</span>
           <span class="chip gold">🏁 پایان ${fmtT(res.endedAt)}</span>

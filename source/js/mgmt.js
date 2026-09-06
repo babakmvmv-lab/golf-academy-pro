@@ -2047,6 +2047,19 @@
     if (list[2]) r[t[0]].top['3'] = list[2].pid;
     D.saveResults(r);
   }
+  /* پایان خودکار مسابقه: وقتی همهٔ کارت‌های شروع‌شده «ثبت نهایی کارت» خوردند، مسابقه به «نتایج ثبت‌شده» می‌رود و از «نتایج مسابقات» ناپدید می‌شود */
+  function scAutoFinalize(t){
+    const curr = D.loadResults();
+    if (curr[t[0]] && curr[t[0]].endedAt) return false; /* قبلاً پایان یافته */
+    const dr = scDraftTour(t[0]);
+    const started = Object.entries(dr).filter(([k, d]) => k !== '__meta' && d && Object.keys(d.holes || {}).length > 0);
+    if (!started.length) return false; /* هنوز کارتی شروع نشده */
+    if (started.some(([, d]) => !d.final)) return false; /* هنوز کارتی نهایی نشده */
+    if (!extraCards().some(c => c.tour === t[0])) return false;
+    const ok = finalizeTournament(t);
+    if (ok) APP.toast(`🏁 مسابقه «${t[1]}» پایان یافت — نتیجه به «نتایج ثبت‌شده» منتقل شد ✔`, 'green');
+    return ok;
+  }
   /* 🏁 ثبت نهایی مسابقه: کارت‌های آماده نهایی می‌شوند، نتیجه به «نتایج ثبت‌شده» می‌رود و امتیازها بر اساس جوایز طراحی‌شده محاسبه می‌گردند */
   function finalizeTournament(t){
     Object.entries(scDraftTour(t[0])).forEach(([pid, d]) => {
@@ -2236,6 +2249,7 @@
       if (fz) fz.addEventListener('click', () => {
         pend.forEach(pid => scFinalize(t, pid));
         APP.toast(`📥 ${D.fa(pend.length)} کارت ثبت نهایی شد`, 'green');
+        scAutoFinalize(t); /* اگر دیگر کارتی باز نماند، مسابقه پایان می‌یابد */
         if (onChange) onChange();
         render();
       });
@@ -2430,6 +2444,7 @@
         if (fz) fz.addEventListener('click', () => {
           scFinalize(t, state.pid);
           APP.toast(`کارت «${esc((playersOf().find(x => x.pid === state.pid) || {}).name || '')}» ثبت نهایی شد ✅`, 'green');
+          const ended = scAutoFinalize(t); /* همهٔ کارت‌ها نهایی شد → مسابقه پایان یافته */
           if (confirm('ثبت نهایی شد ✔ گزارش مسابقه را ببینید؟')) tourReport(t, () => render());
           else render();
         });

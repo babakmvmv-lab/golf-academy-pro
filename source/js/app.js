@@ -303,7 +303,7 @@
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div>
             <h1 style="font-size:26px;font-weight:900" class="gold-text">آکادمی گلف پات کلاب — ${esc(L('nav.cmd','فرماندهی'))}</h1>
-            <div style="color:var(--muted);font-size:12.5px;margin-top:4px">فصل قهرمانی ۱۴۰۵ • ${D.fa(A.MATCHES_HELD)} مسابقه برگزار شده • ${D.fa(A.LB.length)} بازیکن فعال</div>
+            <div style="color:var(--muted);font-size:12.5px;margin-top:4px">فصل قهرمانی ${D.fa(D.seasonYear)} • ${D.fa(A.MATCHES_HELD)} مسابقه برگزار شده • ${D.fa(A.LB.length)} بازیکن فعال</div>
           </div>
           <div style="margin-right:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <button class="btn sm" onclick="APP.go('mgmt')" style="box-shadow:0 0 16px rgba(212,175,55,.25)">⚙️ ${esc(L('nav.mgmt','پنل مدیریت'))}</button>
@@ -1249,7 +1249,7 @@
     <div style="display:flex;align-items:center;gap:18px;margin-bottom:18px">
       <img src="assets/trophy_3d.webp" class="floaty glow-img" style="width:110px;height:110px;border-radius:16px;object-fit:cover" alt="">
       <div>
-        <h2 class="gold-text" style="font-size:24px;font-weight:900">تالار افتخارات ۱۴۰۵</h2>
+        <h2 class="gold-text" style="font-size:24px;font-weight:900">تالار افتخارات ${D.fa(D.seasonYear)}</h2>
         <div style="color:var(--muted);font-size:12.5px;margin-top:4px">${esc(L('nav.records','رکوردها'))} و قهرمانان فصل — Hall of Fame</div>
       </div>
     </div>
@@ -1385,7 +1385,7 @@
       <div class="glass cal-grid-pane">
         <div class="card-head"><span class="ic">🇮🇷</span>
           <h3>تقویم <span id="cal-month-name"></span></h3>
-          <span class="tag">فصل ۱۴۰۵</span>
+          <span class="tag">فصل ${D.fa(D.seasonYear)}</span>
           <div style="margin-right:auto;display:flex;gap:6px;align-items:center">
             <button class="btn sm ghost" id="cal-prev">▶</button>
             <button class="btn sm" id="cal-today" style="padding:4px 10px;font-size:11px">امروز</button>
@@ -1444,13 +1444,13 @@
     // ── تقویم ماه ──
     function renderGrid(){
       const mm = viewMonth;
-      $('#cal-month-name').textContent = MONTHS[mm-1] + ' ۱۴۰۵';
+      $('#cal-month-name').textContent = MONTHS[mm-1] + ' ' + D.fa(D.seasonYear);
       const grid = $('#cal-grid'); if (!grid) return;
       const sel = events[selIdx];
       const selDays = new Set();
       if (sel){
         const j0 = D.jalaliInfo(sel.d), j1 = D.jalaliInfo(sel.end);
-        if (j0.mm === mm && j0.yy === 1405){
+        if (j0.mm === mm && j0.yy === D.seasonYear){
           const n = daysBetween(sel.d, sel.end);
           for (let i=0;i<n;i++) selDays.add(j0.dd + i);
         }
@@ -1466,7 +1466,7 @@
         const isSelDay = selDays.has(d);
         const dayEvs = events.filter(e => {
           const j0 = D.jalaliInfo(e.d);
-          if (j0.yy !== 1405 || j0.mm !== mm) return false;
+          if (j0.yy !== D.seasonYear || j0.mm !== mm) return false;
           const n = daysBetween(e.d, e.end);
           for (let i=0;i<n;i++){ if (j0.dd + i === d) return true; }
           return false;
@@ -1486,7 +1486,7 @@
       const mm = viewMonth;
       const cnt = events.filter(e => {
         const j0 = D.jalaliInfo(e.d);
-        if (j0.yy !== 1405 || j0.mm !== mm) return false;
+        if (j0.yy !== D.seasonYear || j0.mm !== mm) return false;
         const n = daysBetween(e.d, e.end);
         for (let i=0;i<n;i++){ if (j0.dd + i >= 1 && j0.dd + i <= DAYS_IN[mm-1]) return true; }
         return false;
@@ -1876,7 +1876,7 @@
       <div class="glass" style="grid-column:span 2">
         <div class="card-head"><span class="ic">🚀</span><h3>آکادمی در یک نگاه — پیام سرپرست</h3><span class="tag">Coach Desk</span></div>
         ${[
-          `✅ فصل ۱۴۰۵ با ${D.fa(A.MATCHES_HELD)} مسابقه، ${D.fa(A.COURSE_DAYS)} کلاس و اردو در جریان است.`,
+          `✅ فصل ${D.fa(D.seasonYear)} با ${D.fa(A.MATCHES_HELD)} مسابقه، ${D.fa(A.COURSE_DAYS)} کلاس و اردو در جریان است.`,
           `🏆 سه بازیکن برتر در منطقه قهرمانی هستند و به جام بزرگ فصل راه دارند.`,
           `🐦 میانگین پرنده در هر دور بازیکنان برتر به عدد قابل توجهی رسیده است — روند صعودی.`,
           `📌 پیشنهاد: دو جلسه تمرین شورت گیم برای بازیکنان سطح ۳ اضافه شود.`,
@@ -2055,7 +2055,7 @@
         ${honorProgHTML(o.hn)}
       </div>
       <div class="glass tilt">
-        <div class="card-head"><span class="ic">🏌️</span><h3>وضعیت من در فصل</h3><span class="tag">۱۴۰۵</span></div>
+        <div class="card-head"><span class="ic">🏌️</span><h3>وضعیت من در فصل</h3><span class="tag">${D.fa(D.seasonYear)}</span></div>
         ${o.row ? `
           <div style="display:flex;justify-content:space-between;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px"><span style="color:var(--muted)">رتبه در فصل</span><b class="gold-text">${D.fa(o.row.rank)}</b></div>
           <div style="display:flex;justify-content:space-between;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px"><span style="color:var(--muted)">امتیاز فصل</span><b class="gold-text">${D.faNum(o.row.pts,0)}</b></div>

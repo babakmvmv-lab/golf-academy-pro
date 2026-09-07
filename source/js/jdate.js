@@ -51,7 +51,7 @@
     const MONTHS = D.MONTHS_FA;
     sm.innerHTML = MONTHS.map((m,i) => `<option value="${i+1}">${m}</option>`).join('');
 
-    function daysIn(jy, jm){ return jm <= 6 ? 31 : jm <= 11 ? 30 : (jy % 33 % 4 === 1 ? 30 : 29); }
+    function daysIn(jy, jm){ if (jm <= 6) return 31; if (jm <= 11) return 30; const r = ((jy % 33) + 33) % 33; /* کبیسهٔ دقیق چرخهٔ ۳۳ساله جلالی: باقیماندهٔ ۱،۵،۹،۱۳،۱۷،۲۲،۲۶،۳۰ */ return [1,5,9,13,17,22,26,30].includes(r) ? 30 : 29; }
 
     function setDayOptions(keep){
       const jy = +sy.value, jm = +sm.value;

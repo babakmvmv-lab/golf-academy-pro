@@ -114,8 +114,8 @@
     return [jy, jm, jd];
   }
   const dateFrom = s => new Date(s + 'T00:00:00Z');
-  const TODAY = dateFrom('2026-08-31');
-  const SEASON_START = dateFrom('2026-03-21');
+  const TODAY = new Date(); /* امروزِ واقعی — هاردکد قبلی (۲۰۲۶/۰۸/۳۱) باعث انحراف «امروز» می‌شد؛ اکنون پویا */
+  const SEASON_START = dateFrom('2026-03-21');  /* ⚑ سال فصل از همین پوشیده می‌شود — برای رول اور به ۱۴۰۶ فقط این را عوض کنید */
 
   const FA_DIG = {0:'۰',1:'۱',2:'۲',3:'۳',4:'۴',5:'۵',6:'۶',7:'۷',8:'۸',9:'۹'};
   const fa = v => String(v).replace(/[0-9]/g, d => FA_DIG[d]);
@@ -718,9 +718,10 @@
   }
 
   const IR_HOLIDAYS = (typeof IR_HOLIDAYS_1405 !== 'undefined' && IR_HOLIDAYS_1405) ? IR_HOLIDAYS_1405 : ((typeof window.IR_HOLIDAYS_1405 !== 'undefined') ? window.IR_HOLIDAYS_1405 : []);
+  const HOLI_BY_YEAR = { 1405: () => IR_HOLIDAYS };  /* جدول هر سال که اضافه شود، خودکار فعال می‌شود */
   function holidaysOf(jy, jm, jd){
-    if (jy !== 1405) return [];
-    return IR_HOLIDAYS.filter(h => h[0] === jm && h[1] === jd);
+    const T = HOLI_BY_YEAR[jy];
+    return T ? T().filter(h => h[0] === jm && h[1] === jd) : [];
   }
   function isHoliday(d){
     const j = jalaliInfo(d);
@@ -730,7 +731,7 @@
   window.Data = {
     fa, faNum, jalaliInfo, weekOf, dayFmt, dateFrom, TODAY, SEASON_START,
     toJalaali, jalaaliToDateObject, j2d, shamsiToISO, isoToShamsi, parseShamsi,
-    PLAYERS, PLAYER_NAME, ACTIVE, COURSES, COURSE_PARS, COURSE_NAME, TOURNAMENTS,
+    PLAYERS, PLAYER_NAME, ACTIVE, COURSES, COURSE_PARS, COURSE_NAME, TOURNAMENTS, seasonYear: (function(){ const j = jalaliInfo(SEASON_START); return j.yy; })(),
     PTS_RULE, RESULT_LABEL, MONTHS_FA, RANK_DEF, RANK_TEXT, rankOf, FORM_META, GOLD_ELITE,
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,

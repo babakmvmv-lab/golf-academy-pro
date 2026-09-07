@@ -16,6 +16,19 @@
     return (window.APP && window.APP.state) ? window.APP.state() : { S:null, A:null };
   }
 
+  /* 🌐 ارقام فارسی/عربی (۰۱۲۳…) در همهٔ ورودی‌های عددی فوراً به لاتین تبدیل می‌شوند — جلوی NaN/صفرِ صامت در فرمول‌ها (چکِ ممیزی: ۳۴ فیلد بدون تبدیل) */
+  document.addEventListener('input', e => {
+    const t = e.target;
+    if (!t || typeof t.value !== 'string' || !t.value) return;
+    if (t.type !== 'number' && t.type !== 'tel' && t.getAttribute('inputmode') !== 'numeric') return;
+    const v = t.value.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+    if (v !== t.value){
+      const at = t.selectionStart;
+      t.value = v;
+      try{ t.setSelectionRange(at, at); }catch(_){}
+    }
+  }, true);
+
   /* ── تنظیمات نمایش نمودارها (localStorage) ── */
   const DEFAULTS = {
     chCmd: true, chMonthly: true, chRace: true, chRaceBars: true,
@@ -316,7 +329,9 @@
     $$('.mgmt-tab').forEach(t => t.addEventListener('click', () => { mgmtTab = t.dataset.tab; APP.go('mgmt'); }));
     const reseed = v.querySelector('#mgmt-reseed');
     if (reseed) reseed.addEventListener('click', () => {
-      if (!confirm('همهٔ دادهٔ فعلی (نتایج، دوره‌ها، زمین‌ها، بازیکنان سفارشی و…) حذف و دادهٔ استاندارد فصل ۱۴۰۵ دوباره بارگذاری می‌شود. ادامه می‌دهید؟')) return;
+      const _jy = (window.Data && D.jalaliInfo ? D.jalaliInfo(new Date()).yy : D.seasonYear);
+      const _warn = (_jy !== D.seasonYear) ? '⚠️ توجه: سال جلالی جاری ' + D.fa(_jy) + ' است ولی دادهٔ بذر برای فصل ' + D.fa(D.seasonYear) + ' است — بازنشانی سایت را به محتوای فصل ' + D.fa(D.seasonYear) + ' برمی‌گرداند!\n\n' : '';
+      if (!confirm(_warn + 'همهٔ دادهٔ فعلی (نتایج، دوره‌ها، زمین‌ها، بازیکنان سفارشی و…) حذف و دادهٔ استاندارد فصل ۱۴۰۵ دوباره بارگذاری می‌شود. ادامه می‌دهید؟')) return;
       try { D.seedSeason(true); APP.reloadData(); APP.go('mgmt'); mgmtTab = 'players'; APP.toast('دادهٔ فصل ۱۴۰۵ بازنشانی شد ✓', 'green'); }
       catch(e){ APP.toast('خطا در بازنشانی: ' + e.message, 'red'); }
     });

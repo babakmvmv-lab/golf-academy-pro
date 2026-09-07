@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ═══ امنیت: CSP (فقط اسکریپت/استایل خودِ ما + CDN تأییدشدهٔ jsDelivr برای PDF)، قفل دامنه، حذف مجوزهای حساس ═══ -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.open-meteo.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()">
 <meta name="description" content="داشبورد حرفه‌ای آکادمی گلف پات کلاب — فارسی، آفلاین و تک‌فایل؛ با لابی سینمایی، اقتصاد سکه، فروشگاه برند و رنک افتخار.">
 <meta name="theme-color" content="#0B0F14">
 <meta property="og:title" content="آکادمی گلف پات کلاب — Putt Club Golf Academy">
@@ -11043,7 +11047,7 @@ window.__L3D = {
     if (active) setTimeout(() => active.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' }), 20);
   }
 
-  function go(page){
+  function go(page, _noPush){
     if (!PAGES[page]) page = 'cmd';
     const rec = userRec(currentUser);
     // اعضا: فقط بخش اعضا + آیتم‌هایی که مدیر در تنظیمات نمایش برایشان فعال کرده
@@ -11076,6 +11080,16 @@ window.__L3D = {
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => { initTilt(); runCountups(); growBars(); }, 40);
+    /* 📍 ناوبری استاندارد مرورگر: URL هر بخش (#) نشان‌پذیر است و تیتر تب اسم بخش را می‌گوید */
+    document.title = p.t + ' — پات کلاب · آکادمی گلف پات کلاب';
+    try {
+      if (!_noPush){
+        const h = '#' + page;
+        if (location.hash !== h && history.state && history.state.p) history.pushState({ p: page }, '', h);
+        else if (location.hash !== h && !history.state) history.pushState({ p: page }, '', h);
+        else history.replaceState({ p: page }, '', h);
+      }
+    } catch (e){}
   }
 
   function runCountups(){
@@ -13358,7 +13372,9 @@ window.__L3D = {
     $('#app').classList.add('on');
     applyRoleUI(rec);
     reloadData();
-    go(rec && rec.role === 'member' ? 'memberzone' : 'cmd');
+    const _hp = (location.hash || '').slice(1);
+    const _dp = PAGES[_hp] ? _hp : 'cmd';
+    go(rec && rec.role === 'member' ? 'memberzone' : _dp);
     tickClock(); setInterval(tickClock, 1000);
     msgGate(); /* پیام خوانده‌نشده؟ → گیت اجباری قبل از ورود به پنل */
   }
@@ -13464,6 +13480,22 @@ window.__L3D = {
     if (sess && buildUsers()[sess] !== undefined){
       enterApp(sess);
     }
+  });
+
+  /* ← دکمه‌های Back/Forward مرورگر: بین بخش‌های داخل همین اپ حرکت می‌کنند؛ اگر مودال باز است، Back آن را می‌بندد و جای‌مان عوض نمی‌شود */
+  window.addEventListener('popstate', e => {
+    if (!$('#app') || !$('#app').classList.contains('on')) return; /* هنوز لاگین نشده */
+    const open = $$('#tour-report, #score-wizard, [id^="modal-"], .spk-modal').find(m => {
+      const cs = getComputedStyle(m); return cs.display !== 'none' && cs.visibility !== 'hidden';
+    });
+    if (open){
+      open.style.display = 'none';
+      try { history.pushState({ p: currentPage }, '', '#' + currentPage); } catch (e2){}
+      return;
+    }
+    let pg = (e.state && e.state.p) || (location.hash || '').slice(1) || 'cmd';
+    if (!PAGES[pg]) pg = 'cmd';
+    go(pg, true);
   });
 
   window.APP = {

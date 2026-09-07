@@ -237,7 +237,7 @@
     if (active) setTimeout(() => active.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' }), 20);
   }
 
-  function go(page){
+  function go(page, _noPush){
     if (!PAGES[page]) page = 'cmd';
     const rec = userRec(currentUser);
     // اعضا: فقط بخش اعضا + آیتم‌هایی که مدیر در تنظیمات نمایش برایشان فعال کرده
@@ -270,6 +270,16 @@
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => { initTilt(); runCountups(); growBars(); }, 40);
+    /* 📍 ناوبری استاندارد مرورگر: URL هر بخش (#) نشان‌پذیر است و تیتر تب اسم بخش را می‌گوید */
+    document.title = p.t + ' — پات کلاب · آکادمی گلف پات کلاب';
+    try {
+      if (!_noPush){
+        const h = '#' + page;
+        if (location.hash !== h && history.state && history.state.p) history.pushState({ p: page }, '', h);
+        else if (location.hash !== h && !history.state) history.pushState({ p: page }, '', h);
+        else history.replaceState({ p: page }, '', h);
+      }
+    } catch (e){}
   }
 
   function runCountups(){
@@ -2552,7 +2562,9 @@
     $('#app').classList.add('on');
     applyRoleUI(rec);
     reloadData();
-    go(rec && rec.role === 'member' ? 'memberzone' : 'cmd');
+    const _hp = (location.hash || '').slice(1);
+    const _dp = PAGES[_hp] ? _hp : 'cmd';
+    go(rec && rec.role === 'member' ? 'memberzone' : _dp);
     tickClock(); setInterval(tickClock, 1000);
     msgGate(); /* پیام خوانده‌نشده؟ → گیت اجباری قبل از ورود به پنل */
   }
@@ -2658,6 +2670,22 @@
     if (sess && buildUsers()[sess] !== undefined){
       enterApp(sess);
     }
+  });
+
+  /* ← دکمه‌های Back/Forward مرورگر: بین بخش‌های داخل همین اپ حرکت می‌کنند؛ اگر مودال باز است، Back آن را می‌بندد و جای‌مان عوض نمی‌شود */
+  window.addEventListener('popstate', e => {
+    if (!$('#app') || !$('#app').classList.contains('on')) return; /* هنوز لاگین نشده */
+    const open = $$('#tour-report, #score-wizard, [id^="modal-"], .spk-modal').find(m => {
+      const cs = getComputedStyle(m); return cs.display !== 'none' && cs.visibility !== 'hidden';
+    });
+    if (open){
+      open.style.display = 'none';
+      try { history.pushState({ p: currentPage }, '', '#' + currentPage); } catch (e2){}
+      return;
+    }
+    let pg = (e.state && e.state.p) || (location.hash || '').slice(1) || 'cmd';
+    if (!PAGES[pg]) pg = 'cmd';
+    go(pg, true);
   });
 
   window.APP = {

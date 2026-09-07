@@ -2792,16 +2792,23 @@
   }
 
   /* ── 📧 ارسال یک‌طرفهٔ ایمیل از طریق EmailJS (رایگان ~۲۰۰/ماه — بدون سرور و DNS؛ اتصال به حساب Gmail هر ایمیلی) ── */
-  const EMAIL_DEFAULTS = { key: 'olblhtePYhlS_a4Rv', svc: 'service_ewdayg4', tpl: '' };  /* EmailJS — از پنل مدیر اگر مقدار دیگری ذخیره شود اولویت می‌گیرد */
+  const EMAIL_DEFAULTS = { key: 'olblhtePYhlS_a4Rv', svc: 'service_ewdayg4', tpl: 'templates_k2dhpqd' };  /* ⚠️ اگر ارسال «template not found» داد → تک‌وشیع «template_k2dhpqd» را جایگزین کنید */  /* EmailJS — از پنل مدیر اگر مقدار دیگری ذخیره شود اولویت می‌گیرد */
   function emailCfg(){ try { return Object.assign({}, EMAIL_DEFAULTS, JSON.parse(localStorage.getItem('ga_email_cfg') || '{}')); } catch(e){ return EMAIL_DEFAULTS; } }
   function saveEmailCfg(c){ try { localStorage.setItem('ga_email_cfg', JSON.stringify(c)); } catch(e){} }
   function playerEmailOf(u){
+    /* S.players به‌صورت آرایه است [id,name,gender,hcp,join,active] — ایمیل در ویرایش‌های ga_players یا بازیکنان سفارشی ذخیره می‌شود */
     try {
-      if (u && u.pid != null){
-        const S0 = gstate().S;
-        const pl = S0 && S0.players ? S0.players.find(p => p.id === +u.pid) : null;
-        if (pl && pl.email && pl.email.includes('@')) return pl.email.trim();
+      if (!u || u.pid == null) return null;
+      const pid = +u.pid; if (!pid) return null;
+      if (pid >= 9000){  /* بازیکن سفارشی: در ga_custom_players ذخیره */
+        const cs = JSON.parse(localStorage.getItem('ga_custom_players') || '[]');
+        const c = cs[pid - 9000];
+        if (c && c.email && String(c.email).includes('@')) return String(c.email).trim();
+        return null;
       }
+      const edits = JSON.parse(localStorage.getItem('ga_players') || '{}');
+      const e = edits[pid] || {};
+      if (e.email && String(e.email).includes('@')) return String(e.email).trim();
     } catch(e){}
     return null;
   }

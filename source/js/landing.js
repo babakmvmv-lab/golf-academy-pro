@@ -669,13 +669,27 @@ function panelCal(){
       rows.push(o);
     } catch(e){}
   }
-  /* 🏆 مسابقات فصل (همه — گذشته و آینده) */
+  /* 🏆 مسابقات — جام‌های فصل + مسابقه‌های طراحی‌شدهٔ مدیر (ga_tournaments) — گذشته و آینده */
   var tours = [];
   try { tours = (D.visibleTours ? D.visibleTours() : D.TOURNAMENTS) || []; } catch(e){}
   tours.forEach(function(t){
     var d; try{ d = D.dateFrom(t[5]); }catch(e){ return; }
     if (!d || isNaN(d)) return;
     pushIt({ d: d, ic: '🏆', nm: t[1], kind: 'مسابقه', extra: (D.COURSE_NAME && D.COURSE_NAME[t[3]] ? esc(D.COURSE_NAME[t[3]]) : 'زمین گلف') + ' • ' + D.fa(t[4]) + ' حفره' });
+  });
+  /* مسابقه‌های دستی مدیر (طراح مسابقه) — دو قالب ذخیره: آبجکت {name,lvl,course,holes,date} یا {t:[id,name,lvl,course,holes,date]} */
+  var extras = [];
+  try { extras = JSON.parse(localStorage.getItem('ga_tournaments') || '[]'); } catch(e){}
+  (Array.isArray(extras) ? extras : []).forEach(function(x){
+    if (!x) return;
+    var nm = x.name !== undefined ? x.name : (x.t && x.t[1]),
+        cs = +(x.course !== undefined ? x.course : (x.t && x.t[3])) || 0,
+        hl = +(x.holes !== undefined ? x.holes : (x.t && x.t[4])) || 18,
+        dt = x.date !== undefined ? x.date : (x.t && x.t[5]);
+    if (!nm || !dt) return;
+    var d; try{ d = D.dateFrom(dt); }catch(e){ return; }
+    if (!d || isNaN(d)) return;
+    pushIt({ d: d, ic: '🏆', nm: nm, kind: 'مسابقه', extra: (D.COURSE_NAME && D.COURSE_NAME[cs] ? esc(D.COURSE_NAME[cs]) : 'زمین گلف') + ' • ' + D.fa(hl) + ' حفره' });
   });
   /* 🎓 دوره‌ها / اردوها / تمرین‌ها (ثبت‌شده توسط مدیر در پنل) */
   var progs = [];

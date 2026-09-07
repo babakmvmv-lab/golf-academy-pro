@@ -3790,6 +3790,13 @@ var CSS = `
 #l3d-panel .l3d-months{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}
 #l3d-panel .l3d-months button{padding:7px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#F8FAFC;font-size:12px;cursor:pointer}
 #l3d-panel .l3d-months button.on{background:rgba(212,175,55,.28);border-color:rgba(212,175,55,.6);color:#f6e27a}
+#l3d-panel .l3d-calrow.past{opacity:.58}
+#l3d-panel .l3d-calrow .l3d-ckind{display:inline-block;margin-inline-start:5px;font-size:9.5px;font-weight:700;color:#cfe3dd;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);padding:1px 6px;border-radius:7px;vertical-align:middle}
+#l3d-panel .l3d-calrow .l3d-cex{display:block;font-size:10px;color:rgba(248,250,252,.55);font-weight:500;margin-top:1px}
+#l3d-panel .l3d-calrow .l3d-cd{display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:11.5px;font-weight:800;white-space:nowrap}
+#l3d-panel .l3d-calrow .l3d-cst{font-size:9px;font-weight:800;padding:1px 7px;border-radius:7px}
+#l3d-panel .l3d-calrow .l3d-cst.done{background:rgba(110,231,183,.15);color:#6ee7b7;border:1px solid rgba(110,231,183,.35)}
+#l3d-panel .l3d-calrow .l3d-cst.soon{background:rgba(125,211,252,.15);color:#7dd3fc;border:1px solid rgba(125,211,252,.35)}
 #l3d-panel .l3d-tro{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px}
 #l3d-panel .l3d-tro .cup{flex:1;min-width:110px;padding:14px;text-align:center;border-radius:16px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.4);cursor:pointer;transition:all .25s}
 #l3d-panel .l3d-tro .cup:hover{transform:translateY(-5px);background:rgba(212,175,55,.2)}
@@ -4171,7 +4178,7 @@ function renderDock(){
 }
 
 /* ─────────── پنل‌ها ─────────── */
-var panelNav = null, monthSel = 0, trophySel = 0;
+var panelNav = null, monthSel = -1, trophySel = 0;  /* -1 = اولین بازشدن→ماه جاری */
 function openPanel(sec){
   STATE.panel = sec;
   var html = '';
@@ -4317,33 +4324,63 @@ function infoTab(tab){
   return '';
 }
 function panelCal(){
-  var h = '<div class="hd"><span class="ic">📅</span><h3>' + esc(L('landing.calendar','تقویم آکادمی')) + ' — فصل ۱۴۰۵</h3><span class="tg">مسابقات · کلاس‌ها · اردوها · تمرین</span></div>';
+  if (monthSel < 0){ try { monthSel = D.jalaliInfo(D.TODAY).mm - 1; } catch(e){ monthSel = 0; } }
+  var SY = 1405; try{ SY = D.seasonYear || 1405; }catch(e){}
+  var h = '<div class="hd"><span class="ic">📅</span><h3>' + esc(L('landing.calendar','تقویم آکادمی')) + ' — فصل ' + D.fa(SY) + '</h3><span class="tg">مسابقات · دوره‌ها · اردوها · تمرین‌ها</span></div>';
   var monthNames = D.MONTHS_FA || ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
   var mh = '<div class="l3d-months">';
   for (var i=0;i<12;i++) mh += '<button data-m="' + i + '" class="' + (monthSel === i ? 'on' : '') + '">' + monthNames[i] + '</button>';
   mh += '</div>';
   h += mh;
-  var mm = String(monthSel + 1).padStart(2, '0');
+  var smm = monthSel + 1;   /* ماه شمسی انتخاب‌شده (۱..۱۲) */
   var rows = [];
+  var TYPE_ICON = { 'مسابقه':'🏆', 'کلاس':'🎓', 'دوره':'🎓', 'تمرین':'🏌️', 'اردو':'🏕️' };
+  function pushIt(o){ /* فیلتر ماه شمسی — تقسیم‌بندی تاریخ میلادی قبلاً اشتباه بود */
+    try {
+      var j0 = D.jalaliInfo(o.d);
+      if (j0.mm !== smm) return;
+      rows.push(o);
+    } catch(e){}
+  }
+  /* 🏆 مسابقات فصل (همه — گذشته و آینده) */
   var tours = [];
   try { tours = (D.visibleTours ? D.visibleTours() : D.TOURNAMENTS) || []; } catch(e){}
-  tours.forEach(function(t){ if (t[5] && t[5].slice(5,7) === mm) rows.push({ ic: '🏆', txt: esc(t[1]) + ' — مسابقه', dt: esc(t[5]) }); });
-  /* تمرین‌های خودکار پنجشنبه حذف شد — فقط ورودی‌های دستی مدیر نمایش داده می‌شود */
+  tours.forEach(function(t){
+    var d; try{ d = D.dateFrom(t[5]); }catch(e){ return; }
+    if (!d || isNaN(d)) return;
+    pushIt({ d: d, ic: '🏆', nm: t[1], kind: 'مسابقه', extra: (D.COURSE_NAME && D.COURSE_NAME[t[3]] ? esc(D.COURSE_NAME[t[3]]) : 'زمین گلف') + ' • ' + D.fa(t[4]) + ' حفره' });
+  });
+  /* 🎓 دوره‌ها / اردوها / تمرین‌ها (ثبت‌شده توسط مدیر در پنل) */
   var progs = [];
   try { progs = D.loadPrograms ? D.loadPrograms() : []; } catch(e){}
-  progs.forEach(function(p){
-    var d = p.start || '';
-    if (d && d.slice(5,7) === mm){
-      var ic = p.type === 'اردو' ? '🏕️' : (p.type === 'تمرین' ? '🏌️' : '🎓');
-      rows.push({ ic: ic, txt: esc(p.name), dt: esc(d) });
-    }
+  progs.forEach(function(pp){
+    var d; try{ d = D.dateFrom(pp.start || pp.date || ''); }catch(e){ return; }
+    if (!d || isNaN(d)) return;
+    var tp = pp.type || 'دوره';
+    pushIt({ d: d, ic: TYPE_ICON[tp] || '📌', nm: pp.name || 'دوره', kind: tp, extra: pp.info ? esc(String(pp.info)).slice(0, 46) : '' });
   });
-  if (!rows.length) h += '<div class="sub" style="color:rgba(248,250,252,.55)">رویدادی در این ماه ثبت نشده است.</div>';
-  else {
-    rows.sort(function(x,y){ return (x.dt < y.dt) ? -1 : 1; });
-    rows.forEach(function(r){ h += '<div class="row"><span class="pnm"><span>' + r.ic + '</span>' + r.txt + '</span><span style="direction:ltr">' + r.dt + '</span></div>'; });
+  /* 📌 رویدادهای سفارشی تقویم (۴ نوع مجاز) */
+  var cus = [];
+  try { cus = (window.MGMT && MGMT.customEvents) ? MGMT.customEvents() : JSON.parse(localStorage.getItem('ga_events') || '[]'); } catch(e){}
+  (cus || []).forEach(function(e){
+    var tp = e.type || '';
+    if (!TYPE_ICON[tp] && tp !== 'مسابقه') return;
+    var d; try{ d = D.dateFrom(e.date || e.start || ''); }catch(e){ return; }
+    if (!d || isNaN(d)) return;
+    pushIt({ d: d, ic: TYPE_ICON[tp] || '📌', nm: e.name || 'رویداد', kind: tp, extra: '' });
+  });
+  if (!rows.length){
+    h += '<div class="sub" style="color:rgba(248,250,252,.55)">رویدادی در ماه «' + monthNames[monthSel] + '» ثبت نشده است.<br><span style="font-size:11px;opacity:.85">مسابقات، دوره‌ها، اردوها و تمرین‌ها به‌محض ثبت (از پنل مدیریت) همین‌جا نمایش داده می‌شوند.</span></div>';
+  } else {
+    rows.sort(function(x,y){ return (x.d - y.d); });
+    rows.forEach(function(r){
+      var j; try{ j = D.jalaliInfo(r.d); }catch(e){ j = { dd:0, mm:smm }; }
+      var past = r.d < D.TODAY;
+      h += '<div class="row l3d-calrow' + (past ? ' past' : '') + '"><span class="pnm"><span>' + r.ic + '</span><span>' + esc(r.nm) + ' <span class="l3d-ckind">' + esc(r.kind) + '</span>' + (r.extra ? '<br><span class="l3d-cex">' + r.extra + '</span>' : '') + '</span></span>' +
+        '<span class="l3d-cd">' + D.fa(j.dd) + ' ' + monthNames[j.mm - 1] + '<span class="l3d-cst ' + (past ? 'done' : 'soon') + '">' + (past ? '✓ برگزار شد' : 'آینده') + '</span></span></div>';
+    });
   }
-  h += '<div class="note">مکان همهٔ رویدادها: زمین گلف مسجدسلیمان (۱۸ حفره، پار ۷۲).</div>';
+  h += '<div class="note">مکان همهٔ رویدادها: زمین گلف مسجدسلیمان (۱۸ حفره، پار ۷۲) — رویدادهای برگزارشده و آینده، هر دو نمایش داده می‌شوند.</div>';
   return h;
 }
 function panelRecords(){

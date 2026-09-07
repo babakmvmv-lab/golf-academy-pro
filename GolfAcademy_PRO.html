@@ -9300,7 +9300,7 @@ window.__L3D = {
   }
 
   /* ── 📧 ارسال یک‌طرفهٔ ایمیل از طریق EmailJS (رایگان ~۲۰۰/ماه — بدون سرور و DNS؛ اتصال به حساب Gmail هر ایمیلی) ── */
-  const EMAIL_DEFAULTS = { key: 'olblhtePYhlS_a4Rv', svc: 'service_ewdayg4', tpl: '' };  /* EmailJS — از پنل مدیر اگر مقدار دیگری ذخیره شود اولویت می‌گیرد */
+  const EMAIL_DEFAULTS = { key: 'olblhtePYhlS_a4Rv', svc: 'service_ewdayg4', tpl: 'templates_k2dhpqd' };  /* ⚠️ اگر ارسال «template not found» داد → تک‌وشیع «template_k2dhpqd» را جایگزین کنید */  /* EmailJS — از پنل مدیر اگر مقدار دیگری ذخیره شود اولویت می‌گیرد */
   function emailCfg(){ try { return Object.assign({}, EMAIL_DEFAULTS, JSON.parse(localStorage.getItem('ga_email_cfg') || '{}')); } catch(e){ return EMAIL_DEFAULTS; } }
   function saveEmailCfg(c){ try { localStorage.setItem('ga_email_cfg', JSON.stringify(c)); } catch(e){} }
   function playerEmailOf(u){

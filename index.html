@@ -9299,6 +9299,32 @@ window.__L3D = {
     mgmtMessages($('#pm-root'));
   }
 
+  /* ── 📧 ارسال یک‌طرفهٔ ایمیل از طریق EmailJS (رایگان ~۲۰۰/ماه — بدون سرور و DNS؛ اتصال به حساب Gmail هر ایمیلی) ── */
+  function emailCfg(){ try { return JSON.parse(localStorage.getItem('ga_email_cfg') || '{}'); } catch(e){ return {}; } }
+  function saveEmailCfg(c){ try { localStorage.setItem('ga_email_cfg', JSON.stringify(c)); } catch(e){} }
+  function playerEmailOf(u){
+    try {
+      if (u && u.pid != null){
+        const S0 = gstate().S;
+        const pl = S0 && S0.players ? S0.players.find(p => p.id === +u.pid) : null;
+        if (pl && pl.email && pl.email.includes('@')) return pl.email.trim();
+      }
+    } catch(e){}
+    return null;
+  }
+  async function sendEmailJS(toEmail, toName, subject, text){
+    const c = emailCfg();
+    const r = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service_id: c.svc, template_id: c.tpl, user_id: c.key,
+        template_params: { to_email: toEmail, to_name: toName || '', subject: subject, message: text, academy: 'آکادمی گلف پات کلاب — puttclub.ir' }
+      })
+    });
+    if (!r.ok) throw new Error('EmailJS ' + r.status + ': ' + (await r.text().catch(() => '')).slice(0, 120));
+    return true;
+  }
+
   /* ── تب ارسال پیام: فرم + انتخاب مخاطب + تاریخچه با وضعیت خواندن هر عضو ── */
   function mgmtMessages(body){
     const users = APP.users.list().filter(u => u && u.active && u.role === 'member');
@@ -9307,6 +9333,22 @@ window.__L3D = {
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">📨</span><h3>ارسال پیام به اعضا</h3><span class="tag">نمایش اجباری روی پنل عضو تا تأیید «خواندم»</span></div>
+      <div class="form-section" style="margin-top:12px">📡 کانال ارسال</div>
+      <div id="pm-chans" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px">
+        <button class="btn sm" data-pmch="panel" title="پیام داخل پنل عضو (مثل قبل)">📨 پنل اعضا</button>
+        <button class="btn sm ghost" data-pmch="email" title="فقط ایمیل (یک‌طرفه)">📧 فقط ایمیل</button>
+        <button class="btn sm ghost" data-pmch="both" title="هم پنل، هم ایمیل">📨+📧 هر دو</button>
+      </div>
+      <div id="pm-emcfg" style="display:none;margin:0 0 12px;padding:11px 12px;border-radius:11px;border:1px dashed rgba(125,211,252,.4);background:rgba(125,211,252,.05)">
+        <div style="font-size:11.5px;color:#7dd3fc;font-weight:800;margin-bottom:7px">📧 اتصال EmailJS (یک‌بار تنظیم می‌شود)</div>
+        <div class="field-grid">
+          <div><label>Public Key</label><input class="input" id="ec-key" style="width:100%;direction:ltr" placeholder="از دشبورد EmailJS"></div>
+          <div><label>Service ID</label><input class="input" id="ec-svc" style="width:100%;direction:ltr" placeholder="service_…"></div>
+          <div><label>Template ID</label><input class="input" id="ec-tpl" style="width:100%;direction:ltr" placeholder="template_…"></div>
+          <div style="display:flex;align-items:end"><button class="btn sm ghost" id="ec-save" style="width:100%">💾 ذخیره اتصال</button></div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:7px;line-height:1.9">⚙️ راهنمای یک‌بار: در <b>emailjs.com</b> رایگان ثبت‌نام کن ← Email Service ← اتصال Gmail (هر جیمیلی — مثلاً نسخهٔ مخفف آکادمی) ← Template با متغیرهای {{to_email}}، {{to_name}}، {{subject}}، {{message}}، {{academy}} ← سه مقدار بالا را بردار. سپس ایمیل همان‌جا از جیمیل تو یک‌طرفه ارسال می‌شود. رایگان تا ~۲۰۰ ایمیل/ماه.</div>
+      </div>
       <div class="field-grid" style="margin-top:12px">
         <div class="span2"><label>عنوان پیام</label><input class="input" id="pm-subject" maxlength="90" style="width:100%" placeholder="مثلاً: تغییر ساعت کلاس پنجشنبه"></div>
         <div class="span2"><label>متن پیام</label><textarea class="input" id="pm-body" rows="4" maxlength="1200" style="width:100%;resize:vertical;line-height:1.9" placeholder="متن پیام برای اعضا…"></textarea></div>
@@ -9335,7 +9377,7 @@ window.__L3D = {
         const on = picked.some(x => x.user === u.user);
         return `<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;border:1px solid ${on ? 'rgba(212,175,55,.55)' : 'var(--line-soft)'};background:${on ? 'rgba(212,175,55,.08)' : 'rgba(255,255,255,.02)'};font-size:12px;transition:.15s" data-pmu="${escU(u.user)}">
           <input type="checkbox" ${on ? 'checked' : ''} style="accent-color:var(--gold);pointer-events:none">
-          <span style="flex:1">${escU(u.name)}<small style="color:var(--muted)"> @${escU(u.user)}</small></span>
+          <span style="flex:1">${escU(u.name)}<small style="color:var(--muted)"> @${escU(u.user)}</small>${(() => { const em = playerEmailOf(u); return em ? `<small style=\"color:#7dd3fc\"> 📧</small>` : `<small style=\"color:rgba(248,113,113,.55)\" title=\"ایمیل در پروفایل بازیکن ثبت نشده\"> ⚠</small>`; })()}</span>
         </label>`;
       }).join('') || '<div style="color:var(--muted);font-size:11.5px;padding:8px">عضویی با این جست‌وجو پیدا نشد</div>';
       $$('#pm-list [data-pmu]').forEach(el => el.addEventListener('click', ev => {
@@ -9407,26 +9449,68 @@ window.__L3D = {
     }
     drawHistory();
 
-    $('#pm-send').addEventListener('click', () => {
+    /* ── انتخاب کانال ارسال ── */
+    let chan = 'panel';
+    const chanBtns = $$('#pm-chans [data-pmch]');
+    function paintChan(){
+      chanBtns.forEach(b => {
+        const on = b.dataset.pmch === chan;
+        b.classList.toggle('ghost', !on);
+      });
+      $('#pm-emcfg').style.display = (chan === 'panel') ? 'none' : 'block';
+    }
+    chanBtns.forEach(b => b.addEventListener('click', () => { chan = b.dataset.pmch; paintChan(); }));
+    { const ec0 = emailCfg(); if (ec0.key) $('#ec-key').value = ec0.key; if (ec0.svc) $('#ec-svc').value = ec0.svc; if (ec0.tpl) $('#ec-tpl').value = ec0.tpl; }
+    $('#ec-save').addEventListener('click', () => {
+      const c = { key: $('#ec-key').value.trim(), svc: $('#ec-svc').value.trim(), tpl: $('#ec-tpl').value.trim() };
+      if (!c.key || !c.svc || !c.tpl){ APP.toast('هر سه مقدار EmailJS لازم است', 'red'); return; }
+      saveEmailCfg(c); APP.toast('اتصال ایمیل ذخیره شد ✓', 'green');
+    });
+    $('#pm-send').addEventListener('click', async () => {
       const subject = ($('#pm-subject').value || '').trim();
       const text = ($('#pm-body').value || '').trim();
       if (!subject){ APP.toast('عنوان پیام را وارد کنید', 'red'); return; }
       if (!text){ APP.toast('متن پیام را وارد کنید', 'red'); return; }
       if (!picked.length){ APP.toast('حداقل یک مخاطب انتخاب کنید', 'red'); return; }
       const cur = APP.currentUser();
-      const msg = {
-        id: 'm' + Date.now().toString(36),
-        subject, body: text,
-        sender: APP.users.label(cur),
-        senderUser: cur,
-        createdAt: new Date().toISOString(),
-        targets: picked.map(u => String(u.user).toLowerCase()),
-        /* ساختار آماده برای توسعهٔ آینده — بدون بازنویسی */
-        channel: 'popup', priority: 'normal', scheduleAt: null, groupKey: null,
-      };
-      const list = GA_MSG.load(); list.push(msg); GA_MSG.save(list);
-      APP.toast(`پیام «${subject}» برای ${D.fa(picked.length)} عضو ارسال شد 📨`, 'green');
-      APP.reloadData(); APP.go('messages'); /* صفحهٔ مستقل در منوی گروه مدیریت */
+      const btn = $('#pm-send'); const txt0 = btn.textContent;
+      try {
+        /* ── ایمیل یک‌طرفه ── */
+        if (chan !== 'panel'){
+          const c = emailCfg();
+          if (!c.key || !c.svc || !c.tpl){ APP.toast('اول «اتصال EmailJS» را بالا ذخیره کنید', 'red'); btn.textContent = txt0; return; }
+          const wMail = picked.map(u => ({ u, em: playerEmailOf(u) }));
+          const noMail = wMail.filter(x => !x.em).map(x => x.u.name);
+          const dests = wMail.filter(x => !!x.em);
+          if (!dests.length){ APP.toast('هیچ‌کدام از مخاطبین ایمیل ثبت‌شده ندارند — توی «پروفایل بازیکن» ایمیل بگذارید', 'red'); btn.textContent = txt0; return; }
+          btn.disabled = true;
+          let ok = 0, fail = 0;
+          for (let i = 0; i < dests.length; i++){
+            btn.textContent = `📧 ${D.fa(i + 1)}/${D.fa(dests.length)} …`;
+            try { await sendEmailJS(dests[i].em, dests[i].u.name, subject, text); ok++; }
+            catch(e){ fail++; console.warn('email fail for', dests[i].em, e); }
+            await new Promise(rs => setTimeout(rs, 350)); /* احترام به سقف رایگان */
+          }
+          if (noMail.length) APP.toast(`⚠️ ${D.fa(noMail.length)} نفر بدون ایمیل: ${noMail.slice(0,3).join('، ')}${noMail.length > 3 ? '…' : ''}`, 'gold');
+          APP.toast(`📧 ایمیل: ${D.fa(ok)} موفق${fail ? ' • ' + D.fa(fail) + ' ناموفق' : ''}`, fail ? 'gold' : 'green');
+        }
+        /* ── پنل اعضا (رفتار قبلی) ── */
+        if (chan !== 'email'){
+          const msg = {
+            id: 'm' + Date.now().toString(36),
+            subject, body: text,
+            sender: APP.users.label(cur),
+            senderUser: cur,
+            createdAt: new Date().toISOString(),
+            targets: picked.map(u => String(u.user).toLowerCase()),
+            channel: chan === 'panel' ? 'popup' : 'popup+email', priority: 'normal', scheduleAt: null, groupKey: null,
+          };
+          const list = GA_MSG.load(); list.push(msg); GA_MSG.save(list);
+          if (chan === 'panel') APP.toast(`پیام «${subject}» برای ${D.fa(picked.length)} عضو ارسال شد 📨`, 'green');
+        }
+        $('#pm-subject').value = ''; $('#pm-body').value = ''; picked = [];
+        drawList(); drawPicked(); drawHistory();
+      } finally { btn.disabled = false; btn.textContent = txt0; }
     });
   }
 

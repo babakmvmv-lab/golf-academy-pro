@@ -1,4 +1,4 @@
-/* ═══════════════ GolfAcademy PRO — Charts (canvas, glow, animated) ═══════════════ */
+/* ═══════════════ پات کلاب • Putt Club Golf Academy — Charts (canvas, glow, animated) ═══════════════ */
 const Charts = (() => {
   const DPR = () => (window.devicePixelRatio || 1);
 

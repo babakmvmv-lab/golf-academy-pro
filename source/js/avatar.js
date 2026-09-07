@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   GolfAcademy PRO — موتور آواتار + Honor Rank + اقتصاد سکه (v6)
+   پات کلاب • Putt Club Golf Academy — موتور آواتار + Honor Rank + اقتصاد سکه (v6)
    • ۱۵ سطح Honor Rank در ۵ دیویژن (Silver / Gold / Emerald / Royal / Immortal)
    • ظاهر آواتار کاملاً Data-Driven (ga_rank_skin) — هیچ رنگ/نشان/افکتی هاردکد نیست
    • فروشگاه برندهای واقعی گلف (قیمت بر اساس رده‌ی برند)

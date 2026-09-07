@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   GolfAcademy PRO — پلن مدیریت جامع + تنظیمات نمایش
+   پات کلاب • Putt Club Golf Academy — پلن مدیریت جامع + تنظیمات نمایش
    CRUD کامل: بازیکن (فرم جامع + عکس + یوزر/پسورد + اکتیو/دیاکتیو)،
    زمین (لوکیشن + نقشهٔ ماهواره‌ای)، مسابقات، نتایج، رویداد تقویم
    ═══════════════════════════════════════════════════════════════════ */
@@ -2266,8 +2266,8 @@
         +   metaHtml + kpiHtml + sectHtml
         + '</div>'
         + '<div class="pdfk-foot" style="position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:10px 28px;background:#0d141e;border-top:2px solid rgba(212,175,55,.45)">'
-        +   '<span style="font-size:9px;color:#8a97a6">ساخته‌شده در سامانهٔ «گلف آکادمی پرو» — آکادمی گلف پات کلاب</span>'
-        +   '<span style="font-size:9px;color:#8a97a6;direction:ltr">puttclub.ir</span>'
+        +   '<span style="font-size:9px;color:#8a97a6">«پات کلاب» — آکادمی گلف پات کلاب</span>'
+        +   '<span style="font-size:9px;color:#8a97a6;direction:ltr">Putt Club Golf Academy — puttclub.ir</span>'
         + '</div>';
       document.body.appendChild(el);
       /* اتوفیت: محتوای بلند به‌تناسب کوچک می‌شود تا دقیقاً یک برگهٔ A4 شود */

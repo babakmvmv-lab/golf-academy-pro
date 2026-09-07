@@ -1,4 +1,4 @@
-/* ═══════════════ GolfAcademy PRO — App ═══════════════ */
+/* ═══════════════ پات کلاب • Putt Club Golf Academy — App ═══════════════ */
 (function(){
   const D = window.Data;
   const $ = (s, r=document) => r.querySelector(s);

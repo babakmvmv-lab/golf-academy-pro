@@ -721,3 +721,9 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 .sp-note-acts{display:flex;gap:8px}
 .sp-note-hint{font-size:10px;color:var(--muted)}
 @media (max-width:640px){.grid.cols-2.sp-grid{grid-template-columns:1fr}}
+
+/* ── آیکن‌های شبکه‌های اجتماعی در صفحهٔ ورود/رسپشن ── */
+.soc-links{display:inline-flex;gap:7px;flex-wrap:wrap}
+.soc-link{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;border:1px solid rgba(212,175,55,.4);color:#F3D779;background:rgba(255,255,255,.045);transition:.18s}
+.soc-link:hover{background:rgba(212,175,55,.16);transform:translateY(-2px);box-shadow:0 6px 14px rgba(212,175,55,.2)}
+.soc-link svg{width:17px;height:17px;display:block}

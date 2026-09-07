@@ -107,6 +107,52 @@
     return {};
   }
 
+  /* ── شبکه‌های اجتماعی: آیکن‌های SVG داخلی + ادیتور «آیکن + آدرس + ➕ افزودن» ── */
+  window.PUTT_SOCIALS = [
+    { net:'instagram', fa:'اینستاگرام', svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.4"/><circle cx="17.7" cy="6.3" r="1.2" fill="currentColor" stroke="none"/></svg>` },
+    { net:'telegram',  fa:'تلگرام',    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M21.4 3.6 3 10.9l6.3 2.4 2.3 6.5 9.8-16.2z"/><path d="M9.3 13.3 21.4 3.6"/></svg>` },
+    { net:'whatsapp',  fa:'واتساپ',    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 20.8a8.8 8.8 0 1 0-7.6-4.4L3.2 21l4.7-1.2a8.8 8.8 0 0 0 4.1 1z"/><path d="M8.7 8.6c0 3.8 3 6.8 6.7 6.8l1.6-1.6-2.3-1.4-1 .9a5 5 0 0 1-2.8-2.8l.9-1-1.4-2.3z"/></svg>` },
+    { net:'youtube',   fa:'یوتیوب',    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="5.5" width="19" height="13" rx="4.2"/><path d="M10.3 9.2v5.6l4.9-2.8z" fill="currentColor" stroke="none"/></svg>` },
+    { net:'linkedin',  fa:'لینکدین',   svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="2.5" y="2.5" width="19" height="19" rx="4"/><path d="M7.2 10.2v6.6M7.2 7.2v.05M11 16.8v-3.6c0-1.2.9-2.1 2-2.1s2 .9 2 2.1v3.6"/></svg>` },
+    { net:'x',         fa:'ایکس (توییتر)', svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M4.5 4.5l15 15M19.5 4.5l-15 15"/></svg>` },
+    { net:'aparat',    fa:'آپارات',    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M10 8.7v6.6l5.8-3.3z" fill="currentColor" stroke="none"/></svg>` },
+    { net:'other',     fa:'وب‌سایت/دیگر', svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M10 13.5a5 5 0 0 0 7.1 0l2.8-2.8a5 5 0 0 0-7.1-7.1l-1.5 1.5"/><path d="M14 10.5a5 5 0 0 0-7.1 0l-2.8 2.8a5 5 0 0 0 7.1 7.1l1.5-1.5"/></svg>` },
+  ];
+  function socialSvg(net, size){
+    const it = (window.PUTT_SOCIALS || []).find(x => x.net === net) || PUTT_SOCIALS[PUTT_SOCIALS.length - 1];
+    return it.svg.replace('<svg ', '<svg width="' + (size || 18) + '" height="' + (size || 18) + '" ');
+  }
+  function socialsFaText(arr){ return (arr || []).map(s2 => ((window.PUTT_SOCIALS || []).find(x => x.net === s2.net) || {}).fa || s2.net).join(' · '); }
+  /* host ← عنصر کان‌تینر؛ contact ← آبجکت تماس (arr زنده بایند می‌شود و هنگام ذخیره خوانده؛ لینک باید با https یا دات باشد) */
+  function bindSocialEditor(host, contact){
+    if (!host) return;
+    const arr = (contact.socials || []).slice();
+    const draw = () => {
+      host.innerHTML = `<label>📱 شبکه‌های اجتماعی <span style="font-weight:400;font-size:10px;color:var(--muted)">— آیکن شبکه را انتخاب، آدرسش را بنویس و «➕ افزودن» بزن؛ برای هر شبکه یک‌بار</span></label>
+      <div class="soc-list">${
+        arr.length ? arr.map((s2, i) => { const it = PUTT_SOCIALS.find(x => x.net === s2.net) || PUTT_SOCIALS[PUTT_SOCIALS.length-1];
+          return `<span class="soc-chip" title="${esc(s2.url)}">${socialSvg(s2.net, 15)}<b>${it.fa}</b><code dir="ltr">${esc(s2.url.length > 32 ? s2.url.slice(0, 32) + '…' : s2.url)}</code><button type="button" data-soc-del="${i}" title="حذف">✕</button></span>`; }).join('')
+        : '<span class="soc-empty">هنوز شبکه‌ای ثبت نشده — از ردیف پایین یکی‌یکی اضافه کن ⬇</span>'
+      }</div>
+      <div class="soc-add">
+        <select class="sel" data-soc-net>${PUTT_SOCIALS.map(x => `<option value="${x.net}">${x.fa}</option>`).join('')}</select>
+        <input class="input" data-soc-url dir="ltr" placeholder="https://instagram.com/puttclub" autocomplete="off">
+        <button type="button" class="btn sm" data-soc-add style="background:linear-gradient(135deg,var(--gold),#b08a28);color:#1a1407;font-weight:900;white-space:nowrap">➕ افزودن</button>
+      </div>`;
+      host.querySelectorAll('[data-soc-del]').forEach(b => b.addEventListener('click', () => { arr.splice(+b.dataset.socDel, 1); draw(); }));
+      host.querySelector('[data-soc-add]').addEventListener('click', () => {
+        const net = host.querySelector('[data-soc-net]').value;
+        let url = (host.querySelector('[data-soc-url]').value || '').trim();
+        if (!url){ APP.toast('آدرس شبکهٔ اجتماعی را وارد کن (مثلاً instagram.com/puttclub)','red'); return; }
+        if (!/^https?:\/\//i.test(url)) url = 'https://' + (url[0] === '@' ? url : url.replace(/^\/+/, ''));
+        arr.push({ net, url }); draw(); APP.toast('شبکهٔ اجتماعی اضافه شد — با ذخیرهٔ فرم نهایی می‌شود ✓','green');
+      });
+      host.querySelector('[data-soc-url]').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); host.querySelector('[data-soc-add]').click(); } });
+    };
+    draw();
+    host._socGet = () => arr;
+  }
+
   /* ── اطلاعات سایت (تماس با ما + معرفی آکادمی) — قابل ویرایش از مدیریت، خوانده‌شده در صفحهٔ اصلی ── */
   const SITE_DEFAULTS = {
     contact: {
@@ -2969,15 +3015,17 @@
         <div><label>✉️ ایمیل</label><input class="input" id="rcp-email" value="${esc(si.contact.email)}" style="width:100%;direction:ltr"></div>
         <div class="span2"><label>📍 آدرس</label><input class="input" id="rcp-address" value="${esc(si.contact.address)}" style="width:100%"></div>
         <div><label>🌐 وب‌سایت</label><input class="input" id="rcp-website" value="${esc(si.contact.website)}" style="width:100%;direction:ltr"></div>
-        <div><label>📱 شبکه‌های اجتماعی</label><input class="input" id="rcp-social" value="${esc(si.contact.social)}" style="width:100%"></div>
+        <div class="span2" id="rcp-social-host"></div>
         <div><label>⏰ ساعت پاسخ‌گویی</label><input class="input" id="rcp-hours" value="${esc(si.contact.hours)}" style="width:100%"></div>
       </div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
       <button class="btn sm" id="rcp-save2" style="background:linear-gradient(135deg,#1ebb8a,#15996f);font-weight:800">💾 ذخیرهٔ همهٔ بخش‌های رسپشن</button>
     </div>`;
+    bindSocialEditor($('#rcp-social-host'), si.contact);
     const save = () => {
       const si2 = getSiteInfo();
+      const _rsoc = $('#rcp-social-host') && $('#rcp-social-host')._socGet ? $('#rcp-social-host')._socGet() : [];
       si2.info.intro = $('#rcp-intro').value.trim();
       si2.reception = {
         signup: $('#rcp-signup').value.trim(),
@@ -2988,7 +3036,7 @@
       si2.contact = {
         phone: $('#rcp-phone').value.trim(), email: $('#rcp-email').value.trim(),
         address: $('#rcp-address').value.trim(), website: $('#rcp-website').value.trim(),
-        social: $('#rcp-social').value.trim(), hours: $('#rcp-hours').value.trim(), qr: si2.contact.qr,
+        social: socialsFaText(_rsoc) || si2.contact.social, socials: _rsoc, hours: $('#rcp-hours').value.trim(), qr: si2.contact.qr,
       };
       if (!si2.info.intro) delete si2.info.intro; /* خالی → پیش‌فرض فایل */
       saveSiteInfo(si2);
@@ -3013,19 +3061,23 @@
         <div><label>✉️ ایمیل</label><input class="input" id="ct-email" value="${esc(c.email)}" style="width:100%;direction:ltr"></div>
         <div class="span2"><label>📍 آدرس</label><input class="input" id="ct-address" value="${esc(c.address)}" style="width:100%"></div>
         <div><label>🌐 وب‌سایت</label><input class="input" id="ct-website" value="${esc(c.website)}" style="width:100%;direction:ltr"></div>
-        <div><label>📱 شبکه‌های اجتماعی</label><input class="input" id="ct-social" value="${esc(c.social)}" style="width:100%"></div>
+        <div class="span2" id="ct-social-host"></div>
         <div><label>⏰ ساعت پاسخ‌گویی</label><input class="input" id="ct-hours" value="${esc(c.hours)}" style="width:100%"></div>
         <div><label>🔗 لینک QR (آدرس صفحهٔ تماس)</label><input class="input" id="ct-qr" value="${esc(c.qr)}" style="width:100%;direction:ltr"></div>
       </div>
       <button class="btn sm" id="ct-save" style="margin-top:16px">💾 ذخیرهٔ اطلاعات تماس</button>
     </div>`;
+    bindSocialEditor($('#ct-social-host'), c);
     $('#ct-save').addEventListener('click', () => {
       const si = getSiteInfo();
       si.contact = {
         phone: $('#ct-phone').value.trim(), email: $('#ct-email').value.trim(),
         address: $('#ct-address').value.trim(), website: $('#ct-website').value.trim(),
-        social: $('#ct-social').value.trim(), hours: $('#ct-hours').value.trim(), qr: $('#ct-qr').value.trim() || SITE_DEFAULTS.contact.qr,
+        social: si.contact.social, hours: $('#ct-hours').value.trim(), qr: $('#ct-qr').value.trim() || SITE_DEFAULTS.contact.qr,
       };
+      const _cs = $('#ct-social-host') && $('#ct-social-host')._socGet ? $('#ct-social-host')._socGet() : [];
+      si.contact.socials = _cs;
+      si.contact.social = socialsFaText(_cs) || si.contact.social;
       saveSiteInfo(si);
       APP.toast('اطلاعات تماس ذخیره شد — از این به بعد در صفحهٔ اصلی خوانده می‌شود ✓', 'green');
     });

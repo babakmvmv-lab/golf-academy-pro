@@ -280,3 +280,16 @@ tr.off-row{opacity:.5}
   #score-wizard .sw-mini, #score-wizard #sw-close{padding:5px 9px !important;font-size:10.5px !important}
   #score-wizard .chip{padding:3px 9px}
 }
+
+/* ── ادیتور شبکه‌های اجتماعی (پنل مدیریت) ── */
+.soc-list{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px;min-height:28px}
+.soc-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(212,175,55,.32);background:rgba(212,175,55,.06);border-radius:10px;padding:5px 9px}
+.soc-chip b{font-size:11px}
+.soc-chip code{font-family:inherit;font-size:9px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.soc-chip button{background:none;border:0;color:#E74C3C;cursor:pointer;font-size:11.5px;line-height:1;padding:2px 3px}
+.soc-chip svg{color:#F0D48A;display:block}
+.soc-empty{font-size:10.5px;color:var(--muted);padding:5px 2px}
+.soc-add{display:flex;gap:7px;margin-top:6px;align-items:stretch}
+.soc-add .sel{min-width:130px}
+.soc-add .input{flex:1;min-width:0}
+@media (max-width:560px){ .soc-add{flex-wrap:wrap} .soc-add .sel{flex:1} }

@@ -209,7 +209,7 @@ root.innerHTML =
     '<div class="vin"></div>' +
     '<div id="l3d-logo"><div class="lg-letters" id="l3d-lg"></div><div class="lg-sub" id="l3d-lgsub">آکادمی گلف پات کلاب — puttclub.ir</div><div class="lg-line" id="l3d-lgline"></div></div>' +
     '<div id="l3d-flash"></div><div id="l3d-wave"></div><div id="l3d-sndhint">🔊 برای شنیدن صدای افتتاحیه، صفحه را لمس کنید</div>' +
-    '<div class="l3d-brand">GOLFACADEMY</div>' +
+    '<div class="l3d-brand">PUTTCLUB</div>' +
   '</div>' +
   '<div id="l3d-stage">' +
     '<div id="l3d-bg"></div>' +
@@ -354,7 +354,7 @@ function siteInfo(){
     if (window.MGMT && MGMT.getSiteInfo) return MGMT.getSiteInfo();
   } catch(e){}
   return {
-    contact: { phone:'۰۶۱-۳۲۴۴۵۶۷۸', email:'info@puttclub.ir', address:'زمین گلف مسجدسلیمان، خیابان ورزش', website:'puttclub.ir', social:'اینستاگرام · تلگرام · واتساپ', hours:'شنبه تا پنجشنبه ۸ تا ۲۰', qr:'https://puttclub.ir' },
+    contact: { phone:'۰۶۱-۳۲۴۴۵۶۷۸', email:'info@puttclub.ir', address:'زمین گلف مسجدسلیمان، خیابان ورزش', website:'puttclub.ir', social:'اینستاگرام · تلگرام · واتساپ', socials:[], hours:'شنبه تا پنجشنبه ۸ تا ۲۰', qr:'https://puttclub.ir' },
     reception: { signup:'', courses:'', tuition:'', rules:'' },
     info: { intro:'', address:'', hours:'' }
   };
@@ -394,8 +394,8 @@ function playIntro(){
   initAudio();
   // سیاست مرورگرها: تا اولین لمس، صدا اجرا نمی‌شود → راهنمای کوچک نمایش داده می‌شود
   setTimeout(function(){ if (!audioOn() && !STATE.introDone) sndHint(true); }, 500);
-  // لوگو اسلم: حروف GOLFACADEMY یکی‌یکی
-  var word = 'GOLFACADEMY';
+  // لوگو اسلم: حروف PUTTCLUB یکی‌یکی (نام مختصر انگلیسی)
+  var word = 'PUTTCLUB';
   var lg = $('#l3d-lg');
   word.split('').forEach(function(ch, i){
     var s = document.createElement('span');
@@ -609,7 +609,11 @@ function receptionTab(tab){
   }
   if (tab === 'contact'){
     var SIc = siteInfo().contact;
-    return '<div class="sub"><b>تماس با آکادمی:</b><br>📞 تلفن: ' + esc(SIc.phone) + '<br>✉️ ایمیل: ' + esc(SIc.email) + '<br>📍 آدرس: ' + esc(SIc.address) + '<br>🌐 وب‌سایت: ' + esc(SIc.website) + '<br>📱 شبکه‌های اجتماعی: ' + esc(SIc.social) + '</div>';
+    return '<div class="sub"><b>تماس با آکادمی:</b><br>📞 تلفن: ' + esc(SIc.phone) + '<br>✉️ ایمیل: ' + esc(SIc.email) + '<br>📍 آدرس: ' + esc(SIc.address) + '<br>🌐 وب‌سایت: ' + esc(SIc.website) + '<br>📱 شبکه‌های اجتماعی: ' + esc(SIc.social) + '</div>' +
+    ((SIc.socials && SIc.socials.length) ? '<div class="soc-links" style="margin-top:8px">' + SIc.socials.map(function(sn){
+      var it = (window.PUTT_SOCIALS || []).filter(function(x){ return x.net === sn.net; })[0] || { fa:'لینک', svg:'🔗' };
+      return '<a class="soc-link" href="' + esc(sn.url) + '" target="_blank" rel="noopener nofollow" title="' + it.fa + '">' + it.svg + '</a>';
+    }).join('') + '</div>' : '');
   }
   return '';
 }
@@ -702,7 +706,12 @@ function panelContact(){
     '<div class="row"><span>✉️ ایمیل</span><b style="direction:ltr">' + esc(c.email) + '</b></div>' +
     '<div class="row"><span>📍 آدرس</span><b>' + esc(c.address) + '</b></div>' +
     '<div class="row"><span>🌐 وب‌سایت</span><b style="direction:ltr">' + esc(c.website) + '</b></div>' +
-    '<div class="row"><span>📱 شبکه‌های اجتماعی</span><b>' + esc(c.social) + '</b></div>' +
+    ((c.socials && c.socials.length)
+      ? '<div class="row"><span>📱 شبکه‌های اجتماعی</span><b><span class="soc-links">' + c.socials.map(function(sn){
+          var it = (window.PUTT_SOCIALS || []).filter(function(x){ return x.net === sn.net; })[0] || { fa:'لینک', svg:'🔗' };
+          return '<a class="soc-link" href="' + esc(sn.url) + '" target="_blank" rel="noopener nofollow" title="' + it.fa + ' — ' + esc(sn.url) + '">' + it.svg + '</a>';
+        }).join('') + '</span></b></div>'
+      : '<div class="row"><span>📱 شبکه‌های اجتماعی</span><b>' + esc(c.social) + '</b></div>') +
     '</div>';
   h += '<div class="qrwrap"><span class="sub" style="flex:1">برای ارتباط سریع، کد QR کنار را اسکن کنید:<br>باز شدن صفحهٔ تماس ' + esc(c.website) + '</span><span id="l3d-qr"></span></div>';
   h += '<div class="note">ساعت پاسخ‌گویی: ' + esc(c.hours) + '</div>';

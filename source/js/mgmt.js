@@ -416,8 +416,8 @@
       const act = activePlayers();
       const members = t ? (t.members||[]).slice() : [];
       m.innerHTML = `
-      <div class="glass gold-border" style="width:min(620px,94vw);padding:22px">
-        <div class="card-head"><span class="ic">🛡️</span><h3>${t?'ویرایش تیم':'تیم جدید'}</h3><span class="tag">${t?esc(t.name):'Team'}</span></div>
+      <div class="glass gold-border" style="width:min(620px,94vw);padding:22px;max-height:92vh;overflow:auto;-webkit-overflow-scrolling:touch">
+        <div class="card-head"><span class="ic">🛡️</span><h3>${t?'ویرایش تیم':'تیم جدید'}</h3><span class="tag">${t?esc(t.name):'Team'}</span> <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px;line-height:1.4">✕</button></div>
         <div class="field-grid" style="margin-top:12px">
           <div><label>نام تیم</label><input class="input" id="tm-name" style="width:100%" value="${t?esc(t.name):''}"></div>
           <div><label>آیکن</label><input class="input" id="tm-icon" style="width:100%" value="${t?esc(t.icon):'⚔️'}"></div>
@@ -477,8 +477,8 @@
         m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
       }
       m.innerHTML = `
-      <div class="glass gold-border" style="width:min(560px,94vw);padding:22px">
-        <div class="card-head"><span class="ic">🎯</span><h3>نتیجهٔ جدال — ${esc(B.teamName(mm.home))} در برابر ${esc(B.teamName(mm.away))}</h3><span class="tag">${mm.status==='done'?'ثبت‌شده':'برنامه'}</span></div>
+      <div class="glass gold-border" style="width:min(560px,94vw);padding:22px;max-height:92vh;overflow:auto;-webkit-overflow-scrolling:touch">
+        <div class="card-head"><span class="ic">🎯</span><h3>نتیجهٔ جدال — ${esc(B.teamName(mm.home))} در برابر ${esc(B.teamName(mm.away))}</h3><span class="tag">${mm.status==='done'?'ثبت‌شده':'برنامه'}</span> <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px;line-height:1.4">✕</button></div>
         <div class="field-grid" style="margin-top:12px">
           <div><label>برنده</label><select class="sel" id="bm-winner" style="width:100%">
             <option value="" ${!mm.winner?'selected':''}>— انتخاب —</option>
@@ -1163,8 +1163,8 @@
       m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
     }
     m.innerHTML = `
-    <div class="glass gold-border" style="width:min(640px,94vw);padding:20px">
-      <div class="card-head"><span class="ic">📍</span><h3>انتخاب موقعیت زمین روی نقشه</h3><span class="tag">کلیک = انتخاب</span></div>
+    <div class="glass gold-border" style="width:min(640px,94vw);padding:20px;max-height:92vh;overflow:auto;-webkit-overflow-scrolling:touch">
+      <div class="card-head"><span class="ic">📍</span><h3>انتخاب موقعیت زمین روی نقشه</h3><span class="tag">کلیک = انتخاب</span> <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px;line-height:1.4">✕</button></div>
       <div class="map-picker" id="mp-canvas-wrap" style="margin-top:12px">
         <canvas id="mp-canvas" width="600" height="340"></canvas>
         <div class="mk" id="mp-mk"></div>
@@ -1327,8 +1327,8 @@
       m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
     }
     m.innerHTML = `
-    <div class="glass gold-border" style="width:min(720px,94vw);padding:18px">
-      <div class="card-head"><span class="ic">🛰</span><h3>نمای ماهواره‌ای — ${esc(course.name)}</h3><span class="tag">${D.fa(holes)} حفره</span></div>
+    <div class="glass gold-border" style="width:min(720px,94vw);padding:18px;max-height:92vh;overflow:auto;-webkit-overflow-scrolling:touch">
+      <div class="card-head"><span class="ic">🛰</span><h3>نمای ماهواره‌ای — ${esc(course.name)}</h3><span class="tag">${D.fa(holes)} حفره</span> <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px;line-height:1.4">✕</button></div>
       <div class="sat-wrap" style="margin-top:12px">
         <canvas id="sat-canvas"></canvas>
         <div class="sat-overlay">${esc(course.name)} • ${esc(course.loc||'')}</div>
@@ -1572,8 +1572,8 @@
       m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
     }
     m.innerHTML = `
-    <div class="glass gold-border" style="width:min(560px,94vw);padding:22px">
-      <div class="card-head"><span class="ic">✏️</span><h3>ویرایش مسابقه — ${esc(t[1])}</h3><span class="tag">${base?'پایه':'سفارشی'}</span></div>
+    <div class="glass gold-border" style="width:min(560px,94vw);padding:22px;max-height:92vh;overflow:auto;-webkit-overflow-scrolling:touch">
+      <div class="card-head"><span class="ic">✏️</span><h3>ویرایش مسابقه — ${esc(t[1])}</h3><span class="tag">${base?'پایه':'سفارشی'}</span> <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px;line-height:1.4">✕</button></div>
       <div class="field-grid" style="margin-top:12px">
         <div class="span2"><label>نام</label><input class="input" id="et-name" style="width:100%" value="${esc(t[1])}"></div>
         <div class="span2"><label>تاریخ</label><div class="jdate" id="et-date" data-iso="${t[5]}"></div></div>
@@ -3092,8 +3092,8 @@
         document.body.appendChild(m);
       }
       m.innerHTML = `
-      <div class="glass gold-border" style="width:min(440px,94vw);padding:22px">
-        <div class="card-head"><span class="ic">🔑</span><h3>یوزر و رمز — ${esc(u.name)}</h3><span class="tag">${u.pid ? 'عضو بازیکن' : 'یوزر'}</span></div>
+      <div class="glass gold-border" style="width:min(440px,94vw);padding:22px;max-height:92vh;overflow:auto;-webkit-overflow-scrolling:touch">
+        <div class="card-head"><span class="ic">🔑</span><h3>یوزر و رمز — ${esc(u.name)}</h3><span class="tag">${u.pid ? 'عضو بازیکن' : 'یوزر'}</span> <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px;line-height:1.4">✕</button></div>
         <div class="field-grid" style="margin-top:12px">
           <div class="span2"><label>نام نمایشی</label><input class="input" id="pw-name" value="${esc(u.name || '')}" style="width:100%"></div>
           <div><label>نام کاربری (login)</label><input class="input" id="pw-user" value="${esc(u.user)}" style="width:100%;direction:ltr"></div>
@@ -3148,8 +3148,8 @@
         document.body.appendChild(m);
       }
       m.innerHTML = `
-      <div class="glass gold-border" style="width:min(440px,94vw);padding:22px">
-        <div class="card-head"><span class="ic">➕</span><h3>یوزر جدید</h3><span class="tag">دسترسی جدید</span></div>
+      <div class="glass gold-border" style="width:min(440px,94vw);padding:22px;max-height:92vh;overflow:auto;-webkit-overflow-scrolling:touch">
+        <div class="card-head"><span class="ic">➕</span><h3>یوزر جدید</h3><span class="tag">دسترسی جدید</span> <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px;line-height:1.4">✕</button></div>
         <div class="field-grid" style="margin-top:12px">
           <div class="span2"><label>نام</label><input class="input" id="nu-name" style="width:100%" placeholder="مثلاً: علی محمدی"></div>
           <div><label>نام کاربری</label><input class="input" id="nu-user" style="width:100%;direction:ltr" placeholder="username"></div>

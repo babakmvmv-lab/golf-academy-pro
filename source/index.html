@@ -2,6 +2,10 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<script>/* 🔒 HTTPS اجباری: اگر کسی با http آمد بی‌درنگ به https منتقل شود (تا علامت «امن نیست» نبیند) */
+if(location.protocol==='http:' && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
+  location.replace('https://' + location.host + location.pathname + location.search + location.hash);
+}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- ═══ امنیت: CSP (فقط اسکریپت/استایل خودِ ما + CDN تأییدشدهٔ jsDelivr برای PDF)، قفل دامنه، حذف مجوزهای حساس ═══ -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.open-meteo.com; object-src 'none'; base-uri 'self'; form-action 'self'">

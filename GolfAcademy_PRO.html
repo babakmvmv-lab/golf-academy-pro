@@ -8413,44 +8413,71 @@ window.__L3D = {
     });
 
     /* 👥 مودال انتخاب شرکت‌کنندگان رویداد — بازیکن انتخاب‌شده امتیاز رویداد را در «مجموع امسال» (TV) دریافت می‌کند */
+    /* 👥 مودال انتخاب شرکت‌کنندگان رویداد — تک‌لمس (سبک «نتایج مسابقات»): لیست همه در بالا، انتخاب‌شده‌ها می‌آیند پایین */
     function openEventParticipants(i){
-      const lst = customEvents();
-      const e = lst[i]; if (!e) return;
-      const pidSet = new Set((e.participants || []).map(Number));
+      const lst0 = customEvents();
+      let e = lst0[i]; if (!e) return;
+      const all = activePlayersList(); /* همهٔ بازیکنان فعال */
+      let part = (e.participants || []).map(Number);
       let m = $('#modal-evpart');
       if (!m){
         m = document.createElement('div');
         m.id = 'modal-evpart';
-        m.style.cssText = 'position:fixed;inset:0;z-index:210;display:none;align-items:center;justify-content:center;background:rgba(4,8,14,.72);backdrop-filter:blur(6px)';
+        m.style.cssText = 'position:fixed;inset:0;z-index:9501;display:none;align-items:center;justify-content:center;background:rgba(4,8,14,.78);backdrop-filter:blur(6px)';
         document.body.appendChild(m);
-        m.addEventListener('click', ev2 => { if (ev2.target === m) m.style.display = 'none'; });
+        m.addEventListener('click', ev2 => { if (ev2.target === m) { m.style.display = 'none'; renderMeList(); } });
+      }
+      function nameOf(pid){ const x = all.find(p => +p.pid === +pid); return x ? x.name : '—'; }
+      function saveLive(){
+        const l2 = customEvents();
+        if (l2[i]){ l2[i].participants = part.slice(); saveEvents(l2); }
+        if (window.APP) APP.reloadData(); /* امتیازها در TV هم‌درنگ */
+      }
+      function render(){
+        const cur = customEvents()[i] || e;
+        const pts = +cur.pts || 0;
+        const q = (m.querySelector('#evp-search').value || '').trim();
+        const partSet = new Set(part);
+        m.querySelector('#evp-all').innerHTML = all.filter(p => !partSet.has(+p.pid) && (!q || p.name.includes(q))).map(p =>
+          `<div class="rp-item" data-pid="${p.pid}">${esc(p.name)}</div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">— همه شدند —</div>';
+        m.querySelector('#evp-part').innerHTML = part.map(pid =>
+          `<div class="rp-item sel" data-pid="${pid}">${esc(nameOf(pid))} ✕</div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">با یک لمس روی نام‌های بالا اضافه می‌شوند</div>';
+        m.querySelector('#evp-head').textContent = '✅ شرکت‌کنندگان (' + D.fa(part.length) + ' نفر)';
+        m.querySelector('#evp-count').textContent = `🎯 ${D.fa(part.length)} نفر × ${D.fa(pts)} امتیاز = ${D.fa(part.length * pts)}`;
       }
       m.innerHTML = `
-      <div class="glass gold-border" style="width:min(560px,94vw);padding:20px;max-height:86vh;overflow:auto">
-        <div class="card-head"><span class="ic">👥</span><h3>لیست شرکت‌کنندگان — ${esc(e.name)}</h3><span class="tag">🎯 هر نفر ${D.fa(e.pts||0)} امتیاز</span></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px">تیک بزنید — فوراً ذخیره می‌شود؛ امتیاز رویداد در جدول «نمایش تلویزیونی (مجموع امسال)» حساب می‌شود، نه رقابتِ فقط‌مسابقات.</div>
-        <div id="evp-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:7px;margin-top:12px">
-          ${activePlayersList().map(p => `<label style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.03);border:1px solid var(--line-soft);border-radius:10px;padding:8px 10px;cursor:pointer">
-            <input type="checkbox" data-evpid="${p.pid}" ${pidSet.has(+p.pid) ? 'checked' : ''} style="accent-color:#d4af37;width:16px;height:16px">
-            <span style="font-size:12px;font-weight:700">${esc(p.name)}</span>
-          </label>`).join('')}
+      <div class="glass gold-border" style="width:min(680px,94vw);padding:20px;max-height:88vh;overflow:auto">
+        <div class="card-head"><span class="ic">👥</span><h3>لیست شرکت‌کنندگان — ${esc(e.name)}</h3><span class="tag">یک ✋ لمس = جابه‌جایی</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <input class="input" id="evp-search" placeholder="🔎 جست‌وجوی بازیکن…" style="flex:1;min-width:150px" autocomplete="off">
+          <button type="button" class="btn sm ghost" id="evp-allin" style="font-size:10px;padding:3px 9px">✓ همه</button>
+          <button type="button" class="btn sm ghost" id="evp-none" style="font-size:10px;padding:3px 9px">✕ هیچ</button>
         </div>
-        <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
-          <span id="evp-count" style="color:var(--gold-l);font-size:12px;align-self:center;margin-left:auto"></span>
+        <div class="lbl" style="margin-top:10px">👥 همهٔ بازیکنان</div>
+        <div id="evp-all" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:6px"></div>
+        <div class="lbl" id="evp-head" style="margin-top:14px;color:var(--gold-l)"></div>
+        <div id="evp-part" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:6px"></div>
+        <div style="display:flex;gap:8px;margin-top:14px;align-items:center;justify-content:flex-end">
+          <span id="evp-count" style="color:var(--gold-l);font-size:12px;margin-left:auto"></span>
           <button class="btn sm ghost" id="evp-x">بستن</button>
         </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px">ذخیرهٔ فوری ✔ — امتیاز رویداد به جدول «نمایش تلویزیونی (مجموع امسال)» می‌رود، نه رقابتِ فقط‌مسابقات.</div>
       </div>`;
       m.style.display = 'flex';
-      const sync = () => {
-        const picked = [];
-        m.querySelectorAll('[data-evpid]').forEach(cb => { if (cb.checked) picked.push(+cb.dataset.evpid); });
-        const l2 = customEvents();
-        if (l2[i]){ l2[i].participants = picked; saveEvents(l2); }
-        m.querySelector('#evp-count').textContent = `✔ ${D.fa(picked.length)} نفر × ${D.fa(customEvents()[i].pts||0)} امتیاز = ${D.fa(picked.length * (customEvents()[i].pts||0))} امتیاز`;
+      const allBox = m.querySelector('#evp-all'), partBox = m.querySelector('#evp-part');
+      allBox.onclick = ev3 => {
+        const it = ev3.target.closest('.rp-item'); if (!it) return;
+        part.push(+it.dataset.pid); saveLive(); render();
       };
-      m.querySelectorAll('[data-evpid]').forEach(cb => cb.addEventListener('change', () => { sync(); if (window.APP) APP.reloadData(); }));
+      partBox.onclick = ev3 => {
+        const it = ev3.target.closest('.rp-item'); if (!it) return;
+        part = part.filter(p => p !== +it.dataset.pid); saveLive(); render();
+      };
+      m.querySelector('#evp-search').oninput = () => render();
+      m.querySelector('#evp-allin').onclick = () => { part = all.map(p => +p.pid); saveLive(); render(); };
+      m.querySelector('#evp-none').onclick = () => { part = []; saveLive(); render(); };
       m.querySelector('#evp-x').onclick = () => { m.style.display = 'none'; renderMeList(); };
-      sync();
+      render();
     }
 
     function renderMeList(){

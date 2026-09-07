@@ -1520,10 +1520,12 @@
       if (!name && !start){ APP.toast('حداقل نام یا تاریخ را وارد کنید', 'red'); return; }
       const schedule = [];
       $$('.mt-day-sel').forEach(s => schedule.push({ offset: +s.dataset.i, label: s.value }));
-      extra.push({ name: name || 'مسابقه ' + D.fa(extra.length+1), lvl: +$('#mt-lvl').value, course: +$('#mt-crs').value, holes: +$('#mt-holes').value, date: start, end, time: $('#mt-time').value,
+      /* 🐞 فیکس: «extra» آرایهٔ تبدیل‌شدهٔ نمایشی بود و با push به همان فرم ذخیره می‌شد ⟸ آبجکت مسابقهٔ بعدی روی قبلی می‌نشست */
+      const rawTours = extraTours();
+      rawTours.push({ name: name || 'مسابقه ' + D.fa(rawTours.length+1), lvl: +$('#mt-lvl').value, course: +$('#mt-crs').value, holes: +$('#mt-holes').value, date: start, end, time: $('#mt-time').value,
         rule: ($('#mt-rule') ? $('#mt-rule').value : 'normal'),
         p1: +($('#mt-p1').value||0), p2: +($('#mt-p2').value||0), p3: +($('#mt-p3').value||0), entry: +($('#mt-entry').value||0), schedule });
-      saveTours(extra); APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
+      saveTours(rawTours); APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
       APP.toast('مسابقه «' + (name||'بدون نام') + '» ثبت شد ✓', 'green');
     });
     body.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
@@ -3539,7 +3541,13 @@
 
   /* ── ابزارهای مشترک ── */
   function extraCourses(){ try{ return JSON.parse(localStorage.getItem('ga_courses')||'[]'); }catch(e){ return []; } }
-  function extraTours(){ try{ return JSON.parse(localStorage.getItem('ga_tournaments')||'[]'); }catch(e){ return []; } }
+  /* بازگشایی رکوردهای «رپشده» (اثر باگ قدیمی push روی آرایهٔ نمایشی) */
+  function unwrapTour(x){
+    if (x && typeof x === 'object' && Array.isArray(x.t) && x.name === undefined)
+      return { name: x.t[1] || '', lvl: +x.t[2] || 2, course: +x.t[3] || 0, holes: +x.t[4] || 18, date: x.t[5] || '', end: x.end || '', time: x.time || '', rule: x.rule || 'normal', p1: x.p1, p2: x.p2, p3: x.p3, entry: x.entry, schedule: Array.isArray(x.schedule) ? x.schedule : [] };
+    return x;
+  }
+  function extraTours(){ try{ const a = JSON.parse(localStorage.getItem('ga_tournaments')||'[]'); return Array.isArray(a) ? a.map(unwrapTour) : []; }catch(e){ return []; } }
   function extraCards(){ try{ return JSON.parse(localStorage.getItem('ga_scorecards')||'[]'); }catch(e){ return []; } }
   function saveCourses(a){ try{ localStorage.setItem('ga_courses', JSON.stringify(a)); }catch(e){} }
   function saveTours(a){ try{ localStorage.setItem('ga_tournaments', JSON.stringify(a)); }catch(e){} }

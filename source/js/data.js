@@ -202,7 +202,7 @@
   function savePrograms(a){ try { localStorage.setItem('ga_programs', JSON.stringify(a)); } catch(e){} }
   function loadDelActs(){ try { return JSON.parse(localStorage.getItem('ga_del_acts') || '[]'); } catch(e){ return []; } }
   function saveDelActs(a){ try { localStorage.setItem('ga_del_acts', JSON.stringify(a)); } catch(e){} }
-  function loadExtraTours(){ try { return JSON.parse(localStorage.getItem('ga_tournaments') || '[]'); } catch(e){ return []; } }
+  function loadExtraTours(){ try { const a = JSON.parse(localStorage.getItem('ga_tournaments') || '[]'); return Array.isArray(a) ? a.map(x => (x && typeof x === 'object' && Array.isArray(x.t)) ? Object.assign({}, x, { name: x.name !== undefined ? x.name : x.t[1], lvl: x.lvl !== undefined ? x.lvl : x.t[2], course: x.course !== undefined ? x.course : x.t[3], holes: x.holes !== undefined ? x.holes : x.t[4], date: x.date !== undefined ? x.date : x.t[5] }) : x) : []; } catch(e){ return []; } }
   /* امتیازهای ۴گانهٔ یک تورنمنت: [اول، دوم، سوم، شرکت] — از override/extra، وگرنه قوانین سطح */
   function prizesOf(t, rules){
     rules = rules || loadTourRules();

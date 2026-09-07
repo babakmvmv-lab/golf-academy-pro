@@ -2264,7 +2264,7 @@
 
   /* ═══════════ ابزار طراح ═══════════ */
   function extraCourses(){ try{ return JSON.parse(store.get('ga_courses')||'[]'); }catch(e){ return []; } }
-  function extraTours(){ try{ return JSON.parse(store.get('ga_tournaments')||'[]'); }catch(e){ return []; } }
+  function extraTours(){ try{ const a = JSON.parse(store.get('ga_tournaments')||'[]'); return Array.isArray(a) ? a.map(x => (x && typeof x === 'object' && Array.isArray(x.t) && x.name === undefined) ? { name:x.t[1]||'', lvl:+x.t[2]||2, course:+x.t[3]||0, holes:+x.t[4]||18, date:x.t[5]||'', end:x.end||'', time:x.time||'', rule:x.rule||'normal', p1:x.p1, p2:x.p2, p3:x.p3, entry:x.entry, schedule:Array.isArray(x.schedule)?x.schedule:[] } : x) : []; }catch(e){ return []; } }
   function extraCards(){ try{ return JSON.parse(store.get('ga_scorecards')||'[]'); }catch(e){ return []; } }
   function saveCourses(a){ try{ store.set('ga_courses', JSON.stringify(a)); }catch(e){} }
   function saveTours(a){ try{ store.set('ga_tournaments', JSON.stringify(a)); }catch(e){} }

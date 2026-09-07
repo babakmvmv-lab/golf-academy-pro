@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""GolfAcademy PRO — standalone single-file builder.
+"""پات کلاب • Putt Club Golf Academy — standalone single-file builder.
 Inlines CSS/JS and compresses assets to JPEG data-URIs (offline-capable)."""
 import base64, io, os, re, sys
 from PIL import Image

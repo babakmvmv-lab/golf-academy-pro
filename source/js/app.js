@@ -447,6 +447,16 @@
       const top = pr.top || {};
       pr.participants.forEach(pid => addPts(pid, top['1'] === pid ? (+pr.p1 || 0) : top['2'] === pid ? (+pr.p2 || 0) : top['3'] === pid ? (+pr.p3 || 0) : (+pr.entry || 0)));
     });
+    /* 🗓 رویدادهای سفارشی تقویم: هر «شرکت‌کنندهٔ» انتخاب‌شده امتیاز رویداد را می‌گیرد — فقط رویدادهای امسال */
+    try {
+      const evs = (window.MGMT && MGMT.customEvents) ? MGMT.customEvents() : (JSON.parse(localStorage.getItem('ga_events') || '[]') || []);
+      (Array.isArray(evs) ? evs : []).forEach(ev => {
+        if (!ev || !ev.start || !inYr(ev.start)) return;
+        const p = +ev.pts || 0;
+        if (p <= 0 || !Array.isArray(ev.participants)) return;
+        ev.participants.forEach(pid => addPts(+pid, p));
+      });
+    } catch(e){}
     /* ⚔️ نبرد میدانها: امتیاز فصل تیمی */
     try {
       const bt = (window.Battle && window.Battle.computeSeasonBonus) ? window.Battle.computeSeasonBonus() : {};

@@ -8333,6 +8333,7 @@ window.__L3D = {
         <div><label>رنگ</label><select class="sel" id="me-col" style="width:100%">
           <option value="green">سبز</option><option value="gold">طلایی</option><option value="blue">آبی</option><option value="purple">بنفش</option><option value="orange">نارنجی</option><option value="red">قرمز</option>
         </select></div>
+        <div><label>🎯 امتیاز هر شرکت‌کننده</label><input class="input" id="me-pts" type="number" min="0" value="5" style="width:100%"></div>
       </div>
       <div class="field-grid" style="margin-top:10px">
         <div><label>تاریخ شروع <small>(شمسی)</small></label><div id="me-start"></div></div>
@@ -8396,7 +8397,7 @@ window.__L3D = {
       $$('.me-day-sel').forEach(s => schedule.push({ offset: +s.dataset.i, label: s.value }));
       const lst = customEvents();
       const obj = { name: name || 'رویداد ' + D.fa(lst.length+1), type: $('#me-type').value, col: $('#me-col').value,
-        start, end, schedule };
+        pts: Math.max(0, +($('#me-pts').value || 0)), start, end, schedule };
       if (editingIdx >= 0 && lst[editingIdx]){
         Object.assign(lst[editingIdx], obj);
         APP.toast('رویداد «' + name + '» ویرایش و ذخیره شد ✓', 'green');
@@ -8407,9 +8408,50 @@ window.__L3D = {
       saveEvents(lst);
       editingIdx = -1; setBtn();
       $('#me-name').value = '';
-      $('#me-type').value = 'مسابقه'; $('#me-col').value = 'green';
+      $('#me-type').value = 'مسابقه'; $('#me-col').value = 'green'; $('#me-pts').value = 5;
       renderMeList();
     });
+
+    /* 👥 مودال انتخاب شرکت‌کنندگان رویداد — بازیکن انتخاب‌شده امتیاز رویداد را در «مجموع امسال» (TV) دریافت می‌کند */
+    function openEventParticipants(i){
+      const lst = customEvents();
+      const e = lst[i]; if (!e) return;
+      const pidSet = new Set((e.participants || []).map(Number));
+      let m = $('#modal-evpart');
+      if (!m){
+        m = document.createElement('div');
+        m.id = 'modal-evpart';
+        m.style.cssText = 'position:fixed;inset:0;z-index:210;display:none;align-items:center;justify-content:center;background:rgba(4,8,14,.72);backdrop-filter:blur(6px)';
+        document.body.appendChild(m);
+        m.addEventListener('click', ev2 => { if (ev2.target === m) m.style.display = 'none'; });
+      }
+      m.innerHTML = `
+      <div class="glass gold-border" style="width:min(560px,94vw);padding:20px;max-height:86vh;overflow:auto">
+        <div class="card-head"><span class="ic">👥</span><h3>لیست شرکت‌کنندگان — ${esc(e.name)}</h3><span class="tag">🎯 هر نفر ${D.fa(e.pts||0)} امتیاز</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">تیک بزنید — فوراً ذخیره می‌شود؛ امتیاز رویداد در جدول «نمایش تلویزیونی (مجموع امسال)» حساب می‌شود، نه رقابتِ فقط‌مسابقات.</div>
+        <div id="evp-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:7px;margin-top:12px">
+          ${activePlayersList().map(p => `<label style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.03);border:1px solid var(--line-soft);border-radius:10px;padding:8px 10px;cursor:pointer">
+            <input type="checkbox" data-evpid="${p.pid}" ${pidSet.has(+p.pid) ? 'checked' : ''} style="accent-color:#d4af37;width:16px;height:16px">
+            <span style="font-size:12px;font-weight:700">${esc(p.name)}</span>
+          </label>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+          <span id="evp-count" style="color:var(--gold-l);font-size:12px;align-self:center;margin-left:auto"></span>
+          <button class="btn sm ghost" id="evp-x">بستن</button>
+        </div>
+      </div>`;
+      m.style.display = 'flex';
+      const sync = () => {
+        const picked = [];
+        m.querySelectorAll('[data-evpid]').forEach(cb => { if (cb.checked) picked.push(+cb.dataset.evpid); });
+        const l2 = customEvents();
+        if (l2[i]){ l2[i].participants = picked; saveEvents(l2); }
+        m.querySelector('#evp-count').textContent = `✔ ${D.fa(picked.length)} نفر × ${D.fa(customEvents()[i].pts||0)} امتیاز = ${D.fa(picked.length * (customEvents()[i].pts||0))} امتیاز`;
+      };
+      m.querySelectorAll('[data-evpid]').forEach(cb => cb.addEventListener('change', () => { sync(); if (window.APP) APP.reloadData(); }));
+      m.querySelector('#evp-x').onclick = () => { m.style.display = 'none'; renderMeList(); };
+      sync();
+    }
 
     function renderMeList(){
     const lst = customEvents();
@@ -8420,15 +8462,17 @@ window.__L3D = {
         const sch = (e.schedule||[]).map(s => esc(s.label)).join('، ');
         return `<div class="h-item" style="align-items:flex-start">
           <span class="h-day" style="min-width:86px">${D.fa(j.dd)} ${j.monthFa}</span>
-          <span style="flex:1"><b>${esc(e.name)}</b>
-            <div style="font-size:10.5px;color:var(--muted)">${esc(e.type||'')}${n>1?' • '+D.fa(n)+' روز':''}${sch?' • '+sch:''}</div>
+          <span style="flex:1"><b>${esc(e.name)}</b> <span class="chip gold" title="امتیازی که هر شرکت‌کننده می‌گیرد">🎯 ${D.fa(e.pts||0)} امتیاز</span>
+            <div style="font-size:10.5px;color:var(--muted)">${esc(e.type||'')}${n>1?' • '+D.fa(n)+' روز':''}${sch?' • '+sch:''}${(e.participants||[]).length?' • 👥 '+D.fa(e.participants.length)+' شرکت‌کننده':''}</div>
           </span>
-          <button class="btn sm ghost" data-edme="${i}" title="ویرایش">✏️</button>
+          <button class="btn sm ghost" data-partme="${i}" title="انتخاب بازیکنان شرکت‌کننده — هرکدام ${D.fa(e.pts||0)} امتیاز می‌گیرند">👥</button>
+          <button class="btn sm ghost" data-edme="${i}" title="ویرایش (نام، نوع، رنگ، امتیاز، تاریخ)">✏️</button>
           <button class="btn sm danger" data-delme="${i}">🗑</button></div>`;
       }).join('')}</div>` : '<div style="color:var(--muted);font-size:12.5px;padding:8px">رویداد سفارشی ثبت نشده است.</div>';
     $$('#me-list [data-delme]').forEach(b => b.addEventListener('click', () => {
       const a = customEvents(); a.splice(+b.dataset.delme,1); saveEvents(a); APP.go('mgmt'); mgmtTab='calendar'; APP.toast('رویداد حذف شد 🗑','orange');
     }));
+    $$('#me-list [data-partme]').forEach(b => b.addEventListener('click', () => openEventParticipants(+b.dataset.partme)));
     $$('#me-list [data-edme]').forEach(b => b.addEventListener('click', () => {
       const lst = customEvents();
       const i = +b.dataset.edme, e = lst[i];
@@ -8437,6 +8481,7 @@ window.__L3D = {
       $('#me-name').value = e.name || '';
       $('#me-type').value = e.type || 'مسابقه';
       $('#me-col').value = e.col || 'green';
+      $('#me-pts').value = (e.pts !== undefined && e.pts !== null) ? e.pts : 5;
       if (e.start) $('#me-start')._set(e.start);
       if (e.end) $('#me-end')._set(e.end);
       renderSchedule();
@@ -11081,6 +11126,16 @@ window.__L3D = {
       const top = pr.top || {};
       pr.participants.forEach(pid => addPts(pid, top['1'] === pid ? (+pr.p1 || 0) : top['2'] === pid ? (+pr.p2 || 0) : top['3'] === pid ? (+pr.p3 || 0) : (+pr.entry || 0)));
     });
+    /* 🗓 رویدادهای سفارشی تقویم: هر «شرکت‌کنندهٔ» انتخاب‌شده امتیاز رویداد را می‌گیرد — فقط رویدادهای امسال */
+    try {
+      const evs = (window.MGMT && MGMT.customEvents) ? MGMT.customEvents() : (JSON.parse(localStorage.getItem('ga_events') || '[]') || []);
+      (Array.isArray(evs) ? evs : []).forEach(ev => {
+        if (!ev || !ev.start || !inYr(ev.start)) return;
+        const p = +ev.pts || 0;
+        if (p <= 0 || !Array.isArray(ev.participants)) return;
+        ev.participants.forEach(pid => addPts(+pid, p));
+      });
+    } catch(e){}
     /* ⚔️ نبرد میدانها: امتیاز فصل تیمی */
     try {
       const bt = (window.Battle && window.Battle.computeSeasonBonus) ? window.Battle.computeSeasonBonus() : {};

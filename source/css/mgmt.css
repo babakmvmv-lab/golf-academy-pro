@@ -272,3 +272,11 @@ tr.off-row{opacity:.5}
   .label-link-row .btn{width:100%}
   .label-qr{width:min(190px,100%);margin:auto}
 }
+
+/* ───── ویزارد اسکورکارت: موبایل‌دوست ───── */
+#score-wizard .sw-mini, #score-wizard #sw-close{padding:6px 11px !important;font-size:11.5px !important;border-radius:9px;white-space:nowrap}
+#score-wizard #sw-close{font-size:12.5px !important}
+@media (max-width:560px){
+  #score-wizard .sw-mini, #score-wizard #sw-close{padding:5px 9px !important;font-size:10.5px !important}
+  #score-wizard .chip{padding:3px 9px}
+}

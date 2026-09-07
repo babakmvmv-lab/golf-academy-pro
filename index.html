@@ -1013,6 +1013,14 @@ tr.off-row{opacity:.5}
   .label-link-row .btn{width:100%}
   .label-qr{width:min(190px,100%);margin:auto}
 }
+
+/* ───── ویزارد اسکورکارت: موبایل‌دوست ───── */
+#score-wizard .sw-mini, #score-wizard #sw-close{padding:6px 11px !important;font-size:11.5px !important;border-radius:9px;white-space:nowrap}
+#score-wizard #sw-close{font-size:12.5px !important}
+@media (max-width:560px){
+  #score-wizard .sw-mini, #score-wizard #sw-close{padding:5px 9px !important;font-size:10.5px !important}
+  #score-wizard .chip{padding:3px 9px}
+}
 </style>
     <style>/* ═══ فروشگاه آواتار v8 — تم تیره + زمردی + طلایی، شیشه‌ای و سه‌بعدی ═══ */
 .ashop{display:grid;grid-template-columns:212px minmax(0,1fr) 306px;min-width:0;gap:14px;direction:rtl;align-items:start}
@@ -8849,26 +8857,28 @@ window.__L3D = {
 
     function headerHtml(){
       const done = playersOf().filter(p => draftFor(p.pid).final).length;
-      return `<div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line-soft);background:rgba(255,255,255,.02)">
+      return `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line-soft);background:rgba(255,255,255,.02)">
         <button class="btn sm ghost" id="sw-close" title="بستن (پیش‌نویس نگه داشته می‌شود)">✕</button>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:800;font-size:14.5px">📋 ویزارد اسکورکارت — ${esc(t[1])}</div>
-          <div style="font-size:10.5px;color:var(--muted);margin-top:2px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(nHoles)} حفره • پیش‌نویس ابری — هر ادمین می‌تواند ادامه دهد</div>
+        <div style="flex:1 1 140px;min-width:0">
+          <div style="font-weight:800;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📋 ویزارد اسکورکارت — ${esc(t[1])}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(nHoles)} حفره</div>
         </div>
-        <span class="chip ${done ? 'green' : 'gold'}">${D.fa(done)} کارت نهایی</span>
-        <button class="btn sm ghost" id="sw-peek" title="جدول اسکورکارت (نمایش)">👁 جدول</button>
-        <button class="btn sm" id="sw-report" style="background:linear-gradient(135deg,var(--gold),#b08a28);color:#1a1407;font-weight:800" title="ثبت نهایی و گزارش پایانی مسابقه">🏁 گزارش مسابقه</button>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="chip ${done ? 'green' : 'gold'}" style="font-size:10.5px">${D.fa(done)} کارت</span>
+          <button class="btn sm ghost sw-mini" id="sw-peek" title="جدول اسکورکارت (نمایش)">👁 جدول</button>
+          <button class="btn sm sw-mini" id="sw-report" style="background:linear-gradient(135deg,var(--gold),#b08a28);color:#1a1407;font-weight:800" title="ثبت نهایی و گزارش پایانی مسابقه">🏁 گزارش مسابقه</button>
+        </div>
       </div>
-      <div style="display:flex;gap:6px;padding:9px 16px;font-size:10.5px;color:var(--muted);border-bottom:1px solid var(--line-soft)">
+      <div style="display:flex;gap:6px;padding:8px 12px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--line-soft);flex-wrap:wrap">
         ${['۱. انتخاب بازیکن','۲. انتخاب میدان','۳. ثبت ضربه'].map((s,i) => `<span style="padding:3px 10px;border-radius:99px;${state.step === i+1 ? 'background:rgba(212,175,55,.15);color:var(--gold-l);border:1px solid rgba(212,175,55,.4);font-weight:700' : 'background:rgba(255,255,255,.03)'}">${s}</span>`).join('')}
       </div>`;
     }
 
     function stepPlayers(){
       const list = playersOf();
-      return `<div style="padding:16px;overflow:auto;flex:1">
+      return `<div style="padding:12px 10px;overflow:auto;flex:1">
         <div style="font-size:12px;color:var(--muted);margin-bottom:10px">بازیکن شرکت‌کننده در این مسابقه را انتخاب کنید${res ? '' : ' <span class="chip dim" style="font-size:9.5px">نتایج ثبت نشده — همهٔ اعضای فعال</span>'}</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:9px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">
         ${list.map(p => {
           const dr = draftFor(p.pid);
           const n = holesDone(p.pid);
@@ -8887,13 +8897,13 @@ window.__L3D = {
     function stepHoles(){
       const p = playersOf().find(x => x.pid === state.pid);
       const dr = draftFor(state.pid);
-      return `<div style="padding:16px;overflow:auto;flex:1">
+      return `<div style="padding:12px 10px;overflow:auto;flex:1">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
           <button class="btn sm ghost" data-swback="1">→ بازیکنان</button>
           <b style="font-size:13.5px">${esc(p ? p.name : '')}</b>
           <span class="chip dim">${D.fa(holesDone(state.pid))}/${D.fa(nHoles)} میدان</span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:7px">
         ${Array.from({length:nHoles}, (_,i) => {
           const h = i + 1, e = dr.holes[h];
           return `<button type="button" class="sw-hole" data-hole="${h}" style="cursor:pointer;border-radius:12px;padding:10px 8px;text-align:center;border:1px solid ${e ? 'rgba(30,187,138,.45)' : 'var(--line-soft)'};background:${e ? 'rgba(30,187,138,.07)' : 'rgba(255,255,255,.025)'};color:inherit">

@@ -2522,19 +2522,9 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     return st;
   }
 
-  /* ── فعالیت‌ها: تمرین هفتگی پنجشنبه برای همهٔ اعضا (قطعی) ── */
+  /* ── فعالیت‌ها: تمرین‌های خودکار پنجشنبه حذف شدند — مدیر دوره‌ها/تمرین‌ها را دستی (پنل مدیریت → دوره‌ها) وارد می‌کند ── */
   function genActivities(players){
-    const ACT = players ? players.filter(p => p[5]) : ACTIVE;
-    const acts = [];
-    const first = new Date(SEASON_START.getTime());
-    while (first.getUTCDay() !== 4) first.setUTCDate(first.getUTCDate() + 1); // اولین پنجشنبهٔ فصل
-    const d = new Date(first.getTime());
-    while (d <= TODAY){
-      const dd = new Date(d.getTime());
-      ACT.forEach(p => acts.push({ date: dd, pid: p[0], type: 'تمرین', points: 1 }));
-      d.setUTCDate(d.getUTCDate() + 7);
-    }
-    return acts;
+    return [];
   }
 
   /* پنجشنبه‌های کل فصل ۱۴۰۵ (برای تقویم — از ابتدای امسال تا پایان سال) */
@@ -2979,13 +2969,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
         res[t[0]] = { participants: ALL.slice(), top: { 1: 1, 2: 2, 3: (ti % 2 === 0 ? 6 : 7) } };
       });
       localStorage.setItem('ga_results', JSON.stringify(res));
-      // دوره‌ها: دو دورهٔ ۲روزه در خرداد (برگزارشده) + یک دورهٔ آینده در آذر
-      const progs = [
-        { name: 'دورهٔ آموزشی ۲روزهٔ گلف — خرداد', type: 'کلاس', start: '2026-05-26', end: '2026-05-27', info: 'دورهٔ ۲ روزه — همهٔ اعضای آکادمی', p1: 10, p2: 7, p3: 5, entry: 3, participants: ALL.slice(), top: { 1: 1, 2: 2, 3: 6 } },
-        { name: 'دورهٔ تمرینی ۲روزهٔ اصول پوتینگ — خرداد', type: 'تمرین', start: '2026-06-09', end: '2026-06-10', info: 'دورهٔ ۲ روزه — همهٔ اعضای آکادمی', p1: 10, p2: 7, p3: 5, entry: 3, participants: ALL.slice(), top: { 1: 1, 2: 2, 3: 7 } },
-        { name: 'دورهٔ آماده‌سازی جام بزرگ فصل — آذر', type: 'کلاس', start: '2026-11-25', end: '2026-11-26', info: 'دورهٔ ۲ روزهٔ آینده در آذر ماه', p1: 12, p2: 8, p3: 6, entry: 4 },
-      ];
-      localStorage.setItem('ga_programs', JSON.stringify(progs));
+      // دوره‌ها: هیچ بذری ثبت نمی‌شود — مدیر همهٔ دوره‌ها/تمرین‌ها را خودش دستی (پنل مدیریت → دوره‌ها) وارد می‌کند
       localStorage.setItem('ga_seed_v2', '1405');
     } catch(e){}
   }
@@ -3012,7 +2996,24 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason,
   };
+  /* 🧹 مهاجرت یک‌باره: حذف تمرین/دوره‌های بذریِ خودکار از حافظه (تطبیق دقیق نام+تاریخ — ورودی‌های دستی هرگز پاک نمی‌شوند) */
+  function cleanupSeededPrograms(){
+    try {
+      if (localStorage.getItem('ga_cleanup_practice_v1') === '1') return;
+      const SEEDED = [
+        ['دورهٔ آموزشی ۲روزهٔ گلف — خرداد', '2026-05-26'],
+        ['دورهٔ تمرینی ۲روزهٔ اصول پوتینگ — خرداد', '2026-06-09'],
+        ['دورهٔ آماده‌سازی جام بزرگ فصل — آذر', '2026-11-25'],
+      ];
+      const list = loadPrograms();
+      const kept = list.filter(p => !SEEDED.some(([n, s]) => p.name === n && p.start === s));
+      if (kept.length !== list.length) savePrograms(kept);
+      localStorage.removeItem('ga_del_acts');
+      localStorage.setItem('ga_cleanup_practice_v1', '1');
+    } catch(e){}
+  }
   seedSeason();
+  cleanupSeededPrograms();
 })();
 </script>
     <script>/* ═══════════════ GolfAcademy PRO — Charts (canvas, glow, animated) ═══════════════ */
@@ -4287,9 +4288,7 @@ function panelCal(){
   var tours = [];
   try { tours = (D.visibleTours ? D.visibleTours() : D.TOURNAMENTS) || []; } catch(e){}
   tours.forEach(function(t){ if (t[5] && t[5].slice(5,7) === mm) rows.push({ ic: '🏆', txt: esc(t[1]) + ' — مسابقه', dt: esc(t[5]) }); });
-  var thu = [];
-  try { thu = D.thursdaysSeason ? D.thursdaysSeason() : []; } catch(e){}
-  thu.forEach(function(d){ if (d && d.slice(5,7) === mm) rows.push({ ic: '🏌️', txt: 'تمرین هفتگی پنجشنبه — همهٔ اعضا', dt: esc(d) }); });
+  /* تمرین‌های خودکار پنجشنبه حذف شد — فقط ورودی‌های دستی مدیر نمایش داده می‌شود */
   var progs = [];
   try { progs = D.loadPrograms ? D.loadPrograms() : []; } catch(e){}
   progs.forEach(function(p){
@@ -11930,11 +11929,7 @@ window.__L3D = {
       ev({ d, end: d, name: t[1], type: 'مسابقه', col: t[2]===1?'gold':t[2]===2?'green':'blue',
            kind: 'مسابقه', icon: '🏆', extra: `${esc(D.COURSE_NAME[t[3]]||'—')} • ${D.fa(t[4])} حفره` });
     });
-    // تمرین هفتگی پنجشنبه: از ابتدای امسال تا پایان سال (همهٔ اعضا)
-    (window.Data.thursdaysSeason ? Data.thursdaysSeason() : []).forEach(iso => {
-      const d = D.dateFrom(iso);
-      ev({ d, end: d, name: 'تمرین هفتگی پنجشنبه', type: 'تمرین', col: 'green', kind: 'تمرین', icon: '🏌️', extra: 'تمرین هفتگی — همهٔ اعضای آکادمی' });
-    });
+    /* تمرین‌های خودکار پنجشنبه حذف شد — مدیر تمرین‌ها را دستی وارد می‌کند */
     // دوره‌های آموزشی / تمرین / اردو (از پنل مدیریت)
     (window.Data.loadPrograms ? Data.loadPrograms() : []).forEach(p => {
       const d = D.dateFrom(p.start || p.date || '');

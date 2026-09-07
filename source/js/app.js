@@ -1295,11 +1295,7 @@
       ev({ d, end: d, name: t[1], type: 'مسابقه', col: t[2]===1?'gold':t[2]===2?'green':'blue',
            kind: 'مسابقه', icon: '🏆', extra: `${esc(D.COURSE_NAME[t[3]]||'—')} • ${D.fa(t[4])} حفره` });
     });
-    // تمرین هفتگی پنجشنبه: از ابتدای امسال تا پایان سال (همهٔ اعضا)
-    (window.Data.thursdaysSeason ? Data.thursdaysSeason() : []).forEach(iso => {
-      const d = D.dateFrom(iso);
-      ev({ d, end: d, name: 'تمرین هفتگی پنجشنبه', type: 'تمرین', col: 'green', kind: 'تمرین', icon: '🏌️', extra: 'تمرین هفتگی — همهٔ اعضای آکادمی' });
-    });
+    /* تمرین‌های خودکار پنجشنبه حذف شد — مدیر تمرین‌ها را دستی وارد می‌کند */
     // دوره‌های آموزشی / تمرین / اردو (از پنل مدیریت)
     (window.Data.loadPrograms ? Data.loadPrograms() : []).forEach(p => {
       const d = D.dateFrom(p.start || p.date || '');

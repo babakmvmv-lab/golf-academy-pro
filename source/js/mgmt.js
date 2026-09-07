@@ -2219,30 +2219,85 @@
     }
     return _pdfLibsP2;
   }
-  function mgPdfFromEl(el, fileName, btn){
-    const old = btn ? btn.textContent : '';
+  /* ═══ خروجی PDF برنددار — همیشه دقیقاً یک برگهٔ A4 با سربرگ آکادمی (لوگو + نام فارسی/انگلیسی) ═══ */
+  function mgPdfA4(opts){
+    const btn = opts.btn || null, old = btn ? btn.textContent : '';
     const restore = () => { if (btn){ btn.disabled = false; btn.textContent = old; } };
     if (btn){ btn.disabled = true; btn.textContent = '⏳ در حال ساخت PDF…'; }
-    mgPdfLibs().then(() => window.html2canvas(el, { backgroundColor: '#0b0f14', scale: 2, useCORS: true, logging: false }))
-      .then(cv => {
-        const PDF = window.jspdf.jsPDF;
-        const pdf = new PDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
-        const MG = 10, pageW = 200, pageH = 277;
-        const pxPerMm = cv.width / pageW, pagePx = Math.floor(pageH * pxPerMm);
-        const pages = Math.max(1, Math.ceil(cv.height / pagePx));
-        for (let i = 0; i < pages; i++){
-          const slice = document.createElement('canvas');
-          slice.width = cv.width; slice.height = Math.min(pagePx, cv.height - i * pagePx);
-          slice.getContext('2d').drawImage(cv, 0, i * pagePx, cv.width, slice.height, 0, 0, cv.width, slice.height);
-          if (i) pdf.addPage();
-          pdf.addImage(slice.toDataURL('image/jpeg', .93), 'JPEG', MG, MG, pageW, slice.height / pxPerMm);
-        }
-        pdf.save(fileName);
-        APP.toast('📄 PDF گزارش دانلود شد ✓', 'green');
-      })
-      .catch(() => APP.toast('سرویس PDF در دسترس نیست — اتصال اینترنت را بررسی و دوباره تلاش کنید', 'red'))
-      .then(restore);
+    return mgPdfLibs().then(() => {
+      const G = '#d4af37', GL = '#f3d779';
+      const todayFa = D.isoToShamsi ? D.fa(D.isoToShamsi(new Date().toISOString().slice(0, 10))) : '';
+      const trow = (r, i) => '<tr style="background:' + (i % 2 ? 'rgba(255,255,255,.024)' : 'transparent') + '">'
+        + r.map(c => '<td style="padding:5.5px 6px;font-size:10.5px;text-align:center;border-bottom:1px solid rgba(255,255,255,.05)">' + c + '</td>').join('') + '</tr>';
+      const sectHtml = (opts.sections || []).map(sc => {
+        let h = '<div style="margin:13px 0 6px;display:flex;align-items:baseline;gap:8px">'
+          + '<span style="width:4px;height:13px;border-radius:2px;background:linear-gradient(' + G + ',#8a6d1f);align-self:center"></span>'
+          + '<b style="font-size:12px;color:' + GL + '">' + sc.h + '</b>' + (sc.sub ? '<span style="font-size:8.5px;color:#8794a3">' + sc.sub + '</span>' : '') + '</div>';
+        if (sc.table) h += '<table style="width:100%;border-collapse:collapse"><thead><tr>'
+          + sc.table.head.map(x => '<th style="background:rgba(212,175,55,.12);color:' + GL + ';font-size:9.5px;font-weight:800;padding:6px 5px;border:1px solid rgba(212,175,55,.22)">' + x + '</th>').join('')
+          + '</tr></thead><tbody>' + (sc.table.rows || []).map(trow).join('') + '</tbody></table>';
+        if (sc.html) h += sc.html;
+        return h;
+      }).join('');
+      const kpiHtml = (opts.kpis && opts.kpis.length) ? '<div style="display:flex;gap:7px;flex-wrap:wrap;margin:11px 0 2px">'
+        + opts.kpis.map(k => '<div style="flex:1;min-width:100px;text-align:center;border:1px solid rgba(212,175,55,.25);background:rgba(255,255,255,.025);border-radius:11px;padding:9px 6px">'
+          + '<div style="font-size:13.5px;font-weight:900;color:' + GL + '">' + k.v + '</div>'
+          + '<div style="font-size:8.5px;color:#8b96a4;margin-top:3px">' + k.l + '</div></div>').join('') + '</div>' : '';
+      const metaHtml = (opts.meta && opts.meta.length) ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">'
+        + opts.meta.map(m => '<span style="font-size:9.5px;color:#c9d2dd;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:99px;padding:4px 10px">' + m + '</span>').join('') + '</div>' : '';
+      const el = document.createElement('div');
+      el.dir = 'rtl';
+      el.style.cssText = 'position:fixed;left:-40000px;top:0;width:794px;height:1123px;overflow:hidden;background:#0b1017;color:#e9eef5;font-family:Vazirmatn,Tahoma,sans-serif';
+      el.innerHTML =
+          '<div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#7a5f17,' + G + ',#f7e7ac,' + G + ',#7a5f17)"></div>'
+        + '<div class="pdfk-head" style="display:flex;align-items:center;gap:14px;padding:17px 28px 13px;border-bottom:1px solid rgba(212,175,55,.35)">'
+        +   '<img src="assets/puttclub_logo.png" alt="" style="width:58px;height:58px;border-radius:50%;object-fit:cover;border:2px solid ' + G + '">'
+        +   '<div style="flex:1"><div style="font-size:20px;font-weight:900;color:' + GL + '">آکادمی گلف پات کلاب</div>'
+        +   '<div style="font-size:8.5px;letter-spacing:3px;color:rgba(212,175,55,.85);margin-top:4px;direction:ltr;text-align:right">PUTT CLUB GOLF ACADEMY</div></div>'
+        +   '<div style="text-align:left"><div style="font-size:10px;color:#9aa7b5">' + (opts.kind || 'گزارش') + '</div>'
+        +   '<div style="font-size:11px;color:#dde5ee;font-weight:800;margin-top:4px">' + todayFa + '</div>'
+        +   '<div style="font-size:8.5px;letter-spacing:2px;color:#8a7445;margin-top:4px;direction:ltr;text-align:left">puttclub.ir</div></div>'
+        + '</div>'
+        + '<div class="pdfk-main" style="padding:12px 28px 8px">'
+        +   '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">'
+        +     '<div style="font-size:16px;font-weight:900">' + opts.title + '</div>'
+        +     (opts.sub ? '<div style="font-size:10px;color:#8a97a6">' + opts.sub + '</div>' : '')
+        +   '</div>'
+        +   metaHtml + kpiHtml + sectHtml
+        + '</div>'
+        + '<div class="pdfk-foot" style="position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:10px 28px;background:#0d141e;border-top:2px solid rgba(212,175,55,.45)">'
+        +   '<span style="font-size:9px;color:#8a97a6">ساخته‌شده در سامانهٔ «گلف آکادمی پرو» — آکادمی گلف پات کلاب</span>'
+        +   '<span style="font-size:9px;color:#8a97a6;direction:ltr">puttclub.ir</span>'
+        + '</div>';
+      document.body.appendChild(el);
+      /* اتوفیت: محتوای بلند به‌تناسب کوچک می‌شود تا دقیقاً یک برگهٔ A4 شود */
+      const lim = 1123 - el.querySelector('.pdfk-head').offsetHeight - el.querySelector('.pdfk-foot').offsetHeight - 4;
+      const main = el.querySelector('.pdfk-main');
+      if (main.scrollHeight > lim){
+        const z = Math.max(.4, lim / main.scrollHeight);
+        main.style.transform = 'scale(' + z + ')';
+        main.style.transformOrigin = 'top right';
+      }
+      return window.html2canvas(el, { backgroundColor: '#0b1017', scale: 2, useCORS: true, logging: false })
+        .then(cv => {
+          el.remove();
+          const PDF = window.jspdf.jsPDF;
+          const pdf = new PDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
+          const out = document.createElement('canvas');
+          out.width = 1588; out.height = 2246;
+          const oc = out.getContext('2d');
+          oc.fillStyle = '#0b1017'; oc.fillRect(0, 0, out.width, out.height);
+          const fit = Math.min(1, out.height / cv.height, out.width / cv.width);
+          oc.drawImage(cv, 0, 0, Math.round(cv.width * fit), Math.round(cv.height * fit));
+          pdf.addImage(out.toDataURL('image/jpeg', .94), 'JPEG', 0, 0, 210, 297);
+          pdf.save(opts.fileName);
+          APP.toast('📄 PDF یک‌برگیِ A4 دانلود شد ✓', 'green');
+        }, e => { el.remove(); throw e; });
+    })
+    .catch(e => { if (window.APP && APP.toast) APP.toast('سرویس PDF در دسترس نیست — اتصال اینترنت را بررسی و دوباره تلاش کنید', 'red'); throw e; })
+    .finally(restore);
   }
+  window.PDFK = { libs: mgPdfLibs, a4: mgPdfA4 };
 
   /* ── گزارش پایانی مسابقه: سکو + رتبه‌بندی بر اساس کمترین ضربه (نسبت به مجموع پار) ── */
   function tourReport(t, onChange){
@@ -2379,10 +2434,35 @@
         render();
       }));
       const pb = $('#tr-pdf');
+      /* 📄 خروجی PDF برنددار: یک برگهٔ A4 — سربرگ آکادمی + سکوی افتخار + جدول نهایی */
       if (pb) pb.addEventListener('click', () => {
-        $$('#tour-report [data-no-pdf]').forEach(e => { e.style.visibility = 'hidden'; });
-        mgPdfFromEl($('#tr-capture'), `گزارش-مسابقه-${String(t[1]).replace(/\s+/g, '-')}.pdf`, pb);
-        setTimeout(() => $$('#tour-report [data-no-pdf]').forEach(e => { e.style.visibility = ''; }), 1200);
+        const list = rows();
+        const medals = ['🥇', '🥈', '🥉'];
+        const dateF = t[5] && D.isoToShamsi ? D.fa(D.isoToShamsi(String(t[5]).slice(0, 10))) : '—';
+        const podium = list.filter((_, i) => i < 3).map((r, i) => ({ v: medals[i] + ' ' + esc(r.name), l: ['قهرمان مسابقه', 'نایب‌قهرمان', 'سه‌نفرهٔ سوم'][i] }));
+        podium.push({ v: D.fa(list.filter(r => r.diff < 0).length), l: 'بازیکن زیر پار' });
+        podium.push({ v: D.fa(list.length), l: 'شرکت‌کننده' });
+        mgPdfA4({
+          kind: 'گزارش مسابقه',
+          title: '🏁 گزارش پایانی مسابقهٔ «' + esc(t[1]) + '»',
+          sub: esc(D.COURSE_NAME[t[3]] || '') + ' • ' + D.fa(t[4] || 18) + ' میدان • مجموع پار ' + D.fa(tourPar),
+          meta: ['📅 ' + dateF, '🏆 اول ' + D.fa(pr[0]) + ' امتیاز', '🥈 دوم ' + D.fa(pr[1]), '🥉 سوم ' + D.fa(pr[2]), '🎟 شرکت ' + D.fa(pr[3])],
+          kpis: podium,
+          sections: [{
+            h: 'جدول نهایی رتبه‌بندی',
+            sub: 'بر مبنای مجموع ضربه نسبت به پار',
+            table: { head: ['رتبه', 'بازیکن', 'حفره', 'مجموع ضربه', 'مجموع پار', 'نسبت به پار', 'امتیاز'],
+              rows: list.map(r => [
+                r.rank <= 3 ? '<b style="font-size:12px">' + medals[r.rank - 1] + '</b>' : '<b>' + D.fa(r.rank) + '</b>',
+                '<b>' + esc(r.name) + '</b>' + (r.free ? ' <span style="font-size:8px;color:#8a97a6">(آزاد)</span>' : ''),
+                D.fa(r.nH), D.fa(r.total), D.fa(r.par),
+                r.diff === 0 ? 'E' : r.diff > 0 ? '+' + D.fa(r.diff) : '<span style="color:#7fd6b7;font-weight:800">−' + D.fa(-r.diff) + '</span>',
+                '<b style="color:#f3d779">' + D.fa(r.pts) + '</b>'
+              ]) }
+          }],
+          fileName: `گزارش-مسابقه-${String(t[1]).replace(/\s+/g, '-')}.pdf`,
+          btn: pb
+        }).catch(() => {});
       });
     }
     render();

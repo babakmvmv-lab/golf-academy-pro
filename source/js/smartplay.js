@@ -363,10 +363,9 @@
     return _pdfLibsP;
   }
   /* ساخت و دانلود مستقیم PDF از روی گزارش (بدون دیالوگ چاپ) — fallback: چاپ */
+  /* ساخت و دانلود مستقیم PDF برنددار (یک برگهٔ A4، سربرگ آکادمی) — fallback: چاپ */
   function exportSummaryPdf(s) {
     var pb = document.getElementById('spk-pdf');
-    var oldTxt = pb ? pb.textContent : '';
-    function restore() { if (pb) { pb.disabled = false; pb.textContent = oldTxt; } }
     function legacyPrint() {
       var oldTitle = document.title;
       document.title = 'گزارش جلسهٔ تمرینی ' + fa(s.no) + ' — ' + (TYPE_FA[s.type] || s.type) + ' — ' + s.dateFa;
@@ -382,38 +381,49 @@
       window.print();
       setTimeout(cleanup, 2500);
     }
-    if (pb) { pb.disabled = true; pb.textContent = '⏳ در حال ساخت PDF…'; }
-    loadPdfLibs()
-      .then(function () {
-        var el = document.getElementById('spk-wrap');
-        if (!el) throw new Error('wrap-missing');
-        document.body.classList.add('pdf-capture');
-        return window.html2canvas(el, { backgroundColor: '#0b0f14', scale: 2, useCORS: true, logging: false })
-          .then(function (cv) { document.body.classList.remove('pdf-capture'); return cv; },
-                function (e2) { document.body.classList.remove('pdf-capture'); throw e2; });
-      })
-      .then(function (cv) {
-        var PDF = window.jspdf.jsPDF;
-        var pdf = new PDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
-        var MG = 10, pageW = 210 - 2 * MG, pageH = 297 - 2 * MG;
-        var pxPerMm = cv.width / pageW, pagePx = Math.floor(pageH * pxPerMm);
-        var pages = Math.max(1, Math.ceil(cv.height / pagePx));
-        for (var i = 0; i < pages; i++) {
-          var slice = document.createElement('canvas');
-          slice.width = cv.width;
-          slice.height = Math.min(pagePx, cv.height - i * pagePx);
-          slice.getContext('2d').drawImage(cv, 0, i * pagePx, cv.width, slice.height, 0, 0, cv.width, slice.height);
-          if (i) pdf.addPage();
-          pdf.addImage(slice.toDataURL('image/jpeg', .93), 'JPEG', MG, MG, pageW, slice.height / pxPerMm);
+    if (!window.PDFK || !window.PDFK.a4) { legacyPrint(); return; }
+    var an = s.analysis || analyze(sumSid);
+    var durMin = s.closedAt ? Math.max(0, Math.round((new Date(s.closedAt) - new Date(s.createdAt)) / 60000)) : null;
+    var tot = Math.max(1, an.totalShots);
+    var stPct = Math.round(((an.resCount.straight || 0) / tot) * 100);
+    var best = null;
+    Object.keys(an.byPlayer).forEach(function (pid) { var b = an.byPlayer[pid].best; if (b && (!best || b.yds > best.yds)) best = b; });
+    var kpis = [
+      { v: fa(an.totalShots), l: 'کل ضربه‌ها' },
+      { v: fa(an.playerCount), l: 'بازیکن' },
+      { v: fa(stPct) + '٪', l: 'ضربهٔ صاف' }
+    ];
+    if (best) kpis.push({ v: fa(best.yds) + ' یارد', l: 'بیشترین برد' });
+    if (durMin != null) kpis.push({ v: fa(durMin) + ' دقیقه', l: 'مدت جلسه' });
+    var dist = RESULTS.map(function (r) {
+      var n = an.resCount[r[0]] || 0, w = Math.round(n / tot * 100);
+      return w ? '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:#c9d2dd;margin-left:12px"><i style="width:9px;height:9px;border-radius:3px;background:' + r[3] + ';display:inline-block"></i>' + esc(r[1]) + ' <b style="color:#f3d779">' + fa(w) + '٪</b></span>' : '';
+    }).join('');
+    var sections = [{ h: 'پراکندگی نتایج ضربه‌ها', sub: 'سهم هر نتیجه از کل ' + fa(an.totalShots) + ' ضربه', html: '<div style="line-height:2.2">' + dist + '</div>' }];
+    Object.keys(an.byPlayer).forEach(function (pid) {
+      var o = an.byPlayer[pid];
+      var p = playerByPid(+pid);
+      sections.push({
+        h: '🏌️ ' + esc(p ? p.name : 'بازیکن ' + fa(pid)) + ' — ' + fa(o.n) + ' ضربه',
+        sub: o.best ? '🏆 بهترین: ' + fa(o.best.yds) + ' یارد با ' + esc(o.best.club) : '',
+        table: {
+          head: ['کلاب', 'تعداد', 'میانگین یارد', 'بیشینهٔ فاصله', '٪ صاف'],
+          rows: Object.keys(o.clubs).sort(function (a, b) { return o.clubs[b].n - o.clubs[a].n; }).map(function (c) {
+            var cc = o.clubs[c];
+            return ['<b>' + esc(c) + '</b>', fa(cc.n), fa(Math.round(cc.sum / cc.n * 10) / 10), fa(cc.max), '<b style="color:' + (cc.st / cc.n >= .6 ? '#7fd6b7' : '#e9eef5') + '">' + fa(Math.round(cc.st / cc.n * 100)) + '٪</b>'];
+          })
         }
-        pdf.save('گزارش-جلسه-' + fa(s.no) + '-' + String(s.dateFa || '').replace(/[\\/]/g, '.') + '.pdf');
-        toast('PDF گزارش دانلود شد ✓', 'gold');
-      })
-      .catch(function () {
-        legacyPrint();
-        toast('اتصال به سرویس PDF ممکن نشد — دیالوگ چاپ باز شد', 'ok');
-      })
-      .then(restore);
+      });
+    });
+    window.PDFK.a4({
+      kind: 'گزارش جلسهٔ تمرینی',
+      title: 'گزارش جلسهٔ تمرینی شماره ' + fa(s.no) + ' — ' + esc(TYPE_FA[s.type] || s.type),
+      sub: '📅 ' + esc(s.dateFa),
+      kpis: kpis,
+      sections: sections,
+      fileName: 'گزارش-جلسه-' + fa(s.no) + '-' + String(s.dateFa || '').replace(/[\\/]/g, '.') + '.pdf',
+      btn: pb
+    }).catch(function () { legacyPrint(); toast('دیالوگ چاپ باز شد — سرویس PDF در دسترس نبود', 'ok'); });
   }
 
   /* ══════════ پایان جلسه + تحلیل ══════════ */

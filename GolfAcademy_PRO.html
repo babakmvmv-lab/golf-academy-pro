@@ -1659,6 +1659,23 @@ input[type=color].asa-in{padding:2px;width:38px;height:28px}
     syncableKeys().forEach(function (k) { sweepCache[k] = L.getItem(k); });
   }
 
+  /* کلیدهای ساختاری (جلسات/ضربه‌های تمرین): مرج union تا تغییرات پوش‌نشدهٔ محلی لایو نماند */
+  function mergeSpKey(k, localRaw, remoteRaw) {
+    try {
+      if (!localRaw) return remoteRaw;
+      if (k === 'ga_sp_sessions') {
+        var a = JSON.parse(remoteRaw) || {}, b = JSON.parse(localRaw) || {};
+        Object.keys(b).forEach(function (id) { if (!a[id]) a[id] = b[id]; });
+        return JSON.stringify(a);
+      }
+      var arr = JSON.parse(remoteRaw) || [], loc = JSON.parse(localRaw) || [];
+      var seen = {}, keyFn = function (x) { return [x.sid, x.t, x.pid, x.club, x.res].join('|'); };
+      arr.forEach(function (x) { seen[keyFn(x)] = 1; });
+      (Array.isArray(loc) ? loc : []).forEach(function (x) { if (x && !seen[keyFn(x)]) arr.push(x); });
+      arr.sort(function (a, b) { return (a.t || 0) - (b.t || 0); });
+      return JSON.stringify(arr);
+    } catch (e) { return remoteRaw; }
+  }
   /* ── pull: اعمال دادهٔ جدیدترِ سرور روی این دستگاه ──────────────── */
   function pull() {
     if (!hasCred()) { setPhase('off', 'کانفیگ ابری کامل نیست — از پنل ☁️ تنظیم کنید'); return Promise.resolve(false); }
@@ -1684,7 +1701,9 @@ input[type=color].asa-in{padding:2px;width:38px;height:28px}
             }
             if (!remoteNewer && localDirty === undefined && L.getItem(r.k) !== null) return;
             if (remoteNewer) {
-              try { L.setItem(r.k, decode(r.v)); } catch (e) {}
+              var newVal = decode(r.v);
+              if (r.k === 'ga_sp_sessions' || r.k === 'ga_sp_shots') newVal = mergeSpKey(r.k, L.getItem(r.k), newVal);
+              try { L.setItem(r.k, newVal); } catch (e) {}
               ts[r.k] = r.updated_at;
               applied++;
               if (localDirty) delete d[r.k];

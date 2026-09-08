@@ -12074,6 +12074,28 @@ window.__L3D = {
   /* خواندن دیتای خام اسمارت‌پلی از حافظهٔ محلی */
   function spShots(){ try { return JSON.parse(localStorage.getItem('ga_sp_shots') || '[]'); } catch(e){ return []; } }
   function spSessions(){ try { return JSON.parse(localStorage.getItem('ga_sp_sessions') || '{}'); } catch(e){ return {}; } }
+  /* بازگردانی دیتای قدیمی تمرین: اگر کلید ga_sp_restore_v1 از ابر آمده باشد، جلسات/ضربه‌هایش را یک‌بار (union) با محلی مرج می‌کند — هرگز بازنویسی نمی‌کند تا تمرین‌های پوش‌نشدهٔ محلی حفظ شوند */
+  function restoreLegacyPractice(){
+    try {
+      if (localStorage.getItem('sp_restore_done_v1')) return false;
+      const raw = localStorage.getItem('ga_sp_restore_v1');
+      if (!raw) return false;
+      const payload = JSON.parse(raw);
+      if (!payload || (!payload.sessions && !payload.shots)) return false;
+      const ses = JSON.parse(localStorage.getItem('ga_sp_sessions') || '{}');
+      const shots = JSON.parse(localStorage.getItem('ga_sp_shots') || '[]');
+      let added = 0;
+      Object.keys(payload.sessions || {}).forEach(id => { if (!ses[id]) { ses[id] = payload.sessions[id]; added++; } });
+      const key = x => [x.sid, x.t, x.pid, x.club, x.res].join('|');
+      const seen = new Set(shots.map(key));
+      (payload.shots || []).forEach(x => { if (!seen.has(key(x))) { shots.push(x); added++; } });
+      shots.sort((a, b) => (a.t || 0) - (b.t || 0));
+      localStorage.setItem('ga_sp_sessions', JSON.stringify(ses));
+      localStorage.setItem('ga_sp_shots', JSON.stringify(shots));
+      localStorage.setItem('sp_restore_done_v1', '1');
+      return added > 0;
+    } catch(e){ return false; }
+  }
 
   /* بدنهٔ مشترک نمودار ستونیِ یک مجموعه‌ضربه (مرتب‌شده بر زمان) — کارت زنده و آیتم‌های آرشیو هر دو از این */
   function shotChartBody(shotsAll, uid, extraChip){
@@ -12123,6 +12145,7 @@ window.__L3D = {
     const cards = A.CARDS[playerSel] || [];
     const sk = A.SKILLS[playerSel] || {scoring:0,birdie:0,consistency:0,practice:0,experience:0};
     const pt = A.PAR_TYPE[playerSel] || {};
+    const pracSel = pracDefaultPid();
     const dist = { w:0, p:0, b:0, d:0 };
     cards.forEach(c => { dist.w += c.birdies; dist.p += c.pars; dist.b += c.bogeys; dist.d += c.dbog; });
     const tot = Math.max(1, dist.w + dist.p + dist.b + dist.d);
@@ -12175,7 +12198,7 @@ window.__L3D = {
         <div class="fold-body">
         <div class="toolbar" style="margin-bottom:8px">
           <span class="lbl">🏌️ بازیکن:</span>
-          <select class="sel" id="pp-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===playerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+          <select class="sel" id="pp-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===pracSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
           <span class="lbl">🎯 نوع تمرین:</span>
           <select class="sel" id="pp-type"><option value="all">همهٔ تمرین‌ها</option>${Object.keys(SP_TYPE_LBL).map(t => `<option value="${t}">${SP_TYPE_LBL[t]}</option>`).join('')}</select>
           <span class="lbl">⛳ کلاب:</span>
@@ -12203,7 +12226,7 @@ window.__L3D = {
         <div class="fold-body">
         <div class="toolbar" style="margin-bottom:8px;align-items:center">
           <span class="lbl">🏌️ بازیکن:</span>
-          <select class="sel" id="pa-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===playerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+          <select class="sel" id="pa-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===pracSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
           <span class="lbl">🔢 تعداد تمرین:</span>
           <select class="sel" id="pa-n">
             <option value="1">فقط تمرین آخر</option>
@@ -12281,6 +12304,18 @@ window.__L3D = {
     }, 80);
     $('#pl-sel').addEventListener('change', e => { playerSel = +e.target.value; go('player'); });
     bindPlayerTabs();
+  }
+  /* بازیکنی که آخرین/فعلی دیتای تمرین تمام‌شده را دارد — برای پیش‌انتخاب هوشمند سلکت‌های تمرینی */
+  function pracDefaultPid(){
+    try {
+      const ssn = spSessions();
+      const closedIds = {};
+      Object.keys(ssn).forEach(id => { const x = ssn[id]; if (x && x.status === 'closed' && x.closedAt) closedIds[id] = 1; });
+      const has = pid => spShots().some(x => x.pid === pid && closedIds[x.sid]);
+      if (has(playerSel)) return playerSel;
+      const row = A.LB.find(r => has(r.pid));
+      return row ? row.pid : playerSel;
+    } catch(e){ return playerSel; }
   }
   /* ── 🍩 نمودار دایره‌ای نتیجهٔ تمرین: درصد آیتم‌های طراحی‌شدهٔ تمرین (صاف/سمت راست/سمت چپ/خطا)
      روی ضربه‌های بازیکن — فیلتر: بازیکن • نوع تمرین • کلاب • بازهٔ «فقط تمرین آخر / ۳ / ۵ / ۱۰ / کل» (جلسات تمام‌شده) ── */
@@ -12501,6 +12536,7 @@ window.__L3D = {
   }
   /* ── بازیکن هوشمند — اسکلت صفحه (قابلیت‌ها به‌زودی تزریق می‌شوند) ── */
   function renderSmartPlayer(v, p, cards, TABS){
+    const pracSel = pracDefaultPid();
     const SPARK = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M12 3l1.9 5.2L19.2 10l-5.3 1.8L12 17l-1.9-5.2L4.8 10 12 3z"/><path d="M18.5 14.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z"/><path d="M6 15.5l.6 1.6 1.6.6-1.6.6L6 19.9l-.6-1.6-1.6-.6 1.6-.6.6-1.6z"/></svg>';
     const CHART_SVG = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>';
     const ARCHIVE_SVG = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>';
@@ -12530,7 +12566,7 @@ window.__L3D = {
       <div class="card-head"><span class="ic">${ARCHIVE_SVG}</span><h3>آرشیو نمودار جلسات تمام‌شده</h3><span class="tag"></span></div>
       <div class="toolbar" style="margin-bottom:4px">
         <span class="lbl">🏌️ بازیکن:</span>
-        <select class="sel" id="sph-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===p.pid?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+        <select class="sel" id="sph-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===pracSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
         <span class="lbl">🎯 نوع تمرین:</span>
         <select class="sel" id="sph-type"><option value="all">همهٔ تمرین‌ها</option>${Object.keys(SP_TYPE_LBL).map(t => `<option value="${t}">${SP_TYPE_LBL[t]}</option>`).join('')}</select>
         <span class="lbl">⛳ کلاب:</span>
@@ -14382,7 +14418,12 @@ window.__L3D = {
   }
   window.GA_MSG = { load: loadMsgs, save: saveMsgs, reads: loadMsgReads, saveReads: saveMsgReads, gate: msgGate, unreadFor: unreadMsgsFor };
 
-  const __cloudApplied = () => { if (currentPage === 'player' && playerTab === 'smart') go('player'); msgGate(); };
+  const __cloudApplied = () => {
+    const restored = restoreLegacyPractice();
+    if (restored){ S = D.loadState(); }
+    if (currentPage === 'player') go('player');
+    msgGate();
+  };
   let __cloudT = null;
   window.addEventListener('ga-cloud-applied', () => {
     clearTimeout(__cloudT); __cloudT = setTimeout(__cloudApplied, 700); /* دبونسِ پول‌های پشت‌سرهم */
@@ -14390,6 +14431,7 @@ window.__L3D = {
 
   document.addEventListener('DOMContentLoaded', () => {
     if (window.UI_LABELS) UI_LABELS.apply(document);
+    restoreLegacyPractice();
     seedUsers();
     initParticles();
     initAuth();

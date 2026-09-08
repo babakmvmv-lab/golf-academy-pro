@@ -18,7 +18,10 @@ grant select on public.ga_store to anon;
 revoke insert, update, delete on public.ga_store from anon;
 
 -- ✔ نتیجه: کلید عمومی فقط «می‌خواند». نوشتن فقط از Edge Function با کلید مخفی سرور.
+<<<<<<< HEAD
 
 -- 🧹 پاک‌سازی ردیف‌های تستی (یک‌بار)
 delete from public.sp_shots    where session_id = 'TESTPROBE';
 delete from public.sp_sessions where id = 'TESTPROBE';
+=======
+>>>>>>> 2d48648319764d3e9583065e0951d4683278b15e

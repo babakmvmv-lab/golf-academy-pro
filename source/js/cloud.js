@@ -258,9 +258,39 @@
     // توجه: ردیف حذف به‌صورت tombstone ({__del:1}) روی سرور می‌ماند تا
     // بقیهٔ دستگاه‌ها در pull بعدی آن را ببینند و کلید محلی را پاک کنند.
 
+    /* کلیدهای ساختاری تمرین (جلسات/ضربه‌ها): قبل از push، مقدار فعلی سرور گرفته و union مرج
+       می‌شود تا pushِ دستگاهِ دارای دیتای قدیمی، ضربه‌های دستگاه دیگر را بازنویسی نکند */
+    var SP_MERGE = { ga_sp_sessions: 1, ga_sp_shots: 1 };
+    var spRows = rows.filter(function (r) { return SP_MERGE[r.k] && !(r.v && r.v.__del); });
+    var preMerge = spRows.length
+      ? rest('ga_store?select=k,v&k=in.(' + spRows.map(function (r) { return r.k; }).join(',') + ')').then(function (rems) {
+          (rems || []).forEach(function (rr) {
+            var row = null;
+            spRows.forEach(function (x) { if (x.k === rr.k) row = x; });
+            if (!row || !rr.v) return;
+            try {
+              var merged;
+              if (rr.k === 'ga_sp_sessions') {
+                merged = (rr.v && typeof rr.v === 'object' && !Array.isArray(rr.v)) ? rr.v : {};
+                Object.keys(row.v || {}).forEach(function (id) { merged[id] = row.v[id]; }); /* محلی تازه‌تر ← برنده‌ی تک‌سشن */
+              } else {
+                var arr = Array.isArray(rr.v) ? rr.v.slice() : [];
+                var seen = {}, kf = function (x) { return [x.sid, x.t, x.pid, x.club, x.res].join('|'); };
+                arr.forEach(function (x) { seen[kf(x)] = 1; });
+                (Array.isArray(row.v) ? row.v : []).forEach(function (x) { if (x && !seen[kf(x)]) arr.push(x); });
+                arr.sort(function (a, b) { return (a.t || 0) - (b.t || 0); });
+                merged = arr;
+              }
+              row.v = merged;
+              try { L.setItem(rr.k, JSON.stringify(merged)); } catch (e) {}
+            } catch (e) {}
+          });
+        }).catch(function () { /* آفلاین — همان رفتار قبلی push بدون مرج */ })
+      : Promise.resolve();
+
     /* مسیر امن: اول Edge Function «ga-sync» (نوشتن با کلید مخفی سرور)؛
        اگر هنوز دیپلوی نشده بود/خطا داد ← مسیر قدیمی REST (تا قبل از فاز صفر کار می‌کند) */
-    return edgeSync(rows).then(function (r) {
+    return preMerge.then(function () { return edgeSync(rows); }).then(function (r) {
       if (r && r.ok === false) throw new Error('ga-sync: ' + (r.err || '?'));
     }).catch(function () {
       return rest('ga_store', {

@@ -8776,14 +8776,26 @@ window.__L3D = {
   function mgPdfLibs(){
     if (window.html2canvas && window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
     if (!_pdfLibsP2){
+      /* چند CDN پشت‌سرهم — اگر جی‌اس‌دلیور روی شبکهٔ کاربر بسته بود، unpkg/cdnjs در می‌آیند */
       const once = src => new Promise((res, rej) => {
         if ([...document.scripts].some(s => s.src === src)) return res();
         const sc = document.createElement('script'); sc.src = src; sc.async = true;
-        sc.onload = () => res(); sc.onerror = () => rej(new Error('cdn'));
+        const tm = setTimeout(() => { sc.remove(); rej(new Error('cdn-timeout')); }, 15000);
+        sc.onload = () => { clearTimeout(tm); res(); };
+        sc.onerror = () => { clearTimeout(tm); sc.remove(); rej(new Error('cdn')); };
         document.head.appendChild(sc);
       });
-      _pdfLibsP2 = once('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js')
-        .then(() => once('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'));
+      const tryAll = (urls, test) => urls.reduce((p, u) => p.catch(() => test() ? Promise.resolve() : once(u).then(() => {
+        if (!test()) return Promise.reject(new Error('bad-lib'));
+      })), Promise.reject(new Error('start')));
+      const H2C = ['https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+                   'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js',
+                   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'];
+      const JSPDF = ['https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+                     'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
+                     'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
+      _pdfLibsP2 = tryAll(H2C, () => !!window.html2canvas)
+        .then(() => tryAll(JSPDF, () => !!(window.jspdf && window.jspdf.jsPDF)));
       _pdfLibsP2.catch(() => { _pdfLibsP2 = null; });
     }
     return _pdfLibsP2;
@@ -8867,6 +8879,178 @@ window.__L3D = {
     .finally(restore);
   }
   window.PDFK = { libs: mgPdfLibs, a4: mgPdfA4 };
+
+  /* ═══ 📱 خروجی عکس استوری اینستاگرام (۱۰۸۰×۱۹۲۰) — برنددار: لوگو بالا + تاریخ/زمین/شرکت‌کنندگان + سکو و نتایج + سایت/شبکه‌های اجتماعی پایین ═══ */
+  function storyReportPng(t, btn){
+    const old = btn ? btn.textContent : '';
+    const finish = () => { if (btn){ btn.disabled = false; btn.textContent = old; } };
+    if (btn){ btn.disabled = true; btn.textContent = '⏳ در حال ساخت استوری…'; }
+    const pars = (D.parsOf(t[3]) || []).slice(0, t[4] || 18);
+    const pr = D.prizesOf(t);
+    const ptsOfRank = k => k === 1 ? pr[0] : k === 2 ? pr[1] : k === 3 ? pr[2] : pr[3];
+    const nameOf = pid => { const s2 = String(pid); if (s2.startsWith('free:')) return s2.slice(5); const pl = gstate().S.players.find(p => p[0] === pid); return pl ? pl[1] : ('بازیکن ' + D.fa(pid)); };
+    const fa = v => D.fa(v);
+    const medals = ['🥇', '🥈', '🥉'];
+    const list2 = extraCards().filter(c => c.tour === t[0]).map(c => {
+      const holes = Object.keys(c.strokes || {});
+      const total = holes.reduce((a, h) => a + (c.strokes[h] | 0), 0);
+      const par = holes.reduce((a, h) => a + (pars[+h - 1] || 0), 0);
+      return { pid: c.pid, name: nameOf(c.pid), total, diff: total - par, free: String(c.pid).startsWith('free:') };
+    }).sort((a, b) => a.diff - b.diff || a.total - b.total)
+      .map((r, i, arr) => { r.rank = (i > 0 && arr[i-1].diff === r.diff && arr[i-1].total === r.total) ? arr[i-1].rank : i + 1; r.pts = ptsOfRank(r.rank); return r; });
+    const dateF = t[5] && D.isoToShamsi ? fa(D.isoToShamsi(String(t[5]).slice(0, 10))) : '—';
+    const courseF = D.COURSE_NAME[t[3]] || '—';
+    const freeN2 = (((D.loadResults()[t[0]] || {}).free) || []).filter(n => !list2.some(r => String(r.pid) === 'free:' + n)).length;
+    const partsN = list2.length + freeN2;
+    let si = null; try { si = getSiteInfo(); } catch (e) {}
+    const soc = (si && si.contact && Array.isArray(si.contact.socials) ? si.contact.socials : []).filter(x => x && x.url);
+    const netFa = n => ((window.PUTT_SOCIALS || []).find(x => x.net === n) || {}).fa || n;
+    const netIc = { instagram: '📷', telegram: '✈️', whatsapp: '💬', youtube: '▶️', linkedin: '💼', x: '𝕏', aparat: '🎬', other: '🔗' };
+    const handleOf = u => { const h = String(u).replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, ''); const p = h.split('/'); return p.length > 1 && p[p.length - 1] ? '@' + p[p.length - 1] : h; };
+    const socLine = soc.length
+      ? soc.map(x => (netIc[x.net] || '🔗') + ' ' + netFa(x.net) + ' ' + handleOf(x.url)).join('   ·   ')
+      : ((si && si.contact && si.contact.social) || 'اینستاگرام · تلگرام · واتساپ');
+
+    const build = () => {
+      const W = 1080, H = 1920, cvs = document.createElement('canvas');
+      cvs.width = W; cvs.height = H;
+      const c = cvs.getContext('2d');
+      const GOLD = '#d4af37', GL = '#f3d779', FG = '#e9eff6', MUT = '#9aa7b5';
+      const F = (w2, px) => { c.font = w2 + ' ' + px + 'px Vazirmatn, Tahoma, sans-serif'; };
+      const rrect = (x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
+      const fitPx = (txt, maxW, px, w2) => { let s2 = px; F(w2, s2); while (s2 > 13 && c.measureText(txt).width > maxW){ s2 -= 2; F(w2, s2); } return s2; };
+      const txt = (t2, x, y, w2, px, col, align, maxW) => { F(w2, maxW ? fitPx(t2, maxW, px, w2) : px); c.fillStyle = col; c.textAlign = align || 'center'; c.textBaseline = 'alphabetic'; c.direction = 'rtl'; c.fillText(t2, x, y); };
+
+      /* پس‌زمینهٔ تیره + هاله‌های طلایی */
+      const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0a0f16'); g.addColorStop(.55, '#0d1420'); g.addColorStop(1, '#0a0f16');
+      c.fillStyle = g; c.fillRect(0, 0, W, H);
+      const rg = (x, y, r, a) => { const rr = c.createRadialGradient(x, y, 0, x, y, r); rr.addColorStop(0, 'rgba(212,175,55,' + a + ')'); rr.addColorStop(1, 'rgba(212,175,55,0)'); c.fillStyle = rr; c.fillRect(x - r, y - r, r * 2, r * 2); };
+      rg(930, 120, 420, .14); rg(120, 1740, 460, .12); rg(540, 960, 700, .05);
+      const tg = c.createLinearGradient(0, 0, W, 0); tg.addColorStop(0, '#7a5f17'); tg.addColorStop(.25, GOLD); tg.addColorStop(.5, '#f7e7ac'); tg.addColorStop(.75, GOLD); tg.addColorStop(1, '#7a5f17');
+      c.fillStyle = tg; c.fillRect(0, 0, W, 14);
+
+      const drawRest = () => {
+        const doneLogo = () => {
+          c.save(); c.beginPath(); c.arc(W / 2, 172, 82, 0, 7); c.lineWidth = 6; c.strokeStyle = GOLD; c.stroke(); c.restore();
+          txt('آکادمی گلف پات کلاب', W / 2, 308, 900, 46, GL);
+          txt('P U T T   C L U B   G O L F   A C A D E M Y', W / 2, 352, 400, 21, 'rgba(212,175,55,.75)');
+          c.strokeStyle = 'rgba(212,175,55,.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(240, 386); c.lineTo(W - 240, 386); c.stroke();
+          txt('🏁 گزارش پایانی مسابقه', W / 2, 446, 700, 27, MUT);
+          txt('«' + t[1] + '»', W / 2, 512, 900, 58, FG, 'center', 980);
+
+          /* سه چیپ اطلاعات: تاریخ • زمین • شرکت‌کنندگان */
+          const chips = [['📅 تاریخ', dateF], ['⛳ زمین مسابقه', courseF], ['👥 شرکت‌کنندگان', fa(partsN) + ' نفر']];
+          chips.forEach((ch, i) => {
+            const cw = 316, gap = 30, x0 = (W - (cw * 3 + gap * 2)) / 2, x = x0 + i * (cw + gap), y = 566;
+            c.fillStyle = 'rgba(255,255,255,.035)'; c.strokeStyle = 'rgba(212,175,55,.32)'; c.lineWidth = 2;
+            rrect(x, y, cw, 118, 22); c.fill(); c.stroke();
+            txt(ch[0], x + cw / 2, y + 42, 500, 22, MUT);
+            txt(ch[1], x + cw / 2, y + 88, 800, 30, GL, 'center', cw - 26);
+          });
+
+          /* سکو: [۳,۱,۲] مثل گزارش */
+          const top3 = list2.length >= 3 ? [list2[2], list2[0], list2[1]] : list2.slice(0, 2).reverse();
+          if (top3.length){
+            const cardW = 316, baseY = 760;
+            top3.forEach((r, i) => {
+              const is1 = r.rank === 1;
+              const chH = is1 ? 400 : 340, cw = cardW;
+              const x = (W - (cardW * top3.length + 30 * (top3.length - 1))) / 2 + i * (cardW + 30);
+              const y = baseY + (is1 ? 0 : 46);
+              c.fillStyle = is1 ? 'rgba(212,175,55,.10)' : 'rgba(255,255,255,.03)';
+              c.strokeStyle = is1 ? 'rgba(212,175,55,.8)' : 'rgba(255,255,255,.09)'; c.lineWidth = is1 ? 3.5 : 2;
+              rrect(x, y, cw, chH, 26); c.fill(); c.stroke();
+              txt(medals[r.rank - 1] || fa(r.rank), x + cw / 2, y + (is1 ? 92 : 76), 400, is1 ? 74 : 58, FG);
+              txt(r.name, x + cw / 2, y + (is1 ? 152 : 126), 800, 33, FG, 'center', cw - 24);
+              txt(fa(r.total), x + cw / 2, y + (is1 ? 234 : 190), 900, is1 ? 64 : 52, GL);
+              const dw = 120, dh = 46, dx = x + cw / 2 - dw / 2, dy = y + (is1 ? 262 : 212);
+              const dcol = r.diff < 0 ? '#1ebb8a' : r.diff > 0 ? '#e53935' : '#7d8794';
+              c.fillStyle = dcol + '22'; c.strokeStyle = dcol + '99'; c.lineWidth = 2; rrect(dx, dy, dw, dh, 23); c.fill(); c.stroke();
+              txt(r.diff === 0 ? 'E' : (r.diff > 0 ? '+' : '−') + fa(Math.abs(r.diff)), x + cw / 2, dy + 33, 800, 26, r.diff < 0 ? '#7ee8b8' : r.diff > 0 ? '#ffb0b0' : MUT);
+              const pw = 150, py = dy + dh + 14;
+              c.fillStyle = 'rgba(212,175,55,.13)'; c.strokeStyle = 'rgba(212,175,55,.5)'; c.lineWidth = 2; rrect(x + cw / 2 - pw / 2, py, pw, 46, 23); c.fill(); c.stroke();
+              txt(fa(r.pts) + ' امتیاز', x + cw / 2, py + 32, 800, 24, GL);
+            });
+          } else {
+            txt('نتایج این مسابقه هنوز ثبت نهایی نشده', W / 2, 860, 600, 30, MUT);
+            txt('پس از پایان، جدول رتبه‌بندی همین‌جا می‌آید ⛳', W / 2, 910, 500, 24, 'rgba(139,150,164,.6)');
+          }
+          /* سایر رتبه‌ها */
+          const rest = list2.slice(3);
+          let yy = 1240;
+          if (rest.length){
+            const cols = [[900, 'رتبه'], [640, 'بازیکن'], [430, 'مجموع ضربه'], [270, '± پار'], [120, 'امتیاز']];
+            yy += 20;
+            cols.forEach(cl => txt(cl[1], cl[0], yy, 800, 23, MUT, 'center'));
+            yy += 18; c.strokeStyle = 'rgba(212,175,55,.4)'; c.lineWidth = 2; c.beginPath(); c.moveTo(90, yy); c.lineTo(W - 90, yy); c.stroke(); yy += 52;
+            rest.slice(0, 8).forEach((r, i) => {
+              if (i % 2 === 0){ c.fillStyle = 'rgba(255,255,255,.028)'; rrect(70, yy - 34, W - 140, 62, 14); c.fill(); }
+              txt(fa(r.rank), 900, yy, 700, 27, MUT);
+              txt(r.name, 640, yy, r.rank <= 5 ? 800 : 600, 28, FG, 'center', 420);
+              txt(fa(r.total), 430, yy, 800, 28, GL);
+              txt(r.diff === 0 ? 'E' : (r.diff > 0 ? '+' : '−') + fa(Math.abs(r.diff)), 270, yy, 800, 26, r.diff < 0 ? '#7ee8b8' : r.diff > 0 ? '#ffb0b0' : MUT);
+              txt(fa(r.pts), 120, yy, 700, 27, GL);
+              yy += 68;
+            });
+            if (rest.length > 8) txt('و ' + fa(rest.length - 8) + ' بازیکن دیگر…', W / 2, yy + 6, 500, 22, MUT);
+          }
+          /* پانوشت: سایت + شبکه‌های اجتماعی */
+          const fy = H - 118;
+          c.strokeStyle = 'rgba(212,175,55,.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(120, fy - 42); c.lineTo(W - 120, fy - 42); c.stroke();
+          txt('puttclub.ir', W / 2, fy + 8, 800, 34, GL);
+          txt(socLine, W / 2, fy + 58, 500, 24, MUT, 'center', 960);
+          txt('آکادمی گلف پات کلاب — نتیجهٔ کامل در سایت', W / 2, H - 24, 400, 19, 'rgba(139,150,164,.65)');
+          save(cvs);
+        };
+        const img = new Image();
+        let drew = false;
+        const drawImg = () => {
+          if (drew) return; drew = true;
+          c.save(); c.beginPath(); c.arc(W / 2, 172, 76, 0, 7); c.clip();
+          try { c.drawImage(img, W / 2 - 76, 172 - 76, 152, 152); } catch (e) { c.fillStyle = '#111c2a'; c.fill(); }
+          c.restore();
+        };
+        img.onload = () => { drawImg(); doneLogo(); };
+        img.onerror = () => { if (!drew){ drew = true; c.save(); c.beginPath(); c.arc(W / 2, 172, 76, 0, 7); c.fillStyle = '#111c2a'; c.fill(); c.clip(); c.textAlign = 'center'; c.fillStyle = GL; c.font = '64px serif'; c.fillText('⛳', W / 2, 196); c.restore(); } doneLogo(); };
+        img.src = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUEBAQEAwUEBAQGBQUGCA0ICAcHCBALDAkNExAUExIQEhIUFx0ZFBYcFhISGiMaHB4fISEhFBkkJyQgJh0gISD/2wBDAQUGBggHCA8ICA8gFRIVICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICD/wAARCAFUAVQDASIAAhEBAxEB/8QAHQABAAICAwEBAAAAAAAAAAAAAAUGAwQBAgcICf/EAEkQAAEDAwIDAwgFBwsEAwEAAAEAAgMEBRESIQYxURNBYRQiMnGBkaGxBxUjwdEWQlJicpLxCCQzNUNUY3OT4fA0gqKyJSY2RP/EABoBAQADAQEBAAAAAAAAAAAAAAABAgMEBQb/xAAwEQEAAgIBAwIDBwQDAQAAAAAAAQIDEQQSITFBURMUIgUjMmFxgZEzUqHwJLHB4f/aAAwDAQACEQMRAD8A+MkREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEXaNjpZGxsxqccDJAHvKlDw7eBzpDvv6bfxUbUtkrT8U6RKKXHDd5PKiP77fxXccMXsn/o/wDzb+KbhT4+L+6P5QqKaHC18PKhP77fxXYcKX4//wAB/fb+Kjqj3R8xi/uj+UGpqjsLquhZUtqQ1zwSGaM/HK7/AJJX/wDuBPqe38VK21jhZGRljtel40t9LOTsPHKTaNdpc/I5GqxOK0eWhNwnUtjJgqo5ZB/ZuaWE+GTsq/LFJDK6KaN0cjTgtcMEL0bURI4E8ik1NRVzQKymZNtjUdnD1EbqsWn1cWP7QtWdZI3DzZFc6jg+nmeTRVjos8mSt1DPrG/wVculpqbVUiCdzJCWh2qMkgeHLmrRaJeni5WLL2rPdHoiKzpEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQFK2q91NteGEmWmJ86Inl4joVFIo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';
+      };
+
+      const save = cvs => {
+        const fname = 'استوری-مسابقه-' + String(t[1]).replace(/\s+/g, '-') + '.png';
+        cvs.toBlob(b => {
+          const url = URL.createObjectURL(b);
+          let pr2 = document.getElementById('story-preview');
+          if (!pr2){ pr2 = document.createElement('div'); pr2.id = 'story-preview'; document.body.appendChild(pr2); }
+          pr2.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(3,7,12,.92);display:flex;align-items:center;justify-content:center;padding:14px';
+          pr2.innerHTML = '<div style="text-align:center;max-width:400px;width:100%">'
+            + '<img src="' + url + '" style="width:100%;max-height:70vh;object-fit:contain;border-radius:18px;border:2px solid rgba(212,175,55,.55);box-shadow:0 14px 60px rgba(0,0,0,.6)">'
+            + '<div style="color:#cdd7e1;font-size:12.5px;line-height:2;margin:12px 4px">📥 عکس ۱۰۸۰×۱۹۲۰ ساخته شد — اگر خودکار دانلود نشد، روی تصویر <b>لمس طولانی → Add to Photos</b> بزن؛ بعد اینستاگرام ← استوری ← انتخاب عکس</div>'
+            + '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'
+            + '<a id="spv-dl" href="' + url + '" download="' + fname + '" style="background:linear-gradient(135deg,#d4af37,#b08a28);color:#1a1407;font-weight:900;text-decoration:none;padding:10px 22px;border-radius:12px;display:inline-block;font-size:13px">⬇ دانلود عکس</a>'
+            + '<button class="btn sm" id="spv-share" style="background:linear-gradient(135deg,#d62976,#fa7e1e);font-weight:900;color:#fff">📤 اشتراک (مستقیم استوری)</button>'
+            + '<button class="btn sm ghost" id="spv-x">بستن</button></div></div>';
+          document.getElementById('spv-x').onclick = () => { pr2.style.display = 'none'; };
+          document.getElementById('spv-share').onclick = () => {
+            const f = new File([b], fname, { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [f] })) navigator.share({ files: [f], title: 'استوری نتیجهٔ مسابقهٔ ' + t[1] }).catch(() => {});
+            else if (window.APP && APP.toast) APP.toast('اشتراک مستقیم روی این مرورگر نیست — همان «⬇ دانلود عکس» را بزن', 'orange');
+          };
+          const fx = new File([b], fname, { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [fx] })){
+            navigator.share({ files: [fx], title: 'استوری نتیجهٔ مسابقهٔ ' + t[1] }).catch(() => {});
+          } else {
+            const a = document.createElement('a'); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+          }
+          if (window.APP && APP.toast) APP.toast('📱 عکس استوری آماده شد ✓', 'green');
+          finish();
+        }, 'image/png');
+      };
+
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => setTimeout(drawRest, 60));
+      else setTimeout(drawRest, 120);
+    };
+    try { build(); } catch (e) { finish(); if (window.APP && APP.toast) APP.toast('ساخت عکس خطا داد: ' + (e && e.message ? e.message : e), 'red'); }
+  }
 
   /* ── گزارش پایانی مسابقه: سکو + رتبه‌بندی بر اساس کمترین ضربه (نسبت به مجموع پار) ── */
   function tourReport(t, onChange){
@@ -8966,6 +9150,7 @@ window.__L3D = {
       </div>
       <div style="position:sticky;bottom:0;display:flex;gap:9px;justify-content:center;padding:12px 0 18px" data-no-pdf>
         <button class="btn" id="tr-pdf" style="background:linear-gradient(135deg,var(--gold),#b08a28);font-weight:900;min-width:200px">⬇ دانلود PDF گزارش</button>
+        <button class="btn" id="tr-story" style="background:linear-gradient(135deg,#d62976,#fa7e1e);font-weight:900;min-width:190px" title="خروجی عکس ۱۰۸۰×۱۹۲۰ آمادهٔ استوری اینستاگرام">📱 خروجی عکس استوری</button>
       </div>`;
       $('#tr-x').addEventListener('click', () => { rp.style.display = 'none'; if (onChange) onChange(); });
       const tp = $('#tr-part');
@@ -9033,6 +9218,8 @@ window.__L3D = {
           btn: pb
         }).catch(() => {});
       });
+      const sb = $('#tr-story');
+      if (sb) sb.addEventListener('click', () => storyReportPng(t, sb));
     }
     render();
   }
@@ -9185,7 +9372,7 @@ window.__L3D = {
       }</div>`;
       w.style.display = 'flex';
       $('#sw-close').addEventListener('click', () => { w.style.display = 'none'; mgmtTab = 'results'; APP.go('mgmt'); });
-      $('#sw-peek').addEventListener('click', () => openScorecardModal(t));
+      $('#sw-peek').addEventListener('click', () => openScorecardModal(t, true));
       $('#sw-report').addEventListener('click', () => tourReport(t, () => render()));
       $$('#sw-body [data-swback]').forEach(b => b.addEventListener('click', () => { state.step = +b.dataset.swback; render(); }));
       if (state.step === 1){
@@ -9230,8 +9417,10 @@ window.__L3D = {
     render();
   }
 
-  /* ── مودال اسکورکارت مسابقه: جدول بازیکن × حفره + جمع + نسبت به پار ── */
-  function openScorecardModal(t){
+  /* ── مودال اسکورکارت مسابقه: جدول بازیکن × حفره + جمع + نسبت به پار ──
+     live=true (از دکمهٔ «👁 جدول» ویزارد): پیش‌نویس‌های در حال ثبت هم زنده در جدول می‌آیند و هر ۳ ثانیه به‌روزرسانی می‌شود */
+  function openScorecardModal(t, live){
+    if (openScorecardModal._tm){ clearInterval(openScorecardModal._tm); openScorecardModal._tm = null; }
     const S = gstate().S;
     const pars = (D.parsOf(t[3]) || []).slice(0, t[4] || 18);
     const parTotal = pars.reduce((a,b)=>a+b,0);
@@ -9240,53 +9429,108 @@ window.__L3D = {
     if (!m){
       m = document.createElement('div');
       m.id = 'modal-scorecard';
-      m.style.cssText = 'position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(4,8,14,.78);backdrop-filter:blur(6px);padding:10px';
+      m.style.cssText = 'position:fixed;inset:0;z-index:9300;display:none;align-items:center;justify-content:center;background:rgba(4,8,14,.78);backdrop-filter:blur(6px);padding:10px';  /* بالاتر از ویزارد (9000) تا با یک کلیک دیده شود */
       document.body.appendChild(m);
-      m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+      m.addEventListener('click', e => { if (e.target === m){ m.style.display = 'none'; if (openScorecardModal._tm){ clearInterval(openScorecardModal._tm); openScorecardModal._tm = null; } } });
     }
-    const cards = S.scorecards.filter(sc => +sc.tour === t[0])
-      .map(sc => ({ sc, name: String(sc.pid).startsWith('free:') ? String(sc.pid).slice(5) + ' — بازیکن آزاد' : D.nameOf(+sc.pid) }))
-      .sort((a,b) => a.sc.total - b.sc.total);
+    /* حفظ موقعیت اسکرول هنگام رفرش زنده */
+    const scEl = m.querySelector('.sc-scroll');
+    const keepTop = scEl ? scEl.scrollTop : 0;
+
+    /* ── ساخت ردیف‌ها: کارت‌های نهایی + (در حالت زنده) پیش‌نویس‌های در حال ثبت ── */
+    const rows = [];
+    S.scorecards.filter(sc => +sc.tour === t[0]).forEach(sc => {
+      rows.push({ pidKey: String(sc.pid),
+        name: String(sc.pid).startsWith('free:') ? String(sc.pid).slice(5) + ' — بازیکن آزاد' : (D.nameOf(+sc.pid) || 'بازیکن'),
+        strokes: sc.strokes || {}, caps: sc.caps || null, capped: sc.capped || 0, live: false });
+    });
+    if (live){
+      const drT = scDraftTour(t[0]) || {};
+      Object.keys(drT).forEach(k => {
+        if (k === '__meta') return;
+        const d = drT[k];
+        if (!d || !d.holes || !Object.keys(d.holes).length) return;
+        if (rows.some(r => r.pidKey === String(k))) return;  /* کارت نهایی‌اش هست */
+        const strokes = {};
+        Object.entries(d.holes).forEach(([h, e]) => { strokes[h] = (e.s|0) + (e.pen||0); });
+        const pidKey = String(k);
+        rows.push({ pidKey,
+          name: pidKey.startsWith('free:') ? pidKey.slice(5) + ' — بازیکن آزاد' : (D.nameOf(+pidKey) || 'بازیکن'),
+          strokes, caps: null, capped: 0, live: true });
+      });
+    }
+    rows.forEach(r => {
+      const hs = Object.keys(r.strokes).map(Number).filter(h => h >= 1 && h <= pars.length);
+      r.played = hs.length;
+      r.total  = hs.reduce((a,h) => a + (r.strokes[h] || 0), 0);
+      r.parP   = hs.reduce((a,h) => a + (pars[h-1] || 0), 0);
+      r.delta  = r.total - r.parP;   /* نسبت به پارِ میدان‌های بازی‌شده — معیار رتبه‌بندی زنده */
+    });
+    rows.sort(live
+      ? ((a,b) => a.delta - b.delta || a.total - b.total || b.played - a.played)
+      : ((a,b) => a.total - b.total));
+
     const rule = D.tourRuleOf ? D.tourRuleOf(t[0]) : 'normal';
-    const holeCell = (sc, hi) => {
-      const v = sc.strokes[hi+1];
+    const holeCell = (r, hi) => {
+      const v = r.strokes[hi+1];
       if (v == null) return '<td class="num" style="opacity:.35">—</td>';
       const p = pars[hi];
-      const wasCapped = sc.caps && sc.caps[hi+1] !== undefined;
+      const wasCapped = r.caps && r.caps[hi+1] !== undefined;
       const style = wasCapped ? 'color:#ffcf6b;font-weight:700'
         : (v < p ? 'color:#7ee8b8;font-weight:700' : (v > p ? 'color:#ff9d9d' : ''));
-      const title = wasCapped ? ` title="ضربهٔ واقعی: ${D.fa(sc.caps[hi+1])} — سقف قانون فول اعمال شد"` : '';
+      const title = wasCapped ? ` title="ضربهٔ واقعی: ${D.fa(r.caps[hi+1])} — سقف قانون فول اعمال شد"` : '';
       return `<td class="num" style="${style}"${title}>${D.fa(v)}${wasCapped ? '<span style="color:#ffcf6b">*</span>' : ''}</td>`;
     };
-    const capN = cards.reduce((a,c) => a + (c.sc.capped || 0), 0);
+    const deltaTxt = (r) => {
+      if (!r.played) return '—';
+      const ref = live ? r.delta : (r.total - parTotal);
+      return ref === 0 ? 'E' : (ref > 0 ? '+' : '−') + D.fa(Math.abs(ref));
+    };
+    const capN = rows.reduce((a,c) => a + (c.capped || 0), 0);
+    const liveN = rows.filter(r => r.live).length;
+    const now = new Date();
+
     m.innerHTML = `
-    <div class="glass gold-border" style="width:min(920px,96vw);max-height:92vh;overflow:auto;padding:20px 22px">
-      <div class="card-head"><span class="ic">📋</span><h3>اسکورکارت «${esc(t[1])}»</h3>
+    <div class="glass gold-border sc-scroll" style="width:min(920px,96vw);max-height:92vh;overflow:auto;padding:20px 22px">
+      <div class="card-head"><span class="ic">${live ? '📡' : '📋'}</span><h3>${live ? 'جدول زندهٔ ' : 'اسکورکارت '}«${esc(t[1])}»</h3>
         <span class="tag">${D.fa(j.dd)} ${j.monthFa} • ${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(t[4] || pars.length)} حفره • پار ${D.fa(parTotal)}${rule === 'full' ? ' • ⚖️ قانون فول' : ''}</span></div>
+      ${live ? `<div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <span class="chip green" style="font-size:10px">🟢 زنده — با هر ضربهٔ ثبت‌شده به‌روز می‌شود</span>
+        <span class="chip dim" style="font-size:10px">${D.fa(liveN)} پیش‌نویس در حال ثبت • ${D.fa(rows.length - liveN)} نهایی</span>
+        <span style="font-size:9.5px;color:var(--muted)">آخرین به‌روزرسانی: ${D.fa(now.toLocaleTimeString('fa-IR'))}</span>
+      </div>` : ''}
       ${rule === 'full' ? `<div style="margin-top:8px;font-size:11px;color:#ffcf6b;background:rgba(255,207,107,.06);border:1px dashed rgba(255,207,107,.35);border-radius:9px;padding:7px 10px">⚖️ قانون فول فعال: سقف ضربهٔ هر حفره — پار۳ حداکثر ۷ • پار۴ حداکثر ۹ • پار۵ حداکثر ۱۱${capN ? ` • ${D.fa(capN)} ضربه اصلاح شد (*دار)` : ''}</div>` : ''}
-      ${cards.length ? `
+      ${rows.length ? `
       <div style="overflow-x:auto;margin-top:12px"><table class="tbl" style="min-width:560px">
         <thead><tr><th>#</th><th>بازیکن</th>${pars.map((p,i) => `<th class="num" title="پار حفره ${D.fa(i+1)}: ${D.fa(p)}">${D.fa(i+1)}</th>`).join('')}<th class="num">جمع</th><th class="num">±</th></tr>
         <tr style="color:var(--muted);font-size:10.5px"><td></td><td style="color:var(--muted)">پار</td>${pars.map(p => `<td class="num">${D.fa(p)}</td>`).join('')}<td class="num">${D.fa(parTotal)}</td><td></td></tr></thead>
-        <tbody>${cards.map((c,i) => {
-          const delta = c.sc.total - parTotal;
-          const dTxt = delta === 0 ? 'E' : (delta > 0 ? '+' : '−') + D.fa(Math.abs(delta));
-          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
-          return `<tr${i === 0 ? ' style="background:rgba(212,175,55,.08)"' : ''}>
+        <tbody>${rows.map((r,i) => {
+          const ref = live ? r.delta : (r.total - parTotal);
+          const medal = (i === 0 && r.played) ? '🥇' : (i === 1 && r.played) ? '🥈' : (i === 2 && r.played) ? '🥉' : '';
+          const status = r.live
+            ? `<span class="chip gold" style="font-size:9px" title="پیش‌نویس — ثبت نهایی نشده">⏳ زنده ${D.fa(r.played)}/${D.fa(pars.length)}</span>`
+            : `<span class="chip green" style="font-size:9px">✔ نهایی</span>`;
+          return `<tr${i === 0 ? ' style="background:rgba(212,175,55,.08)"' : (r.live ? ' style="background:rgba(30,187,138,.045)"' : '')}>
             <td class="num">${D.fa(i+1)}</td>
-            <td><b>${esc(c.name)}</b> ${medal}</td>
-            ${pars.map((p,hi) => holeCell(c.sc, hi)).join('')}
-            <td class="num"><b>${D.fa(c.sc.total)}</b></td>
-            <td class="num" style="color:${delta < 0 ? '#7ee8b8' : (delta > 0 ? '#ff9d9d' : 'var(--muted)')}">${dTxt}</td>
+            <td><b>${esc(r.name)}</b> ${medal}<div style="margin-top:3px">${status}</div></td>
+            ${pars.map((p,hi) => holeCell(r, hi)).join('')}
+            <td class="num"><b>${r.played ? D.fa(r.total) : '—'}</b></td>
+            <td class="num" style="color:${ref < 0 ? '#7ee8b8' : (ref > 0 ? '#ff9d9d' : 'var(--muted)')}">${deltaTxt(r)}</td>
           </tr>`;
         }).join('')}</tbody>
       </table></div>
-      <div style="font-size:11px;color:var(--muted);margin-top:9px">⛳ قانون گلف: برنده = کمترین ضربه • ${D.fa(cards.length)} کارت ثبت‌شده • <span style="color:#7ee8b8">سبز: زیر پار</span> • <span style="color:#ff9d9d">قرمز: بالای پار</span></div>`
-      : `<div style="padding:30px 14px;text-align:center;color:var(--muted)">📋 هنوز اسکورکارتی برای این مسابقه ثبت نشده است.<div style="font-size:11.5px;margin-top:8px">از دکمهٔ «📋 اسکورکارت» (ویزارد ثبت) کارت‌های بازیکنان را وارد کنید.</div></div>`}
+      <div style="font-size:11px;color:var(--muted);margin-top:9px">⛳ قانون گلف: برنده = کمترین ضربه${live ? ` • رتبه‌بندی زنده بر اساس <b>± نسبت به پار میدان‌های بازی‌شده</b> تاکنون است` : ''} • <span style="color:#7ee8b8">سبز: زیر پار</span> • <span style="color:#ff9d9d">قرمز: بالای پار</span>${live && liveN ? ' • ردیف‌های سبز‌کم‌رنگ = پیش‌نویس در حال ثبت' : ''}</div>`
+      : `<div style="padding:30px 14px;text-align:center;color:var(--muted)">📋 ${live ? 'هنوز هیچ ضربه‌ای ثبت نشده — با ثبت اولین میدان هر بازیکن، این جدول زنده پر می‌شود.' : 'هنوز اسکورکارتی برای این مسابقه ثبت نشده است.'}${live ? '' : '<div style="font-size:11.5px;margin-top:8px">از دکمهٔ «📋 اسکورکارت» (ویزارد ثبت) کارت‌های بازیکنان را وارد کنید.</div>'}</div>`}
       <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn sm ghost" id="sc-close">بستن</button></div>
     </div>`;
     m.style.display = 'flex';
-    $('#sc-close').addEventListener('click', () => m.style.display = 'none');
+    const scEl2 = m.querySelector('.sc-scroll'); if (scEl2 && keepTop) scEl2.scrollTop = keepTop;
+    $('#sc-close').addEventListener('click', () => { m.style.display = 'none'; if (openScorecardModal._tm){ clearInterval(openScorecardModal._tm); openScorecardModal._tm = null; } });
+    if (live) openScorecardModal._tm = setInterval(() => {
+      const mm = $('#modal-scorecard');
+      if (!mm || mm.style.display !== 'flex'){ clearInterval(openScorecardModal._tm); openScorecardModal._tm = null; return; }
+      openScorecardModal(t, true);
+    }, 3000);
   }
 
   /* ── صفحهٔ مستقل «ارسال پیام» — آیتم منوی گروه «مدیریت» (کنار پنل مدیریت/یوزرها/تنظیمات نمایش) ── */
@@ -9300,63 +9544,154 @@ window.__L3D = {
   }
 
   /* ── 📧 ارسال یک‌طرفهٔ ایمیل از طریق EmailJS (رایگان ~۲۰۰/ماه — بدون سرور و DNS؛ اتصال به حساب Gmail هر ایمیلی) ── */
-  const EMAIL_DEFAULTS = { key: 'olblhtePYhlS_a4Rv', svc: 'service_ewdayg4', tpl: '' };  /* EmailJS — از پنل مدیر اگر مقدار دیگری ذخیره شود اولویت می‌گیرد */
+  const EMAIL_DEFAULTS = { key: 'olblhtePYhlS_a4Rv', svc: 'service_ewdayg4', tpl: 'template_k2dhpqd' };  /* EmailJS — از پنل مدیر اگر مقدار دیگری ذخیره شود اولویت می‌گیرد */
   function emailCfg(){ try { return Object.assign({}, EMAIL_DEFAULTS, JSON.parse(localStorage.getItem('ga_email_cfg') || '{}')); } catch(e){ return EMAIL_DEFAULTS; } }
   function saveEmailCfg(c){ try { localStorage.setItem('ga_email_cfg', JSON.stringify(c)); } catch(e){} }
   function playerEmailOf(u){
+    /* S.players به‌صورت آرایه است [id,name,gender,hcp,join,active] — ایمیل در ویرایش‌های ga_players یا بازیکنان سفارشی ذخیره می‌شود */
     try {
-      if (u && u.pid != null){
-        const S0 = gstate().S;
-        const pl = S0 && S0.players ? S0.players.find(p => p.id === +u.pid) : null;
-        if (pl && pl.email && pl.email.includes('@')) return pl.email.trim();
+      if (!u || u.pid == null) return null;
+      const pid = +u.pid; if (!pid) return null;
+      if (pid >= 9000){  /* بازیکن سفارشی: در ga_custom_players ذخیره */
+        const cs = JSON.parse(localStorage.getItem('ga_custom_players') || '[]');
+        const c = cs[pid - 9000];
+        if (c && c.email && String(c.email).includes('@')) return String(c.email).trim();
+        return null;
       }
+      const edits = JSON.parse(localStorage.getItem('ga_players') || '{}');
+      const e = edits[pid] || {};
+      if (e.email && String(e.email).includes('@')) return String(e.email).trim();
     } catch(e){}
     return null;
   }
+  /* 🎨 سربرگ برنددار PUTTCLUB — لوگو + تماس + سوشال‌ها خودکار از تنظیمات سایت خوانده می‌شوند */
+  function buildEmailHtml(subject, text){
+    const site = (window.LND_CONFIG ? window.LND_CONFIG() : null) || (window.APP && APP.state ? APP.state().info : null) || {};
+    /* منبع اطلاعات تماس: همان فیلدهای بخش «مدیریت ← رسپشن/تماس» (در localStorage ذخیره) */
+    let ct = {};
+    try { ct = JSON.parse(localStorage.getItem('ga_siteinfo') || '{}').contact || {}; } catch(e){}
+    const phone = (ct.phone && String(ct.phone).trim()) || '—';
+    const mail  = (ct.email && String(ct.email).trim()) || 'info@puttclub.ir';
+    const addr  = (ct.address && String(ct.address).trim()) || 'زمین گلف مسجدسلیمان';
+    const web   = (ct.website && String(ct.website).trim()) || 'puttclub.ir';
+    const socials = (Array.isArray(ct.socials) && ct.socials.length) ? ct.socials : [];
+    const SOC = { whatsapp:['واتساپ','#25D366'], telegram:['تلگرام','#229ED9'], instagram:['اینستاگرام','#E1306C'], youtube:['یوتیوب','#FF0000'], linkedin:['لینکدین','#0A66C2'], x:['ایکس','#000000'], aparat:['آپارات','#ED145B'], web:['🌐 وب','#d4af37'] };
+    const socHtml = socials.filter(sn => sn && sn.url).map(sn => {
+      const it = SOC[sn.net] || SOC.web;
+      return `<a href="${sn.url}" target="_blank" style="display:inline-block;background:${it[1]}18;color:${it[1]};border:1px solid ${it[1]}55;padding:7px 13px;border-radius:20px;font-size:12px;text-decoration:none;margin:0 4px 6px 0;font-weight:700">${it[0]}</a>`;
+    }).join('');
+    const bodyHtml = String(text || '').split('\n').map(l => l.trim() ? `<p style="margin:0 0 10px;line-height:2;color:#374151">${l}</p>` : '').join('');
+    return `<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Tahoma,Arial,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:24px 12px"><tr><td align="center">
+  <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(6,40,24,.18)">
+    <!-- سربرگ تیره برنددار -->
+    <tr><td style="background:linear-gradient(135deg,#062b1d,#0a3b28 55%,#0f4a33);padding:26px 24px;text-align:center">
+      <img src="https://puttclub.ir/data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUEBAQEAwUEBAQGBQUGCA0ICAcHCBALDAkNExAUExIQEhIUFx0ZFBYcFhISGiMaHB4fISEhFBkkJyQgJh0gISD/2wBDAQUGBggHCA8ICA8gFRIVICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICD/wAARCAFUAVQDASIAAhEBAxEB/8QAHQABAAICAwEBAAAAAAAAAAAAAAUGAwQBAgcICf/EAEkQAAEDAwIDAwgFBwsEAwEAAAEAAgMEBRESIQYxURNBYRQiMnGBkaGxBxUjwdEWQlJicpLxCCQzNUNUY3OT4fA0gqKyJSY2RP/EABoBAQADAQEBAAAAAAAAAAAAAAABAgMEBQb/xAAwEQEAAgIBAwIDBwQDAQAAAAAAAQIDEQQSITFBURMUIgUjMmFxgZEzUqHwJLHB4f/aAAwDAQACEQMRAD8A+MkREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEXaNjpZGxsxqccDJAHvKlDw7eBzpDvv6bfxUbUtkrT8U6RKKXHDd5PKiP77fxXccMXsn/o/wDzb+KbhT4+L+6P5QqKaHC18PKhP77fxXYcKX4//wAB/fb+Kjqj3R8xi/uj+UGpqjsLquhZUtqQ1zwSGaM/HK7/AJJX/wDuBPqe38VK21jhZGRljtel40t9LOTsPHKTaNdpc/I5GqxOK0eWhNwnUtjJgqo5ZB/ZuaWE+GTsq/LFJDK6KaN0cjTgtcMEL0bURI4E8ik1NRVzQKymZNtjUdnD1EbqsWn1cWP7QtWdZI3DzZFc6jg+nmeTRVjos8mSt1DPrG/wVculpqbVUiCdzJCWh2qMkgeHLmrRaJeni5WLL2rPdHoiKzpEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQFK2q91NteGEmWmJ86Inl4joVFIo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" width="54" height="54" alt="PuttClub" style="border-radius:50%;border:2px solid #d4af37;padding:3px;background:#fff" />
+      <div style="color:#f6e27a;font-size:19px;font-weight:800;margin-top:9px">آکادمی گلف پات کلاب</div>
+      <div style="color:rgba(255,255,255,.55);font-size:11px;letter-spacing:2px">PUTTCLUB.IR</div>
+    </td></tr>
+    <tr><td style="height:3px;background:linear-gradient(90deg,#d4af37,#f6e27a,#d4af37)"></td></tr>
+    <!-- بدنهٔ پیام (متنِ تایپ‌شدهٔ مدیر) -->
+    <tr><td style="background:#ffffff;padding:30px 26px">
+      <h2 style="margin:0 0 18px;font-size:17px;color:#062b1d;border-bottom:2px solid #d4af37;padding-bottom:10px">${subject}</h2>
+      ${bodyHtml}
+    </td></tr>
+    <!-- پاورقی: تماس + شبکه‌ها -->
+    <tr><td style="background:#062b1d;padding:22px 24px">
+      ${socHtml ? `<div style="text-align:center;margin-bottom:14px">${socHtml}</div>` : ''}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="color:#cfd8d3;font-size:11.5px;line-height:2.1">
+        <tr><td style="text-align:right">📞 ${phone} &nbsp;|&nbsp; ✉️ ${mail}</td></tr>
+        <tr><td style="text-align:right">📍 ${addr}</td></tr>
+        <tr><td style="text-align:right">🌐 <a href="https://${web}" style="color:#f6e27a;text-decoration:none">${web}</a></td></tr>
+      </table>
+      <div style="text-align:center;color:rgba(255,255,255,.3);font-size:9.5px;margin-top:14px;border-top:1px solid rgba(255,255,255,.09);padding-top:12px">این ایمیل به‌صورت یک‌طرفه از سوی آکادمی گلف پات کلاب ارسال شده است — لطفاً به آن پاسخ ندهید.</div>
+    </td></tr>
+  </table>
+</td></tr></table></body></html>`;
+  }
+
+  const EMAILJS_HOSTS = ['https://api.emailjs.com', 'https://api.eu.emailjs.com'];
   async function sendEmailJS(toEmail, toName, subject, text){
     const c = emailCfg();
-    const r = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: c.svc, template_id: c.tpl, user_id: c.key,
-        template_params: { to_email: toEmail, to_name: toName || '', subject: subject, message: text, academy: 'آکادمی گلف پات کلاب — puttclub.ir' }
-      })
+    const bodyJSON = JSON.stringify({
+      service_id: c.svc, template_id: c.tpl, user_id: c.key,
+      template_params: { to_email: toEmail, to_name: toName || '', name: toName || '', subject: subject, message: text, html: buildEmailHtml(subject, text), email: '', time: new Date().toLocaleString('fa-IR'), academy: 'آکادمی گلف پات کلاب — puttclub.ir' }
     });
-    if (!r.ok) throw new Error('EmailJS ' + r.status + ': ' + (await r.text().catch(() => '')).slice(0, 120));
-    return true;
+    let lastNet = null;
+    /* ── تلاش روی هر دو میزبان (US -> EU) تا اگر یکی فیلتر بود دیگری کار کند ── */
+    for (const host of EMAILJS_HOSTS){
+      let r;
+      try {
+        r = await fetch(host + '/api/v1.0/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: bodyJSON });
+      } catch(net){ lastNet = net; continue; }
+      if (r.ok) return true;
+      const body = (await r.text().catch(() => '')).slice(0, 160);
+      throw new Error('EmailJS ' + r.status + ': ' + body);
+    }
+    /* ── دالان دوم: Supabase Edge Function دالان ایمیل ── */
+    let edgeCfg = { url: 'https://iultwqtzvrysugfxwshw.supabase.co', key: 'sb_publishable_058vN6QjD4sUC9Mam5izUg__vjKt9d0' };
+    try { const o = JSON.parse(localStorage.getItem('ga_cloud_cfg') || 'null'); if (o) { if (o.url) edgeCfg.url = o.url; if (o.key) edgeCfg.key = o.key; } } catch(_){}
+    const edge = edgeCfg.url + '/functions/v1/ga-mail';
+    try {
+      const key = edgeCfg.key;
+      const r2 = await fetch(edge, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key, 'apikey': key },
+        body: JSON.stringify({ to: toEmail, to_name: toName || '', subject, html: buildEmailHtml(subject, text), text }) });
+      if (r2.ok) return true;
+      throw new Error('دالان ایمیل ' + r2.status + ': ' + (await r2.text().catch(() => '')).slice(0, 140));
+    } catch(e2){
+      throw new Error('شبکه: درخواست به سرور ایمیل (EmailJS و دالان دوم) نرسید. اگر فیلترشکن داری روشنش کن، یا شبکه (Wi-Fi/دیتا) را عوض کن.');
+    }
   }
 
   /* ── تب ارسال پیام: فرم + انتخاب مخاطب + تاریخچه با وضعیت خواندن هر عضو ── */
   function mgmtMessages(body){
-    const users = APP.users.list().filter(u => u && u.active && u.role === 'member');
-    let picked = [];
+    const users = APP.users.list().filter(u => u && u.active && u.role === 'member'); /* اکانت‌های پنل (برای کانال پنل اعضا) */
+    /* 🎯 لیست کامل مخاطبین ← همهٔ بازیکنان «فعال» (چه اکانت پنل داشته باشن چه نه) */
+    const S0 = gstate().S;
+    const players = (S0 && S0.players || [])
+      .filter(p => p[5])  /* فقط فعال */
+      .map(p => {
+        const pid = p[0];
+        const nm = D && D.nameOf ? D.nameOf(pid) : p[1];
+        const us = users.find(u => +u.pid === pid);
+        return { pid, name: nm, user: us ? us.user : null, email: playerEmailOf({ pid }) };
+      });
+    let picked = [];  /* آرایه‌ای از ردیف بازیکن*/
+    const PKEY = r => String(r.pid);
     const escU = s => esc(String(s || ''));
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">📨</span><h3>ارسال پیام به اعضا</h3><span class="tag">نمایش اجباری روی پنل عضو تا تأیید «خواندم»</span></div>
       <div class="form-section" style="margin-top:12px">📡 کانال ارسال</div>
-      <div id="pm-chans" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px">
+      <div id="pm-chans" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0;align-items:center">
         <button class="btn sm" data-pmch="panel" title="پیام داخل پنل عضو (مثل قبل)">📨 پنل اعضا</button>
         <button class="btn sm ghost" data-pmch="email" title="فقط ایمیل (یک‌طرفه)">📧 فقط ایمیل</button>
         <button class="btn sm ghost" data-pmch="both" title="هم پنل، هم ایمیل">📨+📧 هر دو</button>
+        <button class="btn sm ghost" id="pm-eg-btn" title="تنظیمات اتصال ایمیل (یک‌بار)">⚙️</button>
+        <span id="pm-estatus" style="font-size:10px;color:var(--muted)"></span>
       </div>
-      <div id="pm-emcfg" style="display:none;margin:0 0 12px;padding:11px 12px;border-radius:11px;border:1px dashed rgba(125,211,252,.4);background:rgba(125,211,252,.05)">
-        <div style="font-size:11.5px;color:#7dd3fc;font-weight:800;margin-bottom:7px">📧 اتصال EmailJS (یک‌بار تنظیم می‌شود)</div>
-        <div class="field-grid">
-          <div><label>Public Key</label><input class="input" id="ec-key" style="width:100%;direction:ltr" placeholder="از دشبورد EmailJS"></div>
-          <div><label>Service ID</label><input class="input" id="ec-svc" style="width:100%;direction:ltr" placeholder="service_…"></div>
-          <div><label>Template ID</label><input class="input" id="ec-tpl" style="width:100%;direction:ltr" placeholder="template_…"></div>
-          <div style="display:flex;align-items:end"><button class="btn sm ghost" id="ec-save" style="width:100%">💾 ذخیره اتصال</button></div>
+      <div id="pm-emodal" style="display:none;position:fixed;inset:0;background:rgba(2,12,8,.74);backdrop-filter:blur(4px);z-index:999;align-items:center;justify-content:center;padding:18px">
+        <div class="glass gold-border" style="max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:18px 16px;position:relative">
+          <button id="pm-emclose" class="btn sm ghost" style="position:absolute;top:12px;left:12px;min-width:34px">✕</button>
+          <div class="card-head" style="margin-bottom:12px"><span class="ic">📧</span><h3 style="font-size:15px">اتصال EmailJS</h3><span class="tag">یک‌بار و برای همیشه</span></div>
+          <div class="field-grid">
+            <div><label>Public Key</label><input class="input" id="ec-key" style="width:100%;direction:ltr" placeholder="از دشبورد EmailJS"></div>
+            <div><label>Service ID</label><input class="input" id="ec-svc" style="width:100%;direction:ltr" placeholder="service_…"></div>
+            <div><label>Template ID</label><input class="input" id="ec-tpl" style="width:100%;direction:ltr" placeholder="template_…"></div>
+            <div style="display:flex;align-items:end"><button class="btn" id="ec-save" style="width:100%">💾 ذخیره اتصال</button></div>
+          </div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:14px;line-height:2.05;background:rgba(125,211,252,.06);border:1px solid rgba(125,211,252,.25);border-radius:10px;padding:10px 12px">⚙️ <b>راهنما (تکمیل است):</b> سرویس SMTP به Resend (smtp.resend.com • پورت 465 • کاربر resend • رمز کلید re_…) و قالب: From Name=آکادمی گلف پات کلاب • From Email=info@puttclub.ir • To={{to_email}} • Subject={{subject}} • Content=<code>{{{html}}}</code> (سه‌آکولاد — چرا که سربرگ برنددار خودکار اضافه می‌شود). بعد از ذخیره، این پنجره فقط با دکمهٔ ⚙️ باز می‌شود.</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:10px;line-height:1.95">🎨 <b>سربرگ خودکار:</b> لوگوی آکادمی + نام + تلفن/نشانی/وب + آیکن شبکه‌های اجتماعی — همه از «مدیریت ← رسپشن/تماس» خوانده می‌شوند و به هر ایمیل الصاق می‌گردند؛ شما فقط عنوان و متن می‌نویسید.</div>
         </div>
-        <div style="font-size:10px;color:var(--muted);margin-top:7px;line-height:1.9">⚙️ راهنمای یک‌بار: در <b>emailjs.com</b> رایگان ثبت‌نام کن ← Email Service ← اتصال Gmail (هر جیمیلی — مثلاً نسخهٔ مخفف آکادمی) ← Template با متغیرهای {{to_email}}، {{to_name}}، {{subject}}، {{message}}، {{academy}} ← سه مقدار بالا را بردار. سپس ایمیل همان‌جا از جیمیل تو یک‌طرفه ارسال می‌شود. رایگان تا ~۲۰۰ ایمیل/ماه.</div>
       </div>
       <div class="field-grid" style="margin-top:12px">
         <div class="span2"><label>عنوان پیام</label><input class="input" id="pm-subject" maxlength="90" style="width:100%" placeholder="مثلاً: تغییر ساعت کلاس پنجشنبه"></div>
-        <div class="span2"><label>متن پیام</label><textarea class="input" id="pm-body" rows="4" maxlength="1200" style="width:100%;resize:vertical;line-height:1.9" placeholder="متن پیام برای اعضا…"></textarea></div>
+        <div class="span2"><label>متن پیام</label><textarea class="input" id="pm-body" rows="5" maxlength="1200" style="width:100%;resize:vertical;line-height:1.9" placeholder="متن پیام برای اعضا… (سربرگ برنددار خودکار به آن اضافه می‌شود)"></textarea></div>
       </div>
       <div class="form-section" style="margin-top:14px">👥 انتخاب مخاطبین</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button class="btn sm ghost" id="pm-all">☑ انتخاب همه (${D.fa(users.length)} عضو)</button>
+        <button class="btn sm ghost" id="pm-all">☑ انتخاب همه (${D.fa(players.length)} بازیکن)</button>
         <button class="btn sm ghost" id="pm-none">☐ هیچ‌کدام</button>
         <input class="input" id="pm-search" placeholder="🔍 جست‌وجوی عضو (نام یا یوزرنیم)…" style="flex:1;min-width:170px">
       </div>
@@ -9374,36 +9709,39 @@ window.__L3D = {
 
     function drawList(){
       const q = ($('#pm-search').value || '').trim().toLowerCase();
-      $('#pm-list').innerHTML = users.filter(u => !q || (u.name + ' @' + u.user).toLowerCase().includes(q)).map(u => {
-        const on = picked.some(x => x.user === u.user);
-        return `<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;border:1px solid ${on ? 'rgba(212,175,55,.55)' : 'var(--line-soft)'};background:${on ? 'rgba(212,175,55,.08)' : 'rgba(255,255,255,.02)'};font-size:12px;transition:.15s" data-pmu="${escU(u.user)}">
+      const rows = players.filter(r => !q || (r.name + ' ' + (r.user || '') + ' ' + (r.email || '')).toLowerCase().includes(q));
+      $('#pm-list').innerHTML = rows.map(r => {
+        const on = picked.some(x => PKEY(x) === PKEY(r));
+        const badges = (r.user ? `<small title="اکانت پنل دارد">👤</small>` : '') +
+                       (r.email ? `<small style="color:#7dd3fc" title="ایمیل: ${escU(r.email)}"> 📧</small>` : `<small style="color:rgba(248,113,113,.55)" title="ایمیل در پروفایل بازیکن ثبت نشده"> ⚡بدون ایمیل</small>`);
+        return `<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;border:1px solid ${on ? 'rgba(212,175,55,.55)' : 'var(--line-soft)'};background:${on ? 'rgba(212,175,55,.08)' : 'rgba(255,255,255,.02)'};font-size:12px;transition:.15s" data-pmu="${escU(PKEY(r))}">
           <input type="checkbox" ${on ? 'checked' : ''} style="accent-color:var(--gold);pointer-events:none">
-          <span style="flex:1">${escU(u.name)}<small style="color:var(--muted)"> @${escU(u.user)}</small>${(() => { const em = playerEmailOf(u); return em ? `<small style=\"color:#7dd3fc\"> 📧</small>` : `<small style=\"color:rgba(248,113,113,.55)\" title=\"ایمیل در پروفایل بازیکن ثبت نشده\"> ⚠</small>`; })()}</span>
+          <span style="flex:1">${escU(r.name)}${r.user ? `<small style="color:var(--muted)"> @${escU(r.user)}</small>` : `<small style="color:var(--muted)"> (بدون یوزر)</small>`} ${badges}</span>
         </label>`;
-      }).join('') || '<div style="color:var(--muted);font-size:11.5px;padding:8px">عضویی با این جست‌وجو پیدا نشد</div>';
+      }).join('') || '<div style="color:var(--muted);font-size:11.5px;padding:8px">بازیکنی با این جست‌وجو پیدا نشد</div>';
       $$('#pm-list [data-pmu]').forEach(el => el.addEventListener('click', ev => {
         ev.preventDefault();
-        const u = users.find(x => String(x.user).toLowerCase() === el.dataset.pmu.toLowerCase());
-        if (!u) return;
-        if (picked.some(x => x.user === u.user)) picked = picked.filter(x => x.user !== u.user);
-        else picked.push(u);
+        const r = players.find(x => PKEY(x) === el.dataset.pmu);
+        if (!r) return;
+        if (picked.some(x => PKEY(x) === PKEY(r))) picked = picked.filter(x => PKEY(x) !== PKEY(r));
+        else picked.push(r);
         drawList(); drawPicked();
       }));
     }
     function drawPicked(){
       const box = $('#pm-picked');
       box.innerHTML = picked.length
-        ? `<span style="color:var(--muted)">مخاطبین انتخاب‌شده (${D.fa(picked.length)}):</span>` + picked.map(u =>
-            `<span class="chip gold" style="display:inline-flex;align-items:center;gap:6px">${escU(u.name)}<b data-pmx="${escU(u.user)}" style="cursor:pointer" title="حذف از مخاطبین">✕</b></span>`).join('')
+        ? `<span style="color:var(--muted)">مخاطبین انتخاب‌شده (${D.fa(picked.length)}):</span>` + picked.map(r =>
+            `<span class="chip gold" style="display:inline-flex;align-items:center;gap:6px">${escU(r.name)}${r.email ? ' <small style="color:#7dd3fc">📧</small>' : ''}<b data-pmx="${escU(PKEY(r))}" style="cursor:pointer" title="حذف از مخاطبین">✕</b></span>`).join('')
         : '<span style="color:var(--muted)">هنوز مخاطبی انتخاب نشده — بالا انتخاب کنید (همه / تکی / جست‌وجو)</span>';
       box.querySelectorAll('[data-pmx]').forEach(x => x.addEventListener('click', () => {
-        picked = picked.filter(u => u.user !== x.dataset.pmx); drawList(); drawPicked();
+        picked = picked.filter(r => PKEY(r) !== x.dataset.pmx); drawList(); drawPicked();
       }));
       const c = $('#pm-count'); if (c) c.textContent = picked.length ? `مجموعاً ${D.fa(picked.length)} مخاطب` : '';
     }
     drawList(); drawPicked();
     $('#pm-search').addEventListener('input', drawList);
-    $('#pm-all').addEventListener('click', () => { picked = users.slice(); drawList(); drawPicked(); });
+    $('#pm-all').addEventListener('click', () => { picked = players.slice(); drawList(); drawPicked(); });
     $('#pm-none').addEventListener('click', () => { picked = []; drawList(); drawPicked(); });
 
     const fmtAt = iso => `${D.fa(D.isoToShamsi(String(iso).slice(0, 10)))} ${D.fa(new Date(iso).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }))}`;
@@ -9453,12 +9791,25 @@ window.__L3D = {
     /* ── انتخاب کانال ارسال ── */
     let chan = 'panel';
     const chanBtns = $$('#pm-chans [data-pmch]');
+    function emailStatus(){
+      const c = emailCfg();
+      const st = $('#pm-estatus'), eg = $('#pm-eg-btn');
+      const shown = (chan !== 'panel');
+      if (st){ st.style.display = shown ? '' : 'none'; st.innerHTML = c.key && c.svc && c.tpl ? '🔗 <b style="color:#7ee8b8">ایمیل متصل</b> (آماده ارسال برنددار)' : '⚠️ <b style="color:#ffd34d">اتصال ایمیل ناقص</b> — ⚙️ را بزنید'; }
+      if (eg) eg.style.display = shown ? '' : 'none';
+    }
+    function openEmailModal(){
+      const c = emailCfg();
+      if (c.key) $('#ec-key').value = c.key; if (c.svc) $('#ec-svc').value = c.svc; if (c.tpl) $('#ec-tpl').value = c.tpl;
+      $('#pm-emodal').style.display = 'flex';
+    }
+    function closeEmailModal(){ $('#pm-emodal').style.display = 'none'; emailStatus(); }
+    $('#pm-eg-btn').addEventListener('click', openEmailModal);
+    $('#pm-emclose').addEventListener('click', closeEmailModal);
+    $('#pm-emodal').addEventListener('click', e => { if (e.target.id === 'pm-emodal') closeEmailModal(); });
     function paintChan(){
-      chanBtns.forEach(b => {
-        const on = b.dataset.pmch === chan;
-        b.classList.toggle('ghost', !on);
-      });
-      $('#pm-emcfg').style.display = (chan === 'panel') ? 'none' : 'block';
+      chanBtns.forEach(b => { b.classList.toggle('ghost', b.dataset.pmch !== chan); });
+      emailStatus();
     }
     chanBtns.forEach(b => b.addEventListener('click', () => { chan = b.dataset.pmch; paintChan(); }));
     { const ec0 = emailCfg(); if (ec0.key) $('#ec-key').value = ec0.key; if (ec0.svc) $('#ec-svc').value = ec0.svc; if (ec0.tpl) $('#ec-tpl').value = ec0.tpl; }
@@ -9480,34 +9831,43 @@ window.__L3D = {
         if (chan !== 'panel'){
           const c = emailCfg();
           if (!c.key || !c.svc || !c.tpl){ APP.toast('اول «اتصال EmailJS» را بالا ذخیره کنید', 'red'); btn.textContent = txt0; return; }
-          const wMail = picked.map(u => ({ u, em: playerEmailOf(u) }));
+          const wMail = picked.map(r => ({ u: r, em: r.email }));
           const noMail = wMail.filter(x => !x.em).map(x => x.u.name);
           const dests = wMail.filter(x => !!x.em);
           if (!dests.length){ APP.toast('هیچ‌کدام از مخاطبین ایمیل ثبت‌شده ندارند — توی «پروفایل بازیکن» ایمیل بگذارید', 'red'); btn.textContent = txt0; return; }
           btn.disabled = true;
-          let ok = 0, fail = 0;
+          let ok = 0, fail = 0, firstErr = '';
           for (let i = 0; i < dests.length; i++){
             btn.textContent = `📧 ${D.fa(i + 1)}/${D.fa(dests.length)} …`;
             try { await sendEmailJS(dests[i].em, dests[i].u.name, subject, text); ok++; }
-            catch(e){ fail++; console.warn('email fail for', dests[i].em, e); }
-            await new Promise(rs => setTimeout(rs, 350)); /* احترام به سقف رایگان */
+            catch(e){ fail++; if (!firstErr) firstErr = String(e.message || e).slice(0, 140); console.warn('email fail for', dests[i].em, e); }
+            await new Promise(rs => setTimeout(rs, 400));
           }
           if (noMail.length) APP.toast(`⚠️ ${D.fa(noMail.length)} نفر بدون ایمیل: ${noMail.slice(0,3).join('، ')}${noMail.length > 3 ? '…' : ''}`, 'gold');
-          APP.toast(`📧 ایمیل: ${D.fa(ok)} موفق${fail ? ' • ' + D.fa(fail) + ' ناموفق' : ''}`, fail ? 'gold' : 'green');
+          if (fail > 0 && firstErr){
+            APP.toast(`📧 خطا: ${firstErr}`, 'red');
+            if (/template not found|Template ID/i.test(firstErr)) APP.toast('💡 Template ID اشتباه است — معمولاً با «template_» (بـ s نه) شروع می‌شود — ⚙️ را بزنید و اصلاحش کنید', 'gold');
+          } else {
+            APP.toast(`📧 ایمیل: ${D.fa(ok)} موفق${fail ? ' • ' + D.fa(fail) + ' ناموفق' : ''}`, fail ? 'gold' : 'green');
+          }
         }
-        /* ── پنل اعضا (رفتار قبلی) ── */
+        /* ── پنل اعضا: فقط آن‌هایی که اکانت پنل دارند ── */
         if (chan !== 'email'){
+          const wUser = picked.filter(r => !!r.user);
+          const noUser = picked.filter(r => !r.user);
+          if (noUser.length) APP.toast(`⚠️ ${D.fa(noUser.length)} بازیکن بدون اکانت پنل: ${noUser.slice(0,3).map(r=>r.name).join('، ')}${noUser.length > 3 ? '…' : ''} — پیام به پنلشان نمی‌رسد`, 'gold');
+          if (!wUser.length){ APP.toast('هیچ‌کدام از مخاطبین اکانت پنل ندارند', 'red'); btn.textContent = txt0; btn.disabled = false; return; }
           const msg = {
             id: 'm' + Date.now().toString(36),
             subject, body: text,
             sender: APP.users.label(cur),
             senderUser: cur,
             createdAt: new Date().toISOString(),
-            targets: picked.map(u => String(u.user).toLowerCase()),
+            targets: wUser.map(r => String(r.user).toLowerCase()),
             channel: chan === 'panel' ? 'popup' : 'popup+email', priority: 'normal', scheduleAt: null, groupKey: null,
           };
           const list = GA_MSG.load(); list.push(msg); GA_MSG.save(list);
-          if (chan === 'panel') APP.toast(`پیام «${subject}» برای ${D.fa(picked.length)} عضو ارسال شد 📨`, 'green');
+          if (chan === 'panel') APP.toast(`پیام «${subject}» برای ${D.fa(wUser.length)} عضو ارسال شد 📨`, 'green');
         }
         $('#pm-subject').value = ''; $('#pm-body').value = ''; picked = [];
         drawList(); drawPicked(); drawHistory();
@@ -9547,6 +9907,7 @@ window.__L3D = {
         <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
           <button class="btn sm" data-mrset="${t[0]}">👥 انتخاب شرکت‌کنندگان</button>
           <button class="btn sm ghost" data-mrcard="${t[0]}" title="نمایش اسکورکارت مسابقه">📋 اسکورکارت</button>
+          <button class="btn sm" data-mrstory2="${t[0]}" title="عکس استوری اینستاگرام (۱۰۸۰×۱۹۲۰)" style="background:linear-gradient(135deg,#d62976,#fa7e1e);color:#fff;font-weight:800;font-size:10px;padding:4px 9px">📱 استوری</button>
           ${has ? `<button class="btn sm danger" data-mrdel="${t[0]}">🗑</button>` : ''}
         </div>
       </div>`;
@@ -9558,6 +9919,10 @@ window.__L3D = {
     $$('#mr-tours [data-mrcard]').forEach(b => b.addEventListener('click', () => {
       const t = S.tournaments.find(x => x[0] === +b.dataset.mrcard);
       if (t) openScoreWizard(t);
+    }));
+    $$('#mr-tours [data-mrstory2]').forEach(b => b.addEventListener('click', () => {
+      const t = S.tournaments.find(x => x[0] === +b.dataset.mrstory2);
+      if (t) storyReportPng(t, b);
     }));
     $$('#mr-tours [data-mrdel]').forEach(b => b.addEventListener('click', () => {
       const r = D.loadResults(); delete r[+b.dataset.mrdel]; D.saveResults(r); APP.reloadData(); APP.go('mgmt'); mgmtTab='results'; APP.toast('نتیجه حذف شد 🗑','orange');
@@ -9583,11 +9948,16 @@ window.__L3D = {
           <span class="chip gold">🏁 پایان ${fmtT(res.endedAt)}</span>
           <span style="flex:1"></span>
           <button class="btn sm ghost" data-mrrep="${tid}" title="گزارش مسابقه + جریمه/حذف بازیکن">✏️ ویرایش</button>
+          <button class="btn sm" data-mrstory="${tid}" title="عکس استوری اینستاگرام (۱۰۸۰×۱۹۲۰) — دانلود/اشتراک" style="background:linear-gradient(135deg,#d62976,#fa7e1e);color:#fff;font-weight:800;font-size:10px;padding:4px 9px">📱 استوری</button>
         </div>`;
       }).join('') : '<div style="color:var(--muted);font-size:12.5px;padding:8px">هنوز نتیجه‌ای ثبت نشده است — از کادر بالا شروع کنید.</div>';
       $$('#mr-list [data-mrrep]').forEach(b => b.addEventListener('click', () => {
         const t = S.tournaments.find(x => x[0] === +b.dataset.mrrep);
         if (t) tourReport(t, () => { renderSavedResults(); });
+      }));
+      $$('#mr-list [data-mrstory]').forEach(b => b.addEventListener('click', () => {
+        const t = S.tournaments.find(x => x[0] === +b.dataset.mrstory);
+        if (t) storyReportPng(t, b);
       }));
     }
   }
@@ -11768,6 +12138,54 @@ window.__L3D = {
         <div class="chart-box short"><canvas id="pl-gold"></canvas></div>
         <div style="text-align:center;font-size:12px;color:var(--muted)">${D.faNum(p.pts,0)} امتیاز — فاصله تا طلایی: ${D.fa(Math.max(0, D.GOLD_ELITE - p.pts))} امتیاز</div>
       </div>
+      <div class="glass" style="grid-column:span 3" id="pp-card">
+        <div class="card-head"><span class="ic">🍩</span><h3>تحلیل دایره‌ای نتیجهٔ تمرین</h3><span class="tag" id="pp-tag">صاف • سمت راست • سمت چپ • خطا</span></div>
+        <div class="toolbar" style="margin-bottom:8px">
+          <span class="lbl">🏌️ بازیکن:</span>
+          <select class="sel" id="pp-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===playerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+          <span class="lbl">🎯 نوع تمرین:</span>
+          <select class="sel" id="pp-type"><option value="all">همهٔ تمرین‌ها</option>${Object.keys(SP_TYPE_LBL).map(t => `<option value="${t}">${SP_TYPE_LBL[t]}</option>`).join('')}</select>
+          <span class="lbl">⛳ کلاب:</span>
+          <select class="sel" id="pp-club"><option value="all">همهٔ کلاب‌ها</option></select>
+          <span class="lbl">🔢 تعداد تمرین:</span>
+          <select class="sel" id="pp-n">
+            <option value="1">فقط تمرین آخر</option>
+            <option value="3">۳ تمرین آخر</option>
+            <option value="5">۵ تمرین آخر</option>
+            <option value="10">۱۰ تمرین آخر</option>
+            <option value="all" selected>کل تمرین‌ها</option>
+          </select>
+        </div>
+        <div id="pp-body" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+          <div style="position:relative;width:230px;flex:0 0 auto;margin:auto">
+            <div class="chart-box short" style="height:230px"><canvas id="pp-pie"></canvas></div>
+            <div id="pp-center" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none"></div>
+          </div>
+          <div id="pp-legend" style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:7px;max-height:230px;overflow:auto"></div>
+        </div>
+      </div>
+      <div class="glass" style="grid-column:span 3" id="pa-card">
+        <div class="card-head"><span class="ic">🧪</span><h3>آنالیز بزرگ تمرین — نمودار دایره‌ای هر کلاب</h3><span class="tag" id="pa-tag">همهٔ گروه‌های تمرین</span></div>
+        <div class="toolbar" style="margin-bottom:8px;align-items:center">
+          <span class="lbl">🏌️ بازیکن:</span>
+          <select class="sel" id="pa-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===playerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+          <span class="lbl">🔢 تعداد تمرین:</span>
+          <select class="sel" id="pa-n">
+            <option value="1">فقط تمرین آخر</option>
+            <option value="3">۳ تمرین آخر</option>
+            <option value="5">۵ تمرین آخر</option>
+            <option value="10">۱۰ تمرین آخر</option>
+            <option value="all" selected>تمامی تمرین‌ها</option>
+          </select>
+          <div style="flex:1"></div>
+          <button type="button" class="btn sm" id="pa-pdf" title="خروجی PDF برنددار — دقیقاً یک برگهٔ A4 با سربرگ و اطلاعات سایت" style="background:linear-gradient(135deg,var(--gold),#b08a28);color:#1a1407;font-weight:900">⬇ خروجی PDF (A4)</button>
+        </div>
+        <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:10.5px;color:var(--muted);margin-bottom:8px">
+          ${Object.keys(SP_RES_LABEL).map(k => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${SP_RES_COLOR[k]};margin-left:4px;vertical-align:-1px"></i>${SP_RES_LABEL[k]}</span>`).join('')}
+          <span style="color:var(--dim)">• بازه بر هر گروه، جداگانه اعمال می‌شود (جلسات تمام‌شده)</span>
+        </div>
+        <div id="pa-body" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;align-items:flex-start"></div>
+      </div>
       <div class="glass" style="grid-column:span 2">
         <div class="card-head"><span class="ic">📊</span><h3>امتیاز ماهانه</h3><span class="tag">Monthly</span></div>
         <div class="chart-box short"><canvas id="pl-month"></canvas></div>
@@ -11806,11 +12224,201 @@ window.__L3D = {
       let acc = 0; const cum = mp.map(v => acc += v);
       Charts.line($('#pl-cum'), [cum], A.MONTHS_SEASON, { colors:['#E9C766'], fill:true, points:true, fmt:v=>D.faNum(v,0) });
       renderHoles(p);
+      renderPracticePie();
+      ['pp-player','pp-type','pp-club','pp-n'].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('change', renderPracticePie); });
+      renderPracticeAnalysis();
+      ['pa-player','pa-n'].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('change', renderPracticeAnalysis); });
+      bindPracticeAnalysisPdf();
     }, 80);
     $('#pl-sel').addEventListener('change', e => { playerSel = +e.target.value; go('player'); });
     $('#pl-tour').addEventListener('change', e => { matchSel = +e.target.value; go('player'); });
     bindPlayerTabs();
   }
+  /* ── 🍩 نمودار دایره‌ای نتیجهٔ تمرین: درصد آیتم‌های طراحی‌شدهٔ تمرین (صاف/سمت راست/سمت چپ/خطا)
+     روی ضربه‌های بازیکن — فیلتر: بازیکن • نوع تمرین • کلاب • بازهٔ «فقط تمرین آخر / ۳ / ۵ / ۱۰ / کل» (جلسات تمام‌شده) ── */
+  function renderPracticePie(){
+    const body = $('#pp-body'); if (!body) return;
+    const plS = $('#pp-player'), tyS = $('#pp-type'), clS = $('#pp-club'), nS = $('#pp-n');
+    const pid  = plS ? +plS.value : playerSel;
+    const typ  = tyS ? tyS.value : 'all';
+    const nSel = nS ? nS.value : 'all';
+    const mine = spShots().filter(x => x.pid === pid);
+    const ssn  = spSessions();
+    const bySid = {}; mine.forEach(x => { (bySid[x.sid] = bySid[x.sid] || []).push(x); });
+    const isClosed = x => x && x.status === 'closed' && x.closedAt;
+    let ses = Object.keys(bySid).map(id => ssn[id]).filter(isClosed)
+      .sort((a,b) => String(b.closedAt).localeCompare(String(a.closedAt)));  /* جدیدترین اول */
+    if (typ !== 'all') ses = ses.filter(sn => sn.type === typ);
+    /* آپشن‌های کلاب از دیتای واقعی همین بازیکن+نوع (انتخاب فعلی در صورت اعتبار حفظ می‌شود) */
+    const clubSeen = {}, clubList = [];
+    ses.forEach(sn => bySid[sn.id].forEach(x => { if (!clubSeen[x.club]){ clubSeen[x.club] = 1; clubList.push(x.club); } }));
+    if (clS){
+      const cur = clS.value;
+      clS.innerHTML = `<option value="all">همهٔ کلاب‌ها</option>` + clubList.map(c => `<option value="${esc(c)}" ${c === cur ? 'selected' : ''}>${esc(c)}</option>`).join('');
+    }
+    const clb = clS ? clS.value : 'all';
+    if (clb !== 'all') ses = ses.filter(sn => bySid[sn.id].some(x => x.club === clb));
+    const sesTotal = ses.length;
+    if (nSel !== 'all') ses = ses.slice(0, +nSel);
+    /* ضربه‌های بازهٔ انتخاب‌شده → شمارش بر اساس آیتم طراحی‌شدهٔ تمرین (res) */
+    const counts = { straight:0, slice:0, hook:0, miss:0 };
+    let totShots = 0;
+    ses.forEach(sn => bySid[sn.id].forEach(x => {
+      if (clb !== 'all' && x.club !== clb) return;
+      totShots++;
+      if (counts[x.res] != null) counts[x.res]++;
+    }));
+    const ORDER = ['straight','slice','hook','miss'];  /* ترتیب طراحی: صاف، راست، چپ، خطا */
+    const segs = ORDER.map(k => ({ k, label: SP_RES_LABEL[k], color: SP_RES_COLOR[k], count: counts[k] }));
+    const tag = $('#pp-tag'); if (tag) tag.textContent = totShots
+      ? `${nSel === 'all' ? 'کل' : 'آخرین ' + D.fa(+nSel)} — ${D.fa(ses.length)} تمرین (از ${D.fa(sesTotal)}) • ${D.fa(totShots)} ضربه`
+      : 'بدون داده';
+    const center = $('#pp-center'), lg = $('#pp-legend'), cv = $('#pp-pie');
+    if (center) center.innerHTML = totShots
+      ? `<div style="font-size:27px;font-weight:900;color:var(--gold-l)">${D.fa(totShots)}</div><div style="font-size:10px;color:var(--muted)">ضربه${nSel === 'all' ? ' • کل تمرین‌ها' : ' • آخرین ' + D.fa(+nSel) + ' تمرین'}</div>`
+      : `<div style="font-size:15px;font-weight:800;color:var(--muted)">بدون تمرین</div><div style="font-size:10px;color:var(--muted)">—</div>`;
+    if (lg) lg.innerHTML = totShots ? segs.map(g => {
+      const pct = Math.round(g.count / totShots * 100);
+      return `<div style="display:flex;align-items:center;gap:9px;font-size:12.5px;padding:7px 10px;border-radius:9px;background:rgba(255,255,255,.02)">
+        <i style="width:11px;height:11px;border-radius:3px;background:${g.color};flex:0 0 auto;box-shadow:0 0 7px ${g.color}66"></i>
+        <span style="flex:1">${g.label}</span>
+        <b style="color:${g.color}">${D.fa(g.count)}</b>
+        <small style="color:var(--dim);min-width:38px;text-align:left">${D.fa(pct)}٪</small>
+      </div>`;
+    }).join('')
+      : `<div style="padding:22px 12px;text-align:center;color:var(--muted);font-size:12px;line-height:2.1">📭 با این فیلترها تمرینِ <b>تمام‌شده‌ای</b> برای «${esc(plS && plS.selectedIndex >= 0 ? plS.options[plS.selectedIndex].text : '')}» ثبت نشده.<br>از «بازیکن هوشمند → ➕ ثبت رکورد» تمرین کن و جلسه را «⏹ ببند» تا این نمودار پر شود.</div>`;
+    if (cv) Charts.donut(cv, totShots
+      ? segs.filter(g => g.count > 0).map(g => ({ value: g.count, color: g.color, glow: true }))
+      : [{ value: 1, color: 'rgba(60,70,85,.35)' }], { inner: 0.66 });
+  }
+
+  /* ── 🧪 آنالیز بزرگ تمرین: به‌ازای هر گروه تمرین (افقی از هم جدا) و هر کلابِ آن گروه، یک دونات صاف/راست/چپ/خطا ── */
+  /* دونات SVG به‌صورت data-URI: هم در صفحه و هم داخل HTML خروجی PDF (html2canvas رندرش می‌کند) */
+  function paSvgDonut(counts, size, stroke){
+    const R = 40, CIRC = 2 * Math.PI * R;
+    const total = Math.max(1, (counts.straight|0) + (counts.slice|0) + (counts.hook|0) + (counts.miss|0));
+    let acc = 0, segs = '';
+    [['straight','#1EBB8A'],['slice','#2E86DE'],['hook','#E67E22'],['miss','#E74C3C']].forEach(pr2 => {
+      const v = counts[pr2[0]] | 0; if (!v) return;
+      const len = v / total * CIRC;
+      segs += '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="' + pr2[1] + '" stroke-width="' + (stroke || 26) + '" stroke-dasharray="' + len.toFixed(2) + ' ' + (CIRC - len).toFixed(2) + '" stroke-dashoffset="' + (-acc).toFixed(2) + '"/>';
+      acc += len;
+    });
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="' + R + '" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="' + (stroke || 26) + '"/><g transform="rotate(-90 50 50)">' + segs + '</g></svg>';  /* width/height الزامی — بدون آن html2canvas در PDF دونات را ۰×۰ رندر می‌کند */
+    return '<img width="' + (size || 92) + '" height="' + (size || 92) + '" style="display:block" src="data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '" alt="">';
+  }
+  function paTopRes(cl){
+    let best = 'straight', bn = -1;
+    ['straight','slice','hook','miss'].forEach(k => { if ((cl[k]|0) > bn){ bn = cl[k]|0; best = k; } });
+    return { k: best, pct: cl.n ? Math.round((cl[best]|0) / cl.n * 100) : 0 };
+  }
+  /* دیتای گروه‌بندی‌شده: هر گروه تمرین ← جلسات تمام‌شدهٔ بازیکن (با برش «N تمرین آخرِ آن گروه») ← شمارش نتیجهٔ ضربه به‌ازای هر کلاب */
+  function paData(pid, nSel){
+    const mine = spShots().filter(x => x.pid === pid);
+    const ssn = spSessions();
+    const bySid = {}; mine.forEach(x => { (bySid[x.sid] = bySid[x.sid] || []).push(x); });
+    const isClosed = x => x && x.status === 'closed' && x.closedAt;
+    const all = Object.keys(bySid).map(id => ssn[id]).filter(isClosed)
+      .sort((a,b) => String(b.closedAt).localeCompare(String(a.closedAt)));
+    return Object.keys(SP_TYPE_LBL).map(ty => {
+      let ses = all.filter(sn => sn.type === ty);
+      if (nSel !== 'all') ses = ses.slice(0, +nSel);
+      const clubs = {}; let shotsN = 0;
+      ses.forEach(sn => bySid[sn.id].forEach(x => {
+        shotsN++;
+        const g = clubs[x.club] = clubs[x.club] || { straight:0, slice:0, hook:0, miss:0, n:0 };
+        if (g[x.res] != null){ g[x.res]++; g.n++; }
+      }));
+      return { ty, sesN: ses.length, shotsN, clubs };
+    }).filter(g => g.sesN > 0);
+  }
+  function paSelVals(){
+    const plS = $('#pa-player'), nS = $('#pa-n');
+    return { pid: plS ? +plS.value : playerSel, nSel: nS ? nS.value : 'all',
+      pname: plS && plS.selectedIndex >= 0 ? plS.options[plS.selectedIndex].text : '' };
+  }
+  function renderPracticeAnalysis(){
+    const body = $('#pa-body'); if (!body) return;
+    const { pid, nSel } = paSelVals();
+    const groups = paData(pid, nSel);
+    const totSes = groups.reduce((a,g) => a + g.sesN, 0);
+    const totSh = groups.reduce((a,g) => a + g.shotsN, 0);
+    const tag = $('#pa-tag'); if (tag) tag.textContent = totSes
+      ? `${D.fa(totSes)} تمرین در ${D.fa(groups.length)} گروه • ${D.fa(totSh)} ضربه` : 'بدون داده';
+    const pb = $('#pa-pdf');
+    if (pb){ pb.disabled = !groups.length;
+      pb.title = groups.length ? 'خروجی PDF برنددار — دقیقاً یک برگهٔ A4 با سربرگ و اطلاعات سایت' : '⚠️ این بازیکن تمرین تمام‌شده ندارد — چیزی برای PDF نیست';
+      pb.style.opacity = groups.length ? '1' : '.45'; pb.style.cursor = groups.length ? '' : 'not-allowed'; }
+    body.innerHTML = groups.length ? groups.map(g => `
+      <div style="min-width:200px;flex:0 0 auto;background:rgba(255,255,255,.025);border:1px solid var(--line-soft);border-radius:14px;padding:10px 10px 6px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px dashed rgba(212,175,55,.35);padding-bottom:6px;margin-bottom:6px">
+          <b style="color:var(--gold-l);font-size:12.5px">${SP_TYPE_LBL[g.ty]}</b>
+          <span style="font-size:9.5px;color:var(--muted)">${D.fa(g.sesN)} تمرین • ${D.fa(g.shotsN)} ضربه</span>
+        </div>
+        ${Object.keys(g.clubs).sort().map(cn => { const cl = g.clubs[cn]; const dom = paTopRes(cl); return `
+        <div style="display:flex;align-items:center;gap:9px;padding:5px 2px">
+          ${paSvgDonut(cl, 62, 20)}
+          <div style="font-size:11px;min-width:0">
+            <div style="font-weight:800;white-space:nowrap">${esc(cn)}</div>
+            <div style="color:var(--muted);font-size:9.5px;margin-top:2px">${D.fa(cl.n)} ضربه</div>
+            <div style="margin-top:3px;font-size:10px;font-weight:800;color:${SP_RES_COLOR[dom.k]}">${SP_RES_LABEL[dom.k]} ${D.fa(dom.pct)}٪</div>
+          </div>
+        </div>`; }).join('')}
+      </div>`).join('')
+      : `<div style="padding:26px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1;width:100%">📭 برای این بازیکن تمرینِ تمام‌شده‌ای ثبت نشده.<br>از «بازیکن هوشمند → ➕ ثبت رکورد» تمرین کن و جلسه را «⏹ ببند» تا ستون‌های رنج/پاتینگ/چیپینگ/… این‌جا با نمودار پر شوند.</div>`;
+  }
+  /* 📄 خروجی PDF برنددار یک‌برگه‌ای A4 — با همان موتور کارت‌های گزارش (سربرگ لوگو + نام آکادمی + تاریخ + puttclub.ir) */
+  function bindPracticeAnalysisPdf(){
+    const pb = $('#pa-pdf'); if (!pb || pb._bound) return; pb._bound = 1;
+    pb.addEventListener('click', () => {
+      if (!window.PDFK || !PDFK.a4){ toast('موتور PDF در دسترس نیست', 'red'); return; }
+      const { pid, nSel, pname } = paSelVals();
+      const groups = paData(pid, nSel);
+      if (!groups.length){ toast('برای این بازیکن تمرین تمام‌شده‌ای نیست که به PDF برود', 'orange'); return; }
+      const totSes = groups.reduce((a,g) => a + g.sesN, 0);
+      const totSh = groups.reduce((a,g) => a + g.shotsN, 0);
+      const allCounts = { straight:0, slice:0, hook:0, miss:0 };
+      groups.forEach(g => Object.values(g.clubs).forEach(cl => ['straight','slice','hook','miss'].forEach(k => allCounts[k] += cl[k] | 0)));
+      const straightPct = totSh ? Math.round(allCounts.straight / totSh * 100) : 0;
+      const rangeFa = nSel === 'all' ? 'تمامی تمرین‌ها' : ({ '1':'فقط تمرین آخر', '3':'۳ تمرین آخر', '5':'۵ تمرین آخر', '10':'۱۰ تمرین آخر' })[nSel] || nSel;
+      const legend = '<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:#8b96a4;margin:2px 0 4px">'
+        + Object.keys(SP_RES_LABEL).map(k => '<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:' + SP_RES_COLOR[k] + ';margin-left:4px"></i>' + SP_RES_LABEL[k] + '</span>').join('')
+        + '</div>';
+      mgSectionsPdfA4(groups, pname, rangeFa, totSes, totSh, straightPct, legend, pb);
+    });
+  }
+  function mgSectionsPdfA4(groups, pname, rangeFa, totSes, totSh, straightPct, legend, pb){
+    PDFK.a4({
+      kind: 'آنالیز تمرین',
+      title: '🧪 آنالیز تمرین‌های «' + esc(pname) + '»',
+      sub: 'بازه: ' + rangeFa + ' (بر هر گروه جداگانه) • جلسات تمام‌شده',
+      meta: ['🎯 رنج/پاتینگ/چیپینگ/اپروچ/روی زمین — به‌ازای هر کلاب یک دونات'],
+      kpis: [
+        { v: D.fa(totSes), l: 'تمرین (جلسه)' },
+        { v: D.fa(totSh), l: 'ضربهٔ ثبت‌شده' },
+        { v: D.fa(groups.length), l: 'گروه فعال' },
+        { v: D.fa(straightPct) + '٪', l: 'ضربهٔ صاف کل' },
+      ],
+      sections: [{ h: 'کلید رنگ‌ها', sub: 'صاف • سمت راست • سمت چپ • ضربه خراب', html: legend }].concat(
+        groups.map(g => ({
+          h: SP_TYPE_LBL[g.ty],
+          sub: D.fa(g.sesN) + ' تمرین • ' + D.fa(g.shotsN) + ' ضربه • ' + D.fa(Object.keys(g.clubs).length) + ' کلاب',
+          html: '<div style="display:flex;gap:9px;flex-wrap:wrap">' + Object.keys(g.clubs).sort().map(cn => {
+            const cl = g.clubs[cn]; const dom = paTopRes(cl);
+            return '<div style="text-align:center;width:88px;background:rgba(255,255,255,.02);border:1px solid rgba(212,175,55,.18);border-radius:10px;padding:6px 3px">'
+              + '<div style="display:flex;justify-content:center">' + paSvgDonut(cl, 62, 20) + '</div>'
+              + '<div style="font-size:9px;font-weight:800;margin-top:3px;color:#e9eef5">' + esc(cn) + '</div>'
+              + '<div style="font-size:8px;color:#8b96a4;margin-top:1px">' + D.fa(cl.n) + ' ضربه</div>'
+              + '<div style="font-size:8px;font-weight:800;color:' + SP_RES_COLOR[dom.k] + ';margin-top:1px">' + SP_RES_LABEL[dom.k] + ' ' + D.fa(dom.pct) + '٪</div>'
+              + '</div>';
+          }).join('') + '</div>'
+        }))
+      ),
+      fileName: 'آنالیز-تمرین-' + String(pname).replace(/\s+/g, '-') + '.pdf',
+      btn: pb
+    }).catch(() => {});
+  }
+
   /* هندلر مشترک دو تب مرکز بازیکن */
   function bindPlayerTabs(){
     const bc = $('#pl-tab-classic'), bs = $('#pl-tab-smart');

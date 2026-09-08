@@ -515,6 +515,7 @@
     s.closedAt = new Date().toISOString();
     s.analysis = analyze(sid);
     saveSessions(ss);
+    try { if (window.GA_SYNC) GA_SYNC.shots(s, shotsOf(sid)); } catch (e) {}  /* ثبت در sp_sessions/sp_shots (تحلیل‌های آینده) */
     sumSid = sid; view = 'summary';
     toast('جلسه بسته شد — تحلیل آماده است ✓', 'gold');
     route();

@@ -722,6 +722,32 @@
         <div class="chart-box short"><canvas id="pl-gold"></canvas></div>
         <div style="text-align:center;font-size:12px;color:var(--muted)">${D.faNum(p.pts,0)} امتیاز — فاصله تا طلایی: ${D.fa(Math.max(0, D.GOLD_ELITE - p.pts))} امتیاز</div>
       </div>
+      <div class="glass" style="grid-column:span 3" id="pp-card">
+        <div class="card-head"><span class="ic">🍩</span><h3>نمودار دایره‌ای تمرین‌ها — نوع تمرین × کلاب</h3><span class="tag" id="pp-tag">تمرین‌های تمام‌شده</span></div>
+        <div class="toolbar" style="margin-bottom:8px">
+          <span class="lbl">🏌️ بازیکن:</span>
+          <select class="sel" id="pp-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===playerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+          <span class="lbl">🎯 نوع تمرین:</span>
+          <select class="sel" id="pp-type"><option value="all">همهٔ تمرین‌ها</option>${Object.keys(SP_TYPE_LBL).map(t => `<option value="${t}">${SP_TYPE_LBL[t]}</option>`).join('')}</select>
+          <span class="lbl">⛳ کلاب:</span>
+          <select class="sel" id="pp-club"><option value="all">همهٔ کلاب‌ها</option></select>
+          <span class="lbl">🔢 تعداد تمرین:</span>
+          <select class="sel" id="pp-n">
+            <option value="1">فقط تمرین آخر</option>
+            <option value="3">۳ تمرین آخر</option>
+            <option value="5">۵ تمرین آخر</option>
+            <option value="10">۱۰ تمرین آخر</option>
+            <option value="all" selected>کل تمرین‌ها</option>
+          </select>
+        </div>
+        <div id="pp-body" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+          <div style="position:relative;width:230px;flex:0 0 auto;margin:auto">
+            <div class="chart-box short" style="height:230px"><canvas id="pp-pie"></canvas></div>
+            <div id="pp-center" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none"></div>
+          </div>
+          <div id="pp-legend" style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:7px;max-height:230px;overflow:auto"></div>
+        </div>
+      </div>
       <div class="glass" style="grid-column:span 2">
         <div class="card-head"><span class="ic">📊</span><h3>امتیاز ماهانه</h3><span class="tag">Monthly</span></div>
         <div class="chart-box short"><canvas id="pl-month"></canvas></div>
@@ -760,11 +786,70 @@
       let acc = 0; const cum = mp.map(v => acc += v);
       Charts.line($('#pl-cum'), [cum], A.MONTHS_SEASON, { colors:['#E9C766'], fill:true, points:true, fmt:v=>D.faNum(v,0) });
       renderHoles(p);
+      renderPracticePie();
+      ['pp-player','pp-type','pp-club','pp-n'].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('change', renderPracticePie); });
     }, 80);
     $('#pl-sel').addEventListener('change', e => { playerSel = +e.target.value; go('player'); });
     $('#pl-tour').addEventListener('change', e => { matchSel = +e.target.value; go('player'); });
     bindPlayerTabs();
   }
+  /* ── 🍩 نمودار دایره‌ای تمرین‌ها: توزیع «نوع تمرین × کلاب» بر اساس تعداد تمرین (جلسهٔ تمام‌شده) — با برش «N تمرین آخر / کل» ── */
+  const PP_PALETTE = ['#D4AF37','#1EBB8A','#2E86DE','#E67E22','#9B59B6','#E74C3C','#1ABC9C','#F39C12','#3498DB','#EC87BF','#F2C879','#8E9BAE'];
+  function renderPracticePie(){
+    const body = $('#pp-body'); if (!body) return;
+    const plS = $('#pp-player'), tyS = $('#pp-type'), clS = $('#pp-club'), nS = $('#pp-n');
+    const pid  = plS ? +plS.value : playerSel;
+    const typ  = tyS ? tyS.value : 'all';
+    const nSel = nS ? nS.value : 'all';
+    const mine = spShots().filter(x => x.pid === pid);
+    const ssn  = spSessions();
+    const bySid = {}; mine.forEach(x => { (bySid[x.sid] = bySid[x.sid] || []).push(x); });
+    const isClosed = x => x && x.status === 'closed' && x.closedAt;
+    let ses = Object.keys(bySid).map(id => ssn[id]).filter(isClosed)
+      .sort((a,b) => String(b.closedAt).localeCompare(String(a.closedAt)));  /* جدیدترین اول */
+    if (typ !== 'all') ses = ses.filter(sn => sn.type === typ);
+    /* آپشن‌های کلاب از دیتای واقعی همین بازیکن+نوع (انتخاب فعلی در صورت اعتبار حفظ می‌شود) */
+    const clubSeen = {}, clubList = [];
+    ses.forEach(sn => bySid[sn.id].forEach(x => { if (!clubSeen[x.club]){ clubSeen[x.club] = 1; clubList.push(x.club); } }));
+    if (clS){
+      const cur = clS.value;
+      clS.innerHTML = `<option value="all">همهٔ کلاب‌ها</option>` + clubList.map(c => `<option value="${esc(c)}" ${c === cur ? 'selected' : ''}>${esc(c)}</option>`).join('');
+    }
+    const clb = clS ? clS.value : 'all';
+    if (clb !== 'all') ses = ses.filter(sn => bySid[sn.id].some(x => x.club === clb));
+    const sesTotal = ses.length;
+    if (nSel !== 'all') ses = ses.slice(0, +nSel);
+    /* شمارش ترکیب «نوع × کلاب»: هر جلسه به‌ازای هر کلابِ استفاده‌شده = ۱ تمرین آن ترکیب */
+    const counts = {};
+    ses.forEach(sn => {
+      const set = {}; bySid[sn.id].forEach(x => { if (clb === 'all' || x.club === clb) set[x.club] = 1; });
+      Object.keys(set).forEach(cn => { const k = sn.type + '|' + cn; counts[k] = (counts[k] || 0) + 1; });
+    });
+    const combos = Object.keys(counts).map(k => {
+      const pr = k.split('|');
+      return { label: (SP_TYPE_LBL[pr[0]] || pr[0]) + ' — ' + pr[1], count: counts[k] };
+    }).sort((a,b) => b.count - a.count);
+    combos.forEach((c,i) => c.color = PP_PALETTE[i % PP_PALETTE.length]);
+    const sumCnt = combos.reduce((a,c) => a + c.count, 0) || 1;
+    const tag = $('#pp-tag'); if (tag) tag.textContent = ses.length ? `آخرین ${D.fa(ses.length)} تمرین (از ${D.fa(sesTotal)}) • ${D.fa(combos.length)} ترکیب` : 'بدون داده';
+    const center = $('#pp-center'), lg = $('#pp-legend'), cv = $('#pp-pie');
+    if (center) center.innerHTML = ses.length
+      ? `<div style="font-size:27px;font-weight:900;color:var(--gold-l)">${D.fa(ses.length)}</div><div style="font-size:10px;color:var(--muted)">${nSel === 'all' ? 'کل تمرین‌ها' : 'آخرین ' + D.fa(+nSel) + ' تمرین'}</div>`
+      : `<div style="font-size:15px;font-weight:800;color:var(--muted)">بدون تمرین</div><div style="font-size:10px;color:var(--muted)">—</div>`;
+    if (lg) lg.innerHTML = combos.length ? combos.map((c,i) => `
+      <div style="display:flex;align-items:center;gap:9px;font-size:12px;padding:6px 9px;border-radius:9px;${i===0 ? 'background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.25)' : 'background:rgba(255,255,255,.02)'}">
+        <i style="width:11px;height:11px;border-radius:3px;background:${c.color};flex:0 0 auto;box-shadow:0 0 7px ${c.color}66"></i>
+        <span style="flex:1">${esc(c.label)}</span>
+        <b style="color:${c.color}">${D.fa(c.count)} تمرین</b>
+        <small style="color:var(--dim);min-width:36px;text-align:left">${D.fa(Math.round(c.count/sumCnt*100))}٪</small>
+        ${i===0 ? '<span title="پرتکرارترین ترکیب" style="font-size:13px">👑</span>' : ''}
+      </div>`).join('')
+      : `<div style="padding:22px 12px;text-align:center;color:var(--muted);font-size:12px;line-height:2.1">📭 با این فیلترها تمرینِ <b>تمام‌شده‌ای</b> برای «${esc(plS && plS.selectedIndex >= 0 ? plS.options[plS.selectedIndex].text : '')}» ثبت نشده.<br>از «بازیکن هوشمند → ➕ ثبت رکورد» تمرین کن و جلسه را «⏹ ببند» تا این نمودار پر شود.</div>`;
+    if (cv) Charts.donut(cv, combos.length
+      ? combos.map(c => ({ value: c.count, color: c.color, glow: true }))
+      : [{ value: 1, color: 'rgba(60,70,85,.35)' }], { inner: 0.66 });
+  }
+
   /* هندلر مشترک دو تب مرکز بازیکن */
   function bindPlayerTabs(){
     const bc = $('#pl-tab-classic'), bs = $('#pl-tab-smart');

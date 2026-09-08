@@ -239,10 +239,16 @@
     // توجه: ردیف حذف به‌صورت tombstone ({__del:1}) روی سرور می‌ماند تا
     // بقیهٔ دستگاه‌ها در pull بعدی آن را ببینند و کلید محلی را پاک کنند.
 
-    return rest('ga_store', {
-      method: 'POST',
-      headers: { 'Prefer': 'return=representation,resolution=merge-duplicates' },
-      body: JSON.stringify(rows)
+    /* مسیر امن: اول Edge Function «ga-sync» (نوشتن با کلید مخفی سرور)؛
+       اگر هنوز دیپلوی نشده بود/خطا داد ← مسیر قدیمی REST (تا قبل از فاز صفر کار می‌کند) */
+    return edgeSync(rows).then(function (r) {
+      if (r && r.ok === false) throw new Error('ga-sync: ' + (r.err || '?'));
+    }).catch(function () {
+      return rest('ga_store', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation,resolution=merge-duplicates' },
+        body: JSON.stringify(rows)
+      });
     }).then(function () {
       var d2 = jread(DIRTY_KEY, {});
       keys.forEach(function (k) { delete d2[k]; });
@@ -408,13 +414,10 @@
         return { k: k, v: v === null ? { __del: 1 } : encode(v), updated_at: d[k] || now };
       });
       var c = cfg();
-      fetch(c.url + '/rest/v1/ga_store', {
+      fetch(c.url + '/functions/v1/ga-sync', {
         method: 'POST',
-        headers: {
-          'apikey': c.key, 'Content-Type': 'application/json',
-          'Prefer': 'return=minimal,resolution=merge-duplicates'
-        },
-        body: JSON.stringify(rows),
+        headers: { 'apikey': c.key, 'Authorization': 'Bearer ' + c.key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'kv', rows: rows }),
         keepalive: true,
         mode: 'cors'
       }).catch(function () {});
@@ -425,6 +428,31 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
   }
+
+  /* دروازهٔ امن نوشتن — Edge Function «ga-sync» */
+  function edgeSync(rows) {
+    var c = cfg();
+    return fetch(c.url + '/functions/v1/ga-sync', {
+      method: 'POST',
+      headers: { 'apikey': c.key, 'Authorization': 'Bearer ' + c.key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'kv', rows: rows })
+    }).then(function (r) { return r.json(); });
+  }
+
+  /* dual-write: جلسهٔ بسته‌شده + ضربه‌هایش → جدول‌های واقعی sp_sessions/sp_shots (فاز ۱) */
+  window.GA_SYNC = {
+    shots: function (sn, arr) {
+      try {
+        if (!hasCred() || !sn || !sn.id) return;
+        var c = cfg();
+        fetch(c.url + '/functions/v1/ga-sync', {
+          method: 'POST',
+          headers: { 'apikey': c.key, 'Authorization': 'Bearer ' + c.key, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'shots', session: sn, shots: arr || [] })
+        }).catch(function () {});
+      } catch (e) {}
+    }
+  };
 
   /* API عمومی برای دیباگ و تست‌های e2e */
   window.GA_CLOUD = {

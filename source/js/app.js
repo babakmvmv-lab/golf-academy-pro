@@ -2974,8 +2974,11 @@
   window.GA_MSG = { load: loadMsgs, save: saveMsgs, reads: loadMsgReads, saveReads: saveMsgReads, gate: msgGate, unreadFor: unreadMsgsFor };
 
   const __cloudApplied = () => {
-    const restored = restoreLegacyPractice();
-    if (restored){ S = D.loadState(); }
+    restoreLegacyPractice();
+    /* هر بار دیتای ابر اعمال شد: state آنالیتیکس را از اول بساز تا بازیکنانِ سفارشیِ تازه‌پول‌شده
+       (مثل Emt با pid‌های ۹۰۰۰+) همان لحظه در تمام سلکت‌ها/گزارش‌ها دیده شوند */
+    S = D.loadState();
+    A = D.compute(S);
     if (currentPage === 'player') go('player');
     msgGate();
   };

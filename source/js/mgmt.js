@@ -2792,63 +2792,154 @@
   }
 
   /* ── 📧 ارسال یک‌طرفهٔ ایمیل از طریق EmailJS (رایگان ~۲۰۰/ماه — بدون سرور و DNS؛ اتصال به حساب Gmail هر ایمیلی) ── */
-  const EMAIL_DEFAULTS = { key: 'olblhtePYhlS_a4Rv', svc: 'service_ewdayg4', tpl: '' };  /* EmailJS — از پنل مدیر اگر مقدار دیگری ذخیره شود اولویت می‌گیرد */
+  const EMAIL_DEFAULTS = { key: 'olblhtePYhlS_a4Rv', svc: 'service_ewdayg4', tpl: 'template_k2dhpqd' };  /* EmailJS — از پنل مدیر اگر مقدار دیگری ذخیره شود اولویت می‌گیرد */
   function emailCfg(){ try { return Object.assign({}, EMAIL_DEFAULTS, JSON.parse(localStorage.getItem('ga_email_cfg') || '{}')); } catch(e){ return EMAIL_DEFAULTS; } }
   function saveEmailCfg(c){ try { localStorage.setItem('ga_email_cfg', JSON.stringify(c)); } catch(e){} }
   function playerEmailOf(u){
+    /* S.players به‌صورت آرایه است [id,name,gender,hcp,join,active] — ایمیل در ویرایش‌های ga_players یا بازیکنان سفارشی ذخیره می‌شود */
     try {
-      if (u && u.pid != null){
-        const S0 = gstate().S;
-        const pl = S0 && S0.players ? S0.players.find(p => p.id === +u.pid) : null;
-        if (pl && pl.email && pl.email.includes('@')) return pl.email.trim();
+      if (!u || u.pid == null) return null;
+      const pid = +u.pid; if (!pid) return null;
+      if (pid >= 9000){  /* بازیکن سفارشی: در ga_custom_players ذخیره */
+        const cs = JSON.parse(localStorage.getItem('ga_custom_players') || '[]');
+        const c = cs[pid - 9000];
+        if (c && c.email && String(c.email).includes('@')) return String(c.email).trim();
+        return null;
       }
+      const edits = JSON.parse(localStorage.getItem('ga_players') || '{}');
+      const e = edits[pid] || {};
+      if (e.email && String(e.email).includes('@')) return String(e.email).trim();
     } catch(e){}
     return null;
   }
+  /* 🎨 سربرگ برنددار PUTTCLUB — لوگو + تماس + سوشال‌ها خودکار از تنظیمات سایت خوانده می‌شوند */
+  function buildEmailHtml(subject, text){
+    const site = (window.LND_CONFIG ? window.LND_CONFIG() : null) || (window.APP && APP.state ? APP.state().info : null) || {};
+    /* منبع اطلاعات تماس: همان فیلدهای بخش «مدیریت ← رسپشن/تماس» (در localStorage ذخیره) */
+    let ct = {};
+    try { ct = JSON.parse(localStorage.getItem('ga_siteinfo') || '{}').contact || {}; } catch(e){}
+    const phone = (ct.phone && String(ct.phone).trim()) || '—';
+    const mail  = (ct.email && String(ct.email).trim()) || 'info@puttclub.ir';
+    const addr  = (ct.address && String(ct.address).trim()) || 'زمین گلف مسجدسلیمان';
+    const web   = (ct.website && String(ct.website).trim()) || 'puttclub.ir';
+    const socials = (Array.isArray(ct.socials) && ct.socials.length) ? ct.socials : [];
+    const SOC = { whatsapp:['واتساپ','#25D366'], telegram:['تلگرام','#229ED9'], instagram:['اینستاگرام','#E1306C'], youtube:['یوتیوب','#FF0000'], linkedin:['لینکدین','#0A66C2'], x:['ایکس','#000000'], aparat:['آپارات','#ED145B'], web:['🌐 وب','#d4af37'] };
+    const socHtml = socials.filter(sn => sn && sn.url).map(sn => {
+      const it = SOC[sn.net] || SOC.web;
+      return `<a href="${sn.url}" target="_blank" style="display:inline-block;background:${it[1]}18;color:${it[1]};border:1px solid ${it[1]}55;padding:7px 13px;border-radius:20px;font-size:12px;text-decoration:none;margin:0 4px 6px 0;font-weight:700">${it[0]}</a>`;
+    }).join('');
+    const bodyHtml = String(text || '').split('\n').map(l => l.trim() ? `<p style="margin:0 0 10px;line-height:2;color:#374151">${l}</p>` : '').join('');
+    return `<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Tahoma,Arial,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:24px 12px"><tr><td align="center">
+  <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(6,40,24,.18)">
+    <!-- سربرگ تیره برنددار -->
+    <tr><td style="background:linear-gradient(135deg,#062b1d,#0a3b28 55%,#0f4a33);padding:26px 24px;text-align:center">
+      <img src="https://puttclub.ir/assets/puttclub_logo.png" width="54" height="54" alt="PuttClub" style="border-radius:50%;border:2px solid #d4af37;padding:3px;background:#fff" />
+      <div style="color:#f6e27a;font-size:19px;font-weight:800;margin-top:9px">آکادمی گلف پات کلاب</div>
+      <div style="color:rgba(255,255,255,.55);font-size:11px;letter-spacing:2px">PUTTCLUB.IR</div>
+    </td></tr>
+    <tr><td style="height:3px;background:linear-gradient(90deg,#d4af37,#f6e27a,#d4af37)"></td></tr>
+    <!-- بدنهٔ پیام (متنِ تایپ‌شدهٔ مدیر) -->
+    <tr><td style="background:#ffffff;padding:30px 26px">
+      <h2 style="margin:0 0 18px;font-size:17px;color:#062b1d;border-bottom:2px solid #d4af37;padding-bottom:10px">${subject}</h2>
+      ${bodyHtml}
+    </td></tr>
+    <!-- پاورقی: تماس + شبکه‌ها -->
+    <tr><td style="background:#062b1d;padding:22px 24px">
+      ${socHtml ? `<div style="text-align:center;margin-bottom:14px">${socHtml}</div>` : ''}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="color:#cfd8d3;font-size:11.5px;line-height:2.1">
+        <tr><td style="text-align:right">📞 ${phone} &nbsp;|&nbsp; ✉️ ${mail}</td></tr>
+        <tr><td style="text-align:right">📍 ${addr}</td></tr>
+        <tr><td style="text-align:right">🌐 <a href="https://${web}" style="color:#f6e27a;text-decoration:none">${web}</a></td></tr>
+      </table>
+      <div style="text-align:center;color:rgba(255,255,255,.3);font-size:9.5px;margin-top:14px;border-top:1px solid rgba(255,255,255,.09);padding-top:12px">این ایمیل به‌صورت یک‌طرفه از سوی آکادمی گلف پات کلاب ارسال شده است — لطفاً به آن پاسخ ندهید.</div>
+    </td></tr>
+  </table>
+</td></tr></table></body></html>`;
+  }
+
+  const EMAILJS_HOSTS = ['https://api.emailjs.com', 'https://api.eu.emailjs.com'];
   async function sendEmailJS(toEmail, toName, subject, text){
     const c = emailCfg();
-    const r = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: c.svc, template_id: c.tpl, user_id: c.key,
-        template_params: { to_email: toEmail, to_name: toName || '', subject: subject, message: text, academy: 'آکادمی گلف پات کلاب — puttclub.ir' }
-      })
+    const bodyJSON = JSON.stringify({
+      service_id: c.svc, template_id: c.tpl, user_id: c.key,
+      template_params: { to_email: toEmail, to_name: toName || '', name: toName || '', subject: subject, message: text, html: buildEmailHtml(subject, text), email: '', time: new Date().toLocaleString('fa-IR'), academy: 'آکادمی گلف پات کلاب — puttclub.ir' }
     });
-    if (!r.ok) throw new Error('EmailJS ' + r.status + ': ' + (await r.text().catch(() => '')).slice(0, 120));
-    return true;
+    let lastNet = null;
+    /* ── تلاش روی هر دو میزبان (US -> EU) تا اگر یکی فیلتر بود دیگری کار کند ── */
+    for (const host of EMAILJS_HOSTS){
+      let r;
+      try {
+        r = await fetch(host + '/api/v1.0/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: bodyJSON });
+      } catch(net){ lastNet = net; continue; }
+      if (r.ok) return true;
+      const body = (await r.text().catch(() => '')).slice(0, 160);
+      throw new Error('EmailJS ' + r.status + ': ' + body);
+    }
+    /* ── دالان دوم: Supabase Edge Function دالان ایمیل ── */
+    let edgeCfg = { url: 'https://iultwqtzvrysugfxwshw.supabase.co', key: 'sb_publishable_058vN6QjD4sUC9Mam5izUg__vjKt9d0' };
+    try { const o = JSON.parse(localStorage.getItem('ga_cloud_cfg') || 'null'); if (o) { if (o.url) edgeCfg.url = o.url; if (o.key) edgeCfg.key = o.key; } } catch(_){}
+    const edge = edgeCfg.url + '/functions/v1/ga-mail';
+    try {
+      const key = edgeCfg.key;
+      const r2 = await fetch(edge, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key, 'apikey': key },
+        body: JSON.stringify({ to: toEmail, to_name: toName || '', subject, html: buildEmailHtml(subject, text), text }) });
+      if (r2.ok) return true;
+      throw new Error('دالان ایمیل ' + r2.status + ': ' + (await r2.text().catch(() => '')).slice(0, 140));
+    } catch(e2){
+      throw new Error('شبکه: درخواست به سرور ایمیل (EmailJS و دالان دوم) نرسید. اگر فیلترشکن داری روشنش کن، یا شبکه (Wi-Fi/دیتا) را عوض کن.');
+    }
   }
 
   /* ── تب ارسال پیام: فرم + انتخاب مخاطب + تاریخچه با وضعیت خواندن هر عضو ── */
   function mgmtMessages(body){
-    const users = APP.users.list().filter(u => u && u.active && u.role === 'member');
-    let picked = [];
+    const users = APP.users.list().filter(u => u && u.active && u.role === 'member'); /* اکانت‌های پنل (برای کانال پنل اعضا) */
+    /* 🎯 لیست کامل مخاطبین ← همهٔ بازیکنان «فعال» (چه اکانت پنل داشته باشن چه نه) */
+    const S0 = gstate().S;
+    const players = (S0 && S0.players || [])
+      .filter(p => p[5])  /* فقط فعال */
+      .map(p => {
+        const pid = p[0];
+        const nm = D && D.nameOf ? D.nameOf(pid) : p[1];
+        const us = users.find(u => +u.pid === pid);
+        return { pid, name: nm, user: us ? us.user : null, email: playerEmailOf({ pid }) };
+      });
+    let picked = [];  /* آرایه‌ای از ردیف بازیکن*/
+    const PKEY = r => String(r.pid);
     const escU = s => esc(String(s || ''));
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">📨</span><h3>ارسال پیام به اعضا</h3><span class="tag">نمایش اجباری روی پنل عضو تا تأیید «خواندم»</span></div>
       <div class="form-section" style="margin-top:12px">📡 کانال ارسال</div>
-      <div id="pm-chans" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px">
+      <div id="pm-chans" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0;align-items:center">
         <button class="btn sm" data-pmch="panel" title="پیام داخل پنل عضو (مثل قبل)">📨 پنل اعضا</button>
         <button class="btn sm ghost" data-pmch="email" title="فقط ایمیل (یک‌طرفه)">📧 فقط ایمیل</button>
         <button class="btn sm ghost" data-pmch="both" title="هم پنل، هم ایمیل">📨+📧 هر دو</button>
+        <button class="btn sm ghost" id="pm-eg-btn" title="تنظیمات اتصال ایمیل (یک‌بار)">⚙️</button>
+        <span id="pm-estatus" style="font-size:10px;color:var(--muted)"></span>
       </div>
-      <div id="pm-emcfg" style="display:none;margin:0 0 12px;padding:11px 12px;border-radius:11px;border:1px dashed rgba(125,211,252,.4);background:rgba(125,211,252,.05)">
-        <div style="font-size:11.5px;color:#7dd3fc;font-weight:800;margin-bottom:7px">📧 اتصال EmailJS (یک‌بار تنظیم می‌شود)</div>
-        <div class="field-grid">
-          <div><label>Public Key</label><input class="input" id="ec-key" style="width:100%;direction:ltr" placeholder="از دشبورد EmailJS"></div>
-          <div><label>Service ID</label><input class="input" id="ec-svc" style="width:100%;direction:ltr" placeholder="service_…"></div>
-          <div><label>Template ID</label><input class="input" id="ec-tpl" style="width:100%;direction:ltr" placeholder="template_…"></div>
-          <div style="display:flex;align-items:end"><button class="btn sm ghost" id="ec-save" style="width:100%">💾 ذخیره اتصال</button></div>
+      <div id="pm-emodal" style="display:none;position:fixed;inset:0;background:rgba(2,12,8,.74);backdrop-filter:blur(4px);z-index:999;align-items:center;justify-content:center;padding:18px">
+        <div class="glass gold-border" style="max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:18px 16px;position:relative">
+          <button id="pm-emclose" class="btn sm ghost" style="position:absolute;top:12px;left:12px;min-width:34px">✕</button>
+          <div class="card-head" style="margin-bottom:12px"><span class="ic">📧</span><h3 style="font-size:15px">اتصال EmailJS</h3><span class="tag">یک‌بار و برای همیشه</span></div>
+          <div class="field-grid">
+            <div><label>Public Key</label><input class="input" id="ec-key" style="width:100%;direction:ltr" placeholder="از دشبورد EmailJS"></div>
+            <div><label>Service ID</label><input class="input" id="ec-svc" style="width:100%;direction:ltr" placeholder="service_…"></div>
+            <div><label>Template ID</label><input class="input" id="ec-tpl" style="width:100%;direction:ltr" placeholder="template_…"></div>
+            <div style="display:flex;align-items:end"><button class="btn" id="ec-save" style="width:100%">💾 ذخیره اتصال</button></div>
+          </div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:14px;line-height:2.05;background:rgba(125,211,252,.06);border:1px solid rgba(125,211,252,.25);border-radius:10px;padding:10px 12px">⚙️ <b>راهنما (تکمیل است):</b> سرویس SMTP به Resend (smtp.resend.com • پورت 465 • کاربر resend • رمز کلید re_…) و قالب: From Name=آکادمی گلف پات کلاب • From Email=info@puttclub.ir • To={{to_email}} • Subject={{subject}} • Content=<code>{{{html}}}</code> (سه‌آکولاد — چرا که سربرگ برنددار خودکار اضافه می‌شود). بعد از ذخیره، این پنجره فقط با دکمهٔ ⚙️ باز می‌شود.</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:10px;line-height:1.95">🎨 <b>سربرگ خودکار:</b> لوگوی آکادمی + نام + تلفن/نشانی/وب + آیکن شبکه‌های اجتماعی — همه از «مدیریت ← رسپشن/تماس» خوانده می‌شوند و به هر ایمیل الصاق می‌گردند؛ شما فقط عنوان و متن می‌نویسید.</div>
         </div>
-        <div style="font-size:10px;color:var(--muted);margin-top:7px;line-height:1.9">⚙️ راهنمای یک‌بار: در <b>emailjs.com</b> رایگان ثبت‌نام کن ← Email Service ← اتصال Gmail (هر جیمیلی — مثلاً نسخهٔ مخفف آکادمی) ← Template با متغیرهای {{to_email}}، {{to_name}}، {{subject}}، {{message}}، {{academy}} ← سه مقدار بالا را بردار. سپس ایمیل همان‌جا از جیمیل تو یک‌طرفه ارسال می‌شود. رایگان تا ~۲۰۰ ایمیل/ماه.</div>
       </div>
       <div class="field-grid" style="margin-top:12px">
         <div class="span2"><label>عنوان پیام</label><input class="input" id="pm-subject" maxlength="90" style="width:100%" placeholder="مثلاً: تغییر ساعت کلاس پنجشنبه"></div>
-        <div class="span2"><label>متن پیام</label><textarea class="input" id="pm-body" rows="4" maxlength="1200" style="width:100%;resize:vertical;line-height:1.9" placeholder="متن پیام برای اعضا…"></textarea></div>
+        <div class="span2"><label>متن پیام</label><textarea class="input" id="pm-body" rows="5" maxlength="1200" style="width:100%;resize:vertical;line-height:1.9" placeholder="متن پیام برای اعضا… (سربرگ برنددار خودکار به آن اضافه می‌شود)"></textarea></div>
       </div>
       <div class="form-section" style="margin-top:14px">👥 انتخاب مخاطبین</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button class="btn sm ghost" id="pm-all">☑ انتخاب همه (${D.fa(users.length)} عضو)</button>
+        <button class="btn sm ghost" id="pm-all">☑ انتخاب همه (${D.fa(players.length)} بازیکن)</button>
         <button class="btn sm ghost" id="pm-none">☐ هیچ‌کدام</button>
         <input class="input" id="pm-search" placeholder="🔍 جست‌وجوی عضو (نام یا یوزرنیم)…" style="flex:1;min-width:170px">
       </div>
@@ -2866,36 +2957,39 @@
 
     function drawList(){
       const q = ($('#pm-search').value || '').trim().toLowerCase();
-      $('#pm-list').innerHTML = users.filter(u => !q || (u.name + ' @' + u.user).toLowerCase().includes(q)).map(u => {
-        const on = picked.some(x => x.user === u.user);
-        return `<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;border:1px solid ${on ? 'rgba(212,175,55,.55)' : 'var(--line-soft)'};background:${on ? 'rgba(212,175,55,.08)' : 'rgba(255,255,255,.02)'};font-size:12px;transition:.15s" data-pmu="${escU(u.user)}">
+      const rows = players.filter(r => !q || (r.name + ' ' + (r.user || '') + ' ' + (r.email || '')).toLowerCase().includes(q));
+      $('#pm-list').innerHTML = rows.map(r => {
+        const on = picked.some(x => PKEY(x) === PKEY(r));
+        const badges = (r.user ? `<small title="اکانت پنل دارد">👤</small>` : '') +
+                       (r.email ? `<small style="color:#7dd3fc" title="ایمیل: ${escU(r.email)}"> 📧</small>` : `<small style="color:rgba(248,113,113,.55)" title="ایمیل در پروفایل بازیکن ثبت نشده"> ⚡بدون ایمیل</small>`);
+        return `<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;border:1px solid ${on ? 'rgba(212,175,55,.55)' : 'var(--line-soft)'};background:${on ? 'rgba(212,175,55,.08)' : 'rgba(255,255,255,.02)'};font-size:12px;transition:.15s" data-pmu="${escU(PKEY(r))}">
           <input type="checkbox" ${on ? 'checked' : ''} style="accent-color:var(--gold);pointer-events:none">
-          <span style="flex:1">${escU(u.name)}<small style="color:var(--muted)"> @${escU(u.user)}</small>${(() => { const em = playerEmailOf(u); return em ? `<small style=\"color:#7dd3fc\"> 📧</small>` : `<small style=\"color:rgba(248,113,113,.55)\" title=\"ایمیل در پروفایل بازیکن ثبت نشده\"> ⚠</small>`; })()}</span>
+          <span style="flex:1">${escU(r.name)}${r.user ? `<small style="color:var(--muted)"> @${escU(r.user)}</small>` : `<small style="color:var(--muted)"> (بدون یوزر)</small>`} ${badges}</span>
         </label>`;
-      }).join('') || '<div style="color:var(--muted);font-size:11.5px;padding:8px">عضویی با این جست‌وجو پیدا نشد</div>';
+      }).join('') || '<div style="color:var(--muted);font-size:11.5px;padding:8px">بازیکنی با این جست‌وجو پیدا نشد</div>';
       $$('#pm-list [data-pmu]').forEach(el => el.addEventListener('click', ev => {
         ev.preventDefault();
-        const u = users.find(x => String(x.user).toLowerCase() === el.dataset.pmu.toLowerCase());
-        if (!u) return;
-        if (picked.some(x => x.user === u.user)) picked = picked.filter(x => x.user !== u.user);
-        else picked.push(u);
+        const r = players.find(x => PKEY(x) === el.dataset.pmu);
+        if (!r) return;
+        if (picked.some(x => PKEY(x) === PKEY(r))) picked = picked.filter(x => PKEY(x) !== PKEY(r));
+        else picked.push(r);
         drawList(); drawPicked();
       }));
     }
     function drawPicked(){
       const box = $('#pm-picked');
       box.innerHTML = picked.length
-        ? `<span style="color:var(--muted)">مخاطبین انتخاب‌شده (${D.fa(picked.length)}):</span>` + picked.map(u =>
-            `<span class="chip gold" style="display:inline-flex;align-items:center;gap:6px">${escU(u.name)}<b data-pmx="${escU(u.user)}" style="cursor:pointer" title="حذف از مخاطبین">✕</b></span>`).join('')
+        ? `<span style="color:var(--muted)">مخاطبین انتخاب‌شده (${D.fa(picked.length)}):</span>` + picked.map(r =>
+            `<span class="chip gold" style="display:inline-flex;align-items:center;gap:6px">${escU(r.name)}${r.email ? ' <small style="color:#7dd3fc">📧</small>' : ''}<b data-pmx="${escU(PKEY(r))}" style="cursor:pointer" title="حذف از مخاطبین">✕</b></span>`).join('')
         : '<span style="color:var(--muted)">هنوز مخاطبی انتخاب نشده — بالا انتخاب کنید (همه / تکی / جست‌وجو)</span>';
       box.querySelectorAll('[data-pmx]').forEach(x => x.addEventListener('click', () => {
-        picked = picked.filter(u => u.user !== x.dataset.pmx); drawList(); drawPicked();
+        picked = picked.filter(r => PKEY(r) !== x.dataset.pmx); drawList(); drawPicked();
       }));
       const c = $('#pm-count'); if (c) c.textContent = picked.length ? `مجموعاً ${D.fa(picked.length)} مخاطب` : '';
     }
     drawList(); drawPicked();
     $('#pm-search').addEventListener('input', drawList);
-    $('#pm-all').addEventListener('click', () => { picked = users.slice(); drawList(); drawPicked(); });
+    $('#pm-all').addEventListener('click', () => { picked = players.slice(); drawList(); drawPicked(); });
     $('#pm-none').addEventListener('click', () => { picked = []; drawList(); drawPicked(); });
 
     const fmtAt = iso => `${D.fa(D.isoToShamsi(String(iso).slice(0, 10)))} ${D.fa(new Date(iso).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }))}`;
@@ -2945,12 +3039,25 @@
     /* ── انتخاب کانال ارسال ── */
     let chan = 'panel';
     const chanBtns = $$('#pm-chans [data-pmch]');
+    function emailStatus(){
+      const c = emailCfg();
+      const st = $('#pm-estatus'), eg = $('#pm-eg-btn');
+      const shown = (chan !== 'panel');
+      if (st){ st.style.display = shown ? '' : 'none'; st.innerHTML = c.key && c.svc && c.tpl ? '🔗 <b style="color:#7ee8b8">ایمیل متصل</b> (آماده ارسال برنددار)' : '⚠️ <b style="color:#ffd34d">اتصال ایمیل ناقص</b> — ⚙️ را بزنید'; }
+      if (eg) eg.style.display = shown ? '' : 'none';
+    }
+    function openEmailModal(){
+      const c = emailCfg();
+      if (c.key) $('#ec-key').value = c.key; if (c.svc) $('#ec-svc').value = c.svc; if (c.tpl) $('#ec-tpl').value = c.tpl;
+      $('#pm-emodal').style.display = 'flex';
+    }
+    function closeEmailModal(){ $('#pm-emodal').style.display = 'none'; emailStatus(); }
+    $('#pm-eg-btn').addEventListener('click', openEmailModal);
+    $('#pm-emclose').addEventListener('click', closeEmailModal);
+    $('#pm-emodal').addEventListener('click', e => { if (e.target.id === 'pm-emodal') closeEmailModal(); });
     function paintChan(){
-      chanBtns.forEach(b => {
-        const on = b.dataset.pmch === chan;
-        b.classList.toggle('ghost', !on);
-      });
-      $('#pm-emcfg').style.display = (chan === 'panel') ? 'none' : 'block';
+      chanBtns.forEach(b => { b.classList.toggle('ghost', b.dataset.pmch !== chan); });
+      emailStatus();
     }
     chanBtns.forEach(b => b.addEventListener('click', () => { chan = b.dataset.pmch; paintChan(); }));
     { const ec0 = emailCfg(); if (ec0.key) $('#ec-key').value = ec0.key; if (ec0.svc) $('#ec-svc').value = ec0.svc; if (ec0.tpl) $('#ec-tpl').value = ec0.tpl; }
@@ -2972,34 +3079,43 @@
         if (chan !== 'panel'){
           const c = emailCfg();
           if (!c.key || !c.svc || !c.tpl){ APP.toast('اول «اتصال EmailJS» را بالا ذخیره کنید', 'red'); btn.textContent = txt0; return; }
-          const wMail = picked.map(u => ({ u, em: playerEmailOf(u) }));
+          const wMail = picked.map(r => ({ u: r, em: r.email }));
           const noMail = wMail.filter(x => !x.em).map(x => x.u.name);
           const dests = wMail.filter(x => !!x.em);
           if (!dests.length){ APP.toast('هیچ‌کدام از مخاطبین ایمیل ثبت‌شده ندارند — توی «پروفایل بازیکن» ایمیل بگذارید', 'red'); btn.textContent = txt0; return; }
           btn.disabled = true;
-          let ok = 0, fail = 0;
+          let ok = 0, fail = 0, firstErr = '';
           for (let i = 0; i < dests.length; i++){
             btn.textContent = `📧 ${D.fa(i + 1)}/${D.fa(dests.length)} …`;
             try { await sendEmailJS(dests[i].em, dests[i].u.name, subject, text); ok++; }
-            catch(e){ fail++; console.warn('email fail for', dests[i].em, e); }
-            await new Promise(rs => setTimeout(rs, 350)); /* احترام به سقف رایگان */
+            catch(e){ fail++; if (!firstErr) firstErr = String(e.message || e).slice(0, 140); console.warn('email fail for', dests[i].em, e); }
+            await new Promise(rs => setTimeout(rs, 400));
           }
           if (noMail.length) APP.toast(`⚠️ ${D.fa(noMail.length)} نفر بدون ایمیل: ${noMail.slice(0,3).join('، ')}${noMail.length > 3 ? '…' : ''}`, 'gold');
-          APP.toast(`📧 ایمیل: ${D.fa(ok)} موفق${fail ? ' • ' + D.fa(fail) + ' ناموفق' : ''}`, fail ? 'gold' : 'green');
+          if (fail > 0 && firstErr){
+            APP.toast(`📧 خطا: ${firstErr}`, 'red');
+            if (/template not found|Template ID/i.test(firstErr)) APP.toast('💡 Template ID اشتباه است — معمولاً با «template_» (بـ s نه) شروع می‌شود — ⚙️ را بزنید و اصلاحش کنید', 'gold');
+          } else {
+            APP.toast(`📧 ایمیل: ${D.fa(ok)} موفق${fail ? ' • ' + D.fa(fail) + ' ناموفق' : ''}`, fail ? 'gold' : 'green');
+          }
         }
-        /* ── پنل اعضا (رفتار قبلی) ── */
+        /* ── پنل اعضا: فقط آن‌هایی که اکانت پنل دارند ── */
         if (chan !== 'email'){
+          const wUser = picked.filter(r => !!r.user);
+          const noUser = picked.filter(r => !r.user);
+          if (noUser.length) APP.toast(`⚠️ ${D.fa(noUser.length)} بازیکن بدون اکانت پنل: ${noUser.slice(0,3).map(r=>r.name).join('، ')}${noUser.length > 3 ? '…' : ''} — پیام به پنلشان نمی‌رسد`, 'gold');
+          if (!wUser.length){ APP.toast('هیچ‌کدام از مخاطبین اکانت پنل ندارند', 'red'); btn.textContent = txt0; btn.disabled = false; return; }
           const msg = {
             id: 'm' + Date.now().toString(36),
             subject, body: text,
             sender: APP.users.label(cur),
             senderUser: cur,
             createdAt: new Date().toISOString(),
-            targets: picked.map(u => String(u.user).toLowerCase()),
+            targets: wUser.map(r => String(r.user).toLowerCase()),
             channel: chan === 'panel' ? 'popup' : 'popup+email', priority: 'normal', scheduleAt: null, groupKey: null,
           };
           const list = GA_MSG.load(); list.push(msg); GA_MSG.save(list);
-          if (chan === 'panel') APP.toast(`پیام «${subject}» برای ${D.fa(picked.length)} عضو ارسال شد 📨`, 'green');
+          if (chan === 'panel') APP.toast(`پیام «${subject}» برای ${D.fa(wUser.length)} عضو ارسال شد 📨`, 'green');
         }
         $('#pm-subject').value = ''; $('#pm-body').value = ''; picked = [];
         drawList(); drawPicked(); drawHistory();

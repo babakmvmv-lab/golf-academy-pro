@@ -248,6 +248,7 @@
   }
 
   function go(page, _noPush){
+    if (window.EarthMap && EarthMap.destroy) EarthMap.destroy();
     if (!PAGES[page]) page = 'cmd';
     const rec = userRec(currentUser);
     // اعضا: فقط بخش اعضا + آیتم‌هایی که مدیر در تنظیمات نمایش برایشان فعال کرده
@@ -1533,6 +1534,19 @@
       <span class="chip gold">${esc(crs[1])} — ${esc(crs[2])}</span>
       <span class="chip blue">${D.fa(holes)} حفره • پار ${D.fa(pars.slice(0,holes).reduce((a,b)=>a+b,0))}</span>
     </div>
+    <div class="glass earth-pane" style="margin-bottom:18px">
+      <div class="card-head"><span class="ic">🛰</span><h3>گوگل ارث — موقعیت زمین</h3><span class="tag">خط‌کش متری</span></div>
+      <div class="earth-tools">
+        <button type="button" class="btn sm ghost" id="earth-btn-measure">📏 خط‌کش</button>
+        <button type="button" class="btn sm ghost" id="earth-btn-clear">پاک کردن اندازه</button>
+        <input class="input" id="earth-pin-name" placeholder="نام موقعیت (مثلاً تی ۱)" style="width:min(220px,100%)">
+        <button type="button" class="btn sm ghost" id="earth-btn-pin">📍 سنجاق</button>
+        <button type="button" class="btn sm" id="earth-btn-earth">باز کردن در Google Earth</button>
+        <span class="earth-dist" id="earth-dist">—</span>
+      </div>
+      <div id="earth-map" class="earth-map" dir="ltr"></div>
+      <div class="earth-pins" id="earth-pins"></div>
+    </div>
     <div class="grid cols-4" id="cs-stats" style="margin-bottom:18px"></div>
     <div class="grid cols-3">
       <div class="glass" style="grid-column:span 2">
@@ -1586,6 +1600,27 @@
     }, 80);
     $('#cs-sel').addEventListener('change', e => { courseSel = +e.target.value; go('course'); });
     $('#cs-pl').addEventListener('change', e => { coursePlayerSel = +e.target.value; go('course'); });
+    (function mountEarth(){
+      if (!window.EarthMap) return;
+      EarthMap.destroy();
+      const extras = (typeof extraCourses === 'function') ? extraCourses() : [];
+      const places = [];
+      (S.courses || []).forEach(c => {
+        let lat, lng;
+        if (c[0] >= 1000){
+          const x = extras[c[0] - 1000];
+          if (x && isFinite(+x.lat) && isFinite(+x.lng)) { lat = +x.lat; lng = +x.lng; }
+        }
+        if (lat == null){
+          if (String(c[2]||'').indexOf('مسجدسلیمان') >= 0 || String(c[1]||'').indexOf('مسجدسلیمان') >= 0){
+            lat = 31.9364; lng = 49.3039;
+          } else { lat = 31.9364; lng = 49.3039; }
+        }
+        places.push({ name: c[1], lat, lng });
+      });
+      const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.9364, lng:49.3039 };
+      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16 });
+    })();
   }
 
   /* ═══════════ صفحه: رکوردها ═══════════ */

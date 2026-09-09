@@ -445,3 +445,8 @@ html.phone-mode .pa-row-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !impo
 html.phone-mode .pa-row{padding:10px}
 html.phone-mode .pa-club{padding:8px 4px}
 html.phone-mode .pa-club img{width:60px;height:60px}
+
+html.phone-mode .earth-map{height:260px;border-radius:12px}
+html.phone-mode .earth-tools{gap:6px}
+html.phone-mode .earth-tools .btn{flex:1 1 auto}
+html.phone-mode .earth-tools .input{width:100% !important;flex:1 1 100%}

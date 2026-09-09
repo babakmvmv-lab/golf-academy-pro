@@ -92,7 +92,8 @@
     destroy();
     if (!el) return;
     opts = opts || {};
-    const center = opts.center || { lat: 31.9364, lng: 49.3039 };
+    const mis0 = (window.MIS_GOLF && MIS_GOLF.points && MIS_GOLF.points[0]) || null;
+    const center = opts.center || (mis0 ? { lat: mis0.lat, lng: mis0.lng } : { lat: 31.90494, lng: 49.31398 });
     const places = Array.isArray(opts.places) ? opts.places : [];
 
     if (typeof L === 'undefined'){
@@ -162,7 +163,25 @@
       m.bindPopup(`<b>${esc(p.name || 'موقعیت')}</b><br><span dir="ltr">${(+p.lat).toFixed(5)}, ${(+p.lng).toFixed(5)}</span>`);
       return m;
     }
-    places.forEach(p => { if (p && isFinite(+p.lat) && isFinite(+p.lng)) addPlaceMarker(p, '#D4AF37'); });
+    if (window.MIS_GOLF){
+      const group = [];
+      (MIS_GOLF.polygons || []).forEach(function(p){
+        const poly = L.polygon(p.latlngs, { color:'#8fe3c4', weight:2, fillColor:'#1EBB8A', fillOpacity:0.32 });
+        poly.bindPopup('<b>'+esc(p.name)+'</b>');
+        poly.addTo(map); group.push(poly);
+      });
+      (MIS_GOLF.points || []).forEach(function(p){
+        const tee = p.kind === 'tee';
+        const m = L.marker([p.lat, p.lng], { icon: pinIcon(tee ? '#D4AF37' : '#42a5f5', tee ? 'T' : 'H') });
+        m.bindPopup('<b>'+esc(p.name)+'</b><br><span dir="ltr">'+p.lat.toFixed(5)+', '+p.lng.toFixed(5)+'</span>');
+        m.addTo(map); group.push(m);
+      });
+      if (group.length){
+        try { map.fitBounds(L.featureGroup(group).getBounds().pad(0.2), { maxZoom: 18 }); } catch (e) {}
+      }
+    } else {
+      places.forEach(p => { if (p && isFinite(+p.lat) && isFinite(+p.lng)) addPlaceMarker(p, '#D4AF37'); });
+    }
     loadPins().forEach(p => addPlaceMarker(p, '#7ee8b8'));
     renderPinList();
 

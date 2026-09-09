@@ -1613,12 +1613,12 @@
         }
         if (lat == null){
           if (String(c[2]||'').indexOf('مسجدسلیمان') >= 0 || String(c[1]||'').indexOf('مسجدسلیمان') >= 0){
-            lat = 31.9364; lng = 49.3039;
-          } else { lat = 31.9364; lng = 49.3039; }
+            lat = 31.90494; lng = 49.31398;
+          } else { lat = 31.90494; lng = 49.31398; }
         }
         places.push({ name: c[1], lat, lng });
       });
-      const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.9364, lng:49.3039 };
+      const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.90494, lng:49.31398 };
       EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16 });
     })();
   }

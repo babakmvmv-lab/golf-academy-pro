@@ -949,27 +949,40 @@
   /* ── 🧪 آنالیز بزرگ تمرین: به‌ازای هر گروه تمرین (افقی از هم جدا) و هر کلابِ آن گروه، یک دونات صاف/راست/چپ/خطا ── */
   /* دونات SVG به‌صورت data-URI: هم در صفحه و هم داخل HTML خروجی PDF (html2canvas رندرش می‌کند) */
   function paSvgDonut(counts, size, stroke){
-    const R = 34, CIRC = 2 * Math.PI * R;
-    const sw = stroke || 14;
+    /* PNG روی canvas — html2canvas SVG data-URI را ناقص (حالت C) می‌کشد */
+    const px = Math.max(48, size || 92);
+    const S = px * 2;
+    const cv = document.createElement('canvas');
+    cv.width = S; cv.height = S;
+    const ctx = cv.getContext('2d');
+    const cx = S / 2, cy = S / 2, R = S * 0.34, sw = ((stroke || 14) / 100) * S;
     const total = Math.max(1, (counts.straight|0) + (counts.slice|0) + (counts.hook|0) + (counts.miss|0));
+    ctx.lineWidth = sw;
+    ctx.lineCap = 'butt';
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.stroke();
     const parts = [['straight','#1EBB8A'],['slice','#2E86DE'],['hook','#E67E22'],['miss','#E74C3C']];
-    const used = parts.filter(pr2 => (counts[pr2[0]]|0) > 0);
-    let segs = '';
+    const used = parts.filter(pr => (counts[pr[0]]|0) > 0);
     if (used.length === 1){
-      segs = '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="' + used[0][1] + '" stroke-width="' + sw + '"/>';
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.strokeStyle = used[0][1];
+      ctx.stroke();
     } else {
-      let acc = 0;
-      used.forEach(pr2 => {
-        const v = counts[pr2[0]] | 0;
-        const len = v / total * CIRC;
-        segs += '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="' + pr2[1] + '" stroke-width="' + sw + '" stroke-linecap="butt" stroke-dasharray="' + len.toFixed(3) + ' ' + (CIRC - len).toFixed(3) + '" stroke-dashoffset="' + (-acc).toFixed(3) + '"/>';
-        acc += len;
+      let a = -Math.PI / 2;
+      used.forEach(pr => {
+        const v = counts[pr[0]] | 0;
+        const span = v / total * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, a, a + span);
+        ctx.strokeStyle = pr[1];
+        ctx.stroke();
+        a += span;
       });
-      segs = '<g transform="rotate(-90 50 50)">' + segs + '</g>';
     }
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="' + R + '" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="' + sw + '"/>' + segs + '</svg>';
-    const px = size || 92;
-    return '<img width="' + px + '" height="' + px + '" style="display:block;margin:0 auto" src="data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) + '" alt="">';
+    return '<img width="' + px + '" height="' + px + '" style="display:block;margin:0 auto" src="' + cv.toDataURL('image/png') + '" alt="">';
   }
   function paTopRes(cl){
     let best = 'straight', bn = -1;

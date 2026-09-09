@@ -318,20 +318,28 @@
     wrap.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">💳</span><h3>${esc(L('settings.group.plans','پلن‌ها و اشتراک'))}</h3><span class="tag">سطح دسترسی سایت</span></div>
-      <div class="plan-hint">پلن فقط سطح دسترسی به صفحات سایت است — با نقش ورزشی/رنک قاطی نشود. قیمت بر پایهٔ یک‌ماه است؛ تخفیف هر مدت را دستی بگذارید. فرمول: ماهانه × ماه × (۱ − تخفیف٪). پرداخت آنلاین فعلاً نیست؛ ثبت دستی.</div>
+      <div class="plan-hint">پلن فقط سطح دسترسی به صفحات سایت است — با نقش ورزشی/رنک قاطی نشود. قیمت بر پایهٔ یک‌ماه است؛ تخفیف هر مدت را دستی بگذارید. سه بخش زیر با کلیک باز می‌شوند.</div>
     </div>
-    <div class="glass" style="margin-bottom:16px">
-      <div class="card-head"><span class="ic">💰</span><h3>قیمت پایهٔ یک‌ماه</h3><span class="tag">عدد</span></div>
-      <div id="sub-plan-prices"></div>
+    <div class="glass sub-acc" style="margin-bottom:16px">
+      <button type="button" class="sub-acc-head" aria-expanded="false">
+        <span class="ic">💰</span><h3>قیمت پایهٔ یک‌ماه</h3><span class="tag">عدد</span><span class="sub-acc-chev">▾</span>
+      </button>
+      <div class="sub-acc-body"><div id="sub-plan-prices"></div></div>
     </div>
-    <div class="glass" style="margin-bottom:16px">
-      <div class="card-head"><span class="ic">📆</span><h3>تخفیف مدت اشتراک</h3><span class="tag">۱ / ۳ / ۶ / ۱۲ ماه</span></div>
-      <div id="sub-cycles"></div>
+    <div class="glass sub-acc" style="margin-bottom:16px">
+      <button type="button" class="sub-acc-head" aria-expanded="false">
+        <span class="ic">📆</span><h3>تخفیف مدت اشتراک</h3><span class="tag">۱ / ۳ / ۶ / ۱۲ ماه</span><span class="sub-acc-chev">▾</span>
+      </button>
+      <div class="sub-acc-body"><div id="sub-cycles"></div></div>
     </div>
-    <div class="glass" style="margin-bottom:16px">
-      <div class="card-head"><span class="ic">☑️</span><h3>ماتریس پلن × صفحه</h3><span class="tag">پیش‌فرض: همه روشن</span></div>
-      <div class="plan-hint">هر تیک یعنی آن پلن آن صفحه را می‌بیند. مدیر اصلی همیشه bypass دارد.</div>
-      <div style="overflow-x:auto"><table class="plan-matrix" id="sub-matrix"></table></div>
+    <div class="glass sub-acc" style="margin-bottom:16px">
+      <button type="button" class="sub-acc-head" aria-expanded="false">
+        <span class="ic">☑️</span><h3>ماتریس پلن × صفحه</h3><span class="tag">پیش‌فرض: همه روشن</span><span class="sub-acc-chev">▾</span>
+      </button>
+      <div class="sub-acc-body">
+        <div class="plan-hint">هر تیک یعنی آن پلن آن صفحه را می‌بیند. مدیران bypass دارند.</div>
+        <div style="overflow-x:auto"><table class="plan-matrix" id="sub-matrix"></table></div>
+      </div>
     </div>`;
     host.appendChild(wrap);
 
@@ -394,12 +402,30 @@
       }));
     }
     drawPrices(); drawCycles(); drawMatrix();
+    wrap.querySelectorAll('.sub-acc-head').forEach(btn => btn.addEventListener('click', () => {
+      const box = btn.closest('.sub-acc');
+      const open = box.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }));
   }
 
-  function openSubModal(uname, onSaved){
+  function subActorHint(){
+    try {
+      const u = window.APP && APP.currentUser ? APP.currentUser() : '';
+      const n = (APP.users && APP.users.label) ? APP.users.label(u) : u;
+      return n ? ('ثبت‌کننده: ' + n) : '';
+    } catch(e){ return ''; }
+  }
+
+  function openSubModal(uname, onSaved, opt){
     if (!window.GA_SUB) return;
     const SUB = GA_SUB;
+    opt = opt || {};
+    const mode = opt.mode || 'create';
+    const editing = mode === 'edit' ? SUB.getById(opt.id) : null;
+    if (mode === 'edit' && !editing){ APP.toast('این اشتراک پیدا نشد', 'red'); return; }
     const cur = SUB.view(uname);
+    const live = editing ? SUB.viewRec(editing) : null;
     let m = $('#modal-edit');
     if (!m){
       m = document.createElement('div');
@@ -407,16 +433,25 @@
       m.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(4,8,14,.72);backdrop-filter:blur(6px)';
       document.body.appendChild(m);
     }
+    const selPlan = editing ? editing.plan : '';
+    const selMonths = editing ? (+editing.billing_cycle || 1) : 1;
     const planOpts = SUB.PLAN_ORDER.map(c => {
       const p = SUB.loadPlans()[c];
-      return `<option value="${c}" ${cur.plan===c?'selected':''}>${esc(p.nameEn)} — ${esc(p.nameFa)}</option>`;
+      return `<option value="${c}" ${selPlan===c?'selected':''}>${esc(p.nameEn)} — ${esc(p.nameFa)}</option>`;
     }).join('');
-    const cycOpts = SUB.loadCycles().map(c => `<option value="${c.months}" ${+cur.cycle===+c.months?'selected':''}>${D.fa(c.months)} ماه${c.discount? ' — '+D.fa(c.discount)+'٪ تخفیف':''}</option>`).join('');
+    const cycOpts = SUB.loadCycles().map(c => `<option value="${c.months}" ${+selMonths===+c.months?'selected':''}>${D.fa(c.months)} ماه${c.discount? ' — '+D.fa(c.discount)+'٪ تخفیف':''}</option>`).join('');
+    const title = mode === 'edit' ? 'ویرایش اشتراک' : 'ثبت اشتراک جدید';
+    const hasLive = !!(cur && cur.sub && !cur.staff);
+    const hint = mode === 'edit'
+      ? ('دورهٔ انتخاب‌شده ویرایش می‌شود. ' + subActorHint())
+      : (hasLive
+          ? ('این یوزر الان اشتراک دارد؛ ثبت جدید یک دورهٔ تازه اضافه می‌کند و قبلی را عوض نمی‌کند. ' + subActorHint())
+          : ('ثبت دستی بدون درگاه. ' + subActorHint()));
     m.innerHTML = `
-    <div class="glass gold-border" style="width:min(460px,94vw);padding:22px;max-height:92vh;overflow:auto">
-      <div class="card-head"><span class="ic">💳</span><h3>اشتراک — ${esc(uname)}</h3><span class="tag">${esc(cur.statusFa)}</span>
+    <div class="glass gold-border" style="width:min(480px,94vw);padding:22px;max-height:92vh;overflow:auto">
+      <div class="card-head"><span class="ic">💳</span><h3>${esc(title)} — ${esc(uname)}</h3><span class="tag">${esc(mode==='edit'?(live?live.statusFa:''): (hasLive?'افزودن دوره':'جدید'))}</span>
         <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px">✕</button></div>
-      <div class="plan-hint">وضعیت فعلی: <b>${esc(cur.nameEn)}</b> — ${esc(cur.statusFa)} — تمدید: ${esc(cur.endFa)}</div>
+      <div class="plan-hint">${esc(hint)}</div>
       <div class="field-grid" style="margin-top:12px">
         <div class="span2"><label>پلن</label><select class="sel" id="sub-m-plan" style="width:100%">${planOpts}</select></div>
         <div class="span2"><label>مدت</label><select class="sel" id="sub-m-months" style="width:100%">${cycOpts}</select></div>
@@ -424,7 +459,7 @@
       <div id="sub-m-price" class="plan-hint" style="margin-top:10px"></div>
       <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end">
         <button class="btn sm ghost" id="sub-m-cancel">بستن</button>
-        <button class="btn sm" id="sub-m-save">💾 ثبت دستی اشتراک</button>
+        <button class="btn sm" id="sub-m-save">${mode==='edit'?'💾 ذخیره ویرایش':'💾 ثبت اشتراک جدید'}</button>
       </div>
     </div>`;
     m.style.display = 'flex';
@@ -440,13 +475,97 @@
     preview();
     $('#sub-m-cancel').addEventListener('click', () => m.style.display = 'none');
     $('#sub-m-save').addEventListener('click', () => {
-      const rec = (window.APP && APP.users) ? APP.users.list().find(x => String(x.user).toLowerCase() === String(uname).toLowerCase()) : null;
-      SUB.assign(uname, { plan: $('#sub-m-plan').value, months: +$('#sub-m-months').value || 1, user_id: rec ? rec.id : null, payment_status: 'manual' });
+      const recU = (window.APP && APP.users) ? APP.users.list().find(x => String(x.user).toLowerCase() === String(uname).toLowerCase()) : null;
+      const plan = $('#sub-m-plan').value;
+      const months = +$('#sub-m-months').value || 1;
+      const start = mode === 'edit' ? (editing.start_date || SUB.todayISO()) : SUB.todayISO();
+      const end = SUB.addMonthsISO(start, months);
+      const st = plan === 'trial' ? 'trial' : 'active';
+      if (mode === 'edit'){
+        SUB.updateById(editing.id, { plan, billing_cycle: months, end_date: end, status: st, user_id: recU ? recU.id : editing.user_id });
+        APP.toast('اشتراک ویرایش شد ✓', 'green');
+      } else {
+        SUB.assign(uname, { plan, months, user_id: recU ? recU.id : null, payment_status: 'manual' });
+        APP.toast('اشتراک جدید برای «' + uname + '» ثبت شد ✓', 'green');
+      }
       m.style.display = 'none';
       if (typeof onSaved === 'function') onSaved();
       try { if (window.APP && APP.currentUser) GA_SUB.paintSide(APP.currentUser()); } catch (e) {}
-      APP.toast('اشتراک «' + uname + '» ثبت شد ✓', 'green');
     });
+    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+  }
+
+  function openSubStatusModal(uname, onSaved){
+    if (!window.GA_SUB) return;
+    const SUB = GA_SUB;
+    let m = $('#modal-edit');
+    if (!m){
+      m = document.createElement('div');
+      m.id = 'modal-edit';
+      m.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(4,8,14,.72);backdrop-filter:blur(6px)';
+      document.body.appendChild(m);
+    }
+    function paint(){
+      const hist = SUB.listOf(uname);
+      const cur = SUB.view(uname);
+      const staff = !!(SUB.isStaff && SUB.isStaff(uname));
+      const rows = hist.length ? hist.map(s => {
+        const v = SUB.viewRec(s);
+        const evs = (s.events || []).slice().reverse().map(ev => {
+          const act = ev.action === 'create' ? 'ثبت' : ev.action === 'edit' ? 'ویرایش' : ev.action === 'delete' ? 'حذف' : ev.action;
+          return `<div class="sub-ev">${esc(act)} — ${esc(ev.byName || ev.by || '—')} — ${esc(SUB.atFa ? SUB.atFa(ev.at) : ev.at)}${ev.reason ? ' — دلیل: '+esc(ev.reason) : ''}</div>`;
+        }).join('');
+        const gone = !!(s.deleted_at || s.status === 'deleted');
+        return `<tr class="${gone?'off-row':''}">
+          <td><b style="color:var(--gold-l)">${esc(v.nameEn)}</b><div class="muted-sm">${D.fa(s.billing_cycle||1)} ماه</div></td>
+          <td>${esc(v.startFa)}<div class="muted-sm">تا ${esc(v.endFa)}</div></td>
+          <td><span class="chip ${gone?'red':(v.on?'green':'red')}">${esc(v.statusFa)}</span>${gone && s.delete_reason ? '<div class="muted-sm">دلیل: '+esc(s.delete_reason)+'</div>' : ''}</td>
+          <td class="muted-sm">${esc(s.created_by_name || s.created_by || '—')}<div>${esc(SUB.atFa ? SUB.atFa(s.created_at) : (s.created_at||''))}</div></td>
+          <td>
+            ${gone ? '' : `<div class="row-actions">
+              <button class="btn sm ghost" data-ed="${esc(s.id)}">✏️ ویرایش</button>
+              <button class="btn sm danger" data-del="${esc(s.id)}">🗑 حذف</button>
+            </div>`}
+            <div class="sub-evs">${evs || '<span class="muted-sm">بدون رویداد</span>'}</div>
+          </td>
+        </tr>`;
+      }).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">سابقه‌ای ثبت نشده</td></tr>`;
+      m.innerHTML = `
+      <div class="glass gold-border" style="width:min(860px,96vw);padding:22px;max-height:92vh;overflow:auto">
+        <div class="card-head"><span class="ic">📋</span><h3>وضعیت اشتراک — ${esc(uname)}</h3>
+          <span class="tag">${staff ? 'مدیر — بدون نیاز به اشتراک' : esc(cur.statusFa)}</span>
+          <button type="button" class="btn sm ghost" id="sub-st-x" style="padding:2px 9px;font-size:15px">✕</button></div>
+        <div class="plan-hint">${staff ? 'مدیران نیاز به اشتراک ندارند.' : ('وضعیت جاری: <b>'+esc(cur.nameEn)+'</b> — '+esc(cur.statusFa)+(cur.endFa && cur.endFa!=='—' ? ' — تمدید: '+esc(cur.endFa) : ''))}</div>
+        <div class="form-section" style="margin-top:12px">سوابق اشتراک</div>
+        <div style="overflow-x:auto"><table class="tbl"><thead><tr>
+          <th>پلن</th><th>بازه</th><th>وضعیت</th><th>ثبت‌کننده</th><th>رویداد / عملیات</th>
+        </tr></thead><tbody>${rows}</tbody></table></div>
+        <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;flex-wrap:wrap">
+          <button class="btn sm ghost" id="sub-st-close">بستن</button>
+          <button class="btn sm" id="sub-st-add">➕ ثبت اشتراک جدید</button>
+        </div>
+      </div>`;
+      m.style.display = 'flex';
+      const close = () => { m.style.display = 'none'; };
+      const x = m.querySelector('#sub-st-x'); if (x) x.onclick = close;
+      const c = m.querySelector('#sub-st-close'); if (c) c.onclick = close;
+      const add = m.querySelector('#sub-st-add');
+      if (add) add.onclick = () => openSubModal(uname, () => { if (onSaved) onSaved(); paint(); }, { mode: 'create' });
+      m.querySelectorAll('[data-ed]').forEach(b => b.addEventListener('click', () => {
+        openSubModal(uname, () => { if (onSaved) onSaved(); paint(); }, { mode: 'edit', id: b.dataset.ed });
+      }));
+      m.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+        const reason = prompt('دلیل حذف این اشتراک را بنویس (الزامی):');
+        if (reason == null) return;
+        const r = SUB.softDelete(b.dataset.del, reason);
+        if (!r.ok){ APP.toast(r.err || 'حذف نشد', 'red'); return; }
+        APP.toast('اشتراک حذف شد — در سوابق مانده ✓', 'orange');
+        if (onSaved) onSaved();
+        try { if (window.APP && APP.currentUser) GA_SUB.paintSide(APP.currentUser()); } catch (e) {}
+        paint();
+      }));
+    }
+    paint();
     m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
   }
 
@@ -455,7 +574,7 @@
     v.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:18px">
       <div class="card-head"><span class="ic">💳</span><h3>${esc(L('nav.subs','اشتراک‌ها'))}</h3><span class="tag">پلن و دسترسی سایت</span></div>
-      <div class="plan-hint">پلن فقط سطح دسترسی به صفحات سایت است — جدا از بازیکن و رنک. قیمت پایه یک‌ماه است؛ تخفیف مدت را دستی بگذارید. پرداخت آنلاین فعلاً نیست.</div>
+      <div class="plan-hint">پلن فقط سطح دسترسی به صفحات سایت است — جدا از بازیکن و رنک. قیمت و ماتریس را از بخش‌های بازشو تنظیم کنید. مدیران نیاز به اشتراک ندارند.</div>
     </div>
     <div id="sub-catalog"></div>
     <div id="sub-userlist"></div>`;
@@ -471,24 +590,29 @@
     host.innerHTML = `
     <div class="glass">
       <div class="card-head"><span class="ic">👤</span><h3>اشتراک یوزرها</h3><span class="tag">${D.fa(rows.length)} یوزر</span></div>
-      <div class="plan-hint">اشتراک روی یوزر است نه بازیکن. دکمهٔ «ثبت اشتراک» پلن و مدت را دستی می‌گذارد.</div>
+      <div class="plan-hint">ثبت اشتراک اگر دورهٔ قبلی باشد، دورهٔ تازه اضافه می‌کند. وضعیت اشتراک = سوابق، ویرایش و حذف (با دلیل).</div>
       <div style="overflow-x:auto;margin-top:10px"><table class="tbl"><thead><tr>
         <th>نام</th><th>یوزر</th><th>پلن</th><th>وضعیت</th><th>تمدید</th><th></th>
       </tr></thead><tbody>
         ${rows.map(u => {
+          const staff = window.GA_SUB && GA_SUB.isStaff && GA_SUB.isStaff(u.user);
           const v = window.GA_SUB ? GA_SUB.view(u.user) : null;
           return `<tr class="${u.active?'':'off-row'}">
-            <td><b>${esc(u.name || u.user)}</b> ${u.main?'<span class="chip gold">مدیر اصلی</span>':''}</td>
+            <td><b>${esc(u.name || u.user)}</b> ${u.main?'<span class="chip gold">مدیر اصلی</span>': (u.role==='admin'?'<span class="chip gold">مدیر</span>':'')}</td>
             <td style="direction:ltr">${esc(u.user)}</td>
-            <td>${v ? '<b style="color:var(--gold-l)">'+esc(v.nameEn)+'</b>' : '—'}</td>
-            <td>${v ? '<span class="chip '+(v.on?'green':'red')+'">'+esc(v.statusFa)+'</span>' : '—'}</td>
-            <td>${v ? esc(v.endFa)+'<div class="muted-sm">'+(v.days<0?(D.fa(Math.abs(v.days))+' روز گذشته'):(D.fa(v.days)+' روز باقی'))+'</div>' : '—'}</td>
-            <td><button class="btn sm ghost" data-sub="${esc(u.user)}">💳 ثبت اشتراک</button></td>
+            <td>${staff ? '<b style="color:var(--gold-l)">فعال</b>' : (v ? '<b style="color:var(--gold-l)">'+esc(v.nameEn)+'</b>' : '—')}</td>
+            <td>${staff ? '<span class="chip green">فعال</span>' : (v ? '<span class="chip '+(v.on?'green':'red')+'">'+esc(v.statusFa)+'</span>' : '—')}</td>
+            <td>${staff ? '—' : (v && v.sub ? esc(v.endFa)+'<div class="muted-sm">'+(v.days<0?(D.fa(Math.abs(v.days))+' روز گذشته'):(D.fa(v.days)+' روز باقی'))+'</div>' : '—')}</td>
+            <td><div class="row-actions">
+              <button class="btn sm ghost" data-sub="${esc(u.user)}">💳 ثبت اشتراک</button>
+              <button class="btn sm ghost" data-subst="${esc(u.user)}">📋 وضعیت اشتراک</button>
+            </div></td>
           </tr>`;
         }).join('')}
       </tbody></table></div>
     </div>`;
-    host.querySelectorAll('[data-sub]').forEach(b => b.addEventListener('click', () => openSubModal(b.dataset.sub, () => renderSubUserList(host))));
+    host.querySelectorAll('[data-sub]').forEach(b => b.addEventListener('click', () => openSubModal(b.dataset.sub, () => renderSubUserList(host), { mode:'create' })));
+    host.querySelectorAll('[data-subst]').forEach(b => b.addEventListener('click', () => openSubStatusModal(b.dataset.subst, () => renderSubUserList(host))));
   }
 
   /* ═══════════════ صفحه: پلن مدیریت (تب‌ها) ═══════════════ */
@@ -3833,13 +3957,14 @@
               <option value="member" ${u.role==='member'?'selected':''}>👤 عضو</option>
             </select>`}
           </td>
-          <td>${(window.GA_SUB ? (function(){ var v=GA_SUB.view(u.user); return v ? '<b style="color:var(--gold-l)">'+esc(v.nameEn)+'</b>' : '—'; })() : '—')}</td>
-          <td>${(window.GA_SUB ? (function(){ var v=GA_SUB.view(u.user); if(!v||!v.sub) return '—';
+          <td>${(window.GA_SUB ? (function(){ if(GA_SUB.isStaff && GA_SUB.isStaff(u.user)) return '<b style="color:var(--gold-l)">فعال</b>'; var v=GA_SUB.view(u.user); return v ? '<b style="color:var(--gold-l)">'+esc(v.nameEn)+'</b>' : '—'; })() : '—')}</td>
+          <td>${(window.GA_SUB ? (function(){ if(GA_SUB.isStaff && GA_SUB.isStaff(u.user)) return '<span class="chip green">فعال</span>'; var v=GA_SUB.view(u.user); if(!v||!v.sub) return '—';
             return '<span class="chip '+(v.on?'green':'red')+'">'+esc(v.statusFa)+'</span><div class="muted-sm">'+(v.days<0 ? (D.fa(Math.abs(v.days))+' روز گذشته') : (D.fa(v.days)+' روز'))+' · '+esc(v.endFa)+'</div>'; })() : '—')}</td>
           <td>${u.main ? '<span class="chip green">فعال</span>' : `
             <label class="switch"><input type="checkbox" class="us-act" data-id="${u.id}" ${u.active?'checked':''}><span class="trk"></span></label>`}</td>
           <td><div class="row-actions">
-            <button class="btn sm ghost" data-sub="${esc(u.user)}">💳 اشتراک</button>
+            <button class="btn sm ghost" data-sub="${esc(u.user)}">💳 ثبت اشتراک</button>
+            <button class="btn sm ghost" data-subst="${esc(u.user)}">📋 وضعیت اشتراک</button>
             <button class="btn sm ghost" data-pw="${u.id}" ${u.main?'disabled':''}>🔑 یوزر و رمز</button>
             ${u.main ? '' : `<button class="btn sm danger" data-del="${u.id}">🗑</button>`}
           </div></td>
@@ -3865,7 +3990,8 @@
         APP.toast((u.active ? 'یوزر «' + u.name + '» فعال شد ✓' : 'یوزر «' + u.name + '» غیرفعال شد ⛔ — دیگر نمی‌تواند وارد شود'), u.active ? 'green' : 'orange');
       }));
       $$('#us-rows [data-pw]').forEach(b => b.addEventListener('click', () => pwModal(+b.dataset.pw)));
-      $$('#us-rows [data-sub]').forEach(b => b.addEventListener('click', () => subModal(b.dataset.sub)));
+      $$('#us-rows [data-sub]').forEach(b => b.addEventListener('click', () => openSubModal(b.dataset.sub, render, { mode:'create' })));
+      $$('#us-rows [data-subst]').forEach(b => b.addEventListener('click', () => openSubStatusModal(b.dataset.subst, render)));
       $$('#us-rows [data-del]').forEach(b => b.addEventListener('click', () => {
         const id = +b.dataset.del;
         const a = U.list(); const u = a.find(x => x.id === id);
@@ -4049,7 +4175,7 @@
         const id = Math.max(0, ...a.map(x => x.id)) + 1;
         a.push({ id, user, pass, name, role: $('#nu-role').value, active: true });
         U.save(a);
-        if (window.GA_SUB){
+        if (window.GA_SUB && $('#nu-role').value !== 'admin'){
           const plan = ($('#nu-plan') && $('#nu-plan').value) || 'trial';
           const months = ($('#nu-months') && +$('#nu-months').value) || 1;
           GA_SUB.assign(user, { plan, months, user_id: id, payment_status: 'manual' });

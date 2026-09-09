@@ -304,3 +304,12 @@ tr.off-row{opacity:.5}
 .plan-matrix th:first-child,.plan-matrix td:first-child{text-align:right;white-space:nowrap;font-weight:700}
 .plan-matrix th{color:var(--gold-l);font-size:10.5px}
 .plan-hint{font-size:11.5px;color:var(--muted);line-height:1.9;margin-top:6px}
+.sub-acc-head{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:0;color:inherit;cursor:pointer;padding:0;text-align:right;font:inherit}
+.sub-acc-head h3{flex:1;margin:0;font-size:15px;font-weight:800;text-align:right}
+.sub-acc-chev{margin-right:auto;font-size:16px;color:var(--gold-l);transition:transform .2s;line-height:1}
+.sub-acc.open .sub-acc-chev{transform:rotate(180deg)}
+.sub-acc-body{display:none;margin-top:12px}
+.sub-acc.open .sub-acc-body{display:block}
+.sub-evs{margin-top:6px;font-size:10.5px;color:var(--muted);line-height:1.7}
+.sub-ev{padding:2px 0}
+.muted-sm{font-size:10.5px;color:var(--muted);margin-top:2px}

@@ -2,7 +2,7 @@
    پات کلاب — اشتراک یوزر (جدا از بازیکن)
    User ⇄ Subscription ⇄ Plan
    بازیکن می‌تواند در دیتا باشد بدون یوزر/اشتراک.
-   ورود به پنل فقط با یوزر فعال + اشتراک معتبر.
+   ورود به پنل فقط با یوزر فعال + اشتراک معتبر (مدیران معاف‌اند).
    ═══════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -20,7 +20,6 @@
     business:       { code: 'business',       nameEn: 'Business',      nameFa: 'بیزینس' },
     enterprise:     { code: 'enterprise',     nameEn: 'Enterprise',    nameFa: 'اینترپرایز' }
   };
-  /* مدت‌ها — تخفیف پیش‌فرض همان اعداد قبلی؛ ادمین در تنظیمات عوض می‌کند */
   var CYCLE_DEF = [
     { months: 1,  discount: 0 },
     { months: 3,  discount: 10 },
@@ -113,11 +112,37 @@
 
   function ukey(u) { return String(u || '').toLowerCase(); }
 
-  function of(user) {
-    var k = ukey(user);
-    var mine = list().filter(function (s) { return ukey(s.user) === k; })
-      .sort(function (a, b) { return String(b.start_date || '').localeCompare(String(a.start_date || '')); });
-    return mine[0] || null;
+  function recOfUser(user) {
+    try {
+      if (window.APP && APP.users && APP.users.rec) return APP.users.rec(user);
+    } catch (e) {}
+    return null;
+  }
+  function isStaff(user) {
+    var rec = recOfUser(user);
+    return !!(rec && (rec.main || rec.role === 'admin'));
+  }
+  function actor() {
+    try {
+      if (window.APP && APP.currentUser) {
+        var u = APP.currentUser();
+        var lab = (APP.users && APP.users.label) ? APP.users.label(u) : u;
+        return { user: ukey(u), name: lab || u || 'سیستم' };
+      }
+    } catch (e) {}
+    return { user: 'system', name: 'سیستم' };
+  }
+  function stamp(action, extra) {
+    var a = actor();
+    return Object.assign({
+      at: new Date().toISOString(),
+      by: a.user,
+      byName: a.name,
+      action: action
+    }, extra || {});
+  }
+  function newId() {
+    return 's' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
   }
 
   function addMonthsISO(iso, n) {
@@ -140,8 +165,13 @@
     return Math.ceil((e - new Date()) / 86400000);
   }
 
+  function isDeleted(sub) {
+    return !!(sub && (sub.deleted_at || sub.status === 'deleted'));
+  }
+
   function liveStatus(sub) {
     if (!sub) return 'none';
+    if (isDeleted(sub)) return 'deleted';
     if (sub.status === 'canceled') return 'canceled';
     var d = daysLeft(sub.end_date);
     if (d < 0) return 'expired';
@@ -150,13 +180,36 @@
     return 'active';
   }
 
+  function isLiveRec(s) {
+    if (!s || isDeleted(s) || s.status === 'canceled') return false;
+    var st = liveStatus(s);
+    return st === 'active' || st === 'trial';
+  }
+
+  function of(user) {
+    var k = ukey(user);
+    var mine = list().filter(function (s) { return ukey(s.user) === k && !isDeleted(s); });
+    var live = mine.filter(isLiveRec).sort(function (a, b) {
+      return String(b.end_date || '').localeCompare(String(a.end_date || ''));
+    });
+    if (live[0]) return live[0];
+    mine.sort(function (a, b) { return String(b.start_date || '').localeCompare(String(a.start_date || '')); });
+    return mine[0] || null;
+  }
+
+  function listOf(user) {
+    var k = ukey(user);
+    return list().filter(function (s) { return ukey(s.user) === k; }).sort(function (a, b) {
+      return String(b.created_at || b.start_date || '').localeCompare(String(a.created_at || a.start_date || ''));
+    });
+  }
+
+  function getById(id) {
+    return list().find(function (s) { return s.id === id; }) || null;
+  }
+
   function isAllowed(user) {
-    /* مدیر اصلی قفل نمی‌شود تا بتواند اشتراک را تمدید کند */
-    try {
-      if (window.APP && APP.users && APP.users.isMain && APP.users.isMain(user)) return true;
-      var rec = window.APP && APP.users && APP.users.rec ? APP.users.rec(user) : null;
-      if (rec && rec.main) return true;
-    } catch (e) {}
+    if (isStaff(user)) return true;
     var sub = of(user);
     var st = liveStatus(sub);
     return st === 'active' || st === 'trial';
@@ -164,10 +217,7 @@
 
   function canPage(user, page) {
     if (!page) return true;
-    try {
-      var rec = window.APP && APP.users && APP.users.rec ? APP.users.rec(user) : null;
-      if (rec && rec.main) return true;
-    } catch (e) {}
+    if (isStaff(user)) return true;
     var sub = of(user);
     var plan = (sub && sub.plan) || 'trial';
     var f = featuresOf(plan);
@@ -195,13 +245,33 @@
     } catch (e) { return String(iso || ''); }
   }
 
+  function atFa(iso) {
+    if (!iso) return '—';
+    try {
+      var d = new Date(iso);
+      var datePart = endFa(d.toISOString().slice(0, 10));
+      var hh = String(d.getHours()).padStart(2, '0');
+      var mm = String(d.getMinutes()).padStart(2, '0');
+      return datePart + ' ' + fa(hh) + ':' + fa(mm);
+    } catch (e) { return String(iso); }
+  }
+
+  function statusFaOf(st) {
+    return { none: 'بدون اشتراک', expired: 'منقضی', canceled: 'لغو شده', past_due: 'در انتظار پرداخت', trial: 'آزمایشی', active: 'فعال', deleted: 'حذف‌شده' }[st] || st;
+  }
+
   function view(user) {
+    if (isStaff(user)) {
+      return {
+        sub: null, plan: null, nameEn: 'فعال', nameFa: 'فعال',
+        status: 'active', statusFa: 'فعال', on: true, days: 0, endFa: '—', cycle: 0, staff: true
+      };
+    }
     var sub = of(user);
     var plans = loadPlans();
     var plan = sub ? (plans[sub.plan] || PLAN_DEF[sub.plan] || PLAN_DEF.professional) : null;
     var st = liveStatus(sub);
     var days = sub ? daysLeft(sub.end_date) : 0;
-    var stFa = { none: 'بدون اشتراک', expired: 'منقضی', canceled: 'لغو شده', past_due: 'در انتظار پرداخت', trial: 'آزمایشی', active: 'فعال' }[st] || st;
     var on = st === 'active' || st === 'trial';
     return {
       sub: sub,
@@ -209,36 +279,45 @@
       nameEn: plan ? plan.nameEn : '—',
       nameFa: plan ? plan.nameFa : '—',
       status: st,
-      statusFa: stFa,
+      statusFa: statusFaOf(st),
       on: on,
       days: days,
       endFa: sub ? endFa(sub.end_date) : '—',
-      cycle: sub ? (+sub.billing_cycle || 1) : 1
+      cycle: sub ? (+sub.billing_cycle || 1) : 1,
+      staff: false
     };
   }
 
-  function upsert(rec) {
-    var a = list();
-    var k = ukey(rec.user);
-    var i = a.findIndex(function (s) { return ukey(s.user) === k; });
-    rec.user = k;
-    if (!rec.id) rec.id = 's' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
-    if (i >= 0) a[i] = Object.assign({}, a[i], rec);
-    else a.push(rec);
-    saveList(a);
-    return rec;
+  function viewRec(sub) {
+    if (!sub) return null;
+    var plans = loadPlans();
+    var plan = plans[sub.plan] || PLAN_DEF[sub.plan] || PLAN_DEF.professional;
+    var st = liveStatus(sub);
+    return {
+      rec: sub,
+      nameEn: plan.nameEn,
+      nameFa: plan.nameFa,
+      status: st,
+      statusFa: statusFaOf(st),
+      on: st === 'active' || st === 'trial',
+      days: daysLeft(sub.end_date),
+      startFa: endFa(sub.start_date),
+      endFa: endFa(sub.end_date)
+    };
   }
 
   function assign(user, opt) {
     opt = opt || {};
+    var a = actor();
     var plan = opt.plan || 'trial';
     var months = +opt.billing_cycle || +opt.months || 1;
     var start = opt.start_date || todayISO();
     var end = opt.end_date || addMonthsISO(start, months);
     var st = opt.status;
     if (!st) st = (plan === 'trial') ? 'trial' : 'active';
-    return upsert({
-      user: user,
+    var rec = {
+      id: newId(),
+      user: ukey(user),
       user_id: opt.user_id || null,
       plan: plan,
       status: st,
@@ -246,18 +325,73 @@
       end_date: end,
       billing_cycle: months,
       auto_renew: !!opt.auto_renew,
-      payment_status: opt.payment_status || 'manual'
-    });
+      payment_status: opt.payment_status || 'manual',
+      created_at: new Date().toISOString(),
+      created_by: a.user,
+      created_by_name: a.name,
+      events: [stamp('create', { plan: plan, months: months, start: start, end: end })]
+    };
+    var all = list();
+    all.push(rec);
+    saveList(all);
+    return rec;
   }
 
-  /* یوزرهای فعلی بدون اشتراک → Professional دوازده‌ماهه تا سایت زنده قفل نشود */
+  function updateById(id, patch) {
+    var a = actor();
+    var all = list();
+    var i = all.findIndex(function (s) { return s.id === id; });
+    if (i < 0) return null;
+    if (isDeleted(all[i])) return all[i];
+    var before = {
+      plan: all[i].plan, start_date: all[i].start_date, end_date: all[i].end_date,
+      billing_cycle: all[i].billing_cycle, status: all[i].status
+    };
+    all[i] = Object.assign({}, all[i], patch, {
+      updated_at: new Date().toISOString(),
+      updated_by: a.user,
+      updated_by_name: a.name
+    });
+    if (!all[i].events) all[i].events = [];
+    all[i].events.push(stamp('edit', {
+      before: before,
+      after: {
+        plan: all[i].plan, start_date: all[i].start_date, end_date: all[i].end_date,
+        billing_cycle: all[i].billing_cycle, status: all[i].status
+      }
+    }));
+    saveList(all);
+    return all[i];
+  }
+
+  function softDelete(id, reason) {
+    reason = String(reason || '').trim();
+    if (!reason) return { ok: false, err: 'دلیل حذف الزامی است.' };
+    var a = actor();
+    var all = list();
+    var i = all.findIndex(function (s) { return s.id === id; });
+    if (i < 0) return { ok: false, err: 'اشتراک پیدا نشد.' };
+    if (isDeleted(all[i])) return { ok: true, rec: all[i] };
+    all[i].status = 'deleted';
+    all[i].deleted_at = new Date().toISOString();
+    all[i].deleted_by = a.user;
+    all[i].deleted_by_name = a.name;
+    all[i].delete_reason = reason;
+    if (!all[i].events) all[i].events = [];
+    all[i].events.push(stamp('delete', { reason: reason }));
+    saveList(all);
+    return { ok: true, rec: all[i] };
+  }
+
   function ensureSeed(users) {
     var a = list();
     var changed = false;
     (users || []).forEach(function (u) {
       if (!u || !u.user) return;
+      if (u.main || u.role === 'admin') return;
       if (a.some(function (s) { return ukey(s.user) === ukey(u.user); })) return;
       var start = todayISO();
+      var ac = { user: 'system', name: 'سیستم' };
       a.push({
         id: 'sseed-' + ukey(u.user),
         user: ukey(u.user),
@@ -268,7 +402,11 @@
         end_date: addMonthsISO(start, 12),
         billing_cycle: 12,
         auto_renew: false,
-        payment_status: 'manual'
+        payment_status: 'manual',
+        created_at: new Date().toISOString(),
+        created_by: ac.user,
+        created_by_name: ac.name,
+        events: [{ at: new Date().toISOString(), by: ac.user, byName: ac.name, action: 'create', plan: 'professional', months: 12 }]
       });
       changed = true;
     });
@@ -280,6 +418,19 @@
     var box = document.getElementById('login-sub');
     if (!box) return;
     if (!user) { box.hidden = true; box.setAttribute('hidden', ''); return; }
+    if (isStaff(user)) {
+      box.hidden = false; box.removeAttribute('hidden');
+      box.classList.remove('expired');
+      var p0 = document.getElementById('login-sub-plan');
+      var s0 = document.getElementById('login-sub-st');
+      var d0 = document.getElementById('login-sub-days');
+      var e0 = document.getElementById('login-sub-end');
+      if (p0) p0.textContent = 'فعال';
+      if (s0) s0.innerHTML = '<span class="login-sub-dot on"></span> 🟢 فعال';
+      if (d0) d0.textContent = '';
+      if (e0) e0.textContent = '';
+      return;
+    }
     var v = view(user);
     if (!v.sub) { box.hidden = true; box.setAttribute('hidden', ''); return; }
     box.hidden = false; box.removeAttribute('hidden');
@@ -308,21 +459,32 @@
     var el = document.getElementById('hud-sub');
     if (!el) return;
     if (!user) { el.hidden = true; return; }
+    var planEl = document.getElementById('hud-sub-plan');
+    var daysEl = document.getElementById('hud-sub-days');
+    var dot = document.getElementById('hud-sub-dot');
+    if (isStaff(user)) {
+      el.hidden = false;
+      el.classList.remove('off');
+      if (dot) dot.classList.remove('off');
+      if (planEl) planEl.textContent = 'فعال';
+      if (daysEl) { daysEl.textContent = ''; daysEl.style.display = 'none'; }
+      el.title = 'مدیران نیاز به اشتراک ندارند';
+      el.onclick = function () {
+        try { if (window.APP && APP.go && APP.isAdmin && APP.isAdmin()) APP.go('subs'); } catch (e) {}
+      };
+      return;
+    }
+    if (daysEl) daysEl.style.display = '';
     var v = view(user);
     if (!v.sub) { el.hidden = true; return; }
     el.hidden = false;
     el.classList.toggle('off', !v.on);
-    var dot = document.getElementById('hud-sub-dot');
     if (dot) dot.classList.toggle('off', !v.on);
-    var planEl = document.getElementById('hud-sub-plan');
-    var daysEl = document.getElementById('hud-sub-days');
     if (planEl) planEl.textContent = v.nameEn;
     if (daysEl) daysEl.textContent = v.statusFa + ' · ' + remainText(v);
     el.title = v.nameEn + ' — ' + v.statusFa + ' — تمدید: ' + v.endFa;
     el.onclick = function () {
-      try {
-        if (window.APP && APP.go && APP.isAdmin && APP.isAdmin()) APP.go('subs');
-      } catch (e) {}
+      try { if (window.APP && APP.go && APP.isAdmin && APP.isAdmin()) APP.go('subs'); } catch (e) {}
     };
   }
 
@@ -331,6 +493,11 @@
     var el = document.getElementById('side-sub');
     if (!el) return;
     if (!user) { el.style.display = 'none'; return; }
+    if (isStaff(user)) {
+      el.style.display = '';
+      el.innerHTML = '<div class="side-sub-plan">فعال</div>';
+      return;
+    }
     var v = view(user);
     if (!v.sub) { el.style.display = 'none'; return; }
     el.style.display = '';
@@ -348,10 +515,11 @@
     loadPlans: loadPlans, savePlans: savePlans,
     loadCycles: loadCycles, saveCycles: saveCycles,
     loadFeatures: loadFeatures, saveFeatures: saveFeatures, featuresOf: featuresOf,
-    list: list, of: of, view: view, assign: assign, upsert: upsert,
-    isAllowed: isAllowed, canPage: canPage,
-    priceOf: priceOf, daysLeft: daysLeft, liveStatus: liveStatus,
-    addMonthsISO: addMonthsISO, todayISO: todayISO, endFa: endFa, faNum: faNum,
+    list: list, of: of, listOf: listOf, getById: getById, view: view, viewRec: viewRec,
+    assign: assign, updateById: updateById, softDelete: softDelete,
+    isAllowed: isAllowed, canPage: canPage, isStaff: isStaff,
+    priceOf: priceOf, daysLeft: daysLeft, liveStatus: liveStatus, statusFaOf: statusFaOf,
+    addMonthsISO: addMonthsISO, todayISO: todayISO, endFa: endFa, atFa: atFa, faNum: faNum,
     ensureSeed: ensureSeed,
     paintLogin: paintLogin, paintSide: paintSide, paintHud: paintHud
   };

@@ -264,11 +264,16 @@
     currentPage = page;
     $$('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
     renderMemberMobileNav(rec, page);
-    $('#view').innerHTML = '';
+    const viewEl = $('#view');
+    viewEl.innerHTML = '';
+    viewEl.classList.remove('phone-enter');
     const p = PAGES[page];
     $('#top-title').innerHTML = `${p.i} ${esc(p.t)}`;
     $('#top-crumb').textContent = page.startsWith('a') ? 'ابزار طراح / ' + p.t : L('group.dashboard','داشبورد') + ' / ' + p.t;
     RENDERERS[page]();
+    if (document.documentElement.classList.contains('phone-mode')){
+      requestAnimationFrame(() => { viewEl.classList.add('phone-enter'); });
+    }
     // برای اعضا، دکمه‌های مدیریتی صفحات نمایشی مخفی می‌شوند
     if (rec && rec.role === 'member' && page !== 'memberzone'){
       setTimeout(() => {

@@ -6,7 +6,13 @@
 if(location.protocol==='http:' && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
   location.replace('https://' + location.host + location.pathname + location.search + location.hash);
 }</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>
+(function(){function p(){var w=innerWidth||800,c=false,h=false;try{c=matchMedia("(pointer:coarse)").matches;h=matchMedia("(hover:none)").matches;}catch(e){}var u=/iPhone|iPod|Android.+Mobile|Windows Phone|webOS|BlackBerry/i.test(navigator.userAgent||"");return w<=820||(u&&w<=920)||(c&&h&&w<=900);}var on=p();document.documentElement.classList.toggle("phone-mode",on);document.documentElement.classList.toggle("site-mode",!on);})();
+</script>
 <!-- ═══ امنیت: CSP (فقط اسکریپت/استایل خودِ ما + CDN تأییدشدهٔ jsDelivr برای PDF)، قفل دامنه، حذف مجوزهای حساس ═══ -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.open-meteo.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -27,6 +33,7 @@ if(location.protocol==='http:' && !/^(localhost|127\.0\.0\.1)$/.test(location.ho
     <link rel="stylesheet" href="css/mgmt.css">
     <link rel="stylesheet" href="css/shop.css">
     <link rel="stylesheet" href="css/avatarland.css">
+    <link rel="stylesheet" href="css/phone.css">
 </head>
 <body>
 <div class="bg-mesh"></div>
@@ -133,6 +140,7 @@ if(location.protocol==='http:' && !/^(localhost|127\.0\.0\.1)$/.test(location.ho
 </div>
 <div id="nav-overlay"></div>
 
+    <script src="js/device.js"></script>
     <script src="js/cloud.js"></script>
     <script src="js/labels.js"></script>
     <script src="js/holidays.js"></script>

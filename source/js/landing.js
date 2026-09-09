@@ -202,6 +202,50 @@ var CSS = `
   #l3d-logo .lg-sub{font-size:11px}
   #l3d-dock{bottom:6px;padding:6px 8px}
 }
+html.phone-mode #l3d-dock{
+  left:12px; right:12px; width:auto; transform:none;
+  bottom:calc(12px + env(safe-area-inset-bottom, 0px));
+  display:grid; grid-template-columns:1fr 1fr; gap:12px;
+  padding:12px; border-radius:20px;
+}
+html.phone-mode #l3d-dock .di{
+  min-width:0; min-height:68px; padding:12px 8px; gap:6px; flex:none;
+  border-radius:16px;
+}
+html.phone-mode #l3d-dock .di .ic{font-size:24px}
+html.phone-mode #l3d-dock .di .tx{font-size:13px; font-weight:800}
+html.phone-mode #l3d-dock .di:hover{transform:none}
+html.phone-mode #l3d-panel{
+  left:0; right:0; top:auto; bottom:0; width:100%; max-width:none;
+  max-height:min(88dvh, 92%);
+  transform:translateY(110%);
+  border-radius:24px 24px 0 0;
+  padding:22px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  transition:transform .42s cubic-bezier(.22,.9,.28,1), opacity .32s ease;
+}
+html.phone-mode #l3d-panel.on{opacity:1; pointer-events:auto; transform:translateY(0)}
+html.phone-mode #l3d-pclose{width:44px; height:44px; top:10px; left:10px; font-size:18px}
+html.phone-mode #l3d-enter{
+  top:calc(10px + env(safe-area-inset-top, 0px));
+  min-height:44px; padding:10px 20px; font-size:14px; max-width:80vw;
+}
+html.phone-mode #l3d-enter:hover{transform:translateX(-50%)}
+html.phone-mode #l3d-panel .l3d-nav{
+  display:flex; flex-wrap:nowrap; overflow-x:auto; gap:8px; scrollbar-width:none;
+}
+html.phone-mode #l3d-panel .l3d-nav button{
+  flex:0 0 auto; min-height:42px; padding:8px 14px; font-size:12.5px;
+}
+html.phone-mode #l3d-panel .hd{gap:12px}
+html.phone-mode #l3d-panel .hd .ic{font-size:24px}
+html.phone-mode #l3d-panel .row{padding:12px 10px; font-size:13.5px}
+html.phone-mode #l3d-logo .lg-ch{font-size:28px; letter-spacing:2px}
+html.phone-mode #l3d-logo .lg-sub{font-size:12px; letter-spacing:2px; margin-top:10px}
+@media (orientation:landscape) and (max-height:500px){
+  html.phone-mode #l3d-dock{grid-template-columns:repeat(4,1fr); gap:8px; padding:8px}
+  html.phone-mode #l3d-dock .di{min-height:52px; padding:6px}
+  html.phone-mode #l3d-panel{max-height:94dvh}
+}
 `;
 
 var cssEl = document.createElement('style');

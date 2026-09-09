@@ -1,0 +1,293 @@
+/* ═══ حالت گوشی — فاصلهٔ راحت، هدف لمسی ۴۴px، بدون فشردگی آیکن ═══ */
+html.phone-mode{
+  --tap:46px;
+  --phone-gap:12px;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+html.phone-mode, html.phone-mode body{
+  min-height:100dvh;
+  overflow-x:hidden;
+  overscroll-behavior-x:none;
+  -webkit-tap-highlight-color:rgba(212,175,55,.16);
+  touch-action:manipulation;
+}
+html.phone-mode body.nav-open{overflow:hidden}
+
+/* ورودی‌ها حداقل ۱۶px تا iOS زوم نکند */
+html.phone-mode input,
+html.phone-mode select,
+html.phone-mode textarea{font-size:16px !important; min-height:var(--tap)}
+html.phone-mode .btn{
+  min-height:var(--tap);
+  padding:13px 16px;
+  font-size:15.5px;
+}
+html.phone-mode .btn.sm{min-height:42px; padding:10px 16px; width:auto}
+html.phone-mode .btn:hover{transform:none}
+
+/* ── ورود: برگه از پایین، نه کارت معلق دسکتاپ ── */
+html.phone-mode #login{
+  align-items:flex-end;
+  padding:0;
+}
+html.phone-mode #login .bg-img{animation:none; transform:scale(1.06); object-position:center 30%}
+html.phone-mode #login .login-card{
+  width:100%;
+  max-width:none;
+  border-radius:28px 28px 0 0;
+  padding:26px 20px calc(22px + env(safe-area-inset-bottom, 0px));
+  animation:phoneSheet .48s cubic-bezier(.22,.9,.28,1) both;
+  text-align:center;
+}
+@keyframes phoneSheet{
+  from{opacity:0; transform:translateY(36px)}
+  to{opacity:1; transform:none}
+}
+html.phone-mode .login-logo{width:84px; height:84px; margin-bottom:12px}
+html.phone-mode .login-card h1{font-size:22px; margin-bottom:18px}
+html.phone-mode .field{margin-bottom:14px}
+html.phone-mode .field input{padding:14px 16px; border-radius:14px}
+html.phone-mode .field .toggle-pass{top:40px; font-size:18px; padding:6px}
+html.phone-mode #particles{display:none}
+html.phone-mode .bg-mesh{animation:none}
+
+/* ── سایدبار: کشو با ردیف‌های جادار ── */
+html.phone-mode .menu-btn{
+  display:inline-flex !important;
+  align-items:center; justify-content:center;
+  width:46px; height:46px; flex:0 0 46px;
+  font-size:20px; border-radius:14px;
+}
+html.phone-mode .sidebar{
+  display:flex;
+  width:min(88vw, 320px);
+  right:calc(-1 * min(88vw, 320px));
+  z-index:95;
+  padding:14px 12px calc(18px + env(safe-area-inset-bottom, 0px));
+  box-shadow:0 0 60px rgba(0,0,0,.7);
+  transition:right .38s cubic-bezier(.22,.9,.28,1);
+}
+html.phone-mode body.nav-open .sidebar{right:0}
+html.phone-mode body.nav-open #nav-overlay{display:block}
+html.phone-mode .brand{gap:12px; padding:8px 8px 16px}
+html.phone-mode .brand .logo{width:48px; height:48px}
+html.phone-mode .nav-group{margin-top:12px; padding:10px 12px 6px; font-size:11px}
+html.phone-mode .nav-item{
+  min-height:48px;
+  gap:14px;
+  padding:12px 14px;
+  margin:3px 0;
+  font-size:15px;
+  border-radius:14px;
+}
+html.phone-mode .nav-item .ico{
+  width:28px; height:28px;
+  display:inline-flex; align-items:center; justify-content:center;
+}
+html.phone-mode .nav-item .ico svg.si{width:22px; height:22px}
+html.phone-mode .nav-item:hover{background:transparent; color:var(--muted)}
+html.phone-mode .nav-item.active,
+html.phone-mode .nav-item.active:hover{color:var(--gold-l)}
+html.phone-mode .side-foot{padding-top:12px}
+
+/* ── بدنه و تاپ‌بار ── */
+html.phone-mode #app{padding-top:env(safe-area-inset-top, 0px)}
+html.phone-mode .main{
+  margin-right:0;
+  padding:8px 12px calc(28px + env(safe-area-inset-bottom, 0px));
+}
+html.phone-mode .topbar{
+  position:sticky; top:0; z-index:40;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:8px;
+  margin-bottom:12px;
+  padding:6px 0 10px;
+  background:linear-gradient(180deg, rgba(11,15,20,.97) 40%, rgba(11,15,20,.78) 80%, transparent);
+}
+html.phone-mode .topbar > div:nth-child(2){flex:1; min-width:0}
+html.phone-mode .topbar h1{
+  font-size:16.5px;
+  display:flex; align-items:center; gap:8px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+html.phone-mode .topbar h1 svg.si{width:20px; height:20px; flex:none}
+html.phone-mode .topbar .crumb{font-size:11px; margin-top:2px}
+html.phone-mode .topbar .hud{
+  flex:0 1 auto;
+  max-width:48%;
+  width:auto;
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  gap:8px;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+html.phone-mode .topbar .hud::-webkit-scrollbar{display:none}
+html.phone-mode .hud-chip{
+  flex:0 0 auto;
+  min-height:40px;
+  padding:8px 12px;
+  gap:8px;
+  font-size:11.5px;
+  border-radius:12px;
+}
+html.phone-mode .hud-chip.hud-online{display:none !important}
+html.phone-mode .hud-chip.hud-sub{padding:7px 12px}
+
+/* نوار اعضا */
+html.phone-mode .member-mobile-nav.ready{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  overflow-x:auto;
+  padding:10px;
+  margin-bottom:14px;
+  scrollbar-width:none;
+}
+html.phone-mode .member-mobile-link{
+  min-height:44px;
+  padding:8px 14px;
+  gap:8px;
+  border-radius:12px;
+}
+html.phone-mode .member-mobile-link span{font-size:16px}
+html.phone-mode .member-mobile-link b{font-size:12px}
+
+/* انتقال صفحه */
+html.phone-mode #view.phone-enter{
+  animation:phoneView .36s cubic-bezier(.22,.9,.28,1) both;
+}
+@keyframes phoneView{
+  from{opacity:0; transform:translateY(12px)}
+  to{opacity:1; transform:none}
+}
+@media (prefers-reduced-motion: reduce){
+  html.phone-mode #view.phone-enter,
+  html.phone-mode #login .login-card{animation:none}
+}
+
+/* گریدها و کارت */
+html.phone-mode .grid{gap:12px}
+html.phone-mode .grid.cols-2,
+html.phone-mode .grid.cols-3,
+html.phone-mode .grid.cols-4,
+html.phone-mode .grid.cols-5{grid-template-columns:1fr !important}
+html.phone-mode .field-grid{grid-template-columns:1fr !important; gap:12px}
+html.phone-mode .field-grid .span2{grid-column:span 1 !important}
+html.phone-mode .glass{padding:16px 14px; border-radius:16px}
+html.phone-mode .glass.pad{padding:14px}
+html.phone-mode .card-head{gap:10px; margin-bottom:12px}
+html.phone-mode .card-head .ic{font-size:20px}
+html.phone-mode .card-head h3{font-size:15px}
+html.phone-mode .big-num{font-size:32px}
+html.phone-mode .hero-pano{height:132px}
+html.phone-mode .stat .val{font-size:20px !important}
+html.phone-mode .podium{transform:none}
+
+/* تب‌ها و تولبار: اسکرول افقی با فاصله، نه چسبیده */
+html.phone-mode .tabs,
+html.phone-mode .mgmt-tabs,
+html.phone-mode .seg{
+  display:flex;
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  gap:10px;
+  padding-bottom:8px;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+html.phone-mode .tabs::-webkit-scrollbar,
+html.phone-mode .mgmt-tabs::-webkit-scrollbar{display:none}
+html.phone-mode .tab,
+html.phone-mode .mgmt-tab,
+html.phone-mode .seg-btn{
+  flex:0 0 auto;
+  min-height:44px;
+  padding:10px 16px;
+  gap:10px;
+  font-size:13px;
+  border-radius:12px;
+}
+html.phone-mode .toolbar{gap:10px}
+html.phone-mode .toolbar .input,
+html.phone-mode .toolbar .sel,
+html.phone-mode .toolbar .btn{
+  min-width:0 !important;
+  min-height:44px;
+}
+html.phone-mode .toolbar .input,
+html.phone-mode .toolbar .sel{width:100% !important}
+
+/* جدول */
+html.phone-mode .table-wrap,
+html.phone-mode .rules-box{overflow-x:auto; -webkit-overflow-scrolling:touch; margin-inline:-2px}
+html.phone-mode .tbl th,
+html.phone-mode .tbl td{padding:10px 12px; font-size:12.5px}
+
+/* مودال = شیت پایین */
+html.phone-mode .modal{
+  padding:0;
+  align-items:flex-end;
+}
+html.phone-mode .modal .glass{
+  width:100%;
+  max-width:none;
+  max-height:92dvh;
+  border-radius:22px 22px 0 0;
+  padding:18px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
+/* تقویم / چارت / لیست */
+html.phone-mode .cal-main{grid-template-columns:1fr !important; gap:12px}
+html.phone-mode .chart-box{min-height:170px !important}
+html.phone-mode .h-item{flex-wrap:wrap; gap:10px}
+html.phone-mode .qrwrap{flex-direction:column; text-align:center; gap:12px}
+html.phone-mode .jdate-selects{gap:8px}
+
+/* فروشگاه */
+html.phone-mode .ashop{grid-template-columns:1fr !important; gap:14px}
+html.phone-mode .as-cats{
+  gap:10px !important;
+  padding-bottom:8px;
+}
+html.phone-mode .as-cat{
+  min-height:44px;
+  padding:10px 14px !important;
+  gap:8px;
+  font-size:13px !important;
+}
+html.phone-mode .as-grid{gap:12px !important}
+html.phone-mode .as-card{padding:12px}
+html.phone-mode .as-buy{min-height:42px; padding:10px 12px}
+
+/* سرزمین آواتار */
+html.phone-mode .al-hero-row{grid-template-columns:1fr !important}
+html.phone-mode .al-grid{grid-template-columns:repeat(2, minmax(0,1fr)) !important; gap:12px}
+
+/* امتیاز / ویزارد */
+html.phone-mode #score-wizard .sw-mini,
+html.phone-mode #score-wizard #sw-close{
+  min-height:42px;
+  padding:8px 12px !important;
+}
+html.phone-mode .chip{padding:8px 12px; min-height:36px}
+html.phone-mode .spk-wrap{padding:12px 12px 90px}
+html.phone-mode .grid.cols-2.sp-grid{grid-template-columns:1fr !important}
+
+/* لیبل‌ها و همگام */
+html.phone-mode .label-row{grid-template-columns:1fr !important}
+html.phone-mode .label-sync-grid{grid-template-columns:1fr !important}
+html.phone-mode .soc-add{flex-wrap:wrap; gap:10px}
+
+html.phone-mode .shop-grid{grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px}
+
+/* آیکن‌های عمومی داخل محتوا */
+html.phone-mode .ico,
+html.phone-mode [class$="-ic"]{flex:none}
+html.phone-mode .card-head,
+html.phone-mode .h-item,
+html.phone-mode .mgmt-tab{
+  align-items:center;
+}

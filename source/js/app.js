@@ -1686,7 +1686,7 @@
       const end = p.end ? D.dateFrom(p.end) : d;
       const type = TYPES.includes(p.type) ? p.type : 'کلاس';
       ev({ d, end, name: p.name || 'دوره', type, col: type==='تمرین'?'green':type==='اردو'?'orange':'purple', kind: type,
-           icon: TYPE_ICON[type] || '📌', extra: p.info ? esc(String(p.info)).slice(0,50) : 'دورهٔ فصل' });
+           icon: TYPE_ICON[type] || '📌', extra: p.info ? esc(String(p.info)) : 'دورهٔ فصل' });
     });
     // رویدادهای سفارشی (فقط ۴ نوع مجاز — بقیه نمایش داده نمی‌شوند)
     (MGMT.customEvents()||[]).forEach(e => {

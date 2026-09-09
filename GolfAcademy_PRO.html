@@ -1773,9 +1773,40 @@ html.phone-mode .cal-mini-nm{display:none}
 html.phone-mode .cal-mini-cnt{font-size:10px; font-weight:800; color:var(--gold-l); font-variant-numeric:tabular-nums}
 html.phone-mode .cal-mini-more{font-size:10px; margin:0}
 html.phone-mode .cal-grid-pane .card-head{flex-wrap:wrap; gap:8px}
-html.phone-mode .cal-list-pane{order:2}
+html.phone-mode .cal-list-pane{order:2; min-width:0}
 html.phone-mode .cal-grid-pane{order:1}
 html.phone-mode .cal-main{display:flex; flex-direction:column}
+html.phone-mode .cal-events-list{max-height:none; overflow:visible}
+html.phone-mode .cal-ev-item{
+  display:grid;
+  grid-template-columns:46px minmax(0,1fr);
+  grid-template-rows:auto auto;
+  align-items:start;
+  gap:6px 10px;
+  padding:10px;
+}
+html.phone-mode .cal-ev-date{grid-column:1; grid-row:1 / span 2; align-self:start}
+html.phone-mode .cal-ev-body{grid-column:2; grid-row:1; min-width:0}
+html.phone-mode .cal-ev-item > .chip{
+  grid-column:2; grid-row:2; justify-self:start;
+  font-size:10.5px; padding:3px 8px; margin:0;
+}
+html.phone-mode .cal-ev-body b{
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:unset !important;
+  word-break:break-word;
+  line-height:1.5;
+  font-size:13px;
+}
+html.phone-mode .cal-ev-sub{
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:unset !important;
+  word-break:break-word;
+  line-height:1.45;
+  margin-top:4px;
+}
 
 /* گزارش پایانی مسابقه */
 html.phone-mode #tour-report{
@@ -15088,7 +15119,7 @@ window.addEventListener('ga:brand-changed', function(){
       const end = p.end ? D.dateFrom(p.end) : d;
       const type = TYPES.includes(p.type) ? p.type : 'کلاس';
       ev({ d, end, name: p.name || 'دوره', type, col: type==='تمرین'?'green':type==='اردو'?'orange':'purple', kind: type,
-           icon: TYPE_ICON[type] || '📌', extra: p.info ? esc(String(p.info)).slice(0,50) : 'دورهٔ فصل' });
+           icon: TYPE_ICON[type] || '📌', extra: p.info ? esc(String(p.info)) : 'دورهٔ فصل' });
     });
     // رویدادهای سفارشی (فقط ۴ نوع مجاز — بقیه نمایش داده نمی‌شوند)
     (MGMT.customEvents()||[]).forEach(e => {

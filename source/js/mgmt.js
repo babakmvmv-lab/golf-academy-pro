@@ -592,7 +592,7 @@
     if (!host) return;
     const U = window.APP && APP.users;
     if (!U){ host.innerHTML = '<div class="glass">لیست یوزر در دسترس نیست.</div>'; return; }
-    const rows = U.list();
+    const rows = U.list().filter(u => !(u.main || u.role === 'admin' || (window.GA_SUB && GA_SUB.isStaff && GA_SUB.isStaff(u.user))));
     host.innerHTML = `
     <div class="glass">
       <div class="card-head"><span class="ic">👤</span><h3>اشتراک یوزرها</h3><span class="tag">${D.fa(rows.length)} یوزر</span></div>

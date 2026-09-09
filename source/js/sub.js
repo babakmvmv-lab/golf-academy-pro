@@ -145,23 +145,75 @@
     return 's' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
   }
 
-  function addMonthsISO(iso, n) {
-    var s = String(iso || '').slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-      var d0 = new Date();
-      s = d0.toISOString().slice(0, 10);
-    }
-    var d = new Date(s + 'T12:00:00');
-    var day = d.getDate();
-    d.setMonth(d.getMonth() + (+n || 1));
-    if (d.getDate() !== day) d.setDate(0);
-    return d.toISOString().slice(0, 10);
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function localDateISO(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
   }
-  function todayISO() { return new Date().toISOString().slice(0, 10); }
+  function localDateTimeISO(d) {
+    d = d || new Date();
+    return localDateISO(d) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+  }
+  function splitStamp(iso) {
+    var raw = String(iso || '');
+    var datePart = raw.slice(0, 10);
+    var timePart = '';
+    var t = raw.indexOf('T');
+    if (t >= 0) timePart = raw.slice(t + 1, t + 9);
+    if (timePart && timePart.length === 5) timePart += ':00';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) datePart = localDateISO();
+    return { date: datePart, time: /^\d{2}:\d{2}:\d{2}$/.test(timePart) ? timePart : '' };
+  }
+  /* طول ماه شمسی: ۱–۶ = ۳۱روز، ۷–۱۱ = ۳۰روز، اسفند = ۲۹ یا ۳۰ (کبیسه) */
+  function jalaliMonthLength(jy, jm) {
+    jm = +jm;
+    if (jm >= 1 && jm <= 6) return 31;
+    if (jm >= 7 && jm <= 11) return 30;
+    try {
+      if (window.Data && Data.j2d) return Data.j2d(+jy + 1, 1, 1) - Data.j2d(+jy, 12, 1);
+    } catch (e) {}
+    return 29;
+  }
+  /* یک ماه کامل شمسی: همان روز (و ساعت) تا همان روز ماه بعد — اگر آن روز در ماه بعد نبود، آخرین روز ماه */
+  function addMonthsISO(iso, n) {
+    n = +n || 1;
+    var st = splitStamp(iso);
+    var gy = +st.date.slice(0, 4), gm = +st.date.slice(5, 7), gd = +st.date.slice(8, 10);
+    var jy, jm, jd;
+    if (window.Data && Data.toJalaali) {
+      var j = Data.toJalaali(gy, gm, gd);
+      jy = j[0]; jm = j[1]; jd = j[2];
+    } else {
+      var dg = new Date(st.date + 'T12:00:00');
+      dg.setMonth(dg.getMonth() + n);
+      var outG = dg.getFullYear() + '-' + pad2(dg.getMonth() + 1) + '-' + pad2(dg.getDate());
+      return st.time ? (outG + 'T' + st.time) : outG;
+    }
+    jm += n;
+    while (jm > 12) { jy += 1; jm -= 12; }
+    while (jm < 1) { jy -= 1; jm += 12; }
+    var len = jalaliMonthLength(jy, jm);
+    if (jd > len) jd = len;
+    var outDate = Data.shamsiToISO(jy, jm, jd);
+    return st.time ? (outDate + 'T' + st.time) : outDate;
+  }
+  function todayISO() { return localDateISO(); }
+  function nowStamp() { return localDateTimeISO(); }
 
+  function endMoment(end) {
+    if (!end) return null;
+    if (typeof end === 'object') {
+      if (end.end_at) return new Date(end.end_at);
+      if (end.end_date) return new Date(String(end.end_date).slice(0, 10) + 'T23:59:59');
+      return null;
+    }
+    var s = String(end);
+    if (s.length > 10) return new Date(s);
+    return new Date(s.slice(0, 10) + 'T23:59:59');
+  }
   function daysLeft(end) {
-    if (!end) return 0;
-    var e = new Date(String(end).slice(0, 10) + 'T23:59:59');
+    var e = endMoment(end);
+    if (!e || isNaN(+e)) return 0;
     return Math.ceil((e - new Date()) / 86400000);
   }
 
@@ -173,7 +225,7 @@
     if (!sub) return 'none';
     if (isDeleted(sub)) return 'deleted';
     if (sub.status === 'canceled') return 'canceled';
-    var d = daysLeft(sub.end_date);
+    var d = daysLeft(sub);
     if (d < 0) return 'expired';
     if (sub.status === 'trial' || sub.plan === 'trial') return 'trial';
     if (sub.status === 'past_due') return 'past_due';
@@ -190,24 +242,28 @@
     var k = ukey(user);
     var end = '';
     list().forEach(function (s) {
-      if (ukey(s.user) !== k || !isLiveRec(s) || !s.end_date) return;
-      if (s.end_date > end) end = s.end_date;
+      if (ukey(s.user) !== k || !isLiveRec(s)) return;
+      var stamp = s.end_at || s.end_date;
+      if (!stamp) return;
+      if (String(stamp) > String(end)) end = stamp;
     });
     return end;
   }
-  /* شروع دورهٔ تازه = امروز، یا ته آخرین اشتراک فعال — تا مدت به زمان باقی‌مانده اضافه شود */
+  /* شروع دورهٔ تازه = الان، یا ته آخرین اشتراک فعال (همان روز و ساعت) */
   function nextStart(user) {
-    var today = todayISO();
+    var now = nowStamp();
     var end = latestLiveEnd(user);
-    if (end && end > today) return end;
-    return today;
+    if (end && String(end) > String(now)) return end;
+    return now;
   }
 
   function of(user) {
     var k = ukey(user);
     var mine = list().filter(function (s) { return ukey(s.user) === k && !isDeleted(s); });
     var live = mine.filter(isLiveRec).sort(function (a, b) {
-      return String(b.end_date || '').localeCompare(String(a.end_date || ''));
+      var ea = a.end_at || a.end_date || '';
+      var eb = b.end_at || b.end_date || '';
+      return String(eb).localeCompare(String(ea));
     });
     if (live[0]) return live[0];
     mine.sort(function (a, b) { return String(b.start_date || '').localeCompare(String(a.start_date || '')); });
@@ -288,7 +344,7 @@
     var plans = loadPlans();
     var plan = sub ? (plans[sub.plan] || PLAN_DEF[sub.plan] || PLAN_DEF.professional) : null;
     var st = liveStatus(sub);
-    var days = sub ? daysLeft(sub.end_date) : 0;
+    var days = sub ? daysLeft(sub) : 0;
     var on = st === 'active' || st === 'trial';
     return {
       sub: sub,
@@ -317,7 +373,7 @@
       status: st,
       statusFa: statusFaOf(st),
       on: st === 'active' || st === 'trial',
-      days: daysLeft(sub.end_date),
+      days: daysLeft(sub),
       startFa: endFa(sub.start_date),
       endFa: endFa(sub.end_date)
     };
@@ -328,8 +384,10 @@
     var a = actor();
     var plan = opt.plan || 'trial';
     var months = +opt.billing_cycle || +opt.months || 1;
-    var start = opt.start_date || nextStart(user);
-    var end = opt.end_date || addMonthsISO(start, months);
+    var startRaw = opt.start_at || opt.start_date || nextStart(user);
+    var endRaw = opt.end_at || opt.end_date || addMonthsISO(startRaw, months);
+    var start = String(startRaw).slice(0, 10);
+    var end = String(endRaw).slice(0, 10);
     var st = opt.status;
     if (!st) st = (plan === 'trial') ? 'trial' : 'active';
     var rec = {
@@ -340,13 +398,15 @@
       status: st,
       start_date: start,
       end_date: end,
+      start_at: String(startRaw),
+      end_at: String(endRaw),
       billing_cycle: months,
       auto_renew: !!opt.auto_renew,
       payment_status: opt.payment_status || 'manual',
       created_at: new Date().toISOString(),
       created_by: a.user,
       created_by_name: a.name,
-      events: [stamp('create', { plan: plan, months: months, start: start, end: end })]
+      events: [stamp('create', { plan: plan, months: months, start: startRaw, end: endRaw })]
     };
     var all = list();
     all.push(rec);

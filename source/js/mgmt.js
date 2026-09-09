@@ -469,11 +469,13 @@
       const pr = SUB.priceOf(plan, months);
       const faN = (n) => D.faNum ? D.faNum(n, 0) : String(n);
       let line = 'مبلغ این دوره (ثبت دستی، بدون درگاه): ' + faN(pr.pay) + '  —  ماهانه ' + faN(pr.monthly) + ' × ' + D.fa(months) + ' × (۱−' + D.fa(pr.discount) + '٪)';
-      if (mode !== 'edit'){
-        const st = SUB.nextStart ? SUB.nextStart(uname) : SUB.todayISO();
-        const en = SUB.addMonthsISO(st, months);
-        line += '  |  زمان: از ' + SUB.endFa(st) + ' تا ' + SUB.endFa(en) + (st > SUB.todayISO() ? ' (به باقی‌مانده اضافه می‌شود)' : '');
-      }
+      const st = mode === 'edit' ? (editing.start_at || editing.start_date) : (SUB.nextStart ? SUB.nextStart(uname) : SUB.todayISO());
+      const en = SUB.addMonthsISO(st, months);
+      const a = new Date(String(st).length>10 ? st : String(st).slice(0,10)+'T12:00:00');
+      const b = new Date(String(en).length>10 ? en : String(en).slice(0,10)+'T12:00:00');
+      const nDays = Math.round((b - a) / 86400000);
+      line += '  |  ماه شمسی: از ' + SUB.endFa(st) + ' تا ' + SUB.endFa(en) + ' (' + D.fa(nDays) + ' روز)';
+      if (mode !== 'edit' && String(st).slice(0,10) > SUB.todayISO()) line += ' — به باقی‌مانده اضافه می‌شود';
       $('#sub-m-price').textContent = line;
     }
     $('#sub-m-plan').addEventListener('change', preview);
@@ -484,11 +486,12 @@
       const recU = (window.APP && APP.users) ? APP.users.list().find(x => String(x.user).toLowerCase() === String(uname).toLowerCase()) : null;
       const plan = $('#sub-m-plan').value;
       const months = +$('#sub-m-months').value || 1;
-      const start = mode === 'edit' ? (editing.start_date || SUB.todayISO()) : SUB.todayISO();
-      const end = SUB.addMonthsISO(start, months);
+      const start = mode === 'edit' ? (editing.start_at || editing.start_date || SUB.todayISO()) : (SUB.nextStart ? SUB.nextStart(uname) : SUB.todayISO());
+      const endRaw = SUB.addMonthsISO(start, months);
+      const end = String(endRaw).slice(0, 10);
       const st = plan === 'trial' ? 'trial' : 'active';
       if (mode === 'edit'){
-        SUB.updateById(editing.id, { plan, billing_cycle: months, end_date: end, status: st, user_id: recU ? recU.id : editing.user_id });
+        SUB.updateById(editing.id, { plan, billing_cycle: months, start_date: String(start).slice(0,10), end_date: end, start_at: String(start), end_at: String(endRaw), status: st, user_id: recU ? recU.id : editing.user_id });
         APP.toast('اشتراک ویرایش شد ✓', 'green');
       } else {
         SUB.assign(uname, { plan, months, user_id: recU ? recU.id : null, payment_status: 'manual' });

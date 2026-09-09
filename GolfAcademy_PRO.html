@@ -756,7 +756,15 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   body.printing-report .spk-tbl td:first-child{color:#8a6d1c!important}
   @page{size:A4;margin:12mm}
 }
-@media (max-width:640px){.spk-wrap{padding:12px 12px 90px}}
+@media (max-width:640px){
+  .spk-wrap{padding:8px 12px 16px}
+  .spk-yds-step .spk-ydsp{padding:8px 12px;margin-bottom:8px}
+  .spk-yds-step .spk-ydsp b{font-size:28px}
+  .spk-yds-step .spk-pad{gap:6px;margin-bottom:8px}
+  .spk-yds-step .spk-key{min-height:42px;border-radius:12px;font-size:18px}
+  .spk-yds-step .spk-big{min-height:46px}
+  .spk-yds-step .spk-foot{display:none}
+}
 
 /* ═══ یادداشت‌های مربی (۴ کارت زیر نمودارهای بازیکن هوشمند) ═══ */
 .sp-note{padding:15px 16px 13px;display:flex;flex-direction:column;gap:8px}
@@ -1719,7 +1727,39 @@ html.phone-mode #score-wizard #sw-close{
   padding:8px 12px !important;
 }
 html.phone-mode .chip{padding:8px 12px; min-height:36px}
-html.phone-mode .spk-wrap{padding:12px 12px 90px}
+html.phone-mode .spk-wrap{padding:8px 12px calc(12px + env(safe-area-inset-bottom, 0px))}
+html.phone-mode #spk-page.spk-yds-page{overflow:hidden; height:100dvh; height:100svh}
+html.phone-mode .spk-wrap.spk-yds-step{
+  display:flex; flex-direction:column;
+  min-height:100%;
+  padding:6px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+}
+html.phone-mode .spk-yds-step .spk-head{margin-bottom:6px; gap:8px}
+html.phone-mode .spk-yds-step .spk-title{font-size:14.5px}
+html.phone-mode .spk-yds-step .spk-x{width:40px; height:40px; min-height:40px}
+html.phone-mode .spk-yds-step .spk-end{min-height:40px; padding:6px 10px; font-size:11.5px}
+html.phone-mode .spk-yds-step .spk-steps{margin:0 0 6px; gap:6px}
+html.phone-mode .spk-yds-step .spk-dot{width:26px; height:26px; font-size:11px}
+html.phone-mode .spk-yds-step .spk-back{min-height:32px; padding:2px 2px; margin-bottom:2px; font-size:12px}
+html.phone-mode .spk-yds-step .spk-banner.sm{padding:6px 10px; margin-bottom:8px; border-radius:12px; gap:8px}
+html.phone-mode .spk-yds-step .spk-banner b{font-size:14px}
+html.phone-mode .spk-yds-step .spk-banner small{font-size:10.5px; margin-top:0}
+html.phone-mode .spk-yds-step .spk-st{font-size:13px; margin:0 2px 6px}
+html.phone-mode .spk-yds-step .spk-ydsp{padding:6px 12px; margin-bottom:8px; border-radius:12px}
+html.phone-mode .spk-yds-step .spk-ydsp b{font-size:28px; letter-spacing:1px}
+html.phone-mode .spk-yds-step .spk-pad{
+  gap:6px; margin:0 auto 8px; width:100%; max-width:none;
+  flex:1 1 auto; min-height:0;
+  grid-template-rows:repeat(4, minmax(38px, 1fr));
+  max-height:min(42dvh, 280px);
+}
+html.phone-mode .spk-yds-step .spk-key{min-height:38px; height:100%; border-radius:12px; font-size:18px}
+html.phone-mode .spk-yds-step .spk-key.dim{font-size:14px}
+html.phone-mode .spk-yds-step #spk-next{
+  min-height:46px; margin-top:0; flex:none;
+  position:sticky; bottom:0; z-index:6;
+}
+html.phone-mode .spk-yds-step .spk-foot{display:none}
 html.phone-mode .grid.cols-2.sp-grid{grid-template-columns:1fr !important}
 
 /* لیبل‌ها و همگام */
@@ -12774,6 +12814,10 @@ window.addEventListener('ga:brand-changed', function(){
     }
 
     root.innerHTML = entryShell(h);
+    root.classList.toggle('spk-yds-step', step === 3);
+    if (root.parentElement && root.parentElement.id === 'spk-page') {
+      root.parentElement.classList.toggle('spk-yds-page', step === 3);
+    }
     bindCommon();
 
     if (step === 1) Array.prototype.forEach.call(document.querySelectorAll('.spk-pbtn'), function (b) {
@@ -13135,10 +13179,12 @@ window.addEventListener('ga:brand-changed', function(){
 
   function route() {
     if (!root) return;
+    root.classList.remove('spk-yds-step');
+    if (root.parentElement) root.parentElement.classList.remove('spk-yds-page');
     if (view === 'entry') renderEntry();
     else if (view === 'summary') renderSummary();
     else renderHome();
-    try { root.scrollIntoView({ block: 'start' }); } catch (e) { }
+    try { if (view !== 'entry' || step !== 3) root.scrollIntoView({ block: 'start' }); } catch (e) { }
   }
 
   /* API عمومی */

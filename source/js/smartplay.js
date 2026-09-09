@@ -289,6 +289,10 @@
     }
 
     root.innerHTML = entryShell(h);
+    root.classList.toggle('spk-yds-step', step === 3);
+    if (root.parentElement && root.parentElement.id === 'spk-page') {
+      root.parentElement.classList.toggle('spk-yds-page', step === 3);
+    }
     bindCommon();
 
     if (step === 1) Array.prototype.forEach.call(document.querySelectorAll('.spk-pbtn'), function (b) {
@@ -650,10 +654,12 @@
 
   function route() {
     if (!root) return;
+    root.classList.remove('spk-yds-step');
+    if (root.parentElement) root.parentElement.classList.remove('spk-yds-page');
     if (view === 'entry') renderEntry();
     else if (view === 'summary') renderSummary();
     else renderHome();
-    try { root.scrollIntoView({ block: 'start' }); } catch (e) { }
+    try { if (view !== 'entry' || step !== 3) root.scrollIntoView({ block: 'start' }); } catch (e) { }
   }
 
   /* API عمومی */

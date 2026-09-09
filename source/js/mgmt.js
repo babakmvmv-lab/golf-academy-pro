@@ -302,6 +302,192 @@
     }));
     $('#st-all-on').addEventListener('click', () => { Object.keys(DEFAULTS).forEach(k => s[k]=true); saveSettings(s); APP.go('settings'); APP.toast('همهٔ نمودارها فعال شدند ✓', 'green'); });
     $('#st-all-off').addEventListener('click', () => { Object.keys(DEFAULTS).forEach(k => s[k]=false); saveSettings(s); APP.go('settings'); APP.toast('همهٔ نمودارها غیرفعال شدند', 'orange'); });
+    renderSubSettings(v);
+  }
+
+  function renderSubSettings(host){
+    if (!window.GA_SUB || !host) return;
+    const SUB = GA_SUB;
+    const wrap = document.createElement('div');
+    wrap.id = 'sub-settings';
+    const plans = SUB.loadPlans();
+    const cycles = SUB.loadCycles();
+    const feat = SUB.loadFeatures();
+    const faN = (n) => (window.Data && Data.faNum) ? Data.faNum(n, 0) : String(n);
+    const fa = (n) => (window.Data && Data.fa) ? Data.fa(n) : String(n);
+    wrap.innerHTML = `
+    <div class="glass gold-border" style="margin-bottom:16px">
+      <div class="card-head"><span class="ic">💳</span><h3>${esc(L('settings.group.plans','پلن‌ها و اشتراک'))}</h3><span class="tag">سطح دسترسی سایت</span></div>
+      <div class="plan-hint">پلن فقط سطح دسترسی به صفحات سایت است — با نقش ورزشی/رنک قاطی نشود. قیمت بر پایهٔ یک‌ماه است؛ تخفیف هر مدت را دستی بگذارید. فرمول: ماهانه × ماه × (۱ − تخفیف٪). پرداخت آنلاین فعلاً نیست؛ ثبت دستی.</div>
+    </div>
+    <div class="glass" style="margin-bottom:16px">
+      <div class="card-head"><span class="ic">💰</span><h3>قیمت پایهٔ یک‌ماه</h3><span class="tag">عدد</span></div>
+      <div id="sub-plan-prices"></div>
+    </div>
+    <div class="glass" style="margin-bottom:16px">
+      <div class="card-head"><span class="ic">📆</span><h3>تخفیف مدت اشتراک</h3><span class="tag">۱ / ۳ / ۶ / ۱۲ ماه</span></div>
+      <div id="sub-cycles"></div>
+    </div>
+    <div class="glass" style="margin-bottom:16px">
+      <div class="card-head"><span class="ic">☑️</span><h3>ماتریس پلن × صفحه</h3><span class="tag">پیش‌فرض: همه روشن</span></div>
+      <div class="plan-hint">هر تیک یعنی آن پلن آن صفحه را می‌بیند. مدیر اصلی همیشه bypass دارد.</div>
+      <div style="overflow-x:auto"><table class="plan-matrix" id="sub-matrix"></table></div>
+    </div>`;
+    host.appendChild(wrap);
+
+    function drawPrices(){
+      const p = SUB.loadPlans();
+      const box = wrap.querySelector('#sub-plan-prices');
+      box.innerHTML = SUB.PLAN_ORDER.map(c => {
+        const x = p[c];
+        return `<div class="plan-price-row">
+          <div><b>${esc(x.nameEn)}</b><small> — ${esc(x.nameFa)}</small></div>
+          <input class="input" type="number" min="0" step="1" data-plan-price="${c}" value="${+x.monthly || 0}" style="width:100%;direction:ltr;text-align:center">
+          <small>${faN(+x.monthly || 0)} / ماه</small>
+        </div>`;
+      }).join('');
+      box.querySelectorAll('[data-plan-price]').forEach(inp => inp.addEventListener('change', () => {
+        const all = SUB.loadPlans();
+        all[inp.dataset.planPrice].monthly = Math.max(0, +inp.value || 0);
+        SUB.savePlans(all);
+        drawPrices();
+        APP.toast('قیمت پلن ذخیره شد ✓', 'green');
+      }));
+    }
+    function drawCycles(){
+      const box = wrap.querySelector('#sub-cycles');
+      const p0 = SUB.loadPlans().professional;
+      box.innerHTML = SUB.loadCycles().map(c => {
+        const pr = SUB.priceOf('professional', c.months);
+        return `<div class="plan-price-row">
+          <div><b>${fa(c.months)} ماه</b></div>
+          <input class="input" type="number" min="0" max="100" step="1" data-cyc="${c.months}" value="${+c.discount || 0}" style="width:100%;direction:ltr;text-align:center">
+          <small>تخفیف٪ — نمونه Professional: ${faN(pr.pay)}</small>
+        </div>`;
+      }).join('');
+      box.querySelectorAll('[data-cyc]').forEach(inp => inp.addEventListener('change', () => {
+        const a = SUB.loadCycles().map(c => +c.months === +inp.dataset.cyc ? Object.assign({}, c, { discount: Math.max(0, Math.min(100, +inp.value || 0)) }) : c);
+        SUB.saveCycles(a);
+        drawCycles();
+        APP.toast('تخفیف مدت ذخیره شد ✓', 'green');
+      }));
+    }
+    function drawMatrix(){
+      const f = SUB.loadFeatures();
+      const tbl = wrap.querySelector('#sub-matrix');
+      const head = '<tr><th>صفحه</th>' + SUB.PLAN_ORDER.map(c => `<th>${esc(SUB.loadPlans()[c].nameEn)}</th>`).join('') + '</tr>';
+      const body = SUB.PAGE_KEYS.map(([k, faName]) => {
+        const tds = SUB.PLAN_ORDER.map(c => {
+          const on = f[c] && f[c][k] !== false;
+          return `<td><label class="switch" title="${esc(c)}"><input type="checkbox" data-mx-plan="${c}" data-mx-page="${k}" ${on?'checked':''}><span class="trk"></span></label></td>`;
+        }).join('');
+        return `<tr><td>${esc(faName)}</td>${tds}</tr>`;
+      }).join('');
+      tbl.innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+      tbl.querySelectorAll('[data-mx-plan]').forEach(inp => inp.addEventListener('change', () => {
+        const all = SUB.loadFeatures();
+        const pl = inp.dataset.mxPlan, pg = inp.dataset.mxPage;
+        if (!all[pl]) all[pl] = {};
+        all[pl][pg] = !!inp.checked;
+        SUB.saveFeatures(all);
+        APP.toast('دسترسی پلن ذخیره شد ✓', 'green');
+      }));
+    }
+    drawPrices(); drawCycles(); drawMatrix();
+  }
+
+  function openSubModal(uname, onSaved){
+    if (!window.GA_SUB) return;
+    const SUB = GA_SUB;
+    const cur = SUB.view(uname);
+    let m = $('#modal-edit');
+    if (!m){
+      m = document.createElement('div');
+      m.id = 'modal-edit';
+      m.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(4,8,14,.72);backdrop-filter:blur(6px)';
+      document.body.appendChild(m);
+    }
+    const planOpts = SUB.PLAN_ORDER.map(c => {
+      const p = SUB.loadPlans()[c];
+      return `<option value="${c}" ${cur.plan===c?'selected':''}>${esc(p.nameEn)} — ${esc(p.nameFa)}</option>`;
+    }).join('');
+    const cycOpts = SUB.loadCycles().map(c => `<option value="${c.months}" ${+cur.cycle===+c.months?'selected':''}>${D.fa(c.months)} ماه${c.discount? ' — '+D.fa(c.discount)+'٪ تخفیف':''}</option>`).join('');
+    m.innerHTML = `
+    <div class="glass gold-border" style="width:min(460px,94vw);padding:22px;max-height:92vh;overflow:auto">
+      <div class="card-head"><span class="ic">💳</span><h3>اشتراک — ${esc(uname)}</h3><span class="tag">${esc(cur.statusFa)}</span>
+        <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px">✕</button></div>
+      <div class="plan-hint">وضعیت فعلی: <b>${esc(cur.nameEn)}</b> — ${esc(cur.statusFa)} — تمدید: ${esc(cur.endFa)}</div>
+      <div class="field-grid" style="margin-top:12px">
+        <div class="span2"><label>پلن</label><select class="sel" id="sub-m-plan" style="width:100%">${planOpts}</select></div>
+        <div class="span2"><label>مدت</label><select class="sel" id="sub-m-months" style="width:100%">${cycOpts}</select></div>
+      </div>
+      <div id="sub-m-price" class="plan-hint" style="margin-top:10px"></div>
+      <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end">
+        <button class="btn sm ghost" id="sub-m-cancel">بستن</button>
+        <button class="btn sm" id="sub-m-save">💾 ثبت دستی اشتراک</button>
+      </div>
+    </div>`;
+    m.style.display = 'flex';
+    function preview(){
+      const plan = $('#sub-m-plan').value;
+      const months = +$('#sub-m-months').value || 1;
+      const pr = SUB.priceOf(plan, months);
+      const faN = (n) => D.faNum ? D.faNum(n, 0) : String(n);
+      $('#sub-m-price').textContent = 'مبلغ این دوره (ثبت دستی، بدون درگاه): ' + faN(pr.pay) + '  —  ماهانه ' + faN(pr.monthly) + ' × ' + D.fa(months) + ' × (۱−' + D.fa(pr.discount) + '٪)';
+    }
+    $('#sub-m-plan').addEventListener('change', preview);
+    $('#sub-m-months').addEventListener('change', preview);
+    preview();
+    $('#sub-m-cancel').addEventListener('click', () => m.style.display = 'none');
+    $('#sub-m-save').addEventListener('click', () => {
+      const rec = (window.APP && APP.users) ? APP.users.list().find(x => String(x.user).toLowerCase() === String(uname).toLowerCase()) : null;
+      SUB.assign(uname, { plan: $('#sub-m-plan').value, months: +$('#sub-m-months').value || 1, user_id: rec ? rec.id : null, payment_status: 'manual' });
+      m.style.display = 'none';
+      if (typeof onSaved === 'function') onSaved();
+      APP.toast('اشتراک «' + uname + '» ثبت شد ✓', 'green');
+    });
+    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+  }
+
+  function pageSubs(){
+    const v = $('#view');
+    v.innerHTML = `
+    <div class="glass gold-border" style="margin-bottom:18px">
+      <div class="card-head"><span class="ic">💳</span><h3>${esc(L('nav.subs','اشتراک‌ها'))}</h3><span class="tag">پلن و دسترسی سایت</span></div>
+      <div class="plan-hint">پلن فقط سطح دسترسی به صفحات سایت است — جدا از بازیکن و رنک. قیمت پایه یک‌ماه است؛ تخفیف مدت را دستی بگذارید. پرداخت آنلاین فعلاً نیست.</div>
+    </div>
+    <div id="sub-catalog"></div>
+    <div id="sub-userlist"></div>`;
+    renderSubSettings($('#sub-catalog'));
+    renderSubUserList($('#sub-userlist'));
+  }
+
+  function renderSubUserList(host){
+    if (!host) return;
+    const U = window.APP && APP.users;
+    if (!U){ host.innerHTML = '<div class="glass">لیست یوزر در دسترس نیست.</div>'; return; }
+    const rows = U.list();
+    host.innerHTML = `
+    <div class="glass">
+      <div class="card-head"><span class="ic">👤</span><h3>اشتراک یوزرها</h3><span class="tag">${D.fa(rows.length)} یوزر</span></div>
+      <div class="plan-hint">اشتراک روی یوزر است نه بازیکن. دکمهٔ «ثبت اشتراک» پلن و مدت را دستی می‌گذارد.</div>
+      <div style="overflow-x:auto;margin-top:10px"><table class="tbl"><thead><tr>
+        <th>نام</th><th>یوزر</th><th>پلن</th><th>وضعیت</th><th>تمدید</th><th></th>
+      </tr></thead><tbody>
+        ${rows.map(u => {
+          const v = window.GA_SUB ? GA_SUB.view(u.user) : null;
+          return `<tr class="${u.active?'':'off-row'}">
+            <td><b>${esc(u.name || u.user)}</b> ${u.main?'<span class="chip gold">مدیر اصلی</span>':''}</td>
+            <td style="direction:ltr">${esc(u.user)}</td>
+            <td>${v ? '<b style="color:var(--gold-l)">'+esc(v.nameEn)+'</b>' : '—'}</td>
+            <td>${v ? '<span class="chip '+(v.on?'green':'red')+'">'+esc(v.statusFa)+'</span>' : '—'}</td>
+            <td>${v ? esc(v.endFa)+'<div class="muted-sm">'+(v.days<0?(D.fa(Math.abs(v.days))+' روز گذشته'):(D.fa(v.days)+' روز باقی'))+'</div>' : '—'}</td>
+            <td><button class="btn sm ghost" data-sub="${esc(u.user)}">💳 ثبت اشتراک</button></td>
+          </tr>`;
+        }).join('')}
+      </tbody></table></div>
+    </div>`;
+    host.querySelectorAll('[data-sub]').forEach(b => b.addEventListener('click', () => openSubModal(b.dataset.sub, () => renderSubUserList(host))));
   }
 
   /* ═══════════════ صفحه: پلن مدیریت (تب‌ها) ═══════════════ */
@@ -3616,7 +3802,7 @@
       <div class="sub-note" style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.9">
         دو سطح دسترسی: <b style="color:var(--gold-l)">مدیر</b> (دسترسی کامل به پلن مدیریت و همهٔ بخش‌ها) و
         <b style="color:var(--green-l)">عضو</b> (فقط بخش ویژهٔ اعضا — بدون هیچ ابزار ویرایشی).<br>
-        فعال/غیرفعال کردن، تغییر نقش و رمز هر یوزر همین‌جاست — غیرفعال‌ها نمی‌توانند وارد شوند.
+        اشتراک روی یوزر است نه بازیکن. ورود به پنل فقط با یوزر فعال + اشتراک معتبر. فعال/غیرفعال کردن، تغییر نقش و رمز هر یوزر همین‌جاست.
       </div>
       <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
         <button class="btn sm" id="us-add">➕ یوزر جدید</button>
@@ -3627,7 +3813,7 @@
     <div class="glass">
       <div class="card-head"><span class="ic">👤</span><h3>لیست ${esc(L('nav.users','یوزرها'))}</h3><span class="tag">مدیر / عضو</span></div>
       <div style="overflow-x:auto"><table class="tbl"><thead><tr>
-        <th>#</th><th>نام</th><th>یوزر</th><th>رمز</th><th>نقش / دسترسی</th><th>وضعیت</th><th>عملیات</th>
+        <th>#</th><th>نام</th><th>یوزر</th><th>رمز</th><th>نقش / دسترسی</th><th>پلن</th><th>اشتراک</th><th>وضعیت</th><th>عملیات</th>
       </tr></thead><tbody id="us-rows"></tbody></table></div>
     </div>
     <div id="us-modal"></div>`;
@@ -3646,9 +3832,13 @@
               <option value="member" ${u.role==='member'?'selected':''}>👤 عضو</option>
             </select>`}
           </td>
+          <td>${(window.GA_SUB ? (function(){ var v=GA_SUB.view(u.user); return v ? '<b style="color:var(--gold-l)">'+esc(v.nameEn)+'</b>' : '—'; })() : '—')}</td>
+          <td>${(window.GA_SUB ? (function(){ var v=GA_SUB.view(u.user); if(!v||!v.sub) return '—';
+            return '<span class="chip '+(v.on?'green':'red')+'">'+esc(v.statusFa)+'</span><div class="muted-sm">'+(v.days<0 ? (D.fa(Math.abs(v.days))+' روز گذشته') : (D.fa(v.days)+' روز'))+' · '+esc(v.endFa)+'</div>'; })() : '—')}</td>
           <td>${u.main ? '<span class="chip green">فعال</span>' : `
             <label class="switch"><input type="checkbox" class="us-act" data-id="${u.id}" ${u.active?'checked':''}><span class="trk"></span></label>`}</td>
           <td><div class="row-actions">
+            <button class="btn sm ghost" data-sub="${esc(u.user)}">💳 اشتراک</button>
             <button class="btn sm ghost" data-pw="${u.id}" ${u.main?'disabled':''}>🔑 یوزر و رمز</button>
             ${u.main ? '' : `<button class="btn sm danger" data-del="${u.id}">🗑</button>`}
           </div></td>
@@ -3674,6 +3864,7 @@
         APP.toast((u.active ? 'یوزر «' + u.name + '» فعال شد ✓' : 'یوزر «' + u.name + '» غیرفعال شد ⛔ — دیگر نمی‌تواند وارد شود'), u.active ? 'green' : 'orange');
       }));
       $$('#us-rows [data-pw]').forEach(b => b.addEventListener('click', () => pwModal(+b.dataset.pw)));
+      $$('#us-rows [data-sub]').forEach(b => b.addEventListener('click', () => subModal(b.dataset.sub)));
       $$('#us-rows [data-del]').forEach(b => b.addEventListener('click', () => {
         const id = +b.dataset.del;
         const a = U.list(); const u = a.find(x => x.id === id);
@@ -3684,6 +3875,60 @@
         render();
         APP.toast('یوزر «' + u.name + '» حذف شد 🗑', 'orange');
       }));
+    }
+    function subModal(uname){
+      openSubModal(uname, render);
+      return;
+      if (!window.GA_SUB) return;
+      const SUB = GA_SUB;
+      const cur = SUB.view(uname);
+      let m = $('#modal-edit');
+      if (!m){
+        m = document.createElement('div');
+        m.id = 'modal-edit';
+        m.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(4,8,14,.72);backdrop-filter:blur(6px)';
+        document.body.appendChild(m);
+      }
+      const planOpts = SUB.PLAN_ORDER.map(c => {
+        const p = SUB.loadPlans()[c];
+        return `<option value="${c}" ${cur.plan===c?'selected':''}>${esc(p.nameEn)} — ${esc(p.nameFa)}</option>`;
+      }).join('');
+      const cycOpts = SUB.loadCycles().map(c => `<option value="${c.months}" ${+cur.cycle===+c.months?'selected':''}>${D.fa(c.months)} ماه${c.discount? ' — '+D.fa(c.discount)+'٪ تخفیف':''}</option>`).join('');
+      m.innerHTML = `
+      <div class="glass gold-border" style="width:min(460px,94vw);padding:22px;max-height:92vh;overflow:auto">
+        <div class="card-head"><span class="ic">💳</span><h3>اشتراک — ${esc(uname)}</h3><span class="tag">${esc(cur.statusFa)}</span>
+          <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px">✕</button></div>
+        <div class="plan-hint">وضعیت فعلی: <b>${esc(cur.nameEn)}</b> — ${esc(cur.statusFa)} — تمدید: ${esc(cur.endFa)}</div>
+        <div class="field-grid" style="margin-top:12px">
+          <div class="span2"><label>پلن</label><select class="sel" id="sub-m-plan" style="width:100%">${planOpts}</select></div>
+          <div class="span2"><label>مدت</label><select class="sel" id="sub-m-months" style="width:100%">${cycOpts}</select></div>
+        </div>
+        <div id="sub-m-price" class="plan-hint" style="margin-top:10px"></div>
+        <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end">
+          <button class="btn sm ghost" id="sub-m-cancel">بستن</button>
+          <button class="btn sm" id="sub-m-save">💾 ثبت دستی اشتراک</button>
+        </div>
+      </div>`;
+      m.style.display = 'flex';
+      function preview(){
+        const plan = $('#sub-m-plan').value;
+        const months = +$('#sub-m-months').value || 1;
+        const pr = SUB.priceOf(plan, months);
+        const faN = (n) => D.faNum ? D.faNum(n, 0) : String(n);
+        $('#sub-m-price').textContent = 'مبلغ این دوره (ثبت دستی، بدون درگاه): ' + faN(pr.pay) + '  —  ماهانه ' + faN(pr.monthly) + ' × ' + D.fa(months) + ' × (۱−' + D.fa(pr.discount) + '٪)';
+      }
+      $('#sub-m-plan').addEventListener('change', preview);
+      $('#sub-m-months').addEventListener('change', preview);
+      preview();
+      $('#sub-m-cancel').addEventListener('click', () => m.style.display = 'none');
+      $('#sub-m-save').addEventListener('click', () => {
+        const rec = U.list().find(x => String(x.user).toLowerCase() === String(uname).toLowerCase());
+        SUB.assign(uname, { plan: $('#sub-m-plan').value, months: +$('#sub-m-months').value || 1, user_id: rec ? rec.id : null, payment_status: 'manual' });
+        m.style.display = 'none';
+        render();
+        APP.toast('اشتراک «' + uname + '» ثبت شد ✓', 'green');
+      });
+      m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
     }
     function pwModal(id){
       const a = U.list(); const u = a.find(x => x.id === id);
@@ -3766,6 +4011,19 @@
               <option value="admin">👑 مدیر — دسترسی کامل مدیریت</option>
             </select>
           </div>
+          <div><label>پلن اشتراک</label>
+            <select class="sel" id="nu-plan" style="width:100%">
+              ${(window.GA_SUB ? GA_SUB.PLAN_ORDER.map(c => {
+                const p = GA_SUB.loadPlans()[c];
+                return `<option value="${c}" ${c==='trial'?'selected':''}>${esc(p.nameEn)}</option>`;
+              }).join('') : '<option value="trial">Free Trial</option>')}
+            </select>
+          </div>
+          <div><label>مدت</label>
+            <select class="sel" id="nu-months" style="width:100%">
+              ${(window.GA_SUB ? GA_SUB.loadCycles().map(c => `<option value="${c.months}" ${+c.months===1?'selected':''}>${D.fa(c.months)} ماه</option>`).join('') : '<option value="1">۱ ماه</option>')}
+            </select>
+          </div>
         </div>
         <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
           <button class="btn sm ghost" id="nu-cancel">بستن</button>
@@ -3790,6 +4048,11 @@
         const id = Math.max(0, ...a.map(x => x.id)) + 1;
         a.push({ id, user, pass, name, role: $('#nu-role').value, active: true });
         U.save(a);
+        if (window.GA_SUB){
+          const plan = ($('#nu-plan') && $('#nu-plan').value) || 'trial';
+          const months = ($('#nu-months') && +$('#nu-months').value) || 1;
+          GA_SUB.assign(user, { plan, months, user_id: id, payment_status: 'manual' });
+        }
         m.style.display = 'none';
         render();
         APP.toast('یوزر «' + name + '» ساخته شد — یوزر: ' + user + ' / رمز: ' + pass, 'green');
@@ -3799,6 +4062,7 @@
     $('#us-sync').addEventListener('click', () => {
       const a = U.list();
       let added = 0;
+      const addedUsers = [];
       try {
         const S = gstate().S;
         const pu = playerUsers();
@@ -3807,13 +4071,16 @@
           if (!exists){
             const id = Math.max(0, ...a.map(x => x.id)) + 1;
             const cr = pu[p[0]] || {};
-            a.push({ id, user: cr.user || ('p' + p[0]), pass: cr.pass || 'golf1405', name: p[1],
-                     role: 'member', active: cr.active !== false, pid: p[0] });
+            const rec = { id, user: cr.user || ('p' + p[0]), pass: cr.pass || 'golf1405', name: p[1],
+                     role: 'member', active: cr.active !== false, pid: p[0] };
+            a.push(rec);
+            addedUsers.push(rec);
             added++;
           }
         });
       } catch(e){}
       U.save(a);
+      if (window.GA_SUB) addedUsers.forEach(u => GA_SUB.assign(u.user, { plan: 'trial', months: 1, user_id: u.id, payment_status: 'manual' }));
       render();
       APP.toast(added ? added + ' یوزر عضو ساخته شد — رمز پیش‌فرض: golf1405' : 'همهٔ اعضا قبلاً یوزر داشتند ✓', added ? 'green' : 'gold');
     });
@@ -4231,7 +4498,7 @@
 
   /* ═══════════════ API ═══════════════ */
   window.MGMT = {
-    pageSettings, pageMgmt, pageUsers, pageMessages, renderMgmtTab, customEvents, saveEvents,
+    pageSettings, pageMgmt, pageUsers, pageSubs, pageMessages, renderMgmtTab, customEvents, saveEvents,
     customPlayers, saveCustomPlayers, playerEdits, savePlayerEdits,
     playerUsers, savePlayerUsers, playerFull,
     getSettings, saveSettings, DEFAULTS,

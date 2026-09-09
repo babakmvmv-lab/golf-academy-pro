@@ -90,6 +90,21 @@ body{
 .err-msg{display:none;color:#ff8f82;font-size:13px;margin-bottom:14px;
   background:rgba(231,76,60,.12);border:1px solid rgba(231,76,60,.4);padding:10px;border-radius:11px}
 .err-msg.show{display:block;animation:shake .45s}
+.login-sub{
+  margin:-4px 0 18px;padding:12px 14px 13px;border-radius:14px;text-align:right;
+  background:rgba(11,15,20,.55);border:1px solid var(--line-soft);
+}
+.login-sub[hidden]{display:none!important}
+.login-sub.expired{border-color:rgba(231,76,60,.45);background:rgba(231,76,60,.1)}
+.login-sub-plan{font-size:15px;font-weight:800;letter-spacing:.4px;color:var(--gold-l)}
+.login-sub-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:12.5px}
+.login-sub-end{margin-top:5px;font-size:11.5px;color:var(--dim)}
+.login-sub-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:6px;vertical-align:middle}
+.login-sub-dot.on{background:var(--green-l);box-shadow:0 0 8px var(--green-l)}
+.login-sub-dot.off{background:#E74C3C;box-shadow:0 0 8px rgba(231,76,60,.55)}
+.side-foot{flex-wrap:wrap}
+.side-sub{width:100%;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--line-soft);font-size:11px;line-height:1.75;margin-bottom:2px}
+.side-sub-plan{font-weight:800;color:var(--gold-l);font-size:12px}
 @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 
 /* ═══════════ اپ شِل ═══════════ */

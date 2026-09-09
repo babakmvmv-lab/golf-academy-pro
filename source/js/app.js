@@ -193,11 +193,11 @@
     records:['nav.records','رکوردها'], cal:['nav.cal','تقویم فصل'], tv:['nav.tv','نمایش تلویزیونی'],
     battle:['nav.battle','میدان نبرد'], academy:['nav.academy','پنل آکادمی'], acourses:['nav.acourses','طراح زمین'],
     atournaments:['nav.atournaments','طراح مسابقه'], ascorecards:['nav.ascorecards','ثبت نتایج'],
-    mgmt:['nav.mgmt','پنل مدیریت'], users:['nav.users','یوزرها'], settings:['nav.settings','تنظیمات نمایش'],
+    mgmt:['nav.mgmt','پنل مدیریت'], users:['nav.users','یوزرها'], subs:['nav.subs','اشتراک‌ها'], settings:['nav.settings','تنظیمات نمایش'],
     messages:['nav.messages','ارسال پیام'],
     avatarland:['nav.avatarland','سرزمین آواتارها'],
   };
-  const PAGE_ICONS = { memberzone:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',cmd:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',race:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>',player:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',match:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',course:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M9 3 3 5.5v15L9 18l6 2.5 6-2.5v-15L15 5.5 9 3z"/><path d="M9 3v15"/><path d="M15 5.5v15"/></svg>',records:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>',cal:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',tv:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',battle:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/></svg>',academy:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>',acourses:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',atournaments:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>',ascorecards:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>',mgmt:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',users:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',settings:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',messages:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',avatarland:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' };
+  const PAGE_ICONS = { memberzone:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',cmd:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',race:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>',player:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',match:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',course:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M9 3 3 5.5v15L9 18l6 2.5 6-2.5v-15L15 5.5 9 3z"/><path d="M9 3v15"/><path d="M15 5.5v15"/></svg>',records:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>',cal:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',tv:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',battle:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/></svg>',academy:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>',acourses:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',atournaments:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>',ascorecards:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>',mgmt:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',users:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',subs:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',settings:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',messages:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',avatarland:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' };
   const PAGES = {};
   function updatePageLabels(){
     Object.keys(PAGE_LABELS).forEach(pg => { PAGES[pg] = { t:L(PAGE_LABELS[pg][0], PAGE_LABELS[pg][1]), i:PAGE_ICONS[pg] }; });
@@ -247,10 +247,16 @@
         const key = MEM_PAGE_KEY[page];
         if (!key || !settings[key]) page = 'memberzone';
       }
-      if (page === 'users' || page === 'mgmt' || page === 'settings' || page === 'messages') page = 'memberzone';
+      if (page === 'users' || page === 'mgmt' || page === 'settings' || page === 'messages' || page === 'subs') page = 'memberzone';
     }
     if (page === 'users' && !isMain(currentUser)) page = 'cmd';
     if (page === 'memberzone' && rec && rec.role !== 'member') page = 'cmd';
+    if (window.GA_SUB && rec && !GA_SUB.canPage(rec.user, page)){
+      toast('این بخش در پلن شما فعال نیست.', 'orange');
+      if (rec.role === 'member') page = 'memberzone';
+      else if (GA_SUB.canPage(rec.user, 'cmd')) page = 'cmd';
+      else page = 'memberzone';
+    }
     currentPage = page;
     $$('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
     renderMemberMobileNav(rec, page);
@@ -307,6 +313,7 @@
           </div>
           <div style="margin-right:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <button class="btn sm" onclick="APP.go('mgmt')" style="box-shadow:0 0 16px rgba(212,175,55,.25)">⚙️ ${esc(L('nav.mgmt','پنل مدیریت'))}</button>
+            <button class="btn sm ghost" onclick="APP.go('subs')">💳 ${esc(L('nav.subs','اشتراک‌ها'))}</button>
             <button class="btn sm ghost" onclick="APP.go('settings')">🛠️ ${esc(L('nav.settings','تنظیمات نمایش'))}</button>
             <span class="chip gold">⏳ مسابقه بعدی: ${esc(A.NEXT_T ? A.NEXT_T[1] : '—')} — ${D.fa(A.COUNTDOWN)} روز</span>
             <span class="chip green">🔴 فصل در جریان است</span>
@@ -2784,16 +2791,19 @@
   function toast(msg, type='gold'){
     if (!toastBox){
       toastBox = document.createElement('div');
-      toastBox.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:400;display:flex;flex-direction:column;gap:8px;align-items:center';
+      toastBox.id = 'ga-toast-box';
+      toastBox.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:2147483000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:min(440px,92vw)';
       document.body.appendChild(toastBox);
     }
     const el = document.createElement('div');
-    el.style.cssText = 'background:linear-gradient(135deg,#1a2433,#101722);border:1px solid var(--line);border-radius:13px;padding:12px 22px;font-size:13px;font-weight:700;box-shadow:0 12px 34px rgba(0,0,0,.6);animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2)';
+    const border = (type === 'green' || type === 'ok') ? 'rgba(30,187,138,.75)'
+      : (type === 'red' || type === 'err') ? 'rgba(231,76,60,.75)'
+      : (type === 'orange') ? 'rgba(230,126,34,.75)'
+      : 'rgba(212,175,55,.75)';
+    el.style.cssText = 'pointer-events:auto;background:linear-gradient(135deg,#1a2433,#101722);border:1px solid '+border+';border-radius:13px;padding:12px 22px;font-size:13px;font-weight:700;color:#F8FAFC;box-shadow:0 12px 34px rgba(0,0,0,.65);animation:toastIn .3s cubic-bezier(.2,.9,.3,1.2) both;width:100%;text-align:center';
     el.textContent = msg;
-    if (type === 'green') el.style.borderColor = 'rgba(30,187,138,.5)';
-    if (type === 'red') el.style.borderColor = 'rgba(231,76,60,.5)';
     toastBox.appendChild(el);
-    setTimeout(() => { el.style.opacity = '0'; el.style.transition = '.4s'; setTimeout(()=>el.remove(), 400); }, 2600);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; setTimeout(()=>el.remove(), 400); }, 3200);
   }
   const stStyle = document.createElement('style');
   stStyle.textContent = '@keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.95)}to{opacity:1;transform:none}}';
@@ -2806,7 +2816,7 @@
     course: pageCourse, records: pageRecords, cal: pageCal, tv: pageTv,
     battle: pageBattle, academy: pageAcademy, avatarland: pageAvatarLand,
     acourses: pageACourses, atournaments: pageATours, ascorecards: pageAScorecards,
-    mgmt: () => MGMT.pageMgmt(), users: () => MGMT.pageUsers(), settings: () => MGMT.pageSettings(),
+    mgmt: () => MGMT.pageMgmt(), users: () => MGMT.pageUsers(), subs: () => MGMT.pageSubs(), settings: () => MGMT.pageSettings(),
     messages: () => MGMT.pageMessages(),
   };
 
@@ -2824,6 +2834,14 @@
     $('#toggle-pass').addEventListener('click', () => {
       pass.type = pass.type === 'password' ? 'text' : 'password';
     });
+    const peekSub = () => {
+      if (!window.GA_SUB) return;
+      const u = (user.value || '').trim().toLowerCase();
+      if (u && userRec(u)){ store.set('ga_last_user', u); GA_SUB.paintLogin(u); }
+      else GA_SUB.paintLogin(null);
+    };
+    user.addEventListener('blur', peekSub);
+    user.addEventListener('change', peekSub);
     form.addEventListener('submit', e => {
       e.preventDefault();
       const sbtn = form.querySelector('button[type="submit"]');
@@ -2832,15 +2850,29 @@
       const u = user.value.trim().toLowerCase();
       const h = cyrb53(pass.value);
       if (sbtn){ sbtn.disabled = false; sbtn.textContent = sbtn.dataset.old || 'ورود به داشبورد'; }
-      if (buildUsers()[u] === h){
-        store.set('ga_session', u);
-        store.set('ga_user_label', userLabelFor(u));
-        enterApp(u);
-      } else {
+      const rec = userRec(u);
+      const passOk = rec ? (cyrb53(rec.pass) === h) : (buildUsers()[u] === h);
+      if (!passOk){
         err.classList.add('show');
         err.textContent = 'نام کاربری یا رمز عبور اشتباه است — دوباره تلاش کنید';
         setTimeout(() => err.classList.remove('show'), 2600);
+        return;
       }
+      store.set('ga_last_user', u);
+      if (window.GA_SUB) GA_SUB.paintLogin(u);
+      if (rec && rec.active === false){
+        err.classList.add('show');
+        err.textContent = 'این حساب غیرفعال است.';
+        return;
+      }
+      if (window.GA_SUB && !GA_SUB.isAllowed(u)){
+        err.classList.add('show');
+        err.textContent = 'ورود ممکن نیست؛ اشتراک فعال ندارید.';
+        return;
+      }
+      store.set('ga_session', u);
+      store.set('ga_user_label', userLabelFor(u));
+      enterApp(u);
       }, 350);
     });
   }
@@ -2858,6 +2890,7 @@
       else if (p === 'memberzone') show = false;
       else if (p === 'users') show = !!(rec && rec.main);
       else show = true;
+      if (show && window.GA_SUB && rec && p && !GA_SUB.canPage(rec.user, p)) show = false;
       n.style.display = show ? '' : 'none';
     });
     $$('#app .nav-group').forEach(g => { g.style.display = member ? 'none' : ''; });
@@ -2991,12 +3024,28 @@
     if (window.UI_LABELS) UI_LABELS.apply(document);
     restoreLegacyPractice();
     seedUsers();
+    if (window.GA_SUB) GA_SUB.ensureSeed(loadUsers());
     initParticles();
     initAuth();
     initNav();
     const sess = store.get('ga_session');
     if (sess && buildUsers()[sess] !== undefined){
-      enterApp(sess);
+      if (!window.GA_SUB || GA_SUB.isAllowed(sess)) enterApp(sess);
+      else {
+        store.remove('ga_session');
+        store.set('ga_last_user', sess);
+        $('#login').classList.add('on');
+        if ($('#login-user')) $('#login-user').value = sess;
+        GA_SUB.paintLogin(sess);
+        const err = $('#login-err');
+        if (err){ err.classList.add('show'); err.textContent = 'ورود ممکن نیست؛ اشتراک فعال ندارید.'; }
+      }
+    } else {
+      const last = store.get('ga_last_user');
+      if (last && window.GA_SUB){
+        if ($('#login-user') && !$('#login-user').value) $('#login-user').value = last;
+        GA_SUB.paintLogin(last);
+      }
     }
   });
 

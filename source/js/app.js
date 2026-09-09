@@ -1841,9 +1841,26 @@
           return false;
         });
         const labels = dayEvs.map(e => `${e.icon} ${esc(e.name)}`);
+        const isPhone = document.documentElement.classList.contains('phone-mode');
+        let mini = '';
+        if (dayEvs.length){
+          if (isPhone){
+            const groups = [];
+            const seen = {};
+            dayEvs.forEach(e => {
+              if (!seen[e.kind]){ seen[e.kind] = { kind:e.kind, icon:e.icon, n:0 }; groups.push(seen[e.kind]); }
+              seen[e.kind].n++;
+            });
+            mini = `<div class="cal-ev-mini">${groups.slice(0,3).map(g =>
+              `<span class="cal-mini-ev ${g.kind}"><span class="cal-mini-ic">${g.icon}</span>${g.n>1?`<span class="cal-mini-cnt">${D.fa(g.n)}</span>`:''}</span>`
+            ).join('')}${groups.length>3?'<span class="cal-mini-more">+'+D.fa(groups.length-3)+'</span>':''}</div>`;
+          } else {
+            mini = `<div class="cal-ev-mini">${dayEvs.slice(0,3).map(e=>`<span class="cal-mini-ev ${e.kind}"><span class="cal-mini-ic">${e.icon}</span><span class="cal-mini-nm">${esc(e.name)}</span></span>`).join('')}${dayEvs.length>3?'<span class="cal-mini-more">+'+D.fa(dayEvs.length-3)+'</span>':''}</div>`;
+          }
+        }
         html += `<div class="cal-cell ${dayEvs.length?'has-ev':''} ${isSelDay?'sel':''} ${isToday?'today':''}" title="${esc(labels.join(' • '))}">
           <div class="cal-num">${D.fa(d)}</div>
-          ${dayEvs.length ? `<div class="cal-ev-mini">${dayEvs.slice(0,3).map(e=>`<span class="cal-mini-ev ${e.kind}"><span class="cal-mini-ic">${e.icon}</span><span class="cal-mini-nm">${esc(e.name)}</span></span>`).join('')}${dayEvs.length>3?'<span class="cal-mini-more">+'+D.fa(dayEvs.length-3)+'</span>':''}</div>` : ''}
+          ${mini}
         </div>`;
       }
       html += '</div>';

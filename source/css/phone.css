@@ -247,18 +247,31 @@ html.phone-mode .cal-grid-big-row{
   grid-template-columns:repeat(7, minmax(0, 1fr)) !important;
   gap:3px !important;
 }
-html.phone-mode .cal-grid-big-row:not(:first-child){grid-auto-rows:58px !important}
-html.phone-mode .cal-cell{min-width:0; overflow:hidden; padding:2px 0; height:58px; max-height:58px}
-html.phone-mode .cal-cell .cal-num{font-size:12px; padding:4px 0 2px}
+html.phone-mode .cal-grid-big-row:not(:first-child){grid-auto-rows:64px !important}
+html.phone-mode .cal-cell{min-width:0; overflow:hidden; padding:2px 0; height:64px; max-height:64px}
+html.phone-mode .cal-cell .cal-num{font-size:12px; padding:3px 0 0}
 html.phone-mode .cal-wd{font-size:11px; padding:4px 0}
-html.phone-mode .cal-ev-mini{padding:0 1px 4px; overflow:hidden}
-html.phone-mode .cal-mini-ev{
-  display:block; width:1.25em; max-width:100%;
-  margin:1px auto 0; padding:0; font-size:12px; line-height:1.2;
-  overflow:hidden; white-space:nowrap;
-  background:transparent !important; border:none !important;
+html.phone-mode .cal-ev-mini{
+  display:flex !important; flex-direction:row !important; flex-wrap:nowrap;
+  justify-content:center; align-items:center; gap:2px;
+  padding:0 2px 4px; overflow:hidden; min-height:0;
 }
+html.phone-mode .cal-mini-ev{
+  display:inline-flex !important; align-items:center; justify-content:center;
+  width:auto; min-width:0; max-width:100%;
+  margin:0; padding:1px 3px; font-size:11px; line-height:1;
+  overflow:hidden; white-space:nowrap; gap:1px;
+  background:rgba(255,255,255,.06) !important;
+  border:1px solid rgba(255,255,255,.1) !important;
+  border-radius:6px;
+}
+html.phone-mode .cal-mini-ev.مسابقه{background:rgba(212,175,55,.14) !important; border-color:rgba(212,175,55,.45) !important}
+html.phone-mode .cal-mini-ev.کلاس{background:rgba(168,85,247,.14) !important; border-color:rgba(168,85,247,.4) !important}
+html.phone-mode .cal-mini-ev.تمرین{background:rgba(30,187,138,.14) !important; border-color:rgba(30,187,138,.4) !important}
+html.phone-mode .cal-mini-ev.اردو{background:rgba(249,115,22,.14) !important; border-color:rgba(249,115,22,.4) !important}
 html.phone-mode .cal-mini-nm{display:none}
+html.phone-mode .cal-mini-cnt{font-size:10px; font-weight:800; color:var(--gold-l); font-variant-numeric:tabular-nums}
+html.phone-mode .cal-mini-more{font-size:10px; margin:0}
 html.phone-mode .cal-grid-pane .card-head{flex-wrap:wrap; gap:8px}
 html.phone-mode .cal-list-pane{order:2}
 html.phone-mode .cal-grid-pane{order:1}

@@ -1623,12 +1623,11 @@
     <div class="grid cols-3">
       <div class="glass tilt" style="grid-column:span 2">
         <div class="card-head"><span class="ic">🏅</span><h3>بهترین دورهای فصل</h3><span class="tag">Best Rounds</span></div>
-        <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>بازیکن</th><th>مسابقه</th><th>مجموع</th><th>در برابر پار</th><th>پرنده</th></tr></thead><tbody>
+        <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>بازیکن</th><th>مسابقه</th><th>مجموع</th><th>در برابر پار</th></tr></thead><tbody>
         ${A.BEST_ROUNDS.slice(0,12).map((r,i) => `<tr class="${i===0?'top1':i===1?'top2':i===2?'top3':''}">
           <td>${medal(i+1)} ${D.fa(i+1)}</td><td><b>${esc(r.name)}</b></td><td style="color:var(--muted)">${esc(r.tour)}</td>
           <td class="num" style="font-weight:800">${D.fa(r.total)}</td>
           <td class="num" style="color:${r.vspar<=0?'var(--green-l)':'#ff8f82'};font-weight:800">${r.vspar>0?'+':''}${D.fa(r.vspar)}</td>
-          <td class="num" style="color:var(--green-l)">${D.fa(r.bird)}</td>
         </tr>`).join('')}</tbody></table></div>
       </div>
       <div class="glass">

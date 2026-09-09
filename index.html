@@ -3025,7 +3025,8 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     /* پذیرش Date یا رشتهٔ ISO — قبلاً Date می‌گرفت (مثل D.TODAY) و ورودی نامعتبر،
        خروجی خراب «-100722/07/NaN» می‌داد */
     const d = iso instanceof Date ? iso : dateFrom(iso);
-    const [jy, jm, jd] = toJalaali(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate());
+    const tp = tehranParts(d);
+    const [jy, jm, jd] = toJalaali(tp.y, tp.m, tp.d);
     return jy + '/' + String(jm).padStart(2,'0') + '/' + String(jd).padStart(2,'0');
   }
   /* پارس رشته شمسی '1405/06/10' یا '۱۴۰۵/۶/۱۰' → [jy,jm,jd] یا null */
@@ -3039,8 +3040,41 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     if (jm < 1 || jm > 12 || jd < 1 || jd > 31) return null;
     return [jy, jm, jd];
   }
+  const TZ = 'Asia/Tehran';
+  function tehranParts(input){
+    const d = input instanceof Date ? input : new Date(input == null ? Date.now() : input);
+    const src = isNaN(+d) ? new Date() : d;
+    const map = {};
+    try {
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: TZ, year:'numeric', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23'
+      }).formatToParts(src).forEach(p => { map[p.type] = p.value; });
+    } catch (e) {
+      map.year = src.getFullYear();
+      map.month = String(src.getMonth()+1).padStart(2,'0');
+      map.day = String(src.getDate()).padStart(2,'0');
+      map.hour = String(src.getHours()).padStart(2,'0');
+      map.minute = String(src.getMinutes()).padStart(2,'0');
+      map.second = String(src.getSeconds()).padStart(2,'0');
+    }
+    let h = parseInt(map.hour, 10); if (h === 24) h = 0;
+    return { y:+map.year, m:+map.month, d:+map.day, h:h, min:+map.minute, s:+(map.second||0) };
+  }
+  function tehranISODate(input){
+    const t = tehranParts(input);
+    return t.y + '-' + String(t.m).padStart(2,'0') + '-' + String(t.d).padStart(2,'0');
+  }
+  function tehranWeekday(input){
+    const d = input instanceof Date ? input : new Date();
+    try {
+      const wd = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday:'short' }).format(d);
+      return { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 }[wd] ?? d.getDay();
+    } catch (e) { return d.getDay(); }
+  }
   const dateFrom = s => new Date(s + 'T00:00:00Z');
-  const TODAY = new Date(); /* امروزِ واقعی — هاردکد قبلی (۲۰۲۶/۰۸/۳۱) باعث انحراف «امروز» می‌شد؛ اکنون پویا */
+  function todayStart(){ return dateFrom(tehranISODate(new Date())); }
+  const TODAY = todayStart(); /* امروز به تقویم تهران — نه UTC */
   const SEASON_START = dateFrom('2026-03-21');  /* ⚑ سال فصل از همین پوشیده می‌شود — برای رول اور به ۱۴۰۶ فقط این را عوض کنید */
 
   const FA_DIG = {0:'۰',1:'۱',2:'۲',3:'۳',4:'۴',5:'۵',6:'۶',7:'۷',8:'۸',9:'۹'};
@@ -3050,13 +3084,14 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   const WEEKDAYS = ['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
   const MONTHS_FA = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
   function jalaliInfo(d){
-    const [yy, mm, dd] = toJalaali(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
-    const wd = d.getUTCDay();
+    const tp = tehranParts(d || new Date());
+    const [yy, mm, dd] = toJalaali(tp.y, tp.m, tp.d);
+    const wd = tehranWeekday(d || new Date());
     return { yy, mm, dd, wd: WEEKDAYS[wd], monthFa: MONTHS_FA[mm-1], season:
       mm <= 3 ? 'بهار' : mm <= 6 ? 'تابستان' : mm <= 9 ? 'پاییز' : 'زمستان' };
   }
   const weekOf = d => Math.floor((d - SEASON_START) / 86400000 / 7) + 1;
-  const dayFmt = d => d.toISOString().slice(0,10);
+  const dayFmt = d => tehranISODate(d);
 
   /* ── داده پایه (فصل ۱۴۰۵ — واقعی) ── */
   const PLAYERS = [
@@ -3655,7 +3690,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   }
 
   window.Data = {
-    fa, faNum, jalaliInfo, weekOf, dayFmt, dateFrom, TODAY, SEASON_START,
+    fa, faNum, jalaliInfo, weekOf, dayFmt, dateFrom, todayStart, tehranParts, tehranISODate, SEASON_START,
     toJalaali, jalaaliToDateObject, j2d, shamsiToISO, isoToShamsi, parseShamsi,
     PLAYERS, PLAYER_NAME, ACTIVE, COURSES, COURSE_PARS, COURSE_NAME, TOURNAMENTS, seasonYear: (function(){ const j = jalaliInfo(SEASON_START); return j.yy; })(),
     PTS_RULE, RESULT_LABEL, MONTHS_FA, RANK_DEF, RANK_TEXT, rankOf, FORM_META, GOLD_ELITE,
@@ -3682,6 +3717,10 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
       localStorage.setItem('ga_cleanup_practice_v1', '1');
     } catch(e){}
   }
+  Object.defineProperty(window.Data, 'TODAY', {
+    get: todayStart,
+    enumerable: true
+  });
   seedSeason();
   cleanupSeededPrograms();
 })();
@@ -13499,9 +13538,10 @@ window.addEventListener('ga:brand-changed', function(){
   function tickClock(){
     const now = new Date();
     const j = D.jalaliInfo(now);
-    const hh = String(now.getHours()).padStart(2,'0');
-    const mm = String(now.getMinutes()).padStart(2,'0');
-    const ss = String(now.getSeconds()).padStart(2,'0');
+    const tp = D.tehranParts ? D.tehranParts(now) : null;
+    const hh = String(tp ? tp.h : now.getHours()).padStart(2,'0');
+    const mm = String(tp ? tp.min : now.getMinutes()).padStart(2,'0');
+    const ss = String(tp ? tp.s : now.getSeconds()).padStart(2,'0');
     const el = $('#hud-clock');
     if (el) el.textContent = `${D.fa(hh)}:${D.fa(mm)}:${D.fa(ss)}`;
     const dt = $('#hud-date');

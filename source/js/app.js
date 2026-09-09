@@ -186,9 +186,10 @@
   function tickClock(){
     const now = new Date();
     const j = D.jalaliInfo(now);
-    const hh = String(now.getHours()).padStart(2,'0');
-    const mm = String(now.getMinutes()).padStart(2,'0');
-    const ss = String(now.getSeconds()).padStart(2,'0');
+    const tp = D.tehranParts ? D.tehranParts(now) : null;
+    const hh = String(tp ? tp.h : now.getHours()).padStart(2,'0');
+    const mm = String(tp ? tp.min : now.getMinutes()).padStart(2,'0');
+    const ss = String(tp ? tp.s : now.getSeconds()).padStart(2,'0');
     const el = $('#hud-clock');
     if (el) el.textContent = `${D.fa(hh)}:${D.fa(mm)}:${D.fa(ss)}`;
     const dt = $('#hud-date');

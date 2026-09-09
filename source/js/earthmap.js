@@ -102,40 +102,60 @@
     }
 
     map = L.map(el, { zoomControl: true, attributionControl: true, tap: true }).setView([center.lat, center.lng], opts.zoom || 16);
-    /* کاشی گوگل در ایران اغلب تصویر آبی خالی با وضعیت ۲۰۰ می‌دهد — tileerror نمی‌آید.
-       ماهوارهٔ Esri / سنتینل پیش‌فرض است؛ گوگل فقط به‌صورت لایهٔ اختیاری. */
-    const esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19, attribution: 'Esri'
-    });
-    const sentinel = L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg', {
-      maxZoom: 16, attribution: 'EOX Sentinel-2'
-    });
-    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, subdomains: 'abc', attribution: '© OSM'
-    });
-    const google = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-      maxZoom: 20, subdomains: '0123', attribution: 'Google'
-    });
-    esri.addTo(map);
-    let satIndex = 0;
-    const satChain = [esri, sentinel, osm];
-    satChain[0].on('tileerror', function onErr(){
-      satChain[satIndex].off('tileerror', onErr);
-      if (map.hasLayer(satChain[satIndex])) map.removeLayer(satChain[satIndex]);
-      satIndex++;
-      if (satIndex < satChain.length){
-        satChain[satIndex].addTo(map);
-        satChain[satIndex].on('tileerror', onErr);
+
+    /* منبع کاشی عوض شد: دیگر از گوگل / Esri / OSM.org (Leaflet پیش‌فرض) گرفته نمی‌شود. */
+    const BingSat = L.TileLayer.extend({
+      getTileUrl: function(c){
+        const z = this._getZoomForUrl();
+        let x = c.x, y = c.y, q = '';
+        for (let i = z; i > 0; i--){
+          let d = 0;
+          const m = 1 << (i - 1);
+          if ((x & m) !== 0) d += 1;
+          if ((y & m) !== 0) d += 2;
+          q += d;
+        }
+        return 'https://ecn.t' + (Math.abs(c.x + c.y) % 4) + '.tiles.virtualearth.net/tiles/a' + q + '.jpeg?g=1444';
       }
     });
+    const bing = new BingSat({ maxZoom: 19, attribution: 'Bing' });
+    const carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20, subdomains: 'abcd', attribution: '© OSM © CARTO'
+    });
+    const osmDe = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+      maxZoom: 18, attribution: '© OSM.de'
+    });
+    const osmFr = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+      maxZoom: 19, subdomains: 'abc', attribution: '© OSM.fr'
+    });
+
+    carto.addTo(map);
     L.control.layers({
-      'ماهواره': esri,
-      'ماهوارهٔ سنتینل': sentinel,
-      'نقشهٔ خیابان': osm,
-      'گوگل (اگر فیلتر نباشد)': google
+      'نقشه (Carto)': carto,
+      'ماهواره (Bing)': bing,
+      'نقشه آلمان': osmDe,
+      'نقشه امدادی': osmFr
     }, null, { collapsed: false, position: 'topright' }).addTo(map);
-    setTimeout(function(){ try { map.invalidateSize(); } catch (e) {} }, 250);
-    setTimeout(function(){ try { map.invalidateSize(); } catch (e) {} }, 800);
+
+    function tilesAlive(){
+      const imgs = el.querySelectorAll('.leaflet-tile');
+      for (let i = 0; i < imgs.length; i++){
+        if (imgs[i].complete && imgs[i].naturalWidth > 40) return true;
+      }
+      return false;
+    }
+    function forceLayer(ly){
+      [bing, carto, osmDe, osmFr].forEach(function(x){ if (map.hasLayer(x) && x !== ly) map.removeLayer(x); });
+      if (!map.hasLayer(ly)) ly.addTo(map);
+    }
+    setTimeout(function(){
+      try { map.invalidateSize(); } catch (e) {}
+      if (!tilesAlive()) forceLayer(osmDe);
+    }, 2200);
+    setTimeout(function(){
+      try { map.invalidateSize(); } catch (e) {}
+      if (!tilesAlive()) forceLayer(osmFr);
+    }, 4500);
 
     function addPlaceMarker(p, color){
       const m = L.marker([p.lat, p.lng], { icon: pinIcon(color || '#D4AF37', '⛳') }).addTo(map);

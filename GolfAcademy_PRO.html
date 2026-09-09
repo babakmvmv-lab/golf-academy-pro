@@ -15057,10 +15057,16 @@ window.addEventListener('ga:brand-changed', function(){
     let viewMonth = D.jalaliInfo(events[selIdx].d).mm;
     let filter = 'all';
 
+    function daysInJMonth(mm){
+      if (mm <= 6) return 31;
+      if (mm <= 11) return 30;
+      const g = D.jalaaliToDateObject(D.seasonYear, 12, 30);
+      const j = D.toJalaali(g.gy, g.gm, g.gd);
+      return (j[0] === D.seasonYear && j[1] === 12 && j[2] === 30) ? 30 : 29;
+    }
     function jalMonthStart(mm){
-      const base = new Date(Date.UTC(2026, 2, 21));
-      const off = mm <= 6 ? (mm-1)*31 : 186 + (mm-7)*30;
-      return new Date(base.getTime() + off*86400000);
+      const iso = D.shamsiToISO(D.seasonYear, mm, 1);
+      return D.dateFrom(iso);
     }
     function dstr(d){ return d.toISOString().slice(0,10); }
     function daysBetween(a, b){
@@ -15171,13 +15177,13 @@ window.addEventListener('ga:brand-changed', function(){
         }
       }
       const first = jalMonthStart(mm);
-      const dow = first.getUTCDay();
-      const daysInMonth = DAYS_IN[mm-1];
+      const dow = (first.getUTCDay() + 1) % 7;
+      const daysInMonth = daysInJMonth(mm);
       let html = `<div class="cal-grid-big-row">${WD.map(w=>`<div class="cal-wd">${w}</div>`).join('')}</div>`;
       html += '<div class="cal-grid-big-row">';
       for (let i=0;i<dow;i++) html += '<div class="cal-cell empty"></div>';
       for (let d=1; d<=daysInMonth; d++){
-        const isToday = (mm === D.jalaliInfo(D.TODAY).mm && d === D.jalaliInfo(D.TODAY).dd);
+        const tj = D.jalaliInfo(new Date()); const isToday = (tj.yy === D.seasonYear && mm === tj.mm && d === tj.dd);
         const isSelDay = selDays.has(d);
         const dayEvs = events.filter(e => {
           const j0 = D.jalaliInfo(e.d);
@@ -15203,7 +15209,7 @@ window.addEventListener('ga:brand-changed', function(){
         const j0 = D.jalaliInfo(e.d);
         if (j0.yy !== D.seasonYear || j0.mm !== mm) return false;
         const n = daysBetween(e.d, e.end);
-        for (let i=0;i<n;i++){ if (j0.dd + i >= 1 && j0.dd + i <= DAYS_IN[mm-1]) return true; }
+        for (let i=0;i<n;i++){ if (j0.dd + i >= 1 && j0.dd + i <= daysInJMonth(mm)) return true; }
         return false;
       }).length;
       const hc = $('#cal-month-hols');

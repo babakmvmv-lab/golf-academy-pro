@@ -2995,7 +2995,7 @@
 
     let rp = $('#tour-report');
     if (!rp){ rp = document.createElement('div'); rp.id = 'tour-report'; document.body.appendChild(rp); }
-    rp.style.cssText = 'position:fixed;inset:0;z-index:9100;background:rgba(10,15,22,.97);display:flex;flex-direction:column;overflow:auto';
+    rp.style.cssText = 'position:fixed;inset:0;z-index:9100;background:#0B0F14;display:flex;flex-direction:column;overflow:auto';
 
     function render(){
       const list = rows(), pend = pending();
@@ -3007,7 +3007,7 @@
         return;
       }
       rp.innerHTML = `<div style="max-width:760px;width:100%;margin:0 auto;padding:18px 14px 24px" id="tr-capture">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div class="tr-head" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
           <div style="flex:1">
             <div style="font-weight:900;font-size:17px">🏁 گزارش پایانی — ${esc(t[1])}</div>
             <div style="font-size:11px;color:var(--muted);margin-top:4px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(t[4] || 18)} میدان • <b style="color:var(--gold-l)">مجموع پار: ${D.fa(tourPar)}</b> • 🏆${D.fa(pr[0])} 🥈${D.fa(pr[1])} 🥉${D.fa(pr[2])} 🎟 شرکت ${D.fa(pr[3])} امتیاز • تاریخ ${D.isoToShamsi ? D.fa(D.isoToShamsi(String((t[5] || '')).slice(0, 10))) : ''}</div>
@@ -3022,7 +3022,7 @@
           <span style="flex:1;font-size:11.5px">⏳ ${D.fa(pend.length)} کارت کامل در انتظار «ثبت نهایی» است — ثبت نشوند، در گزارش نمی‌آیند.</span>
           <button class="btn sm" id="tr-finall" style="background:linear-gradient(135deg,#1ebb8a,#15996f);color:#fff;font-weight:800">✅ ثبت نهایی ${D.fa(pend.length)} کارت</button>
         </div>` : ''}
-        ${list.length ? `<div style="display:flex;gap:9px;justify-content:center;align-items:flex-end;margin:16px 0 6px">
+        ${list.length ? `<div class="tr-podium" style="display:flex;gap:9px;justify-content:center;align-items:flex-end;margin:16px 0 6px">
           ${[list[1], list[0], list[2]].filter(Boolean).map(r => {
             const idx = list.indexOf(r);
             return `<div class="glass ${idx === 0 ? 'gold-border' : ''}" style="text-align:center;padding:${idx === 0 ? '20px 16px' : '14px 12px'};min-width:112px;border-radius:14px;transform:translateY(${idx === 0 ? '-8px' : '0'})">
@@ -3034,7 +3034,7 @@
             </div>`;
           }).join('')}
         </div>` : ''}
-        <table class="tbl" style="width:100%;margin-top:14px">
+        <div class="table-wrap tr-table"><table class="tbl" style="width:100%;margin-top:14px">
           <thead><tr><th style="width:54px">رتبه</th><th>بازیکن</th><th>میدان</th><th>مجموع ضربه</th><th>مجموع پار</th><th>نسبت به پار</th><th>امتیاز</th><th data-no-pdf style="width:158px">اقدام (بعد ثبت)</th></tr></thead>
           <tbody>
           ${list.map((r, i) => `<tr${i === 0 ? ' style="background:rgba(212,175,55,.06)"' : ''}>
@@ -3061,10 +3061,10 @@
             <td data-no-pdf></td>
           </tr>`).join('')}
           </tbody>
-        </table>
+        </table></div>
         <div style="font-size:10px;color:var(--muted);margin-top:8px">کمترین مجموع ضربه = نفر اول • − = زیر پار • + = بالای پار • نمرهٔ هر بازیکن = ضربه + جریمهٔ حفره‌ها • امتیاز طبق جوایز طراحی‌شدهٔ مسابقه</div>
       </div>
-      <div style="position:sticky;bottom:0;display:flex;gap:9px;justify-content:center;padding:12px 0 18px" data-no-pdf>
+      <div class="tr-actions" style="position:sticky;bottom:0;display:flex;gap:9px;justify-content:center;padding:12px 0 18px" data-no-pdf>
         <button class="btn" id="tr-pdf" style="background:linear-gradient(135deg,var(--gold),#b08a28);font-weight:900;min-width:200px">⬇ دانلود PDF گزارش</button>
         <button class="btn" id="tr-story" style="background:linear-gradient(135deg,#d62976,#fa7e1e);font-weight:900;min-width:190px" title="خروجی عکس ۱۰۸۰×۱۹۲۰ آمادهٔ استوری اینستاگرام">📱 خروجی عکس استوری</button>
       </div>`;

@@ -1695,6 +1695,78 @@ html.phone-mode .modal .glass{
 
 /* تقویم / چارت / لیست */
 html.phone-mode .cal-main{grid-template-columns:1fr !important; gap:12px}
+html.phone-mode .cal-grid-pane{overflow:hidden; min-width:0}
+html.phone-mode .cal-grid-big{overflow:hidden; min-width:0}
+html.phone-mode .cal-grid-big-row{
+  grid-template-columns:repeat(7, minmax(0, 1fr)) !important;
+  gap:3px !important;
+}
+html.phone-mode .cal-cell{min-width:0; overflow:hidden; padding:2px 0}
+html.phone-mode .cal-cell .cal-num{font-size:12px; padding:4px 0 2px}
+html.phone-mode .cal-wd{font-size:11px; padding:4px 0}
+html.phone-mode .cal-ev-mini{padding:0 1px 4px; overflow:hidden}
+html.phone-mode .cal-mini-ev{
+  display:block; width:1.25em; max-width:100%;
+  margin:1px auto 0; padding:0; font-size:12px; line-height:1.2;
+  overflow:hidden; white-space:nowrap;
+  background:transparent !important; border:none !important;
+}
+html.phone-mode .cal-mini-nm{display:none}
+html.phone-mode .cal-grid-pane .card-head{flex-wrap:wrap; gap:8px}
+html.phone-mode .cal-list-pane{order:2}
+html.phone-mode .cal-grid-pane{order:1}
+html.phone-mode .cal-main{display:flex; flex-direction:column}
+
+/* گزارش پایانی مسابقه */
+html.phone-mode #tour-report{
+  background:#0B0F14 !important;
+  padding-top:env(safe-area-inset-top, 0px);
+  isolation:isolate;
+}
+html.phone-mode #tour-report #tr-capture{
+  max-width:100% !important;
+  padding:12px 12px 24px !important;
+  box-sizing:border-box;
+}
+html.phone-mode #tour-report .tr-head{
+  flex-wrap:wrap !important;
+  align-items:flex-start !important;
+  gap:8px !important;
+}
+html.phone-mode #tour-report .tr-head > div:first-child{flex:1 1 100% !important}
+html.phone-mode #tour-report .tr-head .btn,
+html.phone-mode #tour-report .tr-head .chip{
+  flex:1 1 auto;
+  min-height:42px;
+  justify-content:center;
+}
+html.phone-mode #tour-report .tr-podium{
+  width:100%;
+  gap:8px !important;
+  margin:12px 0 8px !important;
+}
+html.phone-mode #tour-report .tr-podium > .glass{
+  min-width:0 !important;
+  flex:1 1 0;
+  padding:10px 6px !important;
+  transform:none !important;
+}
+html.phone-mode #tour-report .tr-table{overflow-x:auto; -webkit-overflow-scrolling:touch; margin-bottom:8px}
+html.phone-mode #tour-report .tr-table .tbl{min-width:520px}
+html.phone-mode #tour-report .tr-table th:last-child,
+html.phone-mode #tour-report .tr-table td:last-child{display:none}
+html.phone-mode #tour-report .tr-actions{
+  flex-wrap:wrap !important;
+  gap:10px !important;
+  background:linear-gradient(180deg, transparent, #0B0F14 28%);
+  padding:14px 8px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+}
+html.phone-mode #tour-report .tr-actions .btn{
+  flex:1 1 46%;
+  min-width:0;
+  min-height:48px;
+  font-size:13.5px;
+}
 html.phone-mode .chart-box{min-height:170px !important}
 html.phone-mode .h-item{flex-wrap:wrap; gap:10px}
 html.phone-mode .qrwrap{flex-direction:column; text-align:center; gap:12px}
@@ -10766,7 +10838,7 @@ window.addEventListener('ga:brand-changed', function(){
 
     let rp = $('#tour-report');
     if (!rp){ rp = document.createElement('div'); rp.id = 'tour-report'; document.body.appendChild(rp); }
-    rp.style.cssText = 'position:fixed;inset:0;z-index:9100;background:rgba(10,15,22,.97);display:flex;flex-direction:column;overflow:auto';
+    rp.style.cssText = 'position:fixed;inset:0;z-index:9100;background:#0B0F14;display:flex;flex-direction:column;overflow:auto';
 
     function render(){
       const list = rows(), pend = pending();
@@ -10778,7 +10850,7 @@ window.addEventListener('ga:brand-changed', function(){
         return;
       }
       rp.innerHTML = `<div style="max-width:760px;width:100%;margin:0 auto;padding:18px 14px 24px" id="tr-capture">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div class="tr-head" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
           <div style="flex:1">
             <div style="font-weight:900;font-size:17px">🏁 گزارش پایانی — ${esc(t[1])}</div>
             <div style="font-size:11px;color:var(--muted);margin-top:4px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(t[4] || 18)} میدان • <b style="color:var(--gold-l)">مجموع پار: ${D.fa(tourPar)}</b> • 🏆${D.fa(pr[0])} 🥈${D.fa(pr[1])} 🥉${D.fa(pr[2])} 🎟 شرکت ${D.fa(pr[3])} امتیاز • تاریخ ${D.isoToShamsi ? D.fa(D.isoToShamsi(String((t[5] || '')).slice(0, 10))) : ''}</div>
@@ -10793,7 +10865,7 @@ window.addEventListener('ga:brand-changed', function(){
           <span style="flex:1;font-size:11.5px">⏳ ${D.fa(pend.length)} کارت کامل در انتظار «ثبت نهایی» است — ثبت نشوند، در گزارش نمی‌آیند.</span>
           <button class="btn sm" id="tr-finall" style="background:linear-gradient(135deg,#1ebb8a,#15996f);color:#fff;font-weight:800">✅ ثبت نهایی ${D.fa(pend.length)} کارت</button>
         </div>` : ''}
-        ${list.length ? `<div style="display:flex;gap:9px;justify-content:center;align-items:flex-end;margin:16px 0 6px">
+        ${list.length ? `<div class="tr-podium" style="display:flex;gap:9px;justify-content:center;align-items:flex-end;margin:16px 0 6px">
           ${[list[1], list[0], list[2]].filter(Boolean).map(r => {
             const idx = list.indexOf(r);
             return `<div class="glass ${idx === 0 ? 'gold-border' : ''}" style="text-align:center;padding:${idx === 0 ? '20px 16px' : '14px 12px'};min-width:112px;border-radius:14px;transform:translateY(${idx === 0 ? '-8px' : '0'})">
@@ -10805,7 +10877,7 @@ window.addEventListener('ga:brand-changed', function(){
             </div>`;
           }).join('')}
         </div>` : ''}
-        <table class="tbl" style="width:100%;margin-top:14px">
+        <div class="table-wrap tr-table"><table class="tbl" style="width:100%;margin-top:14px">
           <thead><tr><th style="width:54px">رتبه</th><th>بازیکن</th><th>میدان</th><th>مجموع ضربه</th><th>مجموع پار</th><th>نسبت به پار</th><th>امتیاز</th><th data-no-pdf style="width:158px">اقدام (بعد ثبت)</th></tr></thead>
           <tbody>
           ${list.map((r, i) => `<tr${i === 0 ? ' style="background:rgba(212,175,55,.06)"' : ''}>
@@ -10832,10 +10904,10 @@ window.addEventListener('ga:brand-changed', function(){
             <td data-no-pdf></td>
           </tr>`).join('')}
           </tbody>
-        </table>
+        </table></div>
         <div style="font-size:10px;color:var(--muted);margin-top:8px">کمترین مجموع ضربه = نفر اول • − = زیر پار • + = بالای پار • نمرهٔ هر بازیکن = ضربه + جریمهٔ حفره‌ها • امتیاز طبق جوایز طراحی‌شدهٔ مسابقه</div>
       </div>
-      <div style="position:sticky;bottom:0;display:flex;gap:9px;justify-content:center;padding:12px 0 18px" data-no-pdf>
+      <div class="tr-actions" style="position:sticky;bottom:0;display:flex;gap:9px;justify-content:center;padding:12px 0 18px" data-no-pdf>
         <button class="btn" id="tr-pdf" style="background:linear-gradient(135deg,var(--gold),#b08a28);font-weight:900;min-width:200px">⬇ دانلود PDF گزارش</button>
         <button class="btn" id="tr-story" style="background:linear-gradient(135deg,#d62976,#fa7e1e);font-weight:900;min-width:190px" title="خروجی عکس ۱۰۸۰×۱۹۲۰ آمادهٔ استوری اینستاگرام">📱 خروجی عکس استوری</button>
       </div>`;
@@ -15007,7 +15079,7 @@ window.addEventListener('ga:brand-changed', function(){
         const labels = dayEvs.map(e => `${e.icon} ${esc(e.name)}`);
         html += `<div class="cal-cell ${dayEvs.length?'has-ev':''} ${isSelDay?'sel':''} ${isToday?'today':''}" title="${esc(labels.join(' • '))}">
           <div class="cal-num">${D.fa(d)}</div>
-          ${dayEvs.length ? `<div class="cal-ev-mini">${dayEvs.slice(0,3).map(e=>`<span class="cal-mini-ev ${e.kind}">${e.icon} ${esc(e.name)}</span>`).join('')}${dayEvs.length>3?'<span class="cal-mini-more">+'+D.fa(dayEvs.length-3)+'</span>':''}</div>` : ''}
+          ${dayEvs.length ? `<div class="cal-ev-mini">${dayEvs.slice(0,3).map(e=>`<span class="cal-mini-ev ${e.kind}"><span class="cal-mini-ic">${e.icon}</span><span class="cal-mini-nm">${esc(e.name)}</span></span>`).join('')}${dayEvs.length>3?'<span class="cal-mini-more">+'+D.fa(dayEvs.length-3)+'</span>':''}</div>` : ''}
         </div>`;
       }
       html += '</div>';

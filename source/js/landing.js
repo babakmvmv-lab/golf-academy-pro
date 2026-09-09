@@ -15,6 +15,10 @@
 var esc = function(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
 var L = function(id, fallback){ return window.UI_LABELS ? UI_LABELS.t(id, fallback) : fallback; };
 var D = window.Data || {};
+var Bnd = function(){
+  try { if (window.GA_BRAND) return GA_BRAND.get(); } catch(e){}
+  return { nameFa:'آکادمی گلف پات کلاب', nameShortFa:'پات کلاب', nameEn:'Putt Club Golf Academy', nameShortEn:'Putt Club', letters:'PUTTCLUB', domain:'puttclub.ir', email:'info@puttclub.ir' };
+};
 
 /* ─────────── CSS ─────────── */
 var CSS = `
@@ -214,9 +218,9 @@ root.innerHTML =
     '<div class="fr" style="background-image:url(assets/open_sky.webp)"></div>' +
     '<div class="fr" style="background-image:url(assets/open_hole.webp)"></div>' +
     '<div class="vin"></div>' +
-    '<div id="l3d-logo"><div class="lg-letters" id="l3d-lg"></div><div class="lg-sub" id="l3d-lgsub">آکادمی گلف پات کلاب — puttclub.ir</div><div class="lg-line" id="l3d-lgline"></div></div>' +
+    '<div id="l3d-logo"><div class="lg-letters" id="l3d-lg"></div><div class="lg-sub" id="l3d-lgsub">' + esc(Bnd().nameFa) + ' — ' + esc(Bnd().domain) + '</div><div class="lg-line" id="l3d-lgline"></div></div>' +
     '<div id="l3d-flash"></div><div id="l3d-wave"></div><div id="l3d-sndhint">🔊 برای شنیدن صدای افتتاحیه، صفحه را لمس کنید</div>' +
-    '<div class="l3d-brand">PUTTCLUB</div>' +
+    '<div class="l3d-brand">' + esc((Bnd().letters || 'PUTTCLUB').replace(/\s+/g,'').toUpperCase()) + '</div>' +
   '</div>' +
   '<div id="l3d-stage">' +
     '<div id="l3d-bg"></div>' +
@@ -360,8 +364,9 @@ function siteInfo(){
   try {
     if (window.MGMT && MGMT.getSiteInfo) return MGMT.getSiteInfo();
   } catch(e){}
+  var _b = Bnd();
   return {
-    contact: { phone:'۰۶۱-۳۲۴۴۵۶۷۸', email:'info@puttclub.ir', address:'زمین گلف مسجدسلیمان، خیابان ورزش', website:'puttclub.ir', social:'اینستاگرام · تلگرام · واتساپ', socials:[], hours:'شنبه تا پنجشنبه ۸ تا ۲۰', qr:'https://puttclub.ir' },
+    contact: { phone:'۰۶۱-۳۲۴۴۵۶۷۸', email:_b.email || 'info@puttclub.ir', address:'زمین گلف مسجدسلیمان، خیابان ورزش', website:_b.domain || 'puttclub.ir', social:'اینستاگرام · تلگرام · واتساپ', socials:[], hours:'شنبه تا پنجشنبه ۸ تا ۲۰', qr:'https://' + (_b.domain || 'puttclub.ir') },
     reception: { signup:'', courses:'', tuition:'', rules:'' },
     info: { intro:'', address:'', hours:'' }
   };
@@ -402,7 +407,7 @@ function playIntro(){
   // سیاست مرورگرها: تا اولین لمس، صدا اجرا نمی‌شود → راهنمای کوچک نمایش داده می‌شود
   setTimeout(function(){ if (!audioOn() && !STATE.introDone) sndHint(true); }, 500);
   // لوگو اسلم: حروف PUTTCLUB یکی‌یکی (نام مختصر انگلیسی)
-  var word = 'PUTTCLUB';
+  var word = (Bnd().letters || 'PUTTCLUB').replace(/\s+/g,'').toUpperCase() || 'PUTTCLUB';
   var lg = $('#l3d-lg');
   word.split('').forEach(function(ch, i){
     var s = document.createElement('span');
@@ -565,13 +570,13 @@ function panelReception(){
   var navHtml = '<div class="l3d-nav">' + navs.map(function(n){
     return '<button data-nav="' + n[0] + '" class="' + (panelNav === n[0] ? 'on' : '') + '">' + esc(n[1]) + '</button>';
   }).join('') + '</div>';
-  return '<div class="hd"><span class="ic">🛎️</span><h3>' + esc(L('landing.reception','رسپشن')) + ' آکادمی گلف پات کلاب</h3><span class="tg">puttclub.ir</span></div>' + navHtml + receptionTab(panelNav);
+  return '<div class="hd"><span class="ic">🛎️</span><h3>' + esc(L('landing.reception','رسپشن')) + ' ' + esc(Bnd().nameFa) + '</h3><span class="tg">' + esc(Bnd().domain) + '</span></div>' + navHtml + receptionTab(panelNav);
 }
 function receptionTab(tab){
   if (tab === 'intro'){
     var SI = siteInfo();
     var introTxt = SI.info.intro ? SI.info.intro : 'آکادمی تخصصی گلف با زمین ۱۸ حفره‌ای «مسجدسلیمان» (پار ۷۲) — دوره‌های آموزشی، اردوهای گروهی، تمرین‌های هفتگی و مسابقات ماهانه برای همهٔ سنین. تمرین‌های گروهی هر پنجشنبه · مسابقات آخرین جمعهٔ هر ماه · دوره‌های ۲ روزه در خرداد و آذر.';
-    return '<div class="sub"><b>به آکادمی گلف پات کلاب خوش آمدید.</b><br>' + esc(introTxt).replace(/\n/g, '<br>') + '<br><br>گلف ورزش دقت و آرامش است — ثبت‌نام در هر فصل از همین رسپشن انجام می‌شود.</div>';
+    return '<div class="sub"><b>به ' + esc(Bnd().nameFa) + ' خوش آمدید.</b><br>' + esc(introTxt).replace(/\n/g, '<br>') + '<br><br>گلف ورزش دقت و آرامش است — ثبت‌نام در هر فصل از همین رسپشن انجام می‌شود.</div>';
   }
   if (tab === 'signup'){
     var SRs = (siteInfo().reception || {}).signup;
@@ -633,7 +638,7 @@ function panelInfo(){
   var navHtml = '<div class="l3d-nav">' + navs.map(function(n){
     return '<button data-nav="' + n[0] + '" class="' + (panelNav === n[0] ? 'on' : '') + '">' + esc(n[1]) + '</button>';
   }).join('') + '</div>';
-  return '<div class="hd"><span class="ic">ℹ️</span><h3>' + esc(L('landing.info','اطلاعات')) + ' آکادمی</h3><span class="tg">puttclub.ir</span></div>' + navHtml + infoTab(panelNav);
+  return '<div class="hd"><span class="ic">ℹ️</span><h3>' + esc(L('landing.info','اطلاعات')) + ' آکادمی</h3><span class="tg">' + esc(Bnd().domain) + '</span></div>' + navHtml + infoTab(panelNav);
 }
 function infoTab(tab){
   if (tab === 'intro'){
@@ -769,7 +774,7 @@ function panelContact(){
   try {
     setTimeout(function(){
       var host = $('#l3d-qr'); if (!host || typeof qrcode === 'undefined') return;
-      var qr = qrcode(0, 'M'); qr.addData(c.qr || 'https://puttclub.ir'); qr.make();
+      var qr = qrcode(0, 'M'); qr.addData(c.qr || ('https://' + (Bnd().domain || 'puttclub.ir'))); qr.make();
       var img = document.createElement('img');
       img.src = qr.createDataURL(5, 8); img.style.cssText = 'width:110px;height:110px;border-radius:10px';
       host.appendChild(img);
@@ -841,4 +846,10 @@ window.__L3D = {
   refreshLabels: function(){ refreshLabels(); },
   close: function(){ closePanel(); }
 };
+
+window.addEventListener('ga:brand-changed', function(){
+  var b = Bnd();
+  var sub = document.getElementById('l3d-lgsub');
+  if (sub) sub.textContent = (b.nameFa || '') + ' — ' + (b.domain || '');
+});
 })();

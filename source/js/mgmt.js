@@ -629,6 +629,7 @@
   function pageMgmt(){
     const v = $('#view');
     const tabs = [
+      ['academy','🏛️',L('admin.academy','تنظیمات آکادمی')],
       ['players','👥',L('admin.players','بازیکنان')], ['courses','🗺️',L('admin.courses','زمین‌ها')], ['tournaments','🏆',L('admin.tournaments','مسابقات')],
       ['programs','🎓',L('admin.programs','دوره‌ها')], ['results','⛳',L('admin.results','نتایج')], ['calendar','📅',L('admin.calendar','تقویم')],
       ['reception','🛎️',L('admin.reception','رسپشن')], ['contact','📞',L('admin.contact','تماس با ما')], ['info','ℹ️',L('admin.info','اطلاعات')], ['users','🔐',L('admin.users','یوزرها')],
@@ -660,7 +661,8 @@
 
   function renderMgmtTab(){
     const body = $('#mgmt-body'); if (!body) return;
-    if (mgmtTab === 'players') mgmtPlayers(body);
+    if (mgmtTab === 'academy') mgmtAcademy(body);
+    else if (mgmtTab === 'players') mgmtPlayers(body);
     else if (mgmtTab === 'courses') mgmtCourses(body);
     else if (mgmtTab === 'tournaments') mgmtTournaments(body);
     else if (mgmtTab === 'programs') mgmtPrograms(body);
@@ -676,6 +678,108 @@
     else if (mgmtTab === 'battle') mgmtBattle(body);
     else if (mgmtTab === 'avatars') mgmtAvatarLand(body);
     else if (mgmtTab === 'labels') mgmtLabels(body);
+  }
+
+
+  function mgmtAcademy(body){
+    const B = (window.GA_BRAND && GA_BRAND.get()) || {};
+    const logo = (window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.png';
+    const fav = (window.GA_BRAND && GA_BRAND.faviconUrl()) || 'assets/puttclub_favicon.png';
+    const field = (id, lab, val, extra) =>
+      '<label style="display:block;margin:0 0 4px"><span style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:5px">' + lab + '</span>' +
+      '<input id="' + id + '" class="inp" value="' + esc(val || '') + '" ' + (extra || '') + ' style="width:100%"></label>';
+    body.innerHTML =
+      '<div class="glass gold-border" style="margin-bottom:16px;padding:18px 20px">' +
+        '<div class="card-head"><span class="ic">🏛️</span><b>پوستهٔ آکادمی</b></div>' +
+        '<p style="color:var(--muted);font-size:13px;line-height:1.9;margin:8px 0 0">نام، لوگو، دامنه، ایمیل برند، فاویکن، پس‌زمینهٔ ورود و حروف افتتاحیه از اینجا عوض می‌شود. منطق گلف ثابت می‌ماند — همین پنل را می‌توان برای باشگاه دیگر هم پوشاند.</p>' +
+      '</div>' +
+      '<div class="glass" style="padding:18px 20px;margin-bottom:14px">' +
+        '<div style="font-weight:800;margin-bottom:14px">نام و هویت</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 16px">' +
+          field('ac-nameFa','نام فارسی', B.nameFa) +
+          field('ac-nameShortFa','نام کوتاه فارسی', B.nameShortFa) +
+          field('ac-nameEn','نام انگلیسی', B.nameEn) +
+          field('ac-nameShortEn','نام کوتاه انگلیسی (سایدبار)', B.nameShortEn) +
+          field('ac-loginTitle','عنوان صفحهٔ ورود', B.loginTitle) +
+          field('ac-letters','حروف افتتاحیه (لاتین، بدون فاصله)', B.letters, 'dir="ltr"') +
+          field('ac-domain','دامنه', B.domain, 'dir="ltr"') +
+          field('ac-email','ایمیل برند', B.email, 'dir="ltr"') +
+          field('ac-instagram','اینستاگرام (بدون @)', B.instagram, 'dir="ltr"') +
+        '</div>' +
+      '</div>' +
+      '<div class="glass" style="padding:18px 20px;margin-bottom:14px">' +
+        '<div style="font-weight:800;margin-bottom:12px">تصاویر برند</div>' +
+        '<div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">' +
+          '<div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">لوگو</div>' +
+            '<img id="ac-logo-prev" src="' + esc(logo) + '" alt="" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:2px solid var(--gold,#d4af37)">' +
+            '<div style="margin-top:8px"><input type="file" id="ac-logo" accept="image/*"></div></div>' +
+          '<div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">فاویکن</div>' +
+            '<img id="ac-fav-prev" src="' + esc(fav) + '" alt="" style="width:48px;height:48px;border-radius:8px;object-fit:cover;border:1px solid rgba(212,175,55,.4)">' +
+            '<div style="margin-top:8px"><input type="file" id="ac-fav" accept="image/*"></div></div>' +
+          '<div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">پس‌زمینه ورود</div>' +
+            '<img id="ac-bg-prev" src="' + esc(B.loginBg || "assets/login_bg.webp") + '" alt="" style="width:160px;height:90px;border-radius:10px;object-fit:cover;border:1px solid rgba(255,255,255,.12)">' +
+            '<div style="margin-top:8px"><input type="file" id="ac-bg" accept="image/*"></div></div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
+        '<button class="btn gold" id="ac-save">💾 ذخیره پوسته</button>' +
+        '<button class="btn" id="ac-reset">بازگشت به پیش‌فرض پات‌کلاب</button>' +
+      '</div>';
+
+    const pending = {};
+    function readImg(file, max, jpeg, cb){
+      if (!file) return;
+      if (file.size > 6 * 1024 * 1024){ APP.toast('حجم فایل زیاد است (حداکثر ۶ مگابایت)', 'red'); return; }
+      const rd = new FileReader();
+      rd.onload = () => {
+        const im = new Image();
+        im.onload = () => {
+          const k = Math.min(1, max / Math.max(im.width, im.height, 1));
+          const cv = document.createElement('canvas');
+          cv.width = Math.max(1, Math.round(im.width * k));
+          cv.height = Math.max(1, Math.round(im.height * k));
+          cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+          cb(jpeg ? cv.toDataURL('image/jpeg', 0.82) : cv.toDataURL('image/png'));
+        };
+        im.onerror = () => APP.toast('تصویر خوانده نشد', 'red');
+        im.src = rd.result;
+      };
+      rd.readAsDataURL(file);
+    }
+    $('#ac-logo').addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      readImg(f, 512, false, u => { pending.logo = u; $('#ac-logo-prev').src = u; });
+    });
+    $('#ac-fav').addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      readImg(f, 128, false, u => { pending.favicon = u; $('#ac-fav-prev').src = u; });
+    });
+    $('#ac-bg').addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      readImg(f, 1400, true, u => { pending.loginBg = u; $('#ac-bg-prev').src = u; });
+    });
+    $('#ac-save').addEventListener('click', () => {
+      if (!window.GA_BRAND){ APP.toast('ماژول پوسته بار نشده', 'red'); return; }
+      const letters = ($('#ac-letters').value || '').replace(/\s+/g, '').toUpperCase().slice(0, 16);
+      GA_BRAND.save(Object.assign({
+        nameFa: $('#ac-nameFa').value.trim(),
+        nameShortFa: $('#ac-nameShortFa').value.trim(),
+        nameEn: $('#ac-nameEn').value.trim(),
+        nameShortEn: $('#ac-nameShortEn').value.trim(),
+        loginTitle: $('#ac-loginTitle').value.trim(),
+        letters: letters,
+        domain: $('#ac-domain').value.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, ''),
+        email: $('#ac-email').value.trim(),
+        instagram: $('#ac-instagram').value.trim().replace(/^@/, '')
+      }, pending));
+      APP.toast('پوسته ذخیره شد. اگر دستگاه دیگری کش قدیمی دارد، هاردریفرش کنید.', 'gold');
+    });
+    $('#ac-reset').addEventListener('click', () => {
+      if (!confirm('بازگشت به هویت پیش‌فرض پات‌کلاب؟ لوگو و نام سفارشی پاک می‌شود.')) return;
+      GA_BRAND.reset();
+      mgmtAcademy(body);
+      APP.toast('پوسته به پات‌کلاب برگشت', 'gold');
+    });
   }
 
   /* ═══════════════ نبرد میدان‌ها: مدیریت تیم‌ها و جدال‌های تیمی ═══════════════ */
@@ -1528,7 +1632,7 @@
     ctx.textAlign = 'left'; ctx.fillText('LAT ' + course.lat.toFixed(5), 14, 24);
     ctx.fillText('LNG ' + course.lng.toFixed(5), 14, 40);
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,.4)';
-    ctx.fillText('© Satellite view — Putt Club 1405', W-14, H-12);
+    ctx.fillText('© Satellite view — ' + ((window.GA_BRAND && GA_BRAND.get().nameShortEn) || 'Putt Club') + ' 1405', W-14, H-12);
   }
   function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
@@ -2644,12 +2748,12 @@
       el.innerHTML =
           '<div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#7a5f17,' + G + ',#f7e7ac,' + G + ',#7a5f17)"></div>'
         + '<div class="pdfk-head" style="display:flex;align-items:center;gap:14px;padding:17px 28px 13px;border-bottom:1px solid rgba(212,175,55,.35)">'
-        +   '<img src="assets/puttclub_logo.png" alt="" style="width:58px;height:58px;border-radius:50%;object-fit:cover;border:2px solid ' + G + '">'
-        +   '<div style="flex:1"><div style="font-size:20px;font-weight:900;color:' + GL + '">آکادمی گلف پات کلاب</div>'
-        +   '<div style="font-size:8.5px;letter-spacing:3px;color:rgba(212,175,55,.85);margin-top:4px;direction:ltr;text-align:right">PUTT CLUB GOLF ACADEMY</div></div>'
+        +   '<img src="' + ((window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.png') + '" alt="" style="width:58px;height:58px;border-radius:50%;object-fit:cover;border:2px solid ' + G + '">'
+        +   '<div style="flex:1"><div style="font-size:20px;font-weight:900;color:' + GL + '">' + ((window.GA_BRAND && GA_BRAND.get().nameFa) || '') + '</div>'
+        +   '<div style="font-size:8.5px;letter-spacing:3px;color:rgba(212,175,55,.85);margin-top:4px;direction:ltr;text-align:right">' + ((window.GA_BRAND && GA_BRAND.get().nameEn) || '') + '</div></div>'
         +   '<div style="text-align:left"><div style="font-size:10px;color:#9aa7b5">' + (opts.kind || 'گزارش') + '</div>'
         +   '<div style="font-size:11px;color:#dde5ee;font-weight:800;margin-top:4px">' + todayFa + '</div>'
-        +   '<div style="font-size:8.5px;letter-spacing:2px;color:#8a7445;margin-top:4px;direction:ltr;text-align:left">puttclub.ir</div></div>'
+        +   '<div style="font-size:8.5px;letter-spacing:2px;color:#8a7445;margin-top:4px;direction:ltr;text-align:left">' + ((window.GA_BRAND && GA_BRAND.host()) || '') + '</div></div>'
         + '</div>'
         + '<div class="pdfk-main" style="padding:12px 28px 8px">'
         +   '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">'
@@ -2659,8 +2763,8 @@
         +   metaHtml + kpiHtml + sectHtml
         + '</div>'
         + '<div class="pdfk-foot" style="position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:10px 28px;background:#0d141e;border-top:2px solid rgba(212,175,55,.45)">'
-        +   '<span style="font-size:9px;color:#8a97a6">«پات کلاب» — آکادمی گلف پات کلاب</span>'
-        +   '<span style="font-size:9px;color:#8a97a6;direction:ltr">Putt Club Golf Academy — puttclub.ir</span>'
+        +   '<span style="font-size:9px;color:#8a97a6">«' + ((window.GA_BRAND && GA_BRAND.get().nameShortFa) || '') + '» — ' + ((window.GA_BRAND && GA_BRAND.get().nameFa) || '') + '</span>'
+        +   '<span style="font-size:9px;color:#8a97a6;direction:ltr">' + ((window.GA_BRAND && GA_BRAND.get().nameEn) || '') + ' — ' + ((window.GA_BRAND && GA_BRAND.host()) || '') + '</span>'
         + '</div>';
       document.body.appendChild(el);
       /* اتوفیت: محتوای بلند به‌تناسب کوچک می‌شود تا دقیقاً یک برگهٔ A4 شود */
@@ -2744,8 +2848,8 @@
       const drawRest = () => {
         const doneLogo = () => {
           c.save(); c.beginPath(); c.arc(W / 2, 172, 82, 0, 7); c.lineWidth = 6; c.strokeStyle = GOLD; c.stroke(); c.restore();
-          txt('آکادمی گلف پات کلاب', W / 2, 308, 900, 46, GL);
-          txt('P U T T   C L U B   G O L F   A C A D E M Y', W / 2, 352, 400, 21, 'rgba(212,175,55,.75)');
+          txt(((window.GA_BRAND && GA_BRAND.get().nameFa) || 'آکادمی گلف پات کلاب'), W / 2, 308, 900, 46, GL);
+          txt(((window.GA_BRAND && GA_BRAND.get().nameEn) || 'PUTT CLUB GOLF ACADEMY').toUpperCase().split('').join(' '), W / 2, 352, 400, 21, 'rgba(212,175,55,.75)');
           c.strokeStyle = 'rgba(212,175,55,.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(240, 386); c.lineTo(W - 240, 386); c.stroke();
           txt('🏁 گزارش پایانی مسابقه', W / 2, 446, 700, 27, MUT);
           txt('«' + t[1] + '»', W / 2, 512, 900, 58, FG, 'center', 980);
@@ -2809,9 +2913,9 @@
           /* پانوشت: سایت + شبکه‌های اجتماعی */
           const fy = H - 118;
           c.strokeStyle = 'rgba(212,175,55,.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(120, fy - 42); c.lineTo(W - 120, fy - 42); c.stroke();
-          txt('puttclub.ir', W / 2, fy + 8, 800, 34, GL);
+          txt(((window.GA_BRAND && GA_BRAND.host()) || 'puttclub.ir'), W / 2, fy + 8, 800, 34, GL);
           txt(socLine, W / 2, fy + 58, 500, 24, MUT, 'center', 960);
-          txt('آکادمی گلف پات کلاب — نتیجهٔ کامل در سایت', W / 2, H - 24, 400, 19, 'rgba(139,150,164,.65)');
+          txt(((window.GA_BRAND && GA_BRAND.get().nameFa) || '') + ' — نتیجهٔ کامل در سایت', W / 2, H - 24, 400, 19, 'rgba(139,150,164,.65)');
           save(cvs);
         };
         const img = new Image();
@@ -2824,7 +2928,7 @@
         };
         img.onload = () => { drawImg(); doneLogo(); };
         img.onerror = () => { if (!drew){ drew = true; c.save(); c.beginPath(); c.arc(W / 2, 172, 76, 0, 7); c.fillStyle = '#111c2a'; c.fill(); c.clip(); c.textAlign = 'center'; c.fillStyle = GL; c.font = '64px serif'; c.fillText('⛳', W / 2, 196); c.restore(); } doneLogo(); };
-        img.src = 'assets/puttclub_logo.png';
+        img.src = (window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.png';
       };
 
       const save = cvs => {
@@ -3382,10 +3486,15 @@
     /* منبع اطلاعات تماس: همان فیلدهای بخش «مدیریت ← رسپشن/تماس» (در localStorage ذخیره) */
     let ct = {};
     try { ct = JSON.parse(localStorage.getItem('ga_siteinfo') || '{}').contact || {}; } catch(e){}
+    const Br = (window.GA_BRAND && GA_BRAND.get()) || {};
     const phone = (ct.phone && String(ct.phone).trim()) || '—';
-    const mail  = (ct.email && String(ct.email).trim()) || 'info@puttclub.ir';
+    const mail  = (ct.email && String(ct.email).trim()) || Br.email || 'info@puttclub.ir';
     const addr  = (ct.address && String(ct.address).trim()) || 'زمین گلف مسجدسلیمان';
-    const web   = (ct.website && String(ct.website).trim()) || 'puttclub.ir';
+    const web   = (ct.website && String(ct.website).trim()) || Br.domain || 'puttclub.ir';
+    let logoSrc = (window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.png';
+    if (!/^data:|^https?:\/\//i.test(logoSrc)) {
+      logoSrc = 'https://' + String(web).replace(/^https?:\/\//i,'').replace(/\/.*$/,'') + '/' + String(logoSrc).replace(/^\//,'');
+    }
     const socials = (Array.isArray(ct.socials) && ct.socials.length) ? ct.socials : [];
     const SOC = { whatsapp:['واتساپ','#25D366'], telegram:['تلگرام','#229ED9'], instagram:['اینستاگرام','#E1306C'], youtube:['یوتیوب','#FF0000'], linkedin:['لینکدین','#0A66C2'], x:['ایکس','#000000'], aparat:['آپارات','#ED145B'], web:['🌐 وب','#d4af37'] };
     const socHtml = socials.filter(sn => sn && sn.url).map(sn => {
@@ -3399,9 +3508,9 @@
   <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(6,40,24,.18)">
     <!-- سربرگ تیره برنددار -->
     <tr><td style="background:linear-gradient(135deg,#062b1d,#0a3b28 55%,#0f4a33);padding:26px 24px;text-align:center">
-      <img src="https://puttclub.ir/assets/puttclub_logo.png" width="54" height="54" alt="PuttClub" style="border-radius:50%;border:2px solid #d4af37;padding:3px;background:#fff" />
-      <div style="color:#f6e27a;font-size:19px;font-weight:800;margin-top:9px">آکادمی گلف پات کلاب</div>
-      <div style="color:rgba(255,255,255,.55);font-size:11px;letter-spacing:2px">PUTTCLUB.IR</div>
+      <img src="${logoSrc}" width="54" height="54" alt="${Br.nameShortEn || Br.nameFa || ''}" style="border-radius:50%;border:2px solid #d4af37;padding:3px;background:#fff" />
+      <div style="color:#f6e27a;font-size:19px;font-weight:800;margin-top:9px">${Br.nameFa || ''}</div>
+      <div style="color:rgba(255,255,255,.55);font-size:11px;letter-spacing:2px">${String(web || '').toUpperCase()}</div>
     </td></tr>
     <tr><td style="height:3px;background:linear-gradient(90deg,#d4af37,#f6e27a,#d4af37)"></td></tr>
     <!-- بدنهٔ پیام (متنِ تایپ‌شدهٔ مدیر) -->
@@ -3417,7 +3526,7 @@
         <tr><td style="text-align:right">📍 ${addr}</td></tr>
         <tr><td style="text-align:right">🌐 <a href="https://${web}" style="color:#f6e27a;text-decoration:none">${web}</a></td></tr>
       </table>
-      <div style="text-align:center;color:rgba(255,255,255,.3);font-size:9.5px;margin-top:14px;border-top:1px solid rgba(255,255,255,.09);padding-top:12px">این ایمیل به‌صورت یک‌طرفه از سوی آکادمی گلف پات کلاب ارسال شده است — لطفاً به آن پاسخ ندهید.</div>
+      <div style="text-align:center;color:rgba(255,255,255,.3);font-size:9.5px;margin-top:14px;border-top:1px solid rgba(255,255,255,.09);padding-top:12px">این ایمیل به‌صورت یک‌طرفه از سوی ${Br.nameFa || ''} ارسال شده است — لطفاً به آن پاسخ ندهید.</div>
     </td></tr>
   </table>
 </td></tr></table></body></html>`;
@@ -3428,7 +3537,7 @@
     const c = emailCfg();
     const bodyJSON = JSON.stringify({
       service_id: c.svc, template_id: c.tpl, user_id: c.key,
-      template_params: { to_email: toEmail, to_name: toName || '', name: toName || '', subject: subject, message: text, html: buildEmailHtml(subject, text), email: '', time: new Date().toLocaleString('fa-IR'), academy: 'آکادمی گلف پات کلاب — puttclub.ir' }
+      template_params: { to_email: toEmail, to_name: toName || '', name: toName || '', subject: subject, message: text, html: buildEmailHtml(subject, text), email: '', time: new Date().toLocaleString('fa-IR'), academy: ((window.GA_BRAND && GA_BRAND.get().nameFa) || '') + ' — ' + ((window.GA_BRAND && (GA_BRAND.get().domain || GA_BRAND.host())) || '') }
     });
     let lastNet = null;
     /* ── تلاش روی هر دو میزبان (US -> EU) تا اگر یکی فیلتر بود دیگری کار کند ── */

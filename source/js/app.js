@@ -5,6 +5,10 @@
   const $$ = (s, r=document) => [...r.querySelectorAll(s)];
   const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const L = (id, fallback) => window.UI_LABELS ? UI_LABELS.t(id, fallback) : fallback;
+  const Bnd = () => {
+    try { if (window.GA_BRAND) return GA_BRAND.get(); } catch(e){}
+    return { nameFa:'آکادمی گلف پات کلاب', nameShortFa:'پات کلاب', nameEn:'Putt Club Golf Academy', nameShortEn:'Putt Club', instagram:'puttclub' };
+  };
 
   /* ذخیره‌سازی امن — در پیش‌نمایش sandbox شده، localStorage در دسترس نیست */
   const store = (() => {
@@ -277,7 +281,7 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => { initTilt(); runCountups(); growBars(); }, 40);
     /* 📍 ناوبری استاندارد مرورگر: URL هر بخش (#) نشان‌پذیر است و تیتر تب اسم بخش را می‌گوید */
-    document.title = p.t + ' — پات کلاب · آکادمی گلف پات کلاب';
+    document.title = p.t + ' — ' + Bnd().nameShortFa + ' · ' + Bnd().nameFa;
     try {
       if (!_noPush){
         const h = '#' + page;
@@ -308,7 +312,7 @@
       <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(11,15,20,.92));display:flex;flex-direction:column;justify-content:flex-end;padding:26px">
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div>
-            <h1 style="font-size:26px;font-weight:900" class="gold-text">آکادمی گلف پات کلاب — ${esc(L('nav.cmd','فرماندهی'))}</h1>
+            <h1 style="font-size:26px;font-weight:900" class="gold-text">${esc(Bnd().nameFa)} — ${esc(L('nav.cmd','فرماندهی'))}</h1>
             <div style="color:var(--muted);font-size:12.5px;margin-top:4px">فصل قهرمانی ${D.fa(D.seasonYear)} • ${D.fa(A.MATCHES_HELD)} مسابقه برگزار شده • ${D.fa(A.LB.length)} بازیکن فعال</div>
           </div>
           <div style="margin-right:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -1861,7 +1865,7 @@
           <div class="content">
             <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
               <span class="live-badge">● LIVE</span>
-              <span style="font-size:13px;color:var(--muted)">Putt Club ${D.fa(tvYr)} • Season Broadcast</span>
+              <span style="font-size:13px;color:var(--muted)">${esc(Bnd().nameShortEn)} ${D.fa(tvYr)} • Season Broadcast</span>
               <div style="margin-right:auto;display:flex;gap:14px;flex-wrap:wrap">
                 <span style="color:var(--muted);font-size:12px">🌬️ باد اهواز <b style="color:var(--white)" id="tv-wind">…</b></span>
                 <span style="color:var(--muted);font-size:12px">🌡️ دمای اهواز <b style="color:var(--white)" id="tv-temp">…</b></span>
@@ -1869,7 +1873,7 @@
               </div>
             </div>
             <div style="text-align:center;margin:22px 0 8px">
-              <div style="font-size:32px;font-weight:900;line-height:1.5" class="gold-text">برترین‌های آکادمی گلف پات کلاب</div>
+              <div style="font-size:32px;font-weight:900;line-height:1.5" class="gold-text">برترین‌های ${esc(Bnd().nameFa)}</div>
               <div style="color:var(--muted);font-size:11.5px;margin-top:2px">مجموع امتیازهای فصل ${D.fa(tvYr)}</div>
             </div>
             <table class="tbl" style="font-size:14px">
@@ -2228,7 +2232,7 @@
   const spentCoins = (u, a, s, n) => AV.spendCoins(u, a, s, n);
 
   const COIN_RULES = [
-    { id:'story',    ic:'📱', title:'استوری اینستاگرام با تگ کردن پیج آکادمی', amount:10, desc:'استوری خود را با @puttclub تگ کنید و لینک/توضیح را در درخواست بنویسید', every:1 },
+    { id:'story',    ic:'📱', title:'استوری اینستاگرام با تگ کردن پیج آکادمی', amount:10, desc:'استوری خود را با @' + ((window.GA_BRAND && GA_BRAND.get().instagram) || 'puttclub') + ' تگ کنید و لینک/توضیح را در درخواست بنویسید', every:1 },
     { id:'post1k',   ic:'🎬', title:'پست / ریلز اینستاگرام — ویدیو با ۱۰۰۰+ بازدید', amount:30, desc:'پست ویدیویی با تگ آکادمی (تک یا مشترک با پیج آکادمی)', every:1 },
     { id:'post2k',   ic:'🎥', title:'پست / ریلز اینستاگرام — ویدیو با ۲۰۰۰+ بازدید', amount:50, desc:'ویدیو بالای ۲۰۰۰ بازدید با تگ آکادمی', every:1 },
     { id:'refer',    ic:'🤝', title:'معرفی عضو جدید به آکادمی', amount:50, desc:'نام عضو معرفی‌شده را در توضیح درخواست بنویسید', every:0 },

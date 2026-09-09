@@ -776,3 +776,23 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   .pa-row-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .pa-club img{width:64px;height:64px}
 }
+
+/* مدال تلویزیون — بدون ایموجی (ویندوز قدیمی مربع خالی می‌دهد) */
+.tv-medal{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;font-size:12px;line-height:1;
+  margin-left:6px;vertical-align:middle;box-shadow:0 0 10px rgba(0,0,0,.35);
+}
+.tv-medal.gold{background:linear-gradient(145deg,#ffe38a,#d4af37 55%,#8c6e1d);color:#3a2a05}
+.tv-medal.silver{background:linear-gradient(145deg,#f4f7fb,#b8c2cc 55%,#7d8792);color:#243040}
+.tv-medal.bronze{background:linear-gradient(145deg,#f0c49a,#c67b3a 55%,#8a4e1c);color:#2a1408}
+.tv-tbl{width:100%;table-layout:fixed}
+.tv-tbl th,.tv-tbl td{text-align:center}
+.tv-tbl th:nth-child(1),.tv-tbl td:nth-child(1){width:14%;white-space:nowrap}
+.tv-tbl th:nth-child(2),.tv-tbl td:nth-child(2){width:40%;text-align:right}
+.tv-tbl th:nth-child(3),.tv-tbl td:nth-child(3){width:22%}
+.tv-tbl th:nth-child(4),.tv-tbl td:nth-child(4){width:24%;text-align:center}
+.tv-tbl .tv-pts{
+  color:var(--gold-l);font-weight:900;font-size:16px;
+  font-variant-numeric:tabular-nums;direction:ltr;text-align:center;
+}

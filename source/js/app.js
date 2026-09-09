@@ -127,7 +127,12 @@
     if (ch < 0) return `<span class="chip red">▼ ${D.fa(Math.abs(ch))}</span>`;
     return `<span class="chip dim">—</span>`;
   }
-  const medal = r => r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : '';
+  const medal = r => {
+    if (r === 1) return '<span class="tv-medal gold" title="طلا">★</span>';
+    if (r === 2) return '<span class="tv-medal silver" title="نقره">★</span>';
+    if (r === 3) return '<span class="tv-medal bronze" title="برنز">★</span>';
+    return '';
+  };
   function pbar(pct, cls='', w=0){
     return `<div class="pbar ${cls}"><i data-w="${Math.min(100, Math.round(w || pct))}"></i></div>`;
   }
@@ -1903,14 +1908,14 @@
               <div style="font-size:32px;font-weight:900;line-height:1.5" class="gold-text">برترین‌های ${esc(Bnd().nameFa)}</div>
               <div style="color:var(--muted);font-size:11.5px;margin-top:2px">مجموع امتیازهای فصل ${D.fa(tvYr)}</div>
             </div>
-            <table class="tbl" style="font-size:14px">
+            <table class="tbl tv-tbl" style="font-size:14px">
               <thead><tr><th>رتبه</th><th>بازیکن</th><th>رنگ</th><th>امتیاز</th></tr></thead>
               <tbody>
               ${(TV.length ? TV.slice(0,10).map(r => `<tr class="top${r.rank<=3?r.rank:0}" style="font-size:14px">
                 <td style="font-size:17px;font-weight:900">${medal(r.rank)} ${D.fa(r.rank)}</td>
                 <td><b style="font-size:15px">${esc(r.name)}</b>${r.streak>=2?' 🔥':''}</td>
                 <td>${rankPill(r.color)}</td>
-                <td class="num" style="color:var(--gold-l);font-weight:900;font-size:16px">${D.faNum(r.pts,0)}</td>
+                <td class="tv-pts">${D.faNum(r.pts,0)}</td>
               </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:18px">📺 هنوز در ' + D.fa(tvYr) + ' کسی حداقل ۱ امتیاز دریافت نکرده است</td></tr>')}
               </tbody>
             </table>

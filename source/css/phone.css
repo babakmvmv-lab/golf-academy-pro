@@ -395,3 +395,8 @@ html.phone-mode .h-item,
 html.phone-mode .mgmt-tab{
   align-items:center;
 }
+
+html.phone-mode .pa-row-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px}
+html.phone-mode .pa-row{padding:10px}
+html.phone-mode .pa-club{padding:8px 4px}
+html.phone-mode .pa-club img{width:60px;height:60px}

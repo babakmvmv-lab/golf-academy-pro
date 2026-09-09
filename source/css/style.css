@@ -758,3 +758,21 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 .soc-link{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;border:1px solid rgba(212,175,55,.4);color:#F3D779;background:rgba(255,255,255,.045);transition:.18s}
 .soc-link:hover{background:rgba(212,175,55,.16);transform:translateY(-2px);box-shadow:0 6px 14px rgba(212,175,55,.2)}
 .soc-link svg{width:17px;height:17px;display:block}
+
+/* آنالیز تمرین: هر نوع تمرین یک ردیف، سایت ۴ نمودار در هر ردیف */
+.pa-body{display:flex;flex-direction:column;gap:14px;padding-bottom:4px}
+.pa-row{background:rgba(255,255,255,.025);border:1px solid var(--line-soft);border-radius:14px;padding:12px}
+.pa-row-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:1px dashed rgba(212,175,55,.35);padding-bottom:8px;margin-bottom:12px}
+.pa-row-h b{color:var(--gold-l);font-size:13.5px}
+.pa-row-h span{font-size:11px;color:var(--muted)}
+.pa-row-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.pa-club{text-align:center;padding:10px 6px 8px;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);min-width:0}
+.pa-club-n{font-weight:800;font-size:12px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pa-club-m{color:var(--muted);font-size:10px;margin-top:2px}
+.pa-club-r{font-size:11px;font-weight:800;margin-top:4px}
+.pa-club-c{font-size:8px;color:var(--dim);direction:ltr;letter-spacing:.3px;margin-top:6px}
+.pa-club-y{color:#7ee8b8;font-weight:900;font-size:15px;direction:ltr;margin-top:1px}
+@media (max-width:820px){
+  .pa-row-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .pa-club img{width:64px;height:64px}
+}

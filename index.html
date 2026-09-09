@@ -789,6 +789,24 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 .soc-link{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;border:1px solid rgba(212,175,55,.4);color:#F3D779;background:rgba(255,255,255,.045);transition:.18s}
 .soc-link:hover{background:rgba(212,175,55,.16);transform:translateY(-2px);box-shadow:0 6px 14px rgba(212,175,55,.2)}
 .soc-link svg{width:17px;height:17px;display:block}
+
+/* آنالیز تمرین: هر نوع تمرین یک ردیف، سایت ۴ نمودار در هر ردیف */
+.pa-body{display:flex;flex-direction:column;gap:14px;padding-bottom:4px}
+.pa-row{background:rgba(255,255,255,.025);border:1px solid var(--line-soft);border-radius:14px;padding:12px}
+.pa-row-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:1px dashed rgba(212,175,55,.35);padding-bottom:8px;margin-bottom:12px}
+.pa-row-h b{color:var(--gold-l);font-size:13.5px}
+.pa-row-h span{font-size:11px;color:var(--muted)}
+.pa-row-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.pa-club{text-align:center;padding:10px 6px 8px;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);min-width:0}
+.pa-club-n{font-weight:800;font-size:12px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pa-club-m{color:var(--muted);font-size:10px;margin-top:2px}
+.pa-club-r{font-size:11px;font-weight:800;margin-top:4px}
+.pa-club-c{font-size:8px;color:var(--dim);direction:ltr;letter-spacing:.3px;margin-top:6px}
+.pa-club-y{color:#7ee8b8;font-weight:900;font-size:15px;direction:ltr;margin-top:1px}
+@media (max-width:820px){
+  .pa-row-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .pa-club img{width:64px;height:64px}
+}
 </style>
     <style>
 /* ═══════════════ پنل مدیریت جامع + تنظیمات نمایش ═══════════════ */
@@ -1849,6 +1867,11 @@ html.phone-mode .h-item,
 html.phone-mode .mgmt-tab{
   align-items:center;
 }
+
+html.phone-mode .pa-row-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px}
+html.phone-mode .pa-row{padding:10px}
+html.phone-mode .pa-club{padding:8px 4px}
+html.phone-mode .pa-club img{width:60px;height:60px}
 </style>
 </head>
 <body>
@@ -14083,7 +14106,7 @@ window.addEventListener('ga:brand-changed', function(){
           ${Object.keys(SP_RES_LABEL).map(k => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${SP_RES_COLOR[k]};margin-left:4px;vertical-align:-1px"></i>${SP_RES_LABEL[k]}</span>`).join('')}
           <span style="color:var(--dim)">• بازه بر هر گروه، جداگانه اعمال می‌شود (جلسات تمام‌شده)</span>
         </div>
-        <div id="pa-body" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;align-items:flex-start"></div>
+        <div id="pa-body" class="pa-body"></div>
         </div>
       </div>
       <div class="glass" style="grid-column:span 2">
@@ -14219,17 +14242,27 @@ window.addEventListener('ga:brand-changed', function(){
   /* ── 🧪 آنالیز بزرگ تمرین: به‌ازای هر گروه تمرین (افقی از هم جدا) و هر کلابِ آن گروه، یک دونات صاف/راست/چپ/خطا ── */
   /* دونات SVG به‌صورت data-URI: هم در صفحه و هم داخل HTML خروجی PDF (html2canvas رندرش می‌کند) */
   function paSvgDonut(counts, size, stroke){
-    const R = 40, CIRC = 2 * Math.PI * R;
+    const R = 34, CIRC = 2 * Math.PI * R;
+    const sw = stroke || 14;
     const total = Math.max(1, (counts.straight|0) + (counts.slice|0) + (counts.hook|0) + (counts.miss|0));
-    let acc = 0, segs = '';
-    [['straight','#1EBB8A'],['slice','#2E86DE'],['hook','#E67E22'],['miss','#E74C3C']].forEach(pr2 => {
-      const v = counts[pr2[0]] | 0; if (!v) return;
-      const len = v / total * CIRC;
-      segs += '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="' + pr2[1] + '" stroke-width="' + (stroke || 26) + '" stroke-dasharray="' + len.toFixed(2) + ' ' + (CIRC - len).toFixed(2) + '" stroke-dashoffset="' + (-acc).toFixed(2) + '"/>';
-      acc += len;
-    });
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="' + R + '" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="' + (stroke || 26) + '"/><g transform="rotate(-90 50 50)">' + segs + '</g></svg>';  /* width/height الزامی — بدون آن html2canvas در PDF دونات را ۰×۰ رندر می‌کند */
-    return '<img width="' + (size || 92) + '" height="' + (size || 92) + '" style="display:block" src="data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '" alt="">';
+    const parts = [['straight','#1EBB8A'],['slice','#2E86DE'],['hook','#E67E22'],['miss','#E74C3C']];
+    const used = parts.filter(pr2 => (counts[pr2[0]]|0) > 0);
+    let segs = '';
+    if (used.length === 1){
+      segs = '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="' + used[0][1] + '" stroke-width="' + sw + '"/>';
+    } else {
+      let acc = 0;
+      used.forEach(pr2 => {
+        const v = counts[pr2[0]] | 0;
+        const len = v / total * CIRC;
+        segs += '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="' + pr2[1] + '" stroke-width="' + sw + '" stroke-linecap="butt" stroke-dasharray="' + len.toFixed(3) + ' ' + (CIRC - len).toFixed(3) + '" stroke-dashoffset="' + (-acc).toFixed(3) + '"/>';
+        acc += len;
+      });
+      segs = '<g transform="rotate(-90 50 50)">' + segs + '</g>';
+    }
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="' + R + '" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="' + sw + '"/>' + segs + '</svg>';
+    const px = size || 92;
+    return '<img width="' + px + '" height="' + px + '" style="display:block;margin:0 auto" src="data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) + '" alt="">';
   }
   function paTopRes(cl){
     let best = 'straight', bn = -1;
@@ -14274,25 +14307,24 @@ window.addEventListener('ga:brand-changed', function(){
     if (pb){ pb.disabled = !groups.length;
       pb.title = groups.length ? 'خروجی PDF برنددار — دقیقاً یک برگهٔ A4 با سربرگ و اطلاعات سایت' : '⚠️ این بازیکن تمرین تمام‌شده ندارد — چیزی برای PDF نیست';
       pb.style.opacity = groups.length ? '1' : '.45'; pb.style.cursor = groups.length ? '' : 'not-allowed'; }
-    body.innerHTML = groups.length ? groups.map(g => `
-      <div style="min-width:200px;flex:0 0 auto;background:rgba(255,255,255,.025);border:1px solid var(--line-soft);border-radius:14px;padding:10px 10px 6px">
-        <div style="display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px dashed rgba(212,175,55,.35);padding-bottom:6px;margin-bottom:6px">
-          <b style="color:var(--gold-l);font-size:12.5px">${SP_TYPE_LBL[g.ty]}</b>
-          <span style="font-size:9.5px;color:var(--muted)">${D.fa(g.sesN)} تمرین • ${D.fa(g.shotsN)} ضربه</span>
-        </div>
-        ${Object.keys(g.clubs).sort().map(cn => { const cl = g.clubs[cn]; const dom = paTopRes(cl); return `
-        <div style="display:flex;align-items:center;gap:9px;padding:5px 2px">
-          ${paSvgDonut(cl, 62, 20)}
-          <div style="font-size:11px;min-width:0">
-            <div style="font-weight:800;white-space:nowrap">${esc(cn)}</div>
-            <div style="color:var(--muted);font-size:9.5px;margin-top:2px">${D.fa(cl.n)} ضربه</div>
-            <div style="margin-top:3px;font-size:10px;font-weight:800;color:${SP_RES_COLOR[dom.k]}">${SP_RES_LABEL[dom.k]} ${D.fa(dom.pct)}٪</div>
-            <div style="margin-top:4px;font-size:8px;color:var(--dim);direction:ltr;letter-spacing:.3px">Maximum Carry Distance</div>
-            <div style="color:#7ee8b8;font-weight:900;font-size:13.5px;direction:ltr;line-height:1.2">${cl.maxY ? D.fa(Math.round(cl.maxY / 5) * 5) : '—'}</div>
-          </div>
-        </div>`; }).join('')}
-      </div>`).join('')
-      : `<div style="padding:26px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1;width:100%">📭 برای این بازیکن تمرینِ تمام‌شده‌ای ثبت نشده.<br>از «بازیکن هوشمند → ➕ ثبت رکورد» تمرین کن و جلسه را «⏹ ببند» تا ستون‌های رنج/پاتینگ/چیپینگ/… این‌جا با نمودار پر شوند.</div>`;
+    body.innerHTML = groups.length ? groups.map(g => {
+      const keys = Object.keys(g.clubs).sort();
+      return `<section class="pa-row">
+        <div class="pa-row-h"><b>${SP_TYPE_LBL[g.ty]}</b><span>${D.fa(g.sesN)} تمرین • ${D.fa(g.shotsN)} ضربه</span></div>
+        <div class="pa-row-grid">${keys.map(cn => {
+          const cl = g.clubs[cn]; const dom = paTopRes(cl);
+          return `<article class="pa-club">
+            ${paSvgDonut(cl, 76, 14)}
+            <div class="pa-club-n">${esc(cn)}</div>
+            <div class="pa-club-m">${D.fa(cl.n)} ضربه</div>
+            <div class="pa-club-r" style="color:${SP_RES_COLOR[dom.k]}">${SP_RES_LABEL[dom.k]} ${D.fa(dom.pct)}٪</div>
+            <div class="pa-club-c">Maximum Carry Distance</div>
+            <div class="pa-club-y">${cl.maxY ? D.fa(Math.round(cl.maxY / 5) * 5) : '—'}</div>
+          </article>`;
+        }).join('')}</div>
+      </section>`;
+    }).join('')
+      : `<div style="padding:26px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1;width:100%">📭 برای این بازیکن تمرینِ تمام‌شده‌ای ثبت نشده.<br>از «بازیکن هوشمند → ➕ ثبت رکورد» تمرین کن و جلسه را «⏹ ببند» تا ردیف‌های رنج/پاتینگ/چیپینگ/… این‌جا با نمودار پر شوند.</div>`;
   }
   /* 📄 خروجی PDF برنددار یک‌برگه‌ای A4 — با همان موتور کارت‌های گزارش (سربرگ لوگو + نام آکادمی + تاریخ + puttclub.ir) */
   function bindPracticeAnalysisPdf(){
@@ -14330,10 +14362,10 @@ window.addEventListener('ga:brand-changed', function(){
         groups.map(g => ({
           h: SP_TYPE_LBL[g.ty],
           sub: D.fa(g.sesN) + ' تمرین • ' + D.fa(g.shotsN) + ' ضربه • ' + D.fa(Object.keys(g.clubs).length) + ' کلاب',
-          html: '<div style="display:flex;gap:9px;flex-wrap:wrap">' + Object.keys(g.clubs).sort().map(cn => {
+          html: '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">' + Object.keys(g.clubs).sort().map(cn => {
             const cl = g.clubs[cn]; const dom = paTopRes(cl);
-            return '<div style="text-align:center;width:88px;background:rgba(255,255,255,.02);border:1px solid rgba(212,175,55,.18);border-radius:10px;padding:6px 3px">'
-              + '<div style="display:flex;justify-content:center">' + paSvgDonut(cl, 62, 20) + '</div>'
+            return '<div style="text-align:center;background:rgba(255,255,255,.02);border:1px solid rgba(212,175,55,.18);border-radius:10px;padding:8px 4px 7px;min-width:0">'
+              + paSvgDonut(cl, 72, 14)
               + '<div style="font-size:9px;font-weight:800;margin-top:3px;color:#e9eef5">' + esc(cn) + '</div>'
               + '<div style="font-size:8px;color:#8b96a4;margin-top:1px">' + D.fa(cl.n) + ' ضربه</div>'
               + '<div style="font-size:8px;font-weight:800;color:' + SP_RES_COLOR[dom.k] + ';margin-top:1px">' + SP_RES_LABEL[dom.k] + ' ' + D.fa(dom.pct) + '٪</div>'

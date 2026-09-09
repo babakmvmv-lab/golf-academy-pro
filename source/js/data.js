@@ -115,9 +115,36 @@
     return [jy, jm, jd];
   }
   const TZ = 'Asia/Tehran';
+  /* ساعت کاری از Date هدرِ خودِ سایت (نه ساعت ویندوز/گوشی، نه سایت تقویم بیرونی) */
+  let _clockOffsetMs = 0;
+  function nowMs(){ return Date.now() + _clockOffsetMs; }
+  function now(){ return new Date(nowMs()); }
+  function syncClock(){
+    if (typeof location === 'undefined' || location.protocol === 'file:') return Promise.resolve(false);
+    const t0 = Date.now();
+    const urls = [];
+    try {
+      const icon = document.querySelector('link[rel="icon"]');
+      if (icon && icon.href) urls.push(icon.href);
+    } catch (e) {}
+    try { urls.push(location.origin + '/'); } catch (e) {}
+    const tryOne = (u) => fetch(u + (u.indexOf('?') >= 0 ? '&' : '?') + '_clk=' + t0, {
+      method: 'GET', cache: 'no-store', credentials: 'omit'
+    }).then(r => {
+      const hdr = r.headers.get('Date');
+      const server = hdr ? Date.parse(hdr) : NaN;
+      if (isNaN(server)) return false;
+      _clockOffsetMs = server - ((t0 + Date.now()) / 2);
+      return true;
+    });
+    const work = urls.reduce((p, u) => p.then(ok => ok ? true : tryOne(u).catch(() => false)), Promise.resolve(false));
+    return Promise.race([work, new Promise(res => setTimeout(() => res(false), 2500))]);
+  }
+  const clockReady = syncClock();
+  if (typeof setInterval === 'function') setInterval(() => { syncClock(); }, 600000);
   function tehranParts(input){
-    const d = input instanceof Date ? input : new Date(input == null ? Date.now() : input);
-    const src = isNaN(+d) ? new Date() : d;
+    const d = input instanceof Date ? input : new Date(input == null ? nowMs() : input);
+    const src = isNaN(+d) ? now() : d;
     const map = {};
     try {
       new Intl.DateTimeFormat('en-GB', {
@@ -147,7 +174,7 @@
     } catch (e) { return d.getDay(); }
   }
   const dateFrom = s => new Date(s + 'T00:00:00Z');
-  function todayStart(){ return dateFrom(tehranISODate(new Date())); }
+  function todayStart(){ return dateFrom(tehranISODate(now())); }
   const TODAY = todayStart(); /* امروز به تقویم تهران — نه UTC */
   const SEASON_START = dateFrom('2026-03-21');  /* ⚑ سال فصل از همین پوشیده می‌شود — برای رول اور به ۱۴۰۶ فقط این را عوض کنید */
 
@@ -158,9 +185,10 @@
   const WEEKDAYS = ['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
   const MONTHS_FA = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
   function jalaliInfo(d){
-    const tp = tehranParts(d || new Date());
+    const src = (d == null) ? now() : d;
+    const tp = tehranParts(src);
     const [yy, mm, dd] = toJalaali(tp.y, tp.m, tp.d);
-    const wd = tehranWeekday(d || new Date());
+    const wd = tehranWeekday(src);
     return { yy, mm, dd, wd: WEEKDAYS[wd], monthFa: MONTHS_FA[mm-1], season:
       mm <= 3 ? 'بهار' : mm <= 6 ? 'تابستان' : mm <= 9 ? 'پاییز' : 'زمستان' };
   }
@@ -764,7 +792,7 @@
   }
 
   window.Data = {
-    fa, faNum, jalaliInfo, weekOf, dayFmt, dateFrom, todayStart, tehranParts, tehranISODate, SEASON_START,
+    fa, faNum, jalaliInfo, weekOf, dayFmt, dateFrom, todayStart, tehranParts, tehranISODate, now, nowMs, syncClock, clockReady, SEASON_START,
     toJalaali, jalaaliToDateObject, j2d, shamsiToISO, isoToShamsi, parseShamsi,
     PLAYERS, PLAYER_NAME, ACTIVE, COURSES, COURSE_PARS, COURSE_NAME, TOURNAMENTS, seasonYear: (function(){ const j = jalaliInfo(SEASON_START); return j.yy; })(),
     PTS_RULE, RESULT_LABEL, MONTHS_FA, RANK_DEF, RANK_TEXT, rankOf, FORM_META, GOLD_ELITE,

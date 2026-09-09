@@ -247,7 +247,8 @@ html.phone-mode .cal-grid-big-row{
   grid-template-columns:repeat(7, minmax(0, 1fr)) !important;
   gap:3px !important;
 }
-html.phone-mode .cal-cell{min-width:0; overflow:hidden; padding:2px 0}
+html.phone-mode .cal-grid-big-row:not(:first-child){grid-auto-rows:58px !important}
+html.phone-mode .cal-cell{min-width:0; overflow:hidden; padding:2px 0; height:58px; max-height:58px}
 html.phone-mode .cal-cell .cal-num{font-size:12px; padding:4px 0 2px}
 html.phone-mode .cal-wd{font-size:11px; padding:4px 0}
 html.phone-mode .cal-ev-mini{padding:0 1px 4px; overflow:hidden}

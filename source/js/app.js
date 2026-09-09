@@ -184,7 +184,7 @@
 
   /* ═══════════ ساعت و تاریخ ═══════════ */
   function tickClock(){
-    const now = new Date();
+    const now = D.now ? D.now() : new Date();
     const j = D.jalaliInfo(now);
     const tp = D.tehranParts ? D.tehranParts(now) : null;
     const hh = String(tp ? tp.h : now.getHours()).padStart(2,'0');
@@ -1831,7 +1831,7 @@
       html += '<div class="cal-grid-big-row">';
       for (let i=0;i<dow;i++) html += '<div class="cal-cell empty"></div>';
       for (let d=1; d<=daysInMonth; d++){
-        const tj = D.jalaliInfo(new Date()); const isToday = (tj.yy === D.seasonYear && mm === tj.mm && d === tj.dd);
+        const tj = D.jalaliInfo(); const isToday = (tj.yy === D.seasonYear && mm === tj.mm && d === tj.dd);
         const isSelDay = selDays.has(d);
         const dayEvs = events.filter(e => {
           const j0 = D.jalaliInfo(e.d);
@@ -2960,9 +2960,14 @@
     reloadData();
     const _hp = (location.hash || '').slice(1);
     const _dp = PAGES[_hp] ? _hp : 'cmd';
-    go(rec && rec.role === 'member' ? 'memberzone' : _dp);
-    tickClock(); setInterval(tickClock, 1000);
-    msgGate(); /* پیام خوانده‌نشده؟ → گیت اجباری قبل از ورود به پنل */
+    const bootClock = () => {
+      go(rec && rec.role === 'member' ? 'memberzone' : _dp);
+      tickClock(); setInterval(tickClock, 1000);
+      msgGate(); /* پیام خوانده‌نشده؟ → گیت اجباری قبل از ورود به پنل */
+    };
+    const ready = D.clockReady;
+    if (ready && typeof ready.then === 'function') ready.then(bootClock, bootClock);
+    else bootClock();
   }
 
   function logout(){

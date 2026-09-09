@@ -197,9 +197,17 @@ tr.off-row{opacity:.5}
 .cal-ev-sch{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
 .cal-ev-sch span{font-size:9px;background:rgba(30,187,138,.12);color:var(--green-l);border-radius:5px;padding:1px 6px}
 .cal-ev-group{font-size:11px;color:var(--muted);padding:8px 4px 2px;font-weight:700}
-.cal-grid-big-row{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center;direction:rtl}
+.cal-grid-big{width:100%;min-width:0}
+.cal-grid-big-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;text-align:center;direction:rtl}
+.cal-grid-big-row:not(:first-child){grid-auto-rows:96px}
 .cal-grid-big .cal-wd{font-size:11px;color:var(--muted);padding:6px 2px;font-weight:700}
-.cal-cell .cal-num{font-weight:800;font-size:13.5px;color:var(--text);padding:7px 4px 2px}
+.cal-cell{
+  min-width:0;height:96px;max-height:96px;overflow:hidden;box-sizing:border-box;
+  display:flex;flex-direction:column;align-items:stretch;
+  border-radius:10px;border:1px solid rgba(255,255,255,.06);
+}
+.cal-cell.empty{visibility:hidden}
+.cal-cell .cal-num{font-weight:800;font-size:13.5px;color:var(--text);padding:6px 4px 2px;flex:0 0 auto;box-sizing:border-box}
 .cal-cell.holiday .cal-num{color:#ff8d85;background:rgba(255,80,80,.12);border-radius:8px}
 .cal-cell.event .cal-num{color:#f1c40f}
 .cal-cell.sel .cal-num{
@@ -207,12 +215,12 @@ tr.off-row{opacity:.5}
 }
 .cal-cell.has-ev{background:rgba(30,187,138,.05);border-radius:10px}
 .cal-cell.today .cal-num{border:1px solid var(--gold-l);background:rgba(212,175,55,.12);color:var(--gold-l)}
-.cal-ev-mini{font-size:11px;color:var(--green-l);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 3px 5px}
+.cal-ev-mini{flex:1;min-height:0;overflow:hidden;padding:0 3px 4px;display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--green-l)}
 .cal-month-hols{margin-top:10px;font-size:12px;color:var(--muted);padding:8px 12px;background:rgba(255,255,255,.02);border-radius:10px;border:1px solid rgba(255,255,255,.05)}
 .cal-month-hols b{color:#ff8d85}
 .hol-sel{color:#1EBB8A}
 /* چیپ رویداد داخل سلول تقویم (فقط ۴ نوع) */
-.cal-mini-ev{display:inline-block;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:1px 5px;font-size:9.5px;line-height:1.5;margin:1px 2px 0 0;color:#e8eef5;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;vertical-align:top}
+.cal-mini-ev{display:block;width:100%;max-width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:1px 4px;font-size:9.5px;line-height:1.35;margin:0;color:#e8eef5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-mini-ev.مسابقه{border-color:rgba(212,175,55,.55);background:rgba(212,175,55,.10);color:#f0d989}
 .cal-mini-ev.کلاس{border-color:rgba(168,85,247,.5);background:rgba(168,85,247,.10);color:#d8b4fe}
 .cal-mini-ev.تمرین{border-color:rgba(30,187,138,.5);background:rgba(30,187,138,.10);color:#8fe3c4}

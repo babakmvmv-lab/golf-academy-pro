@@ -298,7 +298,36 @@
     box.classList.toggle('expired', !on);
   }
 
+  function remainText(v) {
+    if (!v || !v.sub) return 'بدون اشتراک';
+    if (v.days < 0) return fa(Math.abs(v.days)) + ' روز گذشته';
+    return fa(v.days) + ' روز باقی‌مانده';
+  }
+
+  function paintHud(user) {
+    var el = document.getElementById('hud-sub');
+    if (!el) return;
+    if (!user) { el.hidden = true; return; }
+    var v = view(user);
+    if (!v.sub) { el.hidden = true; return; }
+    el.hidden = false;
+    el.classList.toggle('off', !v.on);
+    var dot = document.getElementById('hud-sub-dot');
+    if (dot) dot.classList.toggle('off', !v.on);
+    var planEl = document.getElementById('hud-sub-plan');
+    var daysEl = document.getElementById('hud-sub-days');
+    if (planEl) planEl.textContent = v.nameEn;
+    if (daysEl) daysEl.textContent = v.statusFa + ' · ' + remainText(v);
+    el.title = v.nameEn + ' — ' + v.statusFa + ' — تمدید: ' + v.endFa;
+    el.onclick = function () {
+      try {
+        if (window.APP && APP.go && APP.isAdmin && APP.isAdmin()) APP.go('subs');
+      } catch (e) {}
+    };
+  }
+
   function paintSide(user) {
+    paintHud(user);
     var el = document.getElementById('side-sub');
     if (!el) return;
     if (!user) { el.style.display = 'none'; return; }
@@ -308,7 +337,7 @@
     el.innerHTML =
       '<div class="side-sub-plan">' + v.nameEn + '</div>' +
       '<div class="side-sub-st"><span class="login-sub-dot ' + (v.on ? 'on' : 'off') + '"></span> ' + v.statusFa + '</div>' +
-      '<div class="side-sub-days">' + (v.days < 0 ? (fa(Math.abs(v.days)) + ' روز گذشته') : (fa(v.days) + ' روز باقی‌مانده')) + '</div>' +
+      '<div class="side-sub-days">' + remainText(v) + '</div>' +
       '<div class="side-sub-end">تاریخ تمدید: ' + v.endFa + '</div>';
   }
 
@@ -324,6 +353,6 @@
     priceOf: priceOf, daysLeft: daysLeft, liveStatus: liveStatus,
     addMonthsISO: addMonthsISO, todayISO: todayISO, endFa: endFa, faNum: faNum,
     ensureSeed: ensureSeed,
-    paintLogin: paintLogin, paintSide: paintSide
+    paintLogin: paintLogin, paintSide: paintSide, paintHud: paintHud
   };
 })();

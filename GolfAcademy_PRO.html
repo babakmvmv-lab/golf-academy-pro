@@ -181,6 +181,14 @@ body{
 }
 .hud-chip.gold{color:var(--gold-l);border-color:var(--line)}
 .hud-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--green-l);box-shadow:0 0 10px var(--green-l);animation:pulse 1.6s infinite}
+.hud-chip .dot.off{background:#e74c3c;box-shadow:0 0 10px #e74c3c;animation:none}
+.hud-chip.hud-sub{gap:10px;cursor:default;padding-top:7px;padding-bottom:7px}
+.hud-chip.hud-sub[hidden]{display:none!important}
+.hud-sub-body{display:flex;flex-direction:column;gap:1px;line-height:1.25;text-align:right}
+.hud-sub-body b{color:var(--gold-l);font-size:12.5px;font-weight:800}
+#hud-sub-days{font-size:10.5px;font-weight:600;color:var(--muted)}
+.hud-chip.hud-sub.off{border-color:rgba(231,76,60,.45)}
+.hud-chip.hud-sub.off b{color:#f5c2c0}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
 .clock{font-variant-numeric:tabular-nums;direction:ltr;letter-spacing:1px}
 
@@ -476,7 +484,7 @@ canvas.glow-canvas{filter:drop-shadow(0 0 6px rgba(212,175,55,.25))}
 @media (max-width:480px){
   .field-grid{grid-template-columns:1fr}
   .field-grid .span2{grid-column:span 1}
-  .topbar .hud .hud-chip:first-child{display:none}
+  .topbar .hud .hud-chip.hud-online{display:none}
   .hud-chip{font-size:10px;padding:5px 8px}
   .menu-btn{width:44px;height:44px;font-size:18px}
 }
@@ -1509,9 +1517,16 @@ input[type=color].asa-in{padding:2px;width:38px;height:28px}
         <div class="crumb" id="top-crumb">داشبورد</div>
       </div>
       <div class="hud">
-        <div class="hud-chip"><span class="dot"></span>سیستم آنلاین</div>
+        <div class="hud-chip hud-online"><span class="dot"></span>سیستم آنلاین</div>
         <div class="hud-chip"><span>📅</span><span id="hud-date">—</span></div>
         <div class="hud-chip gold"><span>⏱️</span><span class="clock" id="hud-clock">—</span></div>
+        <div class="hud-chip gold hud-sub" id="hud-sub" hidden>
+          <span class="dot" id="hud-sub-dot"></span>
+          <span class="hud-sub-body">
+            <b id="hud-sub-plan">—</b>
+            <span id="hud-sub-days">—</span>
+          </span>
+        </div>
       </div>
     </div>
     <nav id="member-mobile-nav" class="member-mobile-nav" aria-label="بخش‌های فعال اعضا"></nav>
@@ -3467,7 +3482,36 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     box.classList.toggle('expired', !on);
   }
 
+  function remainText(v) {
+    if (!v || !v.sub) return 'بدون اشتراک';
+    if (v.days < 0) return fa(Math.abs(v.days)) + ' روز گذشته';
+    return fa(v.days) + ' روز باقی‌مانده';
+  }
+
+  function paintHud(user) {
+    var el = document.getElementById('hud-sub');
+    if (!el) return;
+    if (!user) { el.hidden = true; return; }
+    var v = view(user);
+    if (!v.sub) { el.hidden = true; return; }
+    el.hidden = false;
+    el.classList.toggle('off', !v.on);
+    var dot = document.getElementById('hud-sub-dot');
+    if (dot) dot.classList.toggle('off', !v.on);
+    var planEl = document.getElementById('hud-sub-plan');
+    var daysEl = document.getElementById('hud-sub-days');
+    if (planEl) planEl.textContent = v.nameEn;
+    if (daysEl) daysEl.textContent = v.statusFa + ' · ' + remainText(v);
+    el.title = v.nameEn + ' — ' + v.statusFa + ' — تمدید: ' + v.endFa;
+    el.onclick = function () {
+      try {
+        if (window.APP && APP.go && APP.isAdmin && APP.isAdmin()) APP.go('subs');
+      } catch (e) {}
+    };
+  }
+
   function paintSide(user) {
+    paintHud(user);
     var el = document.getElementById('side-sub');
     if (!el) return;
     if (!user) { el.style.display = 'none'; return; }
@@ -3477,7 +3521,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     el.innerHTML =
       '<div class="side-sub-plan">' + v.nameEn + '</div>' +
       '<div class="side-sub-st"><span class="login-sub-dot ' + (v.on ? 'on' : 'off') + '"></span> ' + v.statusFa + '</div>' +
-      '<div class="side-sub-days">' + (v.days < 0 ? (fa(Math.abs(v.days)) + ' روز گذشته') : (fa(v.days) + ' روز باقی‌مانده')) + '</div>' +
+      '<div class="side-sub-days">' + remainText(v) + '</div>' +
       '<div class="side-sub-end">تاریخ تمدید: ' + v.endFa + '</div>';
   }
 
@@ -3493,7 +3537,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     priceOf: priceOf, daysLeft: daysLeft, liveStatus: liveStatus,
     addMonthsISO: addMonthsISO, todayISO: todayISO, endFa: endFa, faNum: faNum,
     ensureSeed: ensureSeed,
-    paintLogin: paintLogin, paintSide: paintSide
+    paintLogin: paintLogin, paintSide: paintSide, paintHud: paintHud
   };
 })();
 </script>
@@ -7397,6 +7441,7 @@ window.__L3D = {
       SUB.assign(uname, { plan: $('#sub-m-plan').value, months: +$('#sub-m-months').value || 1, user_id: rec ? rec.id : null, payment_status: 'manual' });
       m.style.display = 'none';
       if (typeof onSaved === 'function') onSaved();
+      try { if (window.APP && APP.currentUser) GA_SUB.paintSide(APP.currentUser()); } catch (e) {}
       APP.toast('اشتراک «' + uname + '» ثبت شد ✓', 'green');
     });
     m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
@@ -15026,6 +15071,7 @@ window.__L3D = {
     const mb = $('#side-mgmt-btn'); if (mb) mb.style.display = member ? 'none' : '';
     $('#user-label').textContent = userLabelFor(currentUser);
     $('#user-name').textContent = currentUser;
+    if (window.GA_SUB) GA_SUB.paintSide(currentUser);
   }
 
   function refreshLabels(){

@@ -115,9 +115,16 @@ if(location.protocol==='http:' && !/^(localhost|127\.0\.0\.1)$/.test(location.ho
         <div class="crumb" id="top-crumb">داشبورد</div>
       </div>
       <div class="hud">
-        <div class="hud-chip"><span class="dot"></span>سیستم آنلاین</div>
+        <div class="hud-chip hud-online"><span class="dot"></span>سیستم آنلاین</div>
         <div class="hud-chip"><span>📅</span><span id="hud-date">—</span></div>
         <div class="hud-chip gold"><span>⏱️</span><span class="clock" id="hud-clock">—</span></div>
+        <div class="hud-chip gold hud-sub" id="hud-sub" hidden>
+          <span class="dot" id="hud-sub-dot"></span>
+          <span class="hud-sub-body">
+            <b id="hud-sub-plan">—</b>
+            <span id="hud-sub-days">—</span>
+          </span>
+        </div>
       </div>
     </div>
     <nav id="member-mobile-nav" class="member-mobile-nav" aria-label="بخش‌های فعال اعضا"></nav>

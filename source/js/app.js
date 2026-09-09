@@ -2897,6 +2897,7 @@
     const mb = $('#side-mgmt-btn'); if (mb) mb.style.display = member ? 'none' : '';
     $('#user-label').textContent = userLabelFor(currentUser);
     $('#user-name').textContent = currentUser;
+    if (window.GA_SUB) GA_SUB.paintSide(currentUser);
   }
 
   function refreshLabels(){

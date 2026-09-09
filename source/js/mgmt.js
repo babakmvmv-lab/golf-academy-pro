@@ -444,6 +444,7 @@
       SUB.assign(uname, { plan: $('#sub-m-plan').value, months: +$('#sub-m-months').value || 1, user_id: rec ? rec.id : null, payment_status: 'manual' });
       m.style.display = 'none';
       if (typeof onSaved === 'function') onSaved();
+      try { if (window.APP && APP.currentUser) GA_SUB.paintSide(APP.currentUser()); } catch (e) {}
       APP.toast('اشتراک «' + uname + '» ثبت شد ✓', 'green');
     });
     m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });

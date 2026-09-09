@@ -186,6 +186,23 @@
     return st === 'active' || st === 'trial';
   }
 
+  function latestLiveEnd(user) {
+    var k = ukey(user);
+    var end = '';
+    list().forEach(function (s) {
+      if (ukey(s.user) !== k || !isLiveRec(s) || !s.end_date) return;
+      if (s.end_date > end) end = s.end_date;
+    });
+    return end;
+  }
+  /* شروع دورهٔ تازه = امروز، یا ته آخرین اشتراک فعال — تا مدت به زمان باقی‌مانده اضافه شود */
+  function nextStart(user) {
+    var today = todayISO();
+    var end = latestLiveEnd(user);
+    if (end && end > today) return end;
+    return today;
+  }
+
   function of(user) {
     var k = ukey(user);
     var mine = list().filter(function (s) { return ukey(s.user) === k && !isDeleted(s); });
@@ -311,7 +328,7 @@
     var a = actor();
     var plan = opt.plan || 'trial';
     var months = +opt.billing_cycle || +opt.months || 1;
-    var start = opt.start_date || todayISO();
+    var start = opt.start_date || nextStart(user);
     var end = opt.end_date || addMonthsISO(start, months);
     var st = opt.status;
     if (!st) st = (plan === 'trial') ? 'trial' : 'active';
@@ -519,7 +536,7 @@
     assign: assign, updateById: updateById, softDelete: softDelete,
     isAllowed: isAllowed, canPage: canPage, isStaff: isStaff,
     priceOf: priceOf, daysLeft: daysLeft, liveStatus: liveStatus, statusFaOf: statusFaOf,
-    addMonthsISO: addMonthsISO, todayISO: todayISO, endFa: endFa, atFa: atFa, faNum: faNum,
+    addMonthsISO: addMonthsISO, todayISO: todayISO, nextStart: nextStart, latestLiveEnd: latestLiveEnd, endFa: endFa, atFa: atFa, faNum: faNum,
     ensureSeed: ensureSeed,
     paintLogin: paintLogin, paintSide: paintSide, paintHud: paintHud
   };

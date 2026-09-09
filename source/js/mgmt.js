@@ -468,7 +468,13 @@
       const months = +$('#sub-m-months').value || 1;
       const pr = SUB.priceOf(plan, months);
       const faN = (n) => D.faNum ? D.faNum(n, 0) : String(n);
-      $('#sub-m-price').textContent = 'مبلغ این دوره (ثبت دستی، بدون درگاه): ' + faN(pr.pay) + '  —  ماهانه ' + faN(pr.monthly) + ' × ' + D.fa(months) + ' × (۱−' + D.fa(pr.discount) + '٪)';
+      let line = 'مبلغ این دوره (ثبت دستی، بدون درگاه): ' + faN(pr.pay) + '  —  ماهانه ' + faN(pr.monthly) + ' × ' + D.fa(months) + ' × (۱−' + D.fa(pr.discount) + '٪)';
+      if (mode !== 'edit'){
+        const st = SUB.nextStart ? SUB.nextStart(uname) : SUB.todayISO();
+        const en = SUB.addMonthsISO(st, months);
+        line += '  |  زمان: از ' + SUB.endFa(st) + ' تا ' + SUB.endFa(en) + (st > SUB.todayISO() ? ' (به باقی‌مانده اضافه می‌شود)' : '');
+      }
+      $('#sub-m-price').textContent = line;
     }
     $('#sub-m-plan').addEventListener('change', preview);
     $('#sub-m-months').addEventListener('change', preview);

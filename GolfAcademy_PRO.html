@@ -3379,6 +3379,23 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     return st === 'active' || st === 'trial';
   }
 
+  function latestLiveEnd(user) {
+    var k = ukey(user);
+    var end = '';
+    list().forEach(function (s) {
+      if (ukey(s.user) !== k || !isLiveRec(s) || !s.end_date) return;
+      if (s.end_date > end) end = s.end_date;
+    });
+    return end;
+  }
+  /* شروع دورهٔ تازه = امروز، یا ته آخرین اشتراک فعال — تا مدت به زمان باقی‌مانده اضافه شود */
+  function nextStart(user) {
+    var today = todayISO();
+    var end = latestLiveEnd(user);
+    if (end && end > today) return end;
+    return today;
+  }
+
   function of(user) {
     var k = ukey(user);
     var mine = list().filter(function (s) { return ukey(s.user) === k && !isDeleted(s); });
@@ -3504,7 +3521,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     var a = actor();
     var plan = opt.plan || 'trial';
     var months = +opt.billing_cycle || +opt.months || 1;
-    var start = opt.start_date || todayISO();
+    var start = opt.start_date || nextStart(user);
     var end = opt.end_date || addMonthsISO(start, months);
     var st = opt.status;
     if (!st) st = (plan === 'trial') ? 'trial' : 'active';
@@ -3712,7 +3729,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     assign: assign, updateById: updateById, softDelete: softDelete,
     isAllowed: isAllowed, canPage: canPage, isStaff: isStaff,
     priceOf: priceOf, daysLeft: daysLeft, liveStatus: liveStatus, statusFaOf: statusFaOf,
-    addMonthsISO: addMonthsISO, todayISO: todayISO, endFa: endFa, atFa: atFa, faNum: faNum,
+    addMonthsISO: addMonthsISO, todayISO: todayISO, nextStart: nextStart, latestLiveEnd: latestLiveEnd, endFa: endFa, atFa: atFa, faNum: faNum,
     ensureSeed: ensureSeed,
     paintLogin: paintLogin, paintSide: paintSide, paintHud: paintHud
   };
@@ -7642,7 +7659,13 @@ window.__L3D = {
       const months = +$('#sub-m-months').value || 1;
       const pr = SUB.priceOf(plan, months);
       const faN = (n) => D.faNum ? D.faNum(n, 0) : String(n);
-      $('#sub-m-price').textContent = 'مبلغ این دوره (ثبت دستی، بدون درگاه): ' + faN(pr.pay) + '  —  ماهانه ' + faN(pr.monthly) + ' × ' + D.fa(months) + ' × (۱−' + D.fa(pr.discount) + '٪)';
+      let line = 'مبلغ این دوره (ثبت دستی، بدون درگاه): ' + faN(pr.pay) + '  —  ماهانه ' + faN(pr.monthly) + ' × ' + D.fa(months) + ' × (۱−' + D.fa(pr.discount) + '٪)';
+      if (mode !== 'edit'){
+        const st = SUB.nextStart ? SUB.nextStart(uname) : SUB.todayISO();
+        const en = SUB.addMonthsISO(st, months);
+        line += '  |  زمان: از ' + SUB.endFa(st) + ' تا ' + SUB.endFa(en) + (st > SUB.todayISO() ? ' (به باقی‌مانده اضافه می‌شود)' : '');
+      }
+      $('#sub-m-price').textContent = line;
     }
     $('#sub-m-plan').addEventListener('change', preview);
     $('#sub-m-months').addEventListener('change', preview);

@@ -688,6 +688,8 @@
     const field = (id, lab, val, extra) =>
       '<label style="display:block;margin:0 0 4px"><span style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:5px">' + lab + '</span>' +
       '<input id="' + id + '" class="inp" value="' + esc(val || '') + '" ' + (extra || '') + ' style="width:100%"></label>';
+    const fx = (B.lobbyFocusX != null && B.lobbyFocusX !== '') ? Math.max(0, Math.min(100, +B.lobbyFocusX)) : 50;
+    const fy = (B.lobbyFocusY != null && B.lobbyFocusY !== '') ? Math.max(0, Math.min(100, +B.lobbyFocusY)) : 50;
     body.innerHTML =
       '<div class="glass gold-border" style="margin-bottom:16px;padding:18px 20px">' +
         '<div class="card-head"><span class="ic">🏛️</span><b>پوستهٔ آکادمی</b></div>' +
@@ -719,10 +721,26 @@
           '<div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">پس‌زمینه ورود</div>' +
             '<img id="ac-bg-prev" src="' + esc(B.loginBg || "assets/login_bg.webp") + '" alt="" style="width:160px;height:90px;border-radius:10px;object-fit:cover;border:1px solid rgba(255,255,255,.12)">' +
             '<div style="margin-top:8px"><input type="file" id="ac-bg" accept="image/*"></div></div>' +
-          '<div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">صفحهٔ اول سایت — رسپشن</div>' +
+          '<div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">صفحهٔ اول — رسپشن (دسکتاپ)</div>' +
             '<img id="ac-lobby-prev" src="' + esc(B.lobbyBg || "assets/lobby_bg_v3.webp") + '" alt="" style="width:160px;height:90px;border-radius:10px;object-fit:cover;border:1px solid rgba(255,255,255,.12)">' +
-            '<div style="margin-top:8px"><input type="file" id="ac-lobby" accept="image/*"></div>' +
-            '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;max-width:180px;line-height:1.6">همان تصویر خانم رسپشن در لابی صفحهٔ اصلی</div></div>' +
+            '<div style="margin-top:8px"><input type="file" id="ac-lobby" accept="image/*"></div></div>' +
+          '<div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">صفحهٔ اول — موبایل (اختیاری)</div>' +
+            '<img id="ac-lobby-m-prev" src="' + esc(B.lobbyBgMobile || B.lobbyBg || "assets/lobby_bg_v3.webp") + '" alt="" style="width:90px;height:140px;border-radius:10px;object-fit:cover;object-position:' + fx + '% ' + fy + '%;border:1px solid rgba(255,255,255,.12)">' +
+            '<div style="margin-top:8px"><input type="file" id="ac-lobby-m" accept="image/*"></div>' +
+            '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;max-width:160px;line-height:1.6">خالی = همان تصویر دسکتاپ با برش زیر</div></div>' +
+        '</div>' +
+        '<div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">' +
+          '<div style="font-weight:700;margin-bottom:6px">نمایش روی موبایل — کدام قسمت تصویر</div>' +
+          '<div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.7">اگر تصویر جدا نگذارید، با این اسلایدر بگویید خانم رسپشن کجای عکس وسط قاب باشد.</div>' +
+          '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">' +
+            '<div id="ac-lobby-crop" style="width:110px;height:196px;border-radius:14px;border:1px solid rgba(212,175,55,.35);background-size:cover;background-image:url(' + esc(B.lobbyBgMobile || B.lobbyBg || "assets/lobby_bg_v3.webp") + ');background-position:' + fx + '% ' + fy + '%"></div>' +
+            '<div style="flex:1;min-width:220px">' +
+              '<label style="display:block;font-size:12px;margin-bottom:8px">افقی <b id="ac-fx-v">' + fx + '</b>٪' +
+              '<input id="ac-fx" type="range" min="0" max="100" value="' + fx + '" style="width:100%;margin-top:4px"></label>' +
+              '<label style="display:block;font-size:12px">عمودی <b id="ac-fy-v">' + fy + '</b>٪' +
+              '<input id="ac-fy" type="range" min="0" max="100" value="' + fy + '" style="width:100%;margin-top:4px"></label>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
       '</div>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
@@ -764,7 +782,26 @@
     });
     $('#ac-lobby').addEventListener('change', e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
-      readImg(f, 1600, true, u => { pending.lobbyBg = u; $('#ac-lobby-prev').src = u; });
+      readImg(f, 1600, true, u => { pending.lobbyBg = u; $('#ac-lobby-prev').src = u; syncCrop(); });
+    });
+    $('#ac-lobby-m').addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      readImg(f, 1400, true, u => { pending.lobbyBgMobile = u; $('#ac-lobby-m-prev').src = u; syncCrop(); });
+    });
+    function cropSrc(){ return pending.lobbyBgMobile || pending.lobbyBg || B.lobbyBgMobile || B.lobbyBg || 'assets/lobby_bg_v3.webp'; }
+    function syncCrop(){
+      const box = $('#ac-lobby-crop'); if (!box) return;
+      const x = $('#ac-fx') ? $('#ac-fx').value : 50;
+      const y = $('#ac-fy') ? $('#ac-fy').value : 50;
+      box.style.backgroundImage = 'url(' + cropSrc() + ')';
+      box.style.backgroundPosition = x + '% ' + y + '%';
+      box.style.backgroundSize = 'cover';
+      if ($('#ac-fx-v')) $('#ac-fx-v').textContent = x;
+      if ($('#ac-fy-v')) $('#ac-fy-v').textContent = y;
+    }
+    ['ac-fx','ac-fy'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', syncCrop);
     });
     $('#ac-save').addEventListener('click', () => {
       if (!window.GA_BRAND){ APP.toast('ماژول پوسته بار نشده', 'red'); return; }
@@ -785,7 +822,9 @@
           if (m) s = m[1];
           s = s.replace(/\/+$/,'').split('?')[0];
           return s;
-        })()
+        })(),
+        lobbyFocusX: +(($('#ac-fx') && $('#ac-fx').value) || 50),
+        lobbyFocusY: +(($('#ac-fy') && $('#ac-fy').value) || 50)
       }, pending));
       APP.toast('پوسته ذخیره شد. اگر دستگاه دیگری کش قدیمی دارد، هاردریفرش کنید.', 'gold');
     });

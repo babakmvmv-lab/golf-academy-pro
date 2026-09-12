@@ -281,8 +281,15 @@ var $ = function(s){ return root.querySelector(s); };
 var intro = $('#l3d-intro'), stage = $('#l3d-stage'), bg = $('#l3d-bg');
 function applyLobbyBg(){
   if (!bg) return;
-  var src = (Bnd().lobbyBg) || 'assets/lobby_bg_v3.webp';
+  if (window.GA_BRAND && GA_BRAND.paintLobby) { GA_BRAND.paintLobby(bg); return; }
+  var b = Bnd();
+  var phone = document.documentElement.classList.contains('phone-mode') || (window.innerWidth||1024) <= 820;
+  var src = (phone && b.lobbyBgMobile) ? b.lobbyBgMobile : (b.lobbyBg || 'assets/lobby_bg_v3.webp');
   bg.style.backgroundImage = 'url(' + src + ')';
+  var x = (b.lobbyFocusX != null && b.lobbyFocusX !== '') ? b.lobbyFocusX : 50;
+  var y = (b.lobbyFocusY != null && b.lobbyFocusY !== '') ? b.lobbyFocusY : 50;
+  bg.style.backgroundSize = 'cover';
+  bg.style.backgroundPosition = phone ? (x + '% ' + y + '%') : 'center center';
 }
 applyLobbyBg();
 var panel = $('#l3d-panel'), pbody = $('#l3d-pbody');

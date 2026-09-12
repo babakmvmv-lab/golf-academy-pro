@@ -14,7 +14,10 @@
     logo: '',
     favicon: '',
     loginBg: '',
-    lobbyBg: ''
+    lobbyBg: '',
+    lobbyBgMobile: '',
+    lobbyFocusX: 50,
+    lobbyFocusY: 50
   };
 
   function get() {
@@ -49,6 +52,23 @@
   function host() {
     return String(get().domain || '').replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
   }
+  function isPhoneView() {
+    if (document.documentElement.classList.contains('phone-mode')) return true;
+    return (window.innerWidth || 1024) <= 820;
+  }
+  function paintLobby(el) {
+    el = el || document.getElementById('l3d-bg');
+    if (!el) return;
+    var b = get();
+    var phone = isPhoneView();
+    var src = (phone && b.lobbyBgMobile) ? b.lobbyBgMobile : (b.lobbyBg || 'assets/lobby_bg_v3.webp');
+    el.style.backgroundImage = 'url(' + src + ')';
+    el.style.backgroundSize = 'cover';
+    var x = b.lobbyFocusX, y = b.lobbyFocusY;
+    if (x == null || x === '') x = (!b.lobbyBg && !b.lobbyBgMobile) ? 22 : 50;
+    if (y == null || y === '') y = 50;
+    el.style.backgroundPosition = phone ? ((+x) + '% ' + (+y) + '%') : 'center center';
+  }
   function apply() {
     var b = get();
     var logo = logoUrl();
@@ -67,7 +87,7 @@
     var bg = document.querySelector('#login .bg-img');
     if (bg) bg.src = b.loginBg || 'assets/login_bg.webp';
     var lobby = document.getElementById('l3d-bg');
-    if (lobby) lobby.style.backgroundImage = 'url(' + (b.lobbyBg || 'assets/lobby_bg_v3.webp') + ')';
+    if (lobby) paintLobby(lobby);
     var ogt = document.querySelector('meta[property="og:title"]');
     if (ogt) ogt.setAttribute('content', b.nameFa + ' — ' + b.nameEn);
     var desc = document.querySelector('meta[name="description"]');
@@ -80,8 +100,9 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
   else apply();
 
+  window.addEventListener('resize', function(){ paintLobby(); });
   window.GA_BRAND = {
     KEY: KEY, DEF: DEF, get: get, save: save, reset: reset,
-    logoUrl: logoUrl, faviconUrl: faviconUrl, host: host, apply: apply
+    logoUrl: logoUrl, faviconUrl: faviconUrl, host: host, apply: apply, paintLobby: paintLobby
   };
 })();

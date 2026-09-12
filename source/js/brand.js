@@ -13,7 +13,8 @@
     instagram: 'puttclub',
     logo: '',
     favicon: '',
-    loginBg: ''
+    loginBg: '',
+    lobbyBg: ''
   };
 
   function get() {
@@ -65,6 +66,8 @@
     if (apple && (b.favicon || b.logo)) apple.setAttribute('href', faviconUrl());
     var bg = document.querySelector('#login .bg-img');
     if (bg) bg.src = b.loginBg || 'assets/login_bg.webp';
+    var lobby = document.getElementById('l3d-bg');
+    if (lobby) lobby.style.backgroundImage = 'url(' + (b.lobbyBg || 'assets/lobby_bg_v3.webp') + ')';
     var ogt = document.querySelector('meta[property="og:title"]');
     if (ogt) ogt.setAttribute('content', b.nameFa + ' — ' + b.nameEn);
     var desc = document.querySelector('meta[name="description"]');

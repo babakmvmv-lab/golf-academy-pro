@@ -279,6 +279,12 @@ document.body.appendChild(root);
 
 var $ = function(s){ return root.querySelector(s); };
 var intro = $('#l3d-intro'), stage = $('#l3d-stage'), bg = $('#l3d-bg');
+function applyLobbyBg(){
+  if (!bg) return;
+  var src = (Bnd().lobbyBg) || 'assets/lobby_bg_v3.webp';
+  bg.style.backgroundImage = 'url(' + src + ')';
+}
+applyLobbyBg();
 var panel = $('#l3d-panel'), pbody = $('#l3d-pbody');
 var dock = $('#l3d-dock'), dust = $('#l3d-dust');
 var frames = intro.querySelectorAll('.fr');
@@ -895,5 +901,6 @@ window.addEventListener('ga:brand-changed', function(){
   var b = Bnd();
   var sub = document.getElementById('l3d-lgsub');
   if (sub) sub.textContent = (b.nameFa || '') + ' — ' + (b.domain || '');
+  applyLobbyBg();
 });
 })();

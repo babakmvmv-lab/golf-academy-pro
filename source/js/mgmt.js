@@ -719,6 +719,10 @@
           '<div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">پس‌زمینه ورود</div>' +
             '<img id="ac-bg-prev" src="' + esc(B.loginBg || "assets/login_bg.webp") + '" alt="" style="width:160px;height:90px;border-radius:10px;object-fit:cover;border:1px solid rgba(255,255,255,.12)">' +
             '<div style="margin-top:8px"><input type="file" id="ac-bg" accept="image/*"></div></div>' +
+          '<div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">صفحهٔ اول سایت — رسپشن</div>' +
+            '<img id="ac-lobby-prev" src="' + esc(B.lobbyBg || "assets/lobby_bg_v3.webp") + '" alt="" style="width:160px;height:90px;border-radius:10px;object-fit:cover;border:1px solid rgba(255,255,255,.12)">' +
+            '<div style="margin-top:8px"><input type="file" id="ac-lobby" accept="image/*"></div>' +
+            '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;max-width:180px;line-height:1.6">همان تصویر خانم رسپشن در لابی صفحهٔ اصلی</div></div>' +
         '</div>' +
       '</div>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
@@ -758,6 +762,10 @@
       const f = e.target.files && e.target.files[0]; if (!f) return;
       readImg(f, 1400, true, u => { pending.loginBg = u; $('#ac-bg-prev').src = u; });
     });
+    $('#ac-lobby').addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      readImg(f, 1600, true, u => { pending.lobbyBg = u; $('#ac-lobby-prev').src = u; });
+    });
     $('#ac-save').addEventListener('click', () => {
       if (!window.GA_BRAND){ APP.toast('ماژول پوسته بار نشده', 'red'); return; }
       const letters = ($('#ac-letters').value || '').replace(/\s+/g, '').toUpperCase().slice(0, 16);
@@ -770,7 +778,14 @@
         letters: letters,
         domain: $('#ac-domain').value.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, ''),
         email: $('#ac-email').value.trim(),
-        instagram: $('#ac-instagram').value.trim().replace(/^@/, '')
+        instagram: (function(){
+          let s = $('#ac-instagram').value.trim().replace(/^@/, '');
+          s = s.replace(/^https?:\/\//i,'').replace(/^www\./i,'');
+          const m = s.match(/instagram\.com\/([^/?#]+)/i);
+          if (m) s = m[1];
+          s = s.replace(/\/+$/,'').split('?')[0];
+          return s;
+        })()
       }, pending));
       APP.toast('پوسته ذخیره شد. اگر دستگاه دیگری کش قدیمی دارد، هاردریفرش کنید.', 'gold');
     });
@@ -2823,9 +2838,16 @@
     const netFa = n => ((window.PUTT_SOCIALS || []).find(x => x.net === n) || {}).fa || n;
     const netIc = { instagram: '📷', telegram: '✈️', whatsapp: '💬', youtube: '▶️', linkedin: '💼', x: '𝕏', aparat: '🎬', other: '🔗' };
     const handleOf = u => { const h = String(u).replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, ''); const p = h.split('/'); return p.length > 1 && p[p.length - 1] ? '@' + p[p.length - 1] : h; };
-    const socLine = soc.length
-      ? soc.map(x => (netIc[x.net] || '🔗') + ' ' + netFa(x.net) + ' ' + handleOf(x.url)).join('   ·   ')
-      : ((si && si.contact && si.contact.social) || 'اینستاگرام · تلگرام · واتساپ');
+    const igRaw = ((window.GA_BRAND && GA_BRAND.get && GA_BRAND.get().instagram) || '').trim();
+    let ig = igRaw.replace(/^@/, '').replace(/^https?:\/\//i,'').replace(/^www\./i,'');
+    const igm = ig.match(/instagram\.com\/([^/?#]+)/i);
+    if (igm) ig = igm[1];
+    ig = ig.replace(/\/+$/,'').split('?')[0];
+    if (!ig || /[?&=]/.test(ig) || /puttclub\.ir/i.test(ig)) ig = 'puttclub';
+    const socOthers = soc.filter(x => x && x.net !== 'instagram');
+    const socLine = ['📷 اینستاگرام  @' + ig].concat(
+      socOthers.map(x => (netIc[x.net] || '🔗') + ' ' + netFa(x.net) + ' ' + handleOf(x.url))
+    ).join('   ·   ');
 
     const build = () => {
       const W = 1080, H = 1920, cvs = document.createElement('canvas');

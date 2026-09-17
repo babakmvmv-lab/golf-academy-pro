@@ -15671,11 +15671,6 @@ window.addEventListener('ga:brand-changed', function(){
       ${honorChip(p.pid)}
     </div>`;
     v.innerHTML = TABS + selBar + `
-    <div class="glass sp-hero">
-      <div class="sp-icon">${SPARK}</div>
-      <h2>بازیکن هوشمند <span class="seg-new">آلفا</span></h2>
-      <p>دستیار تحلیل هوشمند <b style="color:var(--gold-l)">${esc(p.name)}</b> — این بخش آماده‌سازی شده و قابلیت‌های آن مرحله‌به‌مرحله فعال می‌شوند. داده‌های فعلی (امتیاز، کارت‌ها و روند فصل) به محض اتصال قابلیت‌ها، اینجا تحلیل می‌شوند.</p>
-    </div>
     <div class="glass" id="sp-live">
       <div class="card-head"><span class="ic">${CHART_SVG}</span><h3>آنالیز آخرین ضربه‌ها — ${esc(p.name)}</h3><span class="tag gold">Live</span><button type="button" class="sp-refresh" id="sp-live-refresh" title="تازه‌سازی نمودار" aria-label="تازه‌سازی نمودار"><svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button></div>
       <div id="sp-live-body"></div>

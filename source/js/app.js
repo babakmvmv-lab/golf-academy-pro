@@ -1562,45 +1562,47 @@
     <div class="earth-layout">
       <div class="glass earth-pane">
         <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین — ${esc(crs[1])}</h3><span class="tag">تصویر ماهواره</span></div>
-        <div class="earth-stage">
+        <div class="earth-stage" dir="ltr">
           <div id="earth-map" class="earth-map" dir="ltr"></div>
-          <div class="em-hud" id="earth-hud">
+          <div class="em-hud" id="earth-hud" dir="ltr">
             <div class="em-tl">
-              <div class="em-stack">
-                <button type="button" class="em-btn" id="em-zoom-in" title="بزرگ‌نمایی">+</button>
-                <button type="button" class="em-btn" id="em-zoom-out" title="کوچک‌نمایی">−</button>
+              <div class="em-layers">
+                <button type="button" class="em-btn on" id="earth-ly-tee" data-ly="tee" title="تی‌باکس"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.4L13.6 13.2H2.4Z" fill="currentColor"/></svg></button>
+                <button type="button" class="em-btn on" id="earth-ly-green" data-ly="green" title="حفره"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.4" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="2.1" fill="currentColor"/></svg></button>
+                <button type="button" class="em-btn on" id="earth-ly-fw" data-ly="fw" title="فروی"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 12.4C4.2 6.2 11.8 6.2 12.8 12.4Z" fill="currentColor" fill-opacity=".35" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+                <button type="button" class="em-btn on" id="earth-ly-line" data-ly="line" title="خط‌چین"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.8 8h3.1M6.5 8h3.1M11.1 8h3.1" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button>
               </div>
-              <div class="em-stack em-layers">
-                <button type="button" class="em-btn on" id="earth-ly-tee" data-ly="tee" title="تی‌باکس"><span class="em-i-tee">▲</span></button>
-                <button type="button" class="em-btn on" id="earth-ly-green" data-ly="green" title="حفره"><span class="em-i-hole">1</span></button>
-                <button type="button" class="em-btn on" id="earth-ly-fw" data-ly="fw" title="فروی"><span class="em-i-fw"></span></button>
-                <button type="button" class="em-btn on" id="earth-ly-line" data-ly="line" title="خط‌چین"><span class="em-i-dash"></span></button>
-              </div>
-              <div class="em-stack em-colors">
-                <label class="em-swatch" title="رنگ خط"><span class="em-i-dash"></span><input type="color" id="earth-c-line" value="#7dcc7a"></label>
-                <div class="em-pair">
-                  <label class="em-swatch" title="رنگ فروی"><span class="em-i-fw"></span><input type="color" id="earth-c-fw" value="#3d9e6a"></label>
-                  <button type="button" class="em-btn" id="earth-alpha-btn" title="شفافیت فروی"><span class="em-i-alpha">◐</span></button>
-                  <div class="em-pop" id="earth-alpha-pop"><input type="range" id="earth-fw-alpha" min="0" max="70" value="22"></div>
+              <div class="em-main">
+                <div class="em-zoom">
+                  <button type="button" class="em-btn" id="em-zoom-in" title="بزرگ‌نمایی"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.2v9.6M3.2 8h9.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+                  <button type="button" class="em-btn" id="em-zoom-out" title="کوچک‌نمایی"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8h9.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
                 </div>
-                <div class="em-pair">
-                  <label class="em-swatch" title="رنگ تی"><span class="em-i-tee">▲</span><input type="color" id="earth-c-tee" value="#f0d989"></label>
-                  <label class="em-swatch" title="فونت تی"><span class="em-i-font">A</span><input type="color" id="earth-c-tee-font" value="#ffffff"></label>
-                </div>
-                <div class="em-pair">
-                  <label class="em-swatch" title="رنگ حفره"><span class="em-i-hole">●</span><input type="color" id="earth-c-hole" value="#1e3d2f"></label>
-                  <label class="em-swatch" title="فونت حفره"><span class="em-i-font">1</span><input type="color" id="earth-c-hole-font" value="#f0d989"></label>
+                <div class="em-colors">
+                  <label class="em-swatch" title="رنگ خط"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.8 8h3.1M6.5 8h3.1M11.1 8h3.1" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg><input type="color" id="earth-c-line" value="#7dcc7a"></label>
+                  <div class="em-pair">
+                    <label class="em-swatch" title="رنگ فروی"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 12.4C4.2 6.2 11.8 6.2 12.8 12.4Z" fill="currentColor" fill-opacity=".35" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><input type="color" id="earth-c-fw" value="#3d9e6a"></label>
+                    <button type="button" class="em-btn" id="earth-alpha-btn" title="شفافیت فروی"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 2.6a5.4 5.4 0 0 1 0 10.8Z" fill="currentColor"/></svg></button>
+                    <div class="em-pop" id="earth-alpha-pop"><input type="range" id="earth-fw-alpha" min="0" max="70" value="22"></div>
+                  </div>
+                  <div class="em-pair">
+                    <label class="em-swatch" title="رنگ تی"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.4L13.6 13.2H2.4Z" fill="currentColor"/></svg><input type="color" id="earth-c-tee" value="#f0d989"></label>
+                    <label class="em-swatch" title="فونت تی"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.2 12.6L8 3.6l3.8 9M5.5 9.6h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg><input type="color" id="earth-c-tee-font" value="#ffffff"></label>
+                  </div>
+                  <div class="em-pair">
+                    <label class="em-swatch" title="رنگ حفره"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.4" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="2.1" fill="currentColor"/></svg><input type="color" id="earth-c-hole" value="#1e3d2f"></label>
+                    <label class="em-swatch" title="فونت حفره"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7.2 3.4v9.2M6 4.6l1.2-1.2h1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><input type="color" id="earth-c-hole-font" value="#f0d989"></label>
+                  </div>
                 </div>
               </div>
             </div>
             <div class="em-tr">
               <div class="em-bg">
-                <button type="button" class="on" data-earth-bg="sat" title="ماهواره">🛰</button>
-                <button type="button" data-earth-bg="topo" title="توپوگرافی">⛰</button>
+                <button type="button" class="on" data-earth-bg="sat" title="ماهواره"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 2.2v1.8M8 12v1.8M2.2 8h1.8M12 8h1.8M4.1 4.1l1.3 1.3M10.6 10.6l1.3 1.3M4.1 11.9l1.3-1.3M10.6 5.4l1.3-1.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+                <button type="button" data-earth-bg="topo" title="توپوگرافی"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 12.6L5.2 6.2l2.6 3.6L11.2 3.8 14.4 12.6Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg></button>
               </div>
             </div>
             <div class="em-bl">
-              <button type="button" class="em-btn" id="earth-btn-measure" title="خط‌کش"><span class="em-i-ruler"></span></button>
+              <button type="button" class="em-btn" id="earth-btn-measure" title="خط‌کش"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="5.2" width="12.8" height="5.6" rx="1.1" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4.2 5.2v2.6M7.2 5.2v1.8M10.2 5.2v2.6M13 5.2v1.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
               <button type="button" class="em-btn em-unit" id="earth-unit" title="واحد">yd</button>
               <span class="em-dist" id="earth-dist"></span>
             </div>

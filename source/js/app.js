@@ -1608,19 +1608,7 @@
             </div>
           </div>
         </div>
-        <div class="earth-tools">
-          <label class="lbl">میدان</label>
-          <select class="sel" id="earth-hole"></select>
-          <button type="button" class="btn sm ghost" id="earth-btn-export">🖨 خروجی تصویر</button>
-        </div>
-        <div class="earth-tools">
-          <label class="lbl">برنامهٔ شات</label>
-          <select class="sel" id="earth-club"></select>
-          <button type="button" class="btn sm" id="earth-btn-club">کشیدن کلاب</button>
-          <button type="button" class="btn sm ghost" id="earth-btn-club-done">ثبت این کلاب</button>
-          <button type="button" class="btn sm ghost" id="earth-btn-next">میدان بعدی ←</button>
-        </div>
-        <div class="earth-pins" id="earth-plan-list"></div>
+        <div id="earth-wiz" class="earth-wiz"></div>
       </div>
       <div class="glass earth-pa">
         <div class="card-head"><span class="ic">🧪</span><h3>آنالیز تمرین — ${pl ? esc(pl.name) : ''}</h3><span class="tag" id="earth-pa-tag">نمودار کلاب</span></div>

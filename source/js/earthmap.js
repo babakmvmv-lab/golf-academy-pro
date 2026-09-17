@@ -11,6 +11,13 @@
   let courseLayers = [], clubDraw = null, clubLine = null, clubMarks = [];
   let optsRef = {};
   let bgLayer = null, bgMode = 'sat';
+  const STYLE_KEY = 'ga_earth_style';
+  let sty = { line:'#7dcc7a', fw:'#3d9e6a', fwAlpha:0.22, tee:'#f0d989', teeFont:'#ffffff', hole:'#1e3d2f', holeFont:'#f0d989' };
+  function loadStyle(){
+    try { const s = JSON.parse(localStorage.getItem(STYLE_KEY) || '{}'); if (s && typeof s === 'object') Object.assign(sty, s); } catch(e){}
+  }
+  function saveStyle(){ try { localStorage.setItem(STYLE_KEY, JSON.stringify(sty)); } catch(e){} }
+  loadStyle();
 
   function loadPins(){
     try { const a = JSON.parse(localStorage.getItem(STORE) || '[]'); return Array.isArray(a) ? a : []; }
@@ -93,14 +100,14 @@
   function teeIcon(n){
     return L.divIcon({
       className: 'earth-divicon',
-      html: `<div class="cm-tee">▲<small>T${n}</small></div>`,
+      html: `<div class="cm-tee" style="color:${esc(sty.tee)}"><span style="color:${esc(sty.tee)}">▲</span><small style="color:${esc(sty.teeFont)}">T${n}</small></div>`,
       iconSize: [28, 28], iconAnchor: [14, 18]
     });
   }
   function holeIcon(n){
     return L.divIcon({
       className: 'earth-divicon',
-      html: `<div class="cm-green">${n}</div>`,
+      html: `<div class="cm-green" style="background:${esc(sty.hole)};border-color:${esc(sty.tee)};color:${esc(sty.holeFont)}">${n}</div>`,
       iconSize: [26, 26], iconAnchor: [13, 13]
     });
   }
@@ -157,13 +164,13 @@
       const h = H[String(n)]; if (!h) return;
       if (showFw && h.fairways){
         h.fairways.forEach(function(fw){
-          const poly = L.polygon(fw.latlngs, { color:'#8fe3c4', weight:1.6, fillColor:'#3d9e6a', fillOpacity:0.22 });
+          const poly = L.polygon(fw.latlngs, { color: sty.fw, weight:1.6, fillColor: sty.fw, fillOpacity: +sty.fwAlpha || 0 });
           poly.bindPopup('<b>'+esc(fw.name)+'</b>');
           poly.addTo(map); addLayer(poly); group.push(poly);
         });
       }
       if (h.tee && h.green){
-        const ln = L.polyline([[h.tee.lat,h.tee.lng],[h.green.lat,h.green.lng]], { color:'#7dcc7a', weight:2, dashArray:'6 5', opacity:0.9 });
+        const ln = L.polyline([[h.tee.lat,h.tee.lng],[h.green.lat,h.green.lng]], { color: sty.line, weight:2, dashArray:'6 5', opacity:0.9 });
         const d = hav(h.tee, h.green);
         ln.bindPopup('میدان '+fa(n)+' • '+fmtDist(d)+(h.yards?(' • کارت '+fa(h.yards)+' یارد'):'')+(h.par?(' • پار '+fa(h.par)):''));
         ln.addTo(map); addLayer(ln); group.push(ln);
@@ -321,23 +328,23 @@
       if (showFw) (h.fairways||[]).forEach(fw => {
         c.beginPath();
         fw.latlngs.forEach((ll,i) => { const p=xy(ll[0],ll[1]); i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]); });
-        c.closePath(); c.fillStyle='rgba(61,158,106,.22)'; c.fill(); c.strokeStyle='#2e7d32'; c.lineWidth=1.2; c.stroke();
+        c.closePath(); c.fillStyle=sty.fw; c.globalAlpha=+sty.fwAlpha||0; c.fill(); c.globalAlpha=1; c.strokeStyle=sty.fw; c.lineWidth=1.2; c.stroke();
       });
       if (h.tee && h.green){
         const a=xy(h.tee.lat,h.tee.lng), b=xy(h.green.lat,h.green.lng);
-        c.setLineDash([6,5]); c.strokeStyle='#66bb6a'; c.lineWidth=2; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); c.setLineDash([]);
+        c.setLineDash([6,5]); c.strokeStyle=sty.line; c.lineWidth=2; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); c.setLineDash([]);
         c.fillStyle='#2e7d32'; c.font='12px Tahoma'; c.textAlign='center';
         c.fillText((h.yards||'')+' yd', (a[0]+b[0])/2, (a[1]+b[1])/2 - 6);
       }
       if (showTee && h.tee){
         const p=xy(h.tee.lat,h.tee.lng);
-        c.fillStyle='#f0d989'; c.beginPath(); c.moveTo(p[0],p[1]-8); c.lineTo(p[0]+7,p[1]+6); c.lineTo(p[0]-7,p[1]+6); c.closePath(); c.fill();
-        c.fillStyle='#1e3d2f'; c.font='11px Tahoma'; c.fillText('T'+n, p[0], p[1]+20);
+        c.fillStyle=sty.tee; c.beginPath(); c.moveTo(p[0],p[1]-8); c.lineTo(p[0]+7,p[1]+6); c.lineTo(p[0]-7,p[1]+6); c.closePath(); c.fill();
+        c.fillStyle=sty.teeFont; c.font='11px Tahoma'; c.fillText('T'+n, p[0], p[1]+20);
       }
       if (showGreen && h.green){
         const p=xy(h.green.lat,h.green.lng);
-        c.fillStyle='#1e3d2f'; c.beginPath(); c.arc(p[0],p[1],10,0,Math.PI*2); c.fill();
-        c.fillStyle='#f0d989'; c.font='800 11px Tahoma'; c.textAlign='center'; c.fillText(String(n), p[0], p[1]+4);
+        c.fillStyle=sty.hole; c.beginPath(); c.arc(p[0],p[1],10,0,Math.PI*2); c.fill();
+        c.fillStyle=sty.holeFont; c.font='800 11px Tahoma'; c.textAlign='center'; c.fillText(String(n), p[0], p[1]+4);
       }
     });
     if (holeSel !== 'all'){
@@ -391,16 +398,29 @@
     document.querySelectorAll('[data-earth-bg]').forEach(function(b){
       b.onclick = function(){ bgMode = b.getAttribute('data-earth-bg') || 'sat'; applyBg(); };
     });
+    const cmap = [
+      ['earth-c-line','line'],['earth-c-fw','fw'],['earth-c-tee','tee'],
+      ['earth-c-tee-font','teeFont'],['earth-c-hole','hole'],['earth-c-hole-font','holeFont']
+    ];
+    cmap.forEach(function(pair){
+      const el = document.getElementById(pair[0]);
+      if (!el) return;
+      el.value = sty[pair[1]] || el.value;
+      el.oninput = function(){ sty[pair[1]] = el.value; saveStyle(); drawCourse(); };
+    });
+    const al = document.getElementById('earth-fw-alpha');
+    if (al){
+      al.value = String(Math.round((+sty.fwAlpha || 0) * 100));
+      al.oninput = function(){ sty.fwAlpha = (+al.value || 0) / 100; saveStyle(); drawCourse(); };
+    }
     const bM = document.getElementById('earth-btn-measure');
     const bC = document.getElementById('earth-btn-clear');
-    const bE = document.getElementById('earth-btn-earth');
     const bX = document.getElementById('earth-btn-export');
     const bClub = document.getElementById('earth-btn-club');
     const bDone = document.getElementById('earth-btn-club-done');
     const bNext = document.getElementById('earth-btn-next');
     if (bM) bM.onclick = function(){ mode = (mode==='measure')?'pan':'measure'; clubDraw=null; syncModeBtns(); };
     if (bC) bC.onclick = function(){ clearMeasure(); };
-    if (bE) bE.onclick = function(){ const c = map.getCenter(); window.open(earthUrl(c.lat,c.lng),'_blank','noopener'); };
     if (bX) bX.onclick = function(){ exportPoster(); };
     if (bClub) bClub.onclick = function(){
       if (holeSel==='all'){ alert('اول یک میدان انتخاب کنید'); return; }

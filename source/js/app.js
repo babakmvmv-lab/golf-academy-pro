@@ -1553,34 +1553,59 @@
       <span class="chip gold">${esc(crs[1])} — ${esc(crs[2])}</span>
       <span class="chip blue">${D.fa(holes)} حفره • پار ${D.fa(pars.slice(0,holes).reduce((a,b)=>a+b,0))}</span>
     </div>
-    <div class="glass earth-pane" style="margin-bottom:18px">
-      <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین — ${esc(crs[1])}</h3><span class="tag">تصویر ماهواره</span></div>
-      <div class="earth-tools">
-        <div class="earth-bg-switch">
-          <button type="button" class="btn sm on" data-earth-bg="sat">ماهواره</button>
-          <button type="button" class="btn sm ghost" data-earth-bg="topo">توپوگرافی</button>
+    <div class="earth-layout">
+      <div class="glass earth-pane">
+        <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین — ${esc(crs[1])}</h3><span class="tag">تصویر ماهواره</span></div>
+        <div id="earth-map" class="earth-map" dir="ltr"></div>
+        <div class="earth-tools">
+          <div class="earth-bg-switch">
+            <button type="button" class="btn sm on" data-earth-bg="sat">ماهواره</button>
+            <button type="button" class="btn sm ghost" data-earth-bg="topo">توپوگرافی</button>
+          </div>
+          <label class="lbl">میدان</label>
+          <select class="sel" id="earth-hole"></select>
+          <label class="chk"><input type="checkbox" id="earth-ly-tee" checked> تی‌باکس</label>
+          <label class="chk"><input type="checkbox" id="earth-ly-green" checked> حفره</label>
+          <label class="chk"><input type="checkbox" id="earth-ly-fw" checked> فیر وی</label>
+          <select class="sel" id="earth-unit"><option value="yd">یارد</option><option value="m">متر</option></select>
+          <button type="button" class="btn sm ghost" id="earth-btn-measure">📏 خط‌کش</button>
+          <button type="button" class="btn sm ghost" id="earth-btn-clear">پاک کردن اندازه</button>
+          <button type="button" class="btn sm ghost" id="earth-btn-export">🖨 خروجی تصویر</button>
+          <span class="earth-dist" id="earth-dist">—</span>
         </div>
-        <label class="lbl">میدان</label>
-        <select class="sel" id="earth-hole"></select>
-        <label class="chk"><input type="checkbox" id="earth-ly-tee" checked> تی‌باکس</label>
-        <label class="chk"><input type="checkbox" id="earth-ly-green" checked> حفره</label>
-        <label class="chk"><input type="checkbox" id="earth-ly-fw" checked> فیر وی</label>
-        <select class="sel" id="earth-unit"><option value="yd">یارد</option><option value="m">متر</option></select>
-        <button type="button" class="btn sm ghost" id="earth-btn-measure">📏 خط‌کش</button>
-        <button type="button" class="btn sm ghost" id="earth-btn-clear">پاک کردن اندازه</button>
-        <button type="button" class="btn sm ghost" id="earth-btn-export">🖨 خروجی تصویر</button>
-        <button type="button" class="btn sm ghost" id="earth-btn-earth">Google Earth</button>
-        <span class="earth-dist" id="earth-dist">—</span>
+        <div class="earth-tools">
+          <label class="lbl">برنامهٔ شات</label>
+          <select class="sel" id="earth-club"></select>
+          <button type="button" class="btn sm" id="earth-btn-club">کشیدن کلاب</button>
+          <button type="button" class="btn sm ghost" id="earth-btn-club-done">ثبت این کلاب</button>
+          <button type="button" class="btn sm ghost" id="earth-btn-next">میدان بعدی ←</button>
+        </div>
+        <div class="earth-tools earth-style">
+          <label class="earth-col"><span>رنگ خط</span><input type="color" id="earth-c-line" value="#7dcc7a"></label>
+          <label class="earth-col"><span>رنگ فروی</span><input type="color" id="earth-c-fw" value="#3d9e6a"></label>
+          <label class="earth-col earth-col-range"><span>شفافیت فروی</span><input type="range" id="earth-fw-alpha" min="0" max="70" value="22"></label>
+          <label class="earth-col"><span>رنگ تی</span><input type="color" id="earth-c-tee" value="#f0d989"></label>
+          <label class="earth-col"><span>فونت تی</span><input type="color" id="earth-c-tee-font" value="#ffffff"></label>
+          <label class="earth-col"><span>رنگ حفره</span><input type="color" id="earth-c-hole" value="#1e3d2f"></label>
+          <label class="earth-col"><span>فونت حفره</span><input type="color" id="earth-c-hole-font" value="#f0d989"></label>
+        </div>
+        <div class="earth-pins" id="earth-plan-list"></div>
       </div>
-      <div class="earth-tools" style="margin-top:0">
-        <label class="lbl">برنامهٔ شات</label>
-        <select class="sel" id="earth-club"></select>
-        <button type="button" class="btn sm" id="earth-btn-club">کشیدن کلاب</button>
-        <button type="button" class="btn sm ghost" id="earth-btn-club-done">ثبت این کلاب</button>
-        <button type="button" class="btn sm ghost" id="earth-btn-next">میدان بعدی ←</button>
+      <div class="glass earth-pa">
+        <div class="card-head"><span class="ic">🧪</span><h3>آنالیز تمرین — ${pl ? esc(pl.name) : ''}</h3><span class="tag" id="earth-pa-tag">نمودار کلاب</span></div>
+        <div class="earth-tools" style="margin-top:8px">
+          <label class="lbl">🔢 تعداد تمرین</label>
+          <select class="sel" id="earth-pa-n">
+            <option value="1">فقط تمرین آخر</option>
+            <option value="3">۳ تمرین آخر</option>
+            <option value="5">۵ تمرین آخر</option>
+            <option value="10">۱۰ تمرین آخر</option>
+            <option value="all" selected>تمامی تمرین‌ها</option>
+          </select>
+        </div>
+        <div class="earth-pa-legend">${Object.keys(SP_RES_LABEL).map(k => `<span><i style="background:${SP_RES_COLOR[k]}"></i>${SP_RES_LABEL[k]}</span>`).join('')}</div>
+        <div id="earth-pa-body" class="pa-body"></div>
       </div>
-      <div id="earth-map" class="earth-map" dir="ltr"></div>
-      <div class="earth-pins" id="earth-plan-list"></div>
     </div>
     <div class="grid cols-4" id="cs-stats" style="margin-bottom:18px"></div>
     <div class="grid cols-3">
@@ -1635,6 +1660,36 @@
     }, 80);
     $('#cs-sel').addEventListener('change', e => { courseSel = +e.target.value; go('course'); });
     $('#cs-pl').addEventListener('change', e => { coursePlayerSel = +e.target.value; go('course'); });
+    (function bindEarthPA(){
+      const nEl = document.getElementById('earth-pa-n');
+      function paint(){
+        const body = document.getElementById('earth-pa-body'); if (!body) return;
+        const nSel = nEl ? nEl.value : 'all';
+        const groups = (typeof paData === 'function') ? paData(coursePlayerSel, nSel) : [];
+        const totSes = groups.reduce((a,g) => a + g.sesN, 0);
+        const totSh = groups.reduce((a,g) => a + g.shotsN, 0);
+        const tag = document.getElementById('earth-pa-tag');
+        if (tag) tag.textContent = totSes ? (D.fa(totSes)+' تمرین • '+D.fa(totSh)+' ضربه') : 'بدون داده';
+        body.innerHTML = groups.length ? groups.map(g => {
+          const keys = Object.keys(g.clubs).sort();
+          return `<section class="pa-row">
+            <div class="pa-row-h"><b>${SP_TYPE_LBL[g.ty]||g.ty}</b><span>${D.fa(g.sesN)} تمرین</span></div>
+            <div class="pa-row-grid earth-pa-grid">${keys.map(cn => {
+              const cl = g.clubs[cn]; const dom = paTopRes(cl);
+              return `<article class="pa-club">
+                ${paSvgDonut(cl, 64, 13)}
+                <div class="pa-club-n">${esc(cn)}</div>
+                <div class="pa-club-m">${D.fa(cl.n)} ضربه</div>
+                <div class="pa-club-r" style="color:${SP_RES_COLOR[dom.k]}">${SP_RES_LABEL[dom.k]} ${D.fa(dom.pct)}٪</div>
+              </article>`;
+            }).join('')}</div>
+          </section>`;
+        }).join('')
+          : `<div style="padding:18px 10px;text-align:center;color:var(--muted);font-size:12px;line-height:2">برای این بازیکن تمرین تمام‌شده نیست.</div>`;
+      }
+      if (nEl) nEl.addEventListener('change', paint);
+      paint();
+    })();
     (function mountEarth(){
       if (!window.EarthMap) return;
       EarthMap.destroy();

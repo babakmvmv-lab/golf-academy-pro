@@ -324,14 +324,23 @@ tr.off-row{opacity:.5}
 
 
 /* گوگل ارث — هوش زمین */
-.earth-pane{overflow:hidden}
-.earth-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 12px}
+.earth-layout{display:grid;grid-template-columns:minmax(0,75%) minmax(220px,1fr);gap:14px;align-items:stretch;margin-bottom:18px}
+.earth-pane{overflow:hidden;min-width:0}
+.earth-pa{overflow:auto;min-width:0;max-height:100%}
+.earth-pa-legend{display:flex;flex-wrap:wrap;gap:8px;font-size:10.5px;color:var(--muted);margin:4px 0 8px}
+.earth-pa-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-left:4px;vertical-align:-1px}
+.earth-pa-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+.earth-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 8px}
+.earth-style{gap:10px 14px}
+.earth-col{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.earth-col input[type=color]{width:28px;height:22px;padding:0;border:1px solid rgba(212,175,55,.35);border-radius:6px;background:transparent;cursor:pointer}
+.earth-col-range input[type=range]{width:90px;accent-color:#D4AF37}
 .earth-bg-switch{display:inline-flex;border:1px solid rgba(212,175,55,.4);border-radius:10px;overflow:hidden}
 .earth-bg-switch .btn{border-radius:0;border:0;margin:0}
 .earth-tools .btn.on{background:rgba(212,175,55,.22);border-color:rgba(212,175,55,.65);color:var(--gold-l)}
 .earth-dist{font-size:12.5px;color:var(--gold-l);font-weight:700}
 .earth-map{
-  height:560px;width:100%;border-radius:14px;overflow:hidden;
+  height:448px;width:100%;border-radius:14px;overflow:hidden;
   background:#c4b496;border:1px solid rgba(212,175,55,.22);
   direction:ltr;position:relative;z-index:1;
 }

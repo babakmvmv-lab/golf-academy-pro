@@ -453,3 +453,7 @@ html.phone-mode .earth-tools .btn{flex:1 1 auto}
 html.phone-mode .earth-tools .input{width:100% !important;flex:1 1 100%}
 html.phone-mode .earth-tools .sel{max-width:42vw}
 html.phone-mode .earth-pa-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+
+html.phone-mode .earth-stage{height:300px}
+html.phone-mode .em-btn,html.phone-mode .em-swatch{width:28px;height:28px}
+html.phone-mode .em-tl{top:6px;left:6px;gap:4px}

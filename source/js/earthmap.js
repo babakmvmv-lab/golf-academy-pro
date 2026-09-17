@@ -7,7 +7,7 @@
   const YD = 0.9144;
 
   let map = null, measurePts = [], measureLine = null, measureMarks = [], mode = 'pan';
-  let unit = 'yd', holeSel = 'all', showTee = true, showGreen = true, showFw = true;
+  let unit = 'yd', holeSel = 'all', showTee = true, showGreen = true, showFw = true, showDash = true;
   let courseLayers = [], clubDraw = null, clubLine = null, clubMarks = [];
   let optsRef = {};
   let bgLayer = null, bgMode = 'sat';
@@ -44,10 +44,17 @@
   }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function fmtDist(m){
-    if (!isFinite(m) || m <= 0) return unit === 'yd' ? '۰ یارد' : '۰ متر';
-    if (unit === 'yd') return fa(Math.round(m / YD)) + ' یارد';
-    if (m < 1000) return fa(Math.round(m)) + ' متر';
-    return fa((m/1000).toFixed(2)) + ' کیلومتر';
+    if (!isFinite(m) || m <= 0) return unit === 'yd' ? '0 yd' : '0 m';
+    if (unit === 'yd') return Math.round(m / YD) + ' yd';
+    if (m < 1000) return Math.round(m) + ' m';
+    return (m/1000).toFixed(2) + ' km';
+  }
+  function bearingDeg(a, b){
+    const dLng = (b.lng - a.lng) * Math.PI / 180;
+    const lat1 = a.lat * Math.PI / 180, lat2 = b.lat * Math.PI / 180;
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
   }
   function holesData(){
     const g = window.MIS_GOLF;
@@ -97,11 +104,12 @@
       iconSize: [26, 34], iconAnchor: [13, 32], popupAnchor: [0, -28]
     });
   }
-  function teeIcon(n){
+  function teeIcon(n, deg){
+    deg = (deg == null) ? 0 : deg;
     return L.divIcon({
       className: 'earth-divicon',
-      html: `<div class="cm-tee" style="color:${esc(sty.tee)}"><span style="color:${esc(sty.tee)}">▲</span><small style="color:${esc(sty.teeFont)}">T${n}</small></div>`,
-      iconSize: [28, 28], iconAnchor: [14, 18]
+      html: `<div class="cm-tee-box"><div class="cm-tee" style="color:${esc(sty.tee)};transform:rotate(${deg}deg)">▲</div><small style="color:${esc(sty.teeFont)}">T${n}</small></div>`,
+      iconSize: [32, 36], iconAnchor: [16, 18]
     });
   }
   function holeIcon(n){
@@ -144,7 +152,7 @@
       });
     }
     const el = document.getElementById('earth-dist');
-    if (el) el.textContent = measurePts.length < 2 ? (mode==='measure' ? 'روی نقشه کلیک کنید' : 'خط‌کش خاموش') : ('مجموع: ' + fmtDist(totalM(measurePts)));
+    if (el) el.textContent = measurePts.length < 2 ? (mode==='measure' ? 'click map' : '') : fmtDist(totalM(measurePts));
   }
   function clearMeasure(){ measurePts = []; redrawMeasure(); }
 
@@ -169,20 +177,21 @@
           poly.addTo(map); addLayer(poly); group.push(poly);
         });
       }
-      if (h.tee && h.green){
+      if (h.tee && h.green && showDash){
         const ln = L.polyline([[h.tee.lat,h.tee.lng],[h.green.lat,h.green.lng]], { color: sty.line, weight:2, dashArray:'6 5', opacity:0.9 });
         const d = hav(h.tee, h.green);
-        ln.bindPopup('میدان '+fa(n)+' • '+fmtDist(d)+(h.yards?(' • کارت '+fa(h.yards)+' یارد'):'')+(h.par?(' • پار '+fa(h.par)):''));
+        ln.bindPopup('Hole '+n+' • '+fmtDist(d)+(h.yards?(' • '+h.yards+' yd'):'')+(h.par?(' • Par '+h.par):''));
         ln.addTo(map); addLayer(ln); group.push(ln);
         const mid = { lat:(h.tee.lat+h.green.lat)/2, lng:(h.tee.lng+h.green.lng)/2 };
         const lab = L.marker([mid.lat, mid.lng], {
-          icon: L.divIcon({ className:'earth-divicon', html:`<div class="earth-seg">${h.yards?fa(h.yards)+' yd':fmtDist(d)}</div>`, iconSize:[70,18], iconAnchor:[35,9] }),
+          icon: L.divIcon({ className:'earth-divicon', html:`<div class="earth-seg">${h.yards? (h.yards+' yd') : fmtDist(d)}</div>`, iconSize:[70,18], iconAnchor:[35,9] }),
           interactive:false
         });
         lab.addTo(map); addLayer(lab);
       }
       if (showTee && h.tee){
-        const m = L.marker([h.tee.lat, h.tee.lng], { icon: teeIcon(n) });
+        const deg = (h.green) ? bearingDeg(h.tee, h.green) : 0;
+        const m = L.marker([h.tee.lat, h.tee.lng], { icon: teeIcon(n, deg) });
         m.bindPopup('<b>تی‌باکس '+fa(n)+'</b><br>'+esc(h.tee.name||'')+'<br>'+(h.yards?fa(h.yards)+' یارد':'')+(h.par?(' • پار '+fa(h.par)):''));
         m.addTo(map); addLayer(m); group.push(m);
       }
@@ -384,16 +393,31 @@
     if (club && !club.options.length){
       CLUBS.forEach(nm => { const o=document.createElement('option'); o.value=nm; o.textContent=nm; club.appendChild(o); });
     }
-    [['earth-ly-tee', v => { showTee=v; }], ['earth-ly-green', v => { showGreen=v; }], ['earth-ly-fw', v => { showFw=v; }]].forEach(function(pair){
+    const layers = [
+      ['earth-ly-tee', () => showTee, v => { showTee=v; }],
+      ['earth-ly-green', () => showGreen, v => { showGreen=v; }],
+      ['earth-ly-fw', () => showFw, v => { showFw=v; }],
+      ['earth-ly-line', () => showDash, v => { showDash=v; }]
+    ];
+    layers.forEach(function(pair){
       const el = document.getElementById(pair[0]);
       if (!el) return;
-      el.checked = pair[0]==='earth-ly-tee'?showTee:pair[0]==='earth-ly-green'?showGreen:showFw;
-      el.onchange = function(){ pair[1](!!el.checked); drawCourse(); };
+      el.classList.toggle('on', pair[1]());
+      el.onclick = function(){ pair[2](!pair[1]()); el.classList.toggle('on', pair[1]()); drawCourse(); };
     });
     const un = document.getElementById('earth-unit');
     if (un){
-      un.value = unit;
-      un.onchange = function(){ unit = un.value; redrawMeasure(); drawCourse(); };
+      un.textContent = unit;
+      un.onclick = function(){ unit = (unit==='yd') ? 'm' : 'yd'; un.textContent = unit; redrawMeasure(); drawCourse(); };
+    }
+    const zi = document.getElementById('em-zoom-in');
+    const zo = document.getElementById('em-zoom-out');
+    if (zi) zi.onclick = function(e){ e.preventDefault(); e.stopPropagation(); if (map) map.zoomIn(); };
+    if (zo) zo.onclick = function(e){ e.preventDefault(); e.stopPropagation(); if (map) map.zoomOut(); };
+    const ab = document.getElementById('earth-alpha-btn');
+    const ap = document.getElementById('earth-alpha-pop');
+    if (ab && ap){
+      ab.onclick = function(e){ e.stopPropagation(); ap.classList.toggle('open'); ab.classList.toggle('on', ap.classList.contains('open')); };
     }
     document.querySelectorAll('[data-earth-bg]').forEach(function(b){
       b.onclick = function(){ bgMode = b.getAttribute('data-earth-bg') || 'sat'; applyBg(); };
@@ -414,13 +438,11 @@
       al.oninput = function(){ sty.fwAlpha = (+al.value || 0) / 100; saveStyle(); drawCourse(); };
     }
     const bM = document.getElementById('earth-btn-measure');
-    const bC = document.getElementById('earth-btn-clear');
     const bX = document.getElementById('earth-btn-export');
     const bClub = document.getElementById('earth-btn-club');
     const bDone = document.getElementById('earth-btn-club-done');
     const bNext = document.getElementById('earth-btn-next');
-    if (bM) bM.onclick = function(){ mode = (mode==='measure')?'pan':'measure'; clubDraw=null; syncModeBtns(); };
-    if (bC) bC.onclick = function(){ clearMeasure(); };
+    if (bM) bM.onclick = function(){ const on = mode!=='measure'; mode = on?'measure':'pan'; if (!on) clearMeasure(); clubDraw=null; syncModeBtns(); };
     if (bX) bX.onclick = function(){ exportPoster(); };
     if (bClub) bClub.onclick = function(){
       if (holeSel==='all'){ alert('اول یک میدان انتخاب کنید'); return; }
@@ -466,7 +488,7 @@
     const el = document.getElementById('earth-map');
     if (el) el.style.cursor = (mode==='pan') ? '' : 'crosshair';
     const dist = document.getElementById('earth-dist');
-    if (dist && mode!=='measure') dist.textContent = mode==='club' ? 'روی نقشه کلیک کنید تا مسیر کلاب کشیده شود' : 'خط‌کش خاموش';
+    if (dist && mode!=='measure') dist.textContent = mode==='club' ? 'click to draw' : '';
     if (mode==='measure') redrawMeasure();
   }
 
@@ -484,7 +506,7 @@
       return;
     }
 
-    map = L.map(el, { zoomControl:true, attributionControl:false, tap:true, minZoom:14, maxZoom:20 }).setView([center.lat, center.lng], 16);
+    map = L.map(el, { zoomControl:false, attributionControl:false, tap:true, minZoom:14, maxZoom:20 }).setView([center.lat, center.lng], 16);
     applyBg();
     if (!satInfo() || !satInfo().url){
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -496,6 +518,10 @@
     drawCourse();
 
     map.on('click', function(ev){
+      const ap = document.getElementById('earth-alpha-pop');
+      const ab = document.getElementById('earth-alpha-btn');
+      if (ap) ap.classList.remove('open');
+      if (ab) ab.classList.remove('on');
       const lat = ev.latlng.lat, lng = ev.latlng.lng;
       if (mode === 'measure'){ measurePts.push({ lat, lng }); redrawMeasure(); return; }
       if (mode === 'club' && clubDraw){ clubDraw.pts.push({ lat, lng }); redrawClubDraw(); return; }

@@ -215,6 +215,7 @@
   updatePageLabels();
   let currentPage = 'cmd';
   let playerSel = 8, matchSel = 1, courseSel = 1, coursePlayerSel = 8;
+  let courseTeeGender = 'F';
   let playerTab = 'classic'; /* classic | smart — تب «بازیکن هوشمند» */
 
   const MEM_PAGE_KEY = { cmd:'memCmd', race:'memRace', player:'memPlayer', match:'memMatch',
@@ -1547,6 +1548,11 @@
     <div class="toolbar">
       <span class="lbl">🗺️ زمین:</span>
       <select class="sel" id="cs-sel">${S.courses.map(c => `<option value="${c[0]}" ${c[0]===courseSel?'selected':''}>${esc(c[1])}</option>`).join('')}</select>
+      <span class="lbl">جنسیت:</span>
+      <div class="em-seg" id="cs-gender">
+        <button type="button" class="em-seg-btn${courseTeeGender!=='M'?' on':''}" data-gender="F">زن</button>
+        <button type="button" class="em-seg-btn${courseTeeGender==='M'?' on':''}" data-gender="M">مرد</button>
+      </div>
       <span class="lbl">🏌️ بازیکن:</span>
       <select class="sel" id="cs-pl">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===coursePlayerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
       <div style="flex:1"></div>
@@ -1556,22 +1562,54 @@
     <div class="earth-layout">
       <div class="glass earth-pane">
         <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین — ${esc(crs[1])}</h3><span class="tag">تصویر ماهواره</span></div>
-        <div id="earth-map" class="earth-map" dir="ltr"></div>
-        <div class="earth-tools">
-          <div class="earth-bg-switch">
-            <button type="button" class="btn sm on" data-earth-bg="sat">ماهواره</button>
-            <button type="button" class="btn sm ghost" data-earth-bg="topo">توپوگرافی</button>
+        <div class="earth-stage">
+          <div id="earth-map" class="earth-map" dir="ltr"></div>
+          <div class="em-hud" id="earth-hud">
+            <div class="em-tl">
+              <div class="em-stack">
+                <button type="button" class="em-btn" id="em-zoom-in" title="بزرگ‌نمایی">+</button>
+                <button type="button" class="em-btn" id="em-zoom-out" title="کوچک‌نمایی">−</button>
+              </div>
+              <div class="em-stack em-layers">
+                <button type="button" class="em-btn on" id="earth-ly-tee" data-ly="tee" title="تی‌باکس"><span class="em-i-tee">▲</span></button>
+                <button type="button" class="em-btn on" id="earth-ly-green" data-ly="green" title="حفره"><span class="em-i-hole">1</span></button>
+                <button type="button" class="em-btn on" id="earth-ly-fw" data-ly="fw" title="فروی"><span class="em-i-fw"></span></button>
+                <button type="button" class="em-btn on" id="earth-ly-line" data-ly="line" title="خط‌چین"><span class="em-i-dash"></span></button>
+              </div>
+              <div class="em-stack em-colors">
+                <label class="em-swatch" title="رنگ خط"><span class="em-i-dash"></span><input type="color" id="earth-c-line" value="#7dcc7a"></label>
+                <div class="em-pair">
+                  <label class="em-swatch" title="رنگ فروی"><span class="em-i-fw"></span><input type="color" id="earth-c-fw" value="#3d9e6a"></label>
+                  <button type="button" class="em-btn" id="earth-alpha-btn" title="شفافیت فروی"><span class="em-i-alpha">◐</span></button>
+                  <div class="em-pop" id="earth-alpha-pop"><input type="range" id="earth-fw-alpha" min="0" max="70" value="22"></div>
+                </div>
+                <div class="em-pair">
+                  <label class="em-swatch" title="رنگ تی"><span class="em-i-tee">▲</span><input type="color" id="earth-c-tee" value="#f0d989"></label>
+                  <label class="em-swatch" title="فونت تی"><span class="em-i-font">A</span><input type="color" id="earth-c-tee-font" value="#ffffff"></label>
+                </div>
+                <div class="em-pair">
+                  <label class="em-swatch" title="رنگ حفره"><span class="em-i-hole">●</span><input type="color" id="earth-c-hole" value="#1e3d2f"></label>
+                  <label class="em-swatch" title="فونت حفره"><span class="em-i-font">1</span><input type="color" id="earth-c-hole-font" value="#f0d989"></label>
+                </div>
+              </div>
+            </div>
+            <div class="em-tr">
+              <div class="em-bg">
+                <button type="button" class="on" data-earth-bg="sat" title="ماهواره">🛰</button>
+                <button type="button" data-earth-bg="topo" title="توپوگرافی">⛰</button>
+              </div>
+            </div>
+            <div class="em-bl">
+              <button type="button" class="em-btn" id="earth-btn-measure" title="خط‌کش"><span class="em-i-ruler"></span></button>
+              <button type="button" class="em-btn em-unit" id="earth-unit" title="واحد">yd</button>
+              <span class="em-dist" id="earth-dist"></span>
+            </div>
           </div>
+        </div>
+        <div class="earth-tools">
           <label class="lbl">میدان</label>
           <select class="sel" id="earth-hole"></select>
-          <label class="chk"><input type="checkbox" id="earth-ly-tee" checked> تی‌باکس</label>
-          <label class="chk"><input type="checkbox" id="earth-ly-green" checked> حفره</label>
-          <label class="chk"><input type="checkbox" id="earth-ly-fw" checked> فیر وی</label>
-          <select class="sel" id="earth-unit"><option value="yd">یارد</option><option value="m">متر</option></select>
-          <button type="button" class="btn sm ghost" id="earth-btn-measure">📏 خط‌کش</button>
-          <button type="button" class="btn sm ghost" id="earth-btn-clear">پاک کردن اندازه</button>
           <button type="button" class="btn sm ghost" id="earth-btn-export">🖨 خروجی تصویر</button>
-          <span class="earth-dist" id="earth-dist">—</span>
         </div>
         <div class="earth-tools">
           <label class="lbl">برنامهٔ شات</label>
@@ -1579,15 +1617,6 @@
           <button type="button" class="btn sm" id="earth-btn-club">کشیدن کلاب</button>
           <button type="button" class="btn sm ghost" id="earth-btn-club-done">ثبت این کلاب</button>
           <button type="button" class="btn sm ghost" id="earth-btn-next">میدان بعدی ←</button>
-        </div>
-        <div class="earth-tools earth-style">
-          <label class="earth-col"><span>رنگ خط</span><input type="color" id="earth-c-line" value="#7dcc7a"></label>
-          <label class="earth-col"><span>رنگ فروی</span><input type="color" id="earth-c-fw" value="#3d9e6a"></label>
-          <label class="earth-col earth-col-range"><span>شفافیت فروی</span><input type="range" id="earth-fw-alpha" min="0" max="70" value="22"></label>
-          <label class="earth-col"><span>رنگ تی</span><input type="color" id="earth-c-tee" value="#f0d989"></label>
-          <label class="earth-col"><span>فونت تی</span><input type="color" id="earth-c-tee-font" value="#ffffff"></label>
-          <label class="earth-col"><span>رنگ حفره</span><input type="color" id="earth-c-hole" value="#1e3d2f"></label>
-          <label class="earth-col"><span>فونت حفره</span><input type="color" id="earth-c-hole-font" value="#f0d989"></label>
         </div>
         <div class="earth-pins" id="earth-plan-list"></div>
       </div>
@@ -1660,6 +1689,9 @@
     }, 80);
     $('#cs-sel').addEventListener('change', e => { courseSel = +e.target.value; go('course'); });
     $('#cs-pl').addEventListener('change', e => { coursePlayerSel = +e.target.value; go('course'); });
+    document.querySelectorAll('#cs-gender [data-gender]').forEach(b => {
+      b.addEventListener('click', () => { courseTeeGender = b.getAttribute('data-gender') || 'F'; go('course'); });
+    });
     (function bindEarthPA(){
       const nEl = document.getElementById('earth-pa-n');
       function paint(){

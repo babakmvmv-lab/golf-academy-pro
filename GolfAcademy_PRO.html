@@ -1154,6 +1154,54 @@ tr.off-row{opacity:.5}
 
 
 /* گوگل ارث — هوش زمین */
+
+.earth-stage{position:relative;height:448px}
+.earth-stage .earth-map{height:100%;border-radius:14px}
+.em-hud{position:absolute;inset:0;z-index:800;pointer-events:none}
+.em-hud *{box-sizing:border-box}
+.em-tl{position:absolute;top:10px;left:10px;display:grid;grid-template-columns:auto auto;grid-template-areas:"zoom layers" "colors .";gap:6px;align-items:start;pointer-events:none}
+.em-tl > .em-stack:first-child{grid-area:zoom}
+.em-layers{grid-area:layers;flex-direction:row !important}
+.em-colors{grid-area:colors}
+.em-tr{position:absolute;top:10px;right:10px;pointer-events:auto}
+.em-bl{position:absolute;bottom:10px;left:10px;display:flex;align-items:center;gap:6px;pointer-events:auto}
+.em-stack{display:flex;flex-direction:column;gap:4px;pointer-events:auto}
+.em-pair{display:flex;gap:4px;position:relative}
+.em-btn,.em-swatch,.em-bg button,.em-seg-btn{
+  width:32px;height:32px;border-radius:9px;border:1px solid rgba(240,217,137,.38);
+  background:rgba(12,16,22,.78);color:#f0d989;cursor:pointer;display:inline-flex;
+  align-items:center;justify-content:center;padding:0;backdrop-filter:blur(8px);
+  box-shadow:0 2px 10px rgba(0,0,0,.28);transition:background .15s,border-color .15s,transform .12s;
+}
+.em-btn:hover,.em-swatch:hover,.em-bg button:hover{border-color:rgba(240,217,137,.75);background:rgba(20,26,34,.9)}
+.em-btn.on,.em-bg button.on,.em-seg-btn.on{background:rgba(212,175,55,.28);border-color:#d4af37;color:#fff4c8}
+.em-btn:active{transform:scale(.96)}
+.em-swatch{position:relative;overflow:hidden}
+.em-swatch input[type=color]{position:absolute;inset:-4px;opacity:0;cursor:pointer;width:auto;height:auto;border:0;padding:0}
+.em-i-tee{font-size:13px;line-height:1;color:#f0d989}
+.em-i-hole{width:14px;height:14px;border-radius:50%;background:#1e3d2f;border:1.5px solid #f0d989;color:#f0d989;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.em-i-fw{width:14px;height:10px;border-radius:3px;background:rgba(61,158,106,.55);border:1.5px solid #8fe3c4;display:block}
+.em-i-dash{width:16px;height:0;border-top:2px dashed #f0d989;display:block}
+.em-i-font{font-size:12px;font-weight:800;font-family:Georgia,serif}
+.em-i-alpha{font-size:15px;line-height:1}
+.em-i-ruler{width:16px;height:16px;display:block;background:
+  linear-gradient(#f0d989,#f0d989) 0 7px/16px 2px no-repeat,
+  repeating-linear-gradient(90deg,#f0d989 0 1.5px,transparent 1.5px 4px) 0 4px/16px 10px no-repeat}
+.em-unit{width:36px;font-size:10px;font-weight:800;letter-spacing:.02em}
+.em-bg{display:flex;border-radius:10px;overflow:hidden;border:1px solid rgba(240,217,137,.38);background:rgba(12,16,22,.78);backdrop-filter:blur(8px)}
+.em-bg button{width:30px;height:28px;border:0;border-radius:0;box-shadow:none;background:transparent;font-size:13px}
+.em-bg button + button{border-right:1px solid rgba(240,217,137,.22)}
+.em-pop{display:none;position:absolute;right:0;top:36px;z-index:20;padding:8px 10px;border-radius:10px;
+  background:rgba(12,16,22,.92);border:1px solid rgba(240,217,137,.4);box-shadow:0 8px 20px rgba(0,0,0,.4)}
+.em-pop.open{display:block}
+.em-pop input[type=range]{width:92px;accent-color:#D4AF37}
+.em-dist{font-size:11px;font-weight:700;color:#f0d989;text-shadow:0 1px 2px #000;min-width:0}
+.em-seg{display:inline-flex;border:1px solid rgba(212,175,55,.4);border-radius:10px;overflow:hidden}
+.em-seg-btn{width:auto;height:30px;padding:0 12px;border-radius:0;border:0;box-shadow:none;font-size:12px;font-weight:700}
+.cm-tee-box{display:flex;flex-direction:column;align-items:center;line-height:1}
+.cm-tee{font-size:16px;line-height:1;filter:drop-shadow(0 1px 2px #000);transform-origin:50% 62%}
+.cm-tee-box small{font-size:9px;font-weight:800;margin-top:1px;text-shadow:0 1px 2px #000}
+
 .earth-layout{display:grid;grid-template-columns:minmax(0,75%) minmax(220px,1fr);gap:14px;align-items:stretch;margin-bottom:18px}
 .earth-pane{overflow:hidden;min-width:0}
 .earth-pa{overflow:auto;min-width:0;max-height:100%}
@@ -2004,6 +2052,10 @@ html.phone-mode .earth-tools .btn{flex:1 1 auto}
 html.phone-mode .earth-tools .input{width:100% !important;flex:1 1 100%}
 html.phone-mode .earth-tools .sel{max-width:42vw}
 html.phone-mode .earth-pa-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+
+html.phone-mode .earth-stage{height:300px}
+html.phone-mode .em-btn,html.phone-mode .em-swatch{width:28px;height:28px}
+html.phone-mode .em-tl{top:6px;left:6px;gap:4px}
 </style>
 <style>/* required styles */
 
@@ -14269,7 +14321,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
   const YD = 0.9144;
 
   let map = null, measurePts = [], measureLine = null, measureMarks = [], mode = 'pan';
-  let unit = 'yd', holeSel = 'all', showTee = true, showGreen = true, showFw = true;
+  let unit = 'yd', holeSel = 'all', showTee = true, showGreen = true, showFw = true, showDash = true;
   let courseLayers = [], clubDraw = null, clubLine = null, clubMarks = [];
   let optsRef = {};
   let bgLayer = null, bgMode = 'sat';
@@ -14306,10 +14358,17 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
   }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function fmtDist(m){
-    if (!isFinite(m) || m <= 0) return unit === 'yd' ? '۰ یارد' : '۰ متر';
-    if (unit === 'yd') return fa(Math.round(m / YD)) + ' یارد';
-    if (m < 1000) return fa(Math.round(m)) + ' متر';
-    return fa((m/1000).toFixed(2)) + ' کیلومتر';
+    if (!isFinite(m) || m <= 0) return unit === 'yd' ? '0 yd' : '0 m';
+    if (unit === 'yd') return Math.round(m / YD) + ' yd';
+    if (m < 1000) return Math.round(m) + ' m';
+    return (m/1000).toFixed(2) + ' km';
+  }
+  function bearingDeg(a, b){
+    const dLng = (b.lng - a.lng) * Math.PI / 180;
+    const lat1 = a.lat * Math.PI / 180, lat2 = b.lat * Math.PI / 180;
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
   }
   function holesData(){
     const g = window.MIS_GOLF;
@@ -14359,11 +14418,12 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       iconSize: [26, 34], iconAnchor: [13, 32], popupAnchor: [0, -28]
     });
   }
-  function teeIcon(n){
+  function teeIcon(n, deg){
+    deg = (deg == null) ? 0 : deg;
     return L.divIcon({
       className: 'earth-divicon',
-      html: `<div class="cm-tee" style="color:${esc(sty.tee)}"><span style="color:${esc(sty.tee)}">▲</span><small style="color:${esc(sty.teeFont)}">T${n}</small></div>`,
-      iconSize: [28, 28], iconAnchor: [14, 18]
+      html: `<div class="cm-tee-box"><div class="cm-tee" style="color:${esc(sty.tee)};transform:rotate(${deg}deg)">▲</div><small style="color:${esc(sty.teeFont)}">T${n}</small></div>`,
+      iconSize: [32, 36], iconAnchor: [16, 18]
     });
   }
   function holeIcon(n){
@@ -14406,7 +14466,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       });
     }
     const el = document.getElementById('earth-dist');
-    if (el) el.textContent = measurePts.length < 2 ? (mode==='measure' ? 'روی نقشه کلیک کنید' : 'خط‌کش خاموش') : ('مجموع: ' + fmtDist(totalM(measurePts)));
+    if (el) el.textContent = measurePts.length < 2 ? (mode==='measure' ? 'click map' : '') : fmtDist(totalM(measurePts));
   }
   function clearMeasure(){ measurePts = []; redrawMeasure(); }
 
@@ -14431,20 +14491,21 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
           poly.addTo(map); addLayer(poly); group.push(poly);
         });
       }
-      if (h.tee && h.green){
+      if (h.tee && h.green && showDash){
         const ln = L.polyline([[h.tee.lat,h.tee.lng],[h.green.lat,h.green.lng]], { color: sty.line, weight:2, dashArray:'6 5', opacity:0.9 });
         const d = hav(h.tee, h.green);
-        ln.bindPopup('میدان '+fa(n)+' • '+fmtDist(d)+(h.yards?(' • کارت '+fa(h.yards)+' یارد'):'')+(h.par?(' • پار '+fa(h.par)):''));
+        ln.bindPopup('Hole '+n+' • '+fmtDist(d)+(h.yards?(' • '+h.yards+' yd'):'')+(h.par?(' • Par '+h.par):''));
         ln.addTo(map); addLayer(ln); group.push(ln);
         const mid = { lat:(h.tee.lat+h.green.lat)/2, lng:(h.tee.lng+h.green.lng)/2 };
         const lab = L.marker([mid.lat, mid.lng], {
-          icon: L.divIcon({ className:'earth-divicon', html:`<div class="earth-seg">${h.yards?fa(h.yards)+' yd':fmtDist(d)}</div>`, iconSize:[70,18], iconAnchor:[35,9] }),
+          icon: L.divIcon({ className:'earth-divicon', html:`<div class="earth-seg">${h.yards? (h.yards+' yd') : fmtDist(d)}</div>`, iconSize:[70,18], iconAnchor:[35,9] }),
           interactive:false
         });
         lab.addTo(map); addLayer(lab);
       }
       if (showTee && h.tee){
-        const m = L.marker([h.tee.lat, h.tee.lng], { icon: teeIcon(n) });
+        const deg = (h.green) ? bearingDeg(h.tee, h.green) : 0;
+        const m = L.marker([h.tee.lat, h.tee.lng], { icon: teeIcon(n, deg) });
         m.bindPopup('<b>تی‌باکس '+fa(n)+'</b><br>'+esc(h.tee.name||'')+'<br>'+(h.yards?fa(h.yards)+' یارد':'')+(h.par?(' • پار '+fa(h.par)):''));
         m.addTo(map); addLayer(m); group.push(m);
       }
@@ -14646,16 +14707,31 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     if (club && !club.options.length){
       CLUBS.forEach(nm => { const o=document.createElement('option'); o.value=nm; o.textContent=nm; club.appendChild(o); });
     }
-    [['earth-ly-tee', v => { showTee=v; }], ['earth-ly-green', v => { showGreen=v; }], ['earth-ly-fw', v => { showFw=v; }]].forEach(function(pair){
+    const layers = [
+      ['earth-ly-tee', () => showTee, v => { showTee=v; }],
+      ['earth-ly-green', () => showGreen, v => { showGreen=v; }],
+      ['earth-ly-fw', () => showFw, v => { showFw=v; }],
+      ['earth-ly-line', () => showDash, v => { showDash=v; }]
+    ];
+    layers.forEach(function(pair){
       const el = document.getElementById(pair[0]);
       if (!el) return;
-      el.checked = pair[0]==='earth-ly-tee'?showTee:pair[0]==='earth-ly-green'?showGreen:showFw;
-      el.onchange = function(){ pair[1](!!el.checked); drawCourse(); };
+      el.classList.toggle('on', pair[1]());
+      el.onclick = function(){ pair[2](!pair[1]()); el.classList.toggle('on', pair[1]()); drawCourse(); };
     });
     const un = document.getElementById('earth-unit');
     if (un){
-      un.value = unit;
-      un.onchange = function(){ unit = un.value; redrawMeasure(); drawCourse(); };
+      un.textContent = unit;
+      un.onclick = function(){ unit = (unit==='yd') ? 'm' : 'yd'; un.textContent = unit; redrawMeasure(); drawCourse(); };
+    }
+    const zi = document.getElementById('em-zoom-in');
+    const zo = document.getElementById('em-zoom-out');
+    if (zi) zi.onclick = function(e){ e.preventDefault(); e.stopPropagation(); if (map) map.zoomIn(); };
+    if (zo) zo.onclick = function(e){ e.preventDefault(); e.stopPropagation(); if (map) map.zoomOut(); };
+    const ab = document.getElementById('earth-alpha-btn');
+    const ap = document.getElementById('earth-alpha-pop');
+    if (ab && ap){
+      ab.onclick = function(e){ e.stopPropagation(); ap.classList.toggle('open'); ab.classList.toggle('on', ap.classList.contains('open')); };
     }
     document.querySelectorAll('[data-earth-bg]').forEach(function(b){
       b.onclick = function(){ bgMode = b.getAttribute('data-earth-bg') || 'sat'; applyBg(); };
@@ -14676,13 +14752,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       al.oninput = function(){ sty.fwAlpha = (+al.value || 0) / 100; saveStyle(); drawCourse(); };
     }
     const bM = document.getElementById('earth-btn-measure');
-    const bC = document.getElementById('earth-btn-clear');
     const bX = document.getElementById('earth-btn-export');
     const bClub = document.getElementById('earth-btn-club');
     const bDone = document.getElementById('earth-btn-club-done');
     const bNext = document.getElementById('earth-btn-next');
-    if (bM) bM.onclick = function(){ mode = (mode==='measure')?'pan':'measure'; clubDraw=null; syncModeBtns(); };
-    if (bC) bC.onclick = function(){ clearMeasure(); };
+    if (bM) bM.onclick = function(){ const on = mode!=='measure'; mode = on?'measure':'pan'; if (!on) clearMeasure(); clubDraw=null; syncModeBtns(); };
     if (bX) bX.onclick = function(){ exportPoster(); };
     if (bClub) bClub.onclick = function(){
       if (holeSel==='all'){ alert('اول یک میدان انتخاب کنید'); return; }
@@ -14728,7 +14802,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     const el = document.getElementById('earth-map');
     if (el) el.style.cursor = (mode==='pan') ? '' : 'crosshair';
     const dist = document.getElementById('earth-dist');
-    if (dist && mode!=='measure') dist.textContent = mode==='club' ? 'روی نقشه کلیک کنید تا مسیر کلاب کشیده شود' : 'خط‌کش خاموش';
+    if (dist && mode!=='measure') dist.textContent = mode==='club' ? 'click to draw' : '';
     if (mode==='measure') redrawMeasure();
   }
 
@@ -14746,7 +14820,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       return;
     }
 
-    map = L.map(el, { zoomControl:true, attributionControl:false, tap:true, minZoom:14, maxZoom:20 }).setView([center.lat, center.lng], 16);
+    map = L.map(el, { zoomControl:false, attributionControl:false, tap:true, minZoom:14, maxZoom:20 }).setView([center.lat, center.lng], 16);
     applyBg();
     if (!satInfo() || !satInfo().url){
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -14758,6 +14832,10 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     drawCourse();
 
     map.on('click', function(ev){
+      const ap = document.getElementById('earth-alpha-pop');
+      const ab = document.getElementById('earth-alpha-btn');
+      if (ap) ap.classList.remove('open');
+      if (ab) ab.classList.remove('on');
       const lat = ev.latlng.lat, lng = ev.latlng.lng;
       if (mode === 'measure'){ measurePts.push({ lat, lng }); redrawMeasure(); return; }
       if (mode === 'club' && clubDraw){ clubDraw.pts.push({ lat, lng }); redrawClubDraw(); return; }
@@ -14987,6 +15065,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
   updatePageLabels();
   let currentPage = 'cmd';
   let playerSel = 8, matchSel = 1, courseSel = 1, coursePlayerSel = 8;
+  let courseTeeGender = 'F';
   let playerTab = 'classic'; /* classic | smart — تب «بازیکن هوشمند» */
 
   const MEM_PAGE_KEY = { cmd:'memCmd', race:'memRace', player:'memPlayer', match:'memMatch',
@@ -16319,6 +16398,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     <div class="toolbar">
       <span class="lbl">🗺️ زمین:</span>
       <select class="sel" id="cs-sel">${S.courses.map(c => `<option value="${c[0]}" ${c[0]===courseSel?'selected':''}>${esc(c[1])}</option>`).join('')}</select>
+      <span class="lbl">جنسیت:</span>
+      <div class="em-seg" id="cs-gender">
+        <button type="button" class="em-seg-btn${courseTeeGender!=='M'?' on':''}" data-gender="F">زن</button>
+        <button type="button" class="em-seg-btn${courseTeeGender==='M'?' on':''}" data-gender="M">مرد</button>
+      </div>
       <span class="lbl">🏌️ بازیکن:</span>
       <select class="sel" id="cs-pl">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===coursePlayerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
       <div style="flex:1"></div>
@@ -16328,22 +16412,54 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     <div class="earth-layout">
       <div class="glass earth-pane">
         <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین — ${esc(crs[1])}</h3><span class="tag">تصویر ماهواره</span></div>
-        <div id="earth-map" class="earth-map" dir="ltr"></div>
-        <div class="earth-tools">
-          <div class="earth-bg-switch">
-            <button type="button" class="btn sm on" data-earth-bg="sat">ماهواره</button>
-            <button type="button" class="btn sm ghost" data-earth-bg="topo">توپوگرافی</button>
+        <div class="earth-stage">
+          <div id="earth-map" class="earth-map" dir="ltr"></div>
+          <div class="em-hud" id="earth-hud">
+            <div class="em-tl">
+              <div class="em-stack">
+                <button type="button" class="em-btn" id="em-zoom-in" title="بزرگ‌نمایی">+</button>
+                <button type="button" class="em-btn" id="em-zoom-out" title="کوچک‌نمایی">−</button>
+              </div>
+              <div class="em-stack em-layers">
+                <button type="button" class="em-btn on" id="earth-ly-tee" data-ly="tee" title="تی‌باکس"><span class="em-i-tee">▲</span></button>
+                <button type="button" class="em-btn on" id="earth-ly-green" data-ly="green" title="حفره"><span class="em-i-hole">1</span></button>
+                <button type="button" class="em-btn on" id="earth-ly-fw" data-ly="fw" title="فروی"><span class="em-i-fw"></span></button>
+                <button type="button" class="em-btn on" id="earth-ly-line" data-ly="line" title="خط‌چین"><span class="em-i-dash"></span></button>
+              </div>
+              <div class="em-stack em-colors">
+                <label class="em-swatch" title="رنگ خط"><span class="em-i-dash"></span><input type="color" id="earth-c-line" value="#7dcc7a"></label>
+                <div class="em-pair">
+                  <label class="em-swatch" title="رنگ فروی"><span class="em-i-fw"></span><input type="color" id="earth-c-fw" value="#3d9e6a"></label>
+                  <button type="button" class="em-btn" id="earth-alpha-btn" title="شفافیت فروی"><span class="em-i-alpha">◐</span></button>
+                  <div class="em-pop" id="earth-alpha-pop"><input type="range" id="earth-fw-alpha" min="0" max="70" value="22"></div>
+                </div>
+                <div class="em-pair">
+                  <label class="em-swatch" title="رنگ تی"><span class="em-i-tee">▲</span><input type="color" id="earth-c-tee" value="#f0d989"></label>
+                  <label class="em-swatch" title="فونت تی"><span class="em-i-font">A</span><input type="color" id="earth-c-tee-font" value="#ffffff"></label>
+                </div>
+                <div class="em-pair">
+                  <label class="em-swatch" title="رنگ حفره"><span class="em-i-hole">●</span><input type="color" id="earth-c-hole" value="#1e3d2f"></label>
+                  <label class="em-swatch" title="فونت حفره"><span class="em-i-font">1</span><input type="color" id="earth-c-hole-font" value="#f0d989"></label>
+                </div>
+              </div>
+            </div>
+            <div class="em-tr">
+              <div class="em-bg">
+                <button type="button" class="on" data-earth-bg="sat" title="ماهواره">🛰</button>
+                <button type="button" data-earth-bg="topo" title="توپوگرافی">⛰</button>
+              </div>
+            </div>
+            <div class="em-bl">
+              <button type="button" class="em-btn" id="earth-btn-measure" title="خط‌کش"><span class="em-i-ruler"></span></button>
+              <button type="button" class="em-btn em-unit" id="earth-unit" title="واحد">yd</button>
+              <span class="em-dist" id="earth-dist"></span>
+            </div>
           </div>
+        </div>
+        <div class="earth-tools">
           <label class="lbl">میدان</label>
           <select class="sel" id="earth-hole"></select>
-          <label class="chk"><input type="checkbox" id="earth-ly-tee" checked> تی‌باکس</label>
-          <label class="chk"><input type="checkbox" id="earth-ly-green" checked> حفره</label>
-          <label class="chk"><input type="checkbox" id="earth-ly-fw" checked> فیر وی</label>
-          <select class="sel" id="earth-unit"><option value="yd">یارد</option><option value="m">متر</option></select>
-          <button type="button" class="btn sm ghost" id="earth-btn-measure">📏 خط‌کش</button>
-          <button type="button" class="btn sm ghost" id="earth-btn-clear">پاک کردن اندازه</button>
           <button type="button" class="btn sm ghost" id="earth-btn-export">🖨 خروجی تصویر</button>
-          <span class="earth-dist" id="earth-dist">—</span>
         </div>
         <div class="earth-tools">
           <label class="lbl">برنامهٔ شات</label>
@@ -16351,15 +16467,6 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
           <button type="button" class="btn sm" id="earth-btn-club">کشیدن کلاب</button>
           <button type="button" class="btn sm ghost" id="earth-btn-club-done">ثبت این کلاب</button>
           <button type="button" class="btn sm ghost" id="earth-btn-next">میدان بعدی ←</button>
-        </div>
-        <div class="earth-tools earth-style">
-          <label class="earth-col"><span>رنگ خط</span><input type="color" id="earth-c-line" value="#7dcc7a"></label>
-          <label class="earth-col"><span>رنگ فروی</span><input type="color" id="earth-c-fw" value="#3d9e6a"></label>
-          <label class="earth-col earth-col-range"><span>شفافیت فروی</span><input type="range" id="earth-fw-alpha" min="0" max="70" value="22"></label>
-          <label class="earth-col"><span>رنگ تی</span><input type="color" id="earth-c-tee" value="#f0d989"></label>
-          <label class="earth-col"><span>فونت تی</span><input type="color" id="earth-c-tee-font" value="#ffffff"></label>
-          <label class="earth-col"><span>رنگ حفره</span><input type="color" id="earth-c-hole" value="#1e3d2f"></label>
-          <label class="earth-col"><span>فونت حفره</span><input type="color" id="earth-c-hole-font" value="#f0d989"></label>
         </div>
         <div class="earth-pins" id="earth-plan-list"></div>
       </div>
@@ -16432,6 +16539,9 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     }, 80);
     $('#cs-sel').addEventListener('change', e => { courseSel = +e.target.value; go('course'); });
     $('#cs-pl').addEventListener('change', e => { coursePlayerSel = +e.target.value; go('course'); });
+    document.querySelectorAll('#cs-gender [data-gender]').forEach(b => {
+      b.addEventListener('click', () => { courseTeeGender = b.getAttribute('data-gender') || 'F'; go('course'); });
+    });
     (function bindEarthPA(){
       const nEl = document.getElementById('earth-pa-n');
       function paint(){

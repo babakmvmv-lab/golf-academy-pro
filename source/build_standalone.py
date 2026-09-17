@@ -24,7 +24,8 @@ SIZES = {
     'open_tee.webp':    (1100, 84),
     'open_swing.webp':  (1100, 84),
     'open_sky.webp':    (1100, 84),
-    'open_hole.webp':   (1100, 84),
+    'open_hole.webp':    (1100, 84),
+    'mis_sat.jpg':      (2100, 78),
 }
 
 def img_uri(name):

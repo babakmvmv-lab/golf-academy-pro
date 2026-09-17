@@ -1554,7 +1554,7 @@
       <span class="chip blue">${D.fa(holes)} حفره • پار ${D.fa(pars.slice(0,holes).reduce((a,b)=>a+b,0))}</span>
     </div>
     <div class="glass earth-pane" style="margin-bottom:18px">
-      <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین — ${esc(crs[1])}</h3><span class="tag">KML مسجدسلیمان</span></div>
+      <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین — ${esc(crs[1])}</h3><span class="tag">تصویر ماهواره</span></div>
       <div class="earth-tools">
         <label class="lbl">میدان</label>
         <select class="sel" id="earth-hole"></select>

@@ -329,8 +329,8 @@ tr.off-row{opacity:.5}
 .earth-tools .btn.on{background:rgba(212,175,55,.22);border-color:rgba(212,175,55,.65);color:var(--gold-l)}
 .earth-dist{font-size:12.5px;color:var(--gold-l);font-weight:700}
 .earth-map{
-  height:420px;width:100%;border-radius:14px;overflow:hidden;
-  background:#0b1218;border:1px solid rgba(212,175,55,.22);
+  height:560px;width:100%;border-radius:14px;overflow:hidden;
+  background:#c4b496;border:1px solid rgba(212,175,55,.22);
   direction:ltr;position:relative;z-index:1;
 }
 .earth-map .leaflet-container{height:100%;width:100%;background:#0b1218;font-family:inherit}

@@ -45,6 +45,10 @@
     const g = window.MIS_GOLF;
     return (g && g.holes) ? g.holes : {};
   }
+  function satInfo(){
+    const g = window.MIS_GOLF;
+    return (g && g.sat) ? g.sat : null;
+  }
   function holeNums(){ return Object.keys(holesData()).map(Number).sort((a,b)=>a-b); }
   function activeHoles(){
     const all = holeNums();
@@ -129,13 +133,13 @@
       const h = H[String(n)]; if (!h) return;
       if (showFw && h.fairways){
         h.fairways.forEach(function(fw){
-          const poly = L.polygon(fw.latlngs, { color:'#8fe3c4', weight:2, fillColor:'#1EBB8A', fillOpacity:0.28 });
+          const poly = L.polygon(fw.latlngs, { color:'#8fe3c4', weight:1.6, fillColor:'#3d9e6a', fillOpacity:0.22 });
           poly.bindPopup('<b>'+esc(fw.name)+'</b>');
           poly.addTo(map); addLayer(poly); group.push(poly);
         });
       }
       if (h.tee && h.green){
-        const ln = L.polyline([[h.tee.lat,h.tee.lng],[h.green.lat,h.green.lng]], { color:'#c8e6c9', weight:2, dashArray:'5 5', opacity:0.85 });
+        const ln = L.polyline([[h.tee.lat,h.tee.lng],[h.green.lat,h.green.lng]], { color:'#7dcc7a', weight:2, dashArray:'6 5', opacity:0.9 });
         const d = hav(h.tee, h.green);
         ln.bindPopup('میدان '+fa(n)+' • '+fmtDist(d)+(h.yards?(' • کارت '+fa(h.yards)+' یارد'):'')+(h.par?(' • پار '+fa(h.par)):''));
         ln.addTo(map); addLayer(ln); group.push(ln);
@@ -238,8 +242,21 @@
   }
 
   function exportPoster(){
+    const sat = satInfo();
+    const img = new Image();
+    let once = false;
+    const go = function(ok){ if (once) return; once = true; drawPoster(ok ? img : null); };
+    if (sat && sat.url){
+      img.onload = function(){ go(true); };
+      img.onerror = function(){ go(false); };
+      img.src = sat.url;
+      if (img.complete && img.width) go(true);
+    } else go(false);
+  }
+  function drawPoster(satImg){
     const H = holesData();
     const nums = activeHoles();
+    const sat = satInfo();
     const W = 1600, Ht = 1000;
     const cvs = document.createElement('canvas');
     cvs.width = W; cvs.height = Ht;
@@ -250,7 +267,7 @@
     c.fillStyle = '#6b5e4a'; c.font = '16px Tahoma';
     c.fillText('مسجدسلیمان  |  Course Map', 40, 76);
     const mapX = 36, mapY = 100, mapW = 1080, mapH = 840;
-    c.fillStyle = '#d7d2c4'; c.fillRect(mapX, mapY, mapW, mapH);
+    c.fillStyle = '#cbbca6'; c.fillRect(mapX, mapY, mapW, mapH);
     let minLat=90, maxLat=-90, minLng=180, maxLng=-180;
     nums.forEach(n => {
       const h = H[String(n)]; if (!h) return;
@@ -264,12 +281,21 @@
       const y = mapY + (maxLat - lat) / (maxLat - minLat) * mapH;
       return [x,y];
     }
+    if (satImg && sat){
+      try {
+        const sx = (minLng - sat.west) / (sat.east - sat.west) * satImg.width;
+        const sy = (sat.north - maxLat) / (sat.north - sat.south) * satImg.height;
+        const sw = (maxLng - minLng) / (sat.east - sat.west) * satImg.width;
+        const sh = (maxLat - minLat) / (sat.north - sat.south) * satImg.height;
+        c.drawImage(satImg, sx, sy, sw, sh, mapX, mapY, mapW, mapH);
+      } catch (e) {}
+    }
     nums.forEach(n => {
       const h = H[String(n)]; if (!h) return;
       if (showFw) (h.fairways||[]).forEach(fw => {
         c.beginPath();
         fw.latlngs.forEach((ll,i) => { const p=xy(ll[0],ll[1]); i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]); });
-        c.closePath(); c.fillStyle='rgba(76,175,80,.35)'; c.fill(); c.strokeStyle='#2e7d32'; c.lineWidth=1.5; c.stroke();
+        c.closePath(); c.fillStyle='rgba(61,158,106,.22)'; c.fill(); c.strokeStyle='#2e7d32'; c.lineWidth=1.2; c.stroke();
       });
       if (h.tee && h.green){
         const a=xy(h.tee.lat,h.tee.lng), b=xy(h.green.lat,h.green.lng);
@@ -409,27 +435,17 @@
       return;
     }
 
-    map = L.map(el, { zoomControl:true, attributionControl:true, tap:true }).setView([center.lat, center.lng], 16);
-    const BingSat = L.TileLayer.extend({
-      getTileUrl: function(c){
-        const z = this._getZoomForUrl();
-        let x = c.x, y = c.y, q = '';
-        for (let i = z; i > 0; i--){
-          let d = 0;
-          const m = 1 << (i - 1);
-          if ((x & m) !== 0) d += 1;
-          if ((y & m) !== 0) d += 2;
-          q += d;
-        }
-        return 'https://ecn.t' + (Math.abs(c.x + c.y) % 4) + '.tiles.virtualearth.net/tiles/a' + q + '.jpeg?g=1444';
-      }
-    });
-    const bing = new BingSat({ maxZoom:19, attribution:'Bing' });
-    const carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom:20, subdomains:'abcd', attribution:'© OSM © CARTO'
-    });
-    carto.addTo(map);
-    L.control.layers({ 'نقشه': carto, 'ماهواره': bing }, null, { collapsed:true, position:'topright' }).addTo(map);
+    const sat = satInfo();
+    map = L.map(el, { zoomControl:true, attributionControl:false, tap:true, minZoom:15, maxZoom:20 }).setView([center.lat, center.lng], 16);
+    if (sat && sat.url){
+      map.createPane('satpane');
+      map.getPane('satpane').style.zIndex = 350;
+      L.imageOverlay(sat.url, [[sat.south, sat.west],[sat.north, sat.east]], { opacity:1, interactive:false, pane:'satpane' }).addTo(map);
+    } else {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom:20, subdomains:'abcd'
+      }).addTo(map);
+    }
 
     bindUi();
     drawCourse();

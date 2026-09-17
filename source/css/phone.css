@@ -450,3 +450,7 @@ html.phone-mode .earth-map{height:260px;border-radius:12px}
 html.phone-mode .earth-tools{gap:6px}
 html.phone-mode .earth-tools .btn{flex:1 1 auto}
 html.phone-mode .earth-tools .input{width:100% !important;flex:1 1 100%}
+
+html.phone-mode .earth-tools{gap:6px}
+html.phone-mode .earth-tools .sel{max-width:42vw}
+html.phone-mode .earth-map{height:300px}

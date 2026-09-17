@@ -1554,17 +1554,29 @@
       <span class="chip blue">${D.fa(holes)} حفره • پار ${D.fa(pars.slice(0,holes).reduce((a,b)=>a+b,0))}</span>
     </div>
     <div class="glass earth-pane" style="margin-bottom:18px">
-      <div class="card-head"><span class="ic">🛰</span><h3>گوگل ارث — موقعیت زمین</h3><span class="tag">خط‌کش متری</span></div>
+      <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین — ${esc(crs[1])}</h3><span class="tag">KML مسجدسلیمان</span></div>
       <div class="earth-tools">
+        <label class="lbl">میدان</label>
+        <select class="sel" id="earth-hole"></select>
+        <label class="chk"><input type="checkbox" id="earth-ly-tee" checked> تی‌باکس</label>
+        <label class="chk"><input type="checkbox" id="earth-ly-green" checked> حفره</label>
+        <label class="chk"><input type="checkbox" id="earth-ly-fw" checked> فیر وی</label>
+        <select class="sel" id="earth-unit"><option value="yd">یارد</option><option value="m">متر</option></select>
         <button type="button" class="btn sm ghost" id="earth-btn-measure">📏 خط‌کش</button>
         <button type="button" class="btn sm ghost" id="earth-btn-clear">پاک کردن اندازه</button>
-        <input class="input" id="earth-pin-name" placeholder="نام موقعیت (مثلاً تی ۱)" style="width:min(220px,100%)">
-        <button type="button" class="btn sm ghost" id="earth-btn-pin">📍 سنجاق</button>
-        <button type="button" class="btn sm" id="earth-btn-earth">باز کردن در Google Earth</button>
+        <button type="button" class="btn sm ghost" id="earth-btn-export">🖨 خروجی تصویر</button>
+        <button type="button" class="btn sm ghost" id="earth-btn-earth">Google Earth</button>
         <span class="earth-dist" id="earth-dist">—</span>
       </div>
+      <div class="earth-tools" style="margin-top:0">
+        <label class="lbl">برنامهٔ شات</label>
+        <select class="sel" id="earth-club"></select>
+        <button type="button" class="btn sm" id="earth-btn-club">کشیدن کلاب</button>
+        <button type="button" class="btn sm ghost" id="earth-btn-club-done">ثبت این کلاب</button>
+        <button type="button" class="btn sm ghost" id="earth-btn-next">میدان بعدی ←</button>
+      </div>
       <div id="earth-map" class="earth-map" dir="ltr"></div>
-      <div class="earth-pins" id="earth-pins"></div>
+      <div class="earth-pins" id="earth-plan-list"></div>
     </div>
     <div class="grid cols-4" id="cs-stats" style="margin-bottom:18px"></div>
     <div class="grid cols-3">
@@ -1638,7 +1650,7 @@
         places.push({ name: c[1], lat, lng });
       });
       const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.90494, lng:49.31398 };
-      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16 });
+      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', pid: coursePlayerSel });
     })();
   }
 

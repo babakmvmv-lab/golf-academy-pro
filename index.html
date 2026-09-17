@@ -15223,7 +15223,9 @@ window.addEventListener('ga:brand-changed', function(){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🏌️ نمودارهای ${esc(L('nav.player','مرکز بازیکن'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
     }
-    const p = A.LB.find(r => r.pid === playerSel) || A.LB[0];
+    const livePid = (playerTab === 'smart') ? lastOpenShotPid() : null;
+    if (livePid) playerSel = livePid;
+    const p = A.LB.find(r => +r.pid === +playerSel) || A.LB[0];
     const cards = A.CARDS[playerSel] || [];
     const sk = A.SKILLS[playerSel] || {scoring:0,birdie:0,consistency:0,practice:0,experience:0};
     const pt = A.PAR_TYPE[playerSel] || {};
@@ -15393,11 +15395,23 @@ window.addEventListener('ga:brand-changed', function(){
       const ssn = spSessions();
       const closedIds = {};
       Object.keys(ssn).forEach(id => { const x = ssn[id]; if (x && x.status === 'closed' && x.closedAt) closedIds[id] = 1; });
-      const has = pid => spShots().some(x => x.pid === pid && closedIds[x.sid]);
+      const has = pid => spShots().some(x => +x.pid === +pid && closedIds[x.sid]);
       if (has(playerSel)) return playerSel;
       const row = A.LB.find(r => has(r.pid));
       return row ? row.pid : playerSel;
     } catch(e){ return playerSel; }
+  }
+  /* آخرین بازیکنی که در جلسهٔ باز ضربه ثبت کرده — تحلیل لحظه‌ای باید همین را نشان بدهد نه سلکت بالای صفحه */
+  function lastOpenShotPid(){
+    try {
+      const ssn = spSessions();
+      const open = Object.keys(ssn).map(k => ssn[k]).find(x => x && x.status === 'open');
+      if (!open) return null;
+      const shots = spShots().filter(x => String(x.sid) === String(open.id)).sort((a,b) => (+a.t||0) - (+b.t||0));
+      if (!shots.length) return null;
+      const pid = +shots[shots.length - 1].pid;
+      return (A.LB || []).some(r => +r.pid === pid) ? pid : null;
+    } catch(e){ return null; }
   }
   /* ── 🍩 نمودار دایره‌ای نتیجهٔ تمرین: درصد آیتم‌های طراحی‌شدهٔ تمرین (صاف/سمت راست/سمت چپ/خطا)
      روی ضربه‌های بازیکن — فیلتر: بازیکن • نوع تمرین • کلاب • بازهٔ «فقط تمرین آخر / ۳ / ۵ / ۱۰ / کل» (جلسات تمام‌شده) ── */
@@ -15696,7 +15710,12 @@ window.addEventListener('ga:brand-changed', function(){
     const rec = $('#sp-record');
     if (rec) rec.addEventListener('click', () => {
       /* صفحهٔ تمام‌صفحهٔ مجزا برای ورود دیتا — ✕ فقط صفحه را می‌بندد، جلسهٔ باز پابرجاست */
-      if (window.SMARTPLAY) SMARTPLAY.open({ A: A, S: S, D: D });
+      if (window.SMARTPLAY) SMARTPLAY.open({ A: A, S: S, D: D, onExit: function(){
+        const lp = lastOpenShotPid();
+        if (lp) playerSel = lp;
+        playerTab = 'smart';
+        go('player');
+      } });
     });
     const back = $('#sp-back');
     if (back) back.addEventListener('click', () => { playerTab = 'classic'; go('player'); });
@@ -15874,8 +15893,13 @@ window.addEventListener('ga:brand-changed', function(){
         از دکمهٔ «ثبت رکورد» بالای صفحه جلسه را شروع کنید — تحلیل لحظه‌ای همین‌جا زنده می‌شود ⛳</div>`;
       return;
     }
-    /* فقط ضربه‌های همین جلسهٔ باز، برای همین بازیکن */
-    const mine = shots.filter(x => x.pid === p.pid && x.sid === open.id).sort((a, b) => a.t - b.t);
+    /* بازیکن = آخرین ضربهٔ همین جلسهٔ باز (نه سلکت بالای صفحه) */
+    const livePid = lastOpenShotPid();
+    if (livePid){
+      const row = A.LB.find(r => +r.pid === +livePid);
+      if (row) p = row;
+    }
+    const mine = shots.filter(x => +x.pid === +p.pid && String(x.sid) === String(open.id)).sort((a, b) => (+a.t||0) - (+b.t||0));
     if (!mine.length){
       if (ttl) ttl.textContent = `تحلیل لحظه‌ای جلسهٔ ${D.fa(open.no)} — ${p.name}`;
       if (tg){ tg.textContent = '۰ ضربه در این جلسه'; tg.classList.remove('gold'); }

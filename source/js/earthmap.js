@@ -10,6 +10,7 @@
   let unit = 'yd', holeSel = 'all', showTee = true, showGreen = true, showFw = true;
   let courseLayers = [], clubDraw = null, clubLine = null, clubMarks = [];
   let optsRef = {};
+  let bgLayer = null, bgMode = 'sat';
 
   function loadPins(){
     try { const a = JSON.parse(localStorage.getItem(STORE) || '[]'); return Array.isArray(a) ? a : []; }
@@ -48,6 +49,29 @@
   function satInfo(){
     const g = window.MIS_GOLF;
     return (g && g.sat) ? g.sat : null;
+  }
+  function bgUrl(){
+    const s = satInfo();
+    if (!s) return '';
+    return (bgMode === 'topo' && s.topo) ? s.topo : s.url;
+  }
+  function applyBg(){
+    if (!map) return;
+    const s = satInfo();
+    if (bgLayer) { try { map.removeLayer(bgLayer); } catch(e){} bgLayer = null; }
+    document.querySelectorAll('[data-earth-bg]').forEach(function(b){
+      b.classList.toggle('on', b.getAttribute('data-earth-bg') === bgMode);
+      b.classList.toggle('ghost', b.getAttribute('data-earth-bg') !== bgMode);
+    });
+    if (!s || !s.url){
+      return;
+    }
+    if (!map.getPane('satpane')){
+      map.createPane('satpane');
+      map.getPane('satpane').style.zIndex = 350;
+    }
+    bgLayer = L.imageOverlay(bgUrl(), [[s.south, s.west],[s.north, s.east]], { opacity:1, interactive:false, pane:'satpane' });
+    bgLayer.addTo(map);
   }
   function holeNums(){ return Object.keys(holesData()).map(Number).sort((a,b)=>a-b); }
   function activeHoles(){
@@ -239,6 +263,7 @@
     if (map) { try { map.remove(); } catch (e) {} map = null; }
     measurePts = []; measureLine = null; measureMarks = []; mode = 'pan';
     courseLayers = []; clubDraw = null; clubLine = null; clubMarks = [];
+    bgLayer = null;
   }
 
   function exportPoster(){
@@ -246,10 +271,11 @@
     const img = new Image();
     let once = false;
     const go = function(ok){ if (once) return; once = true; drawPoster(ok ? img : null); };
-    if (sat && sat.url){
+    const url = bgUrl();
+    if (sat && url){
       img.onload = function(){ go(true); };
       img.onerror = function(){ go(false); };
-      img.src = sat.url;
+      img.src = url;
       if (img.complete && img.width) go(true);
     } else go(false);
   }
@@ -362,6 +388,9 @@
       un.value = unit;
       un.onchange = function(){ unit = un.value; redrawMeasure(); drawCourse(); };
     }
+    document.querySelectorAll('[data-earth-bg]').forEach(function(b){
+      b.onclick = function(){ bgMode = b.getAttribute('data-earth-bg') || 'sat'; applyBg(); };
+    });
     const bM = document.getElementById('earth-btn-measure');
     const bC = document.getElementById('earth-btn-clear');
     const bE = document.getElementById('earth-btn-earth');
@@ -435,13 +464,9 @@
       return;
     }
 
-    const sat = satInfo();
-    map = L.map(el, { zoomControl:true, attributionControl:false, tap:true, minZoom:15, maxZoom:20 }).setView([center.lat, center.lng], 16);
-    if (sat && sat.url){
-      map.createPane('satpane');
-      map.getPane('satpane').style.zIndex = 350;
-      L.imageOverlay(sat.url, [[sat.south, sat.west],[sat.north, sat.east]], { opacity:1, interactive:false, pane:'satpane' }).addTo(map);
-    } else {
+    map = L.map(el, { zoomControl:true, attributionControl:false, tap:true, minZoom:14, maxZoom:20 }).setView([center.lat, center.lng], 16);
+    applyBg();
+    if (!satInfo() || !satInfo().url){
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         maxZoom:20, subdomains:'abcd'
       }).addTo(map);

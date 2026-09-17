@@ -326,6 +326,8 @@ tr.off-row{opacity:.5}
 /* گوگل ارث — هوش زمین */
 .earth-pane{overflow:hidden}
 .earth-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 12px}
+.earth-bg-switch{display:inline-flex;border:1px solid rgba(212,175,55,.4);border-radius:10px;overflow:hidden}
+.earth-bg-switch .btn{border-radius:0;border:0;margin:0}
 .earth-tools .btn.on{background:rgba(212,175,55,.22);border-color:rgba(212,175,55,.65);color:var(--gold-l)}
 .earth-dist{font-size:12.5px;color:var(--gold-l);font-weight:700}
 .earth-map{

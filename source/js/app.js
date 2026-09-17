@@ -1556,6 +1556,10 @@
     <div class="glass earth-pane" style="margin-bottom:18px">
       <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین — ${esc(crs[1])}</h3><span class="tag">تصویر ماهواره</span></div>
       <div class="earth-tools">
+        <div class="earth-bg-switch">
+          <button type="button" class="btn sm on" data-earth-bg="sat">ماهواره</button>
+          <button type="button" class="btn sm ghost" data-earth-bg="topo">توپوگرافی</button>
+        </div>
         <label class="lbl">میدان</label>
         <select class="sel" id="earth-hole"></select>
         <label class="chk"><input type="checkbox" id="earth-ly-tee" checked> تی‌باکس</label>

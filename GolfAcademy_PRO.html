@@ -1246,7 +1246,16 @@ tr.off-row{opacity:.5}
 .earth-map .leaflet-tooltip-pane,
 .earth-map .leaflet-shadow-pane{pointer-events:none !important}
 .em-dist{pointer-events:auto;cursor:pointer}
-.earth-wiz{margin-top:12px;direction:rtl}
+.earth-wiz{margin-top:8px;direction:rtl}
+.ew-hist{display:none;gap:4px;margin:6px 0 0;direction:rtl;width:100%}
+.ew-hist.on{display:flex}
+.ew-hist-cell{
+  flex:1 1 0;min-width:0;text-align:center;padding:2px 2px 3px;
+  border-radius:8px;border:1px solid rgba(212,175,55,.22);
+  background:rgba(10,14,20,.45);
+}
+.ew-hist-n{font-size:13.5px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+.ew-hist-l{font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;line-height:1.2}
 .ew-st{font-size:13.5px;font-weight:800;color:var(--gold-l);margin:2px 0 10px}
 .ew-st small{font-weight:600;color:var(--muted);margin-right:6px}
 .ew-back{background:none;border:0;color:var(--muted);cursor:pointer;font:inherit;font-size:12px;padding:0 0 8px}
@@ -15049,6 +15058,71 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         + '<div class="ew-actions"><button type="button" class="btn sm ghost" data-ew-hole="'+n+'">ویرایش این میدان</button></div></details>';
     }).join('')+'</div>';
   }
+  function vsStrokeColor(vs){
+    if (vs == null || !isFinite(vs)) return 'var(--muted)';
+    if (vs < 0) return '#0d9a62';
+    if (vs === 0) return '#8fe8c4';
+    if (vs <= 2) return '#E9C766';
+    return '#E74C3C';
+  }
+  function lastCourseRounds(){
+    const st = (window.APP && APP.state) ? APP.state() : null;
+    if (!st || !st.S) return [];
+    const pid = playerId();
+    const cid = optsRef.tourCourse != null ? +optsRef.tourCourse : null;
+    if (!pid || cid == null || isNaN(cid)) return [];
+    const D = window.Data;
+    const hidden = (D && D.isTourHidden) ? function(id){ return D.isTourHidden(id); } : function(){ return false; };
+    const tours = (st.S.tournaments || []).filter(function(t){ return +t[3] === cid && !hidden(t[0]); });
+    const cards = (st.S.scorecards || []).filter(function(c){ return +c.pid === pid; });
+    const rows = [];
+    tours.forEach(function(t){
+      const sc = cards.find(function(c){ return +c.tour === +t[0]; });
+      if (!sc || !sc.strokes) return;
+      rows.push({
+        id: t[0], name: t[1], date: t[5] || '', holes: t[4] || 18,
+        pars: (D && D.parsOf) ? D.parsOf(t[3]) : [],
+        strokes: sc.strokes, total: +sc.total || 0
+      });
+    });
+    rows.sort(function(a,b){ return String(b.date).localeCompare(String(a.date)); });
+    return rows.slice(0, 10);
+  }
+  function renderHist(){
+    let box = document.getElementById('earth-hist');
+    if (!box){
+      const wiz = document.getElementById('earth-wiz');
+      if (!wiz || !wiz.parentNode) return;
+      box = document.createElement('div');
+      box.id = 'earth-hist';
+      box.className = 'ew-hist';
+      wiz.parentNode.insertBefore(box, wiz);
+    }
+    const rows = lastCourseRounds();
+    if (!rows.length){ box.classList.remove('on'); box.innerHTML = ''; return; }
+    const hole = holeSel === 'all' ? null : +holeSel;
+    box.classList.add('on');
+    box.innerHTML = rows.map(function(r){
+      let strokes = null, par = null;
+      if (hole){
+        strokes = r.strokes[hole] != null ? +r.strokes[hole] : null;
+        par = r.pars[hole-1] != null ? +r.pars[hole-1] : null;
+      } else {
+        let tot = 0, psum = 0, n = 0;
+        for (let h = 1; h <= r.holes; h++){
+          const s = r.strokes[h];
+          if (s == null) continue;
+          tot += +s; psum += +(r.pars[h-1] || 0); n++;
+        }
+        if (n){ strokes = tot; par = psum; }
+        else if (r.total){ strokes = r.total; par = r.pars.slice(0, r.holes).reduce(function(a,b){ return a+(+b||0); }, 0); }
+      }
+      const vs = (strokes != null && par != null) ? (strokes - par) : null;
+      const col = vsStrokeColor(vs);
+      const num = strokes != null ? fa(strokes) : '—';
+      return '<div class="ew-hist-cell" title="'+esc(r.name)+'"><div class="ew-hist-n" style="color:'+col+'">'+num+'</div><div class="ew-hist-l">'+esc(r.name)+'</div></div>';
+    }).join('');
+  }
   function renderWiz(){
     let box = document.getElementById('earth-wiz');
     if (!box){
@@ -15084,6 +15158,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     }
     box.innerHTML = h;
     bindWiz();
+    try { renderHist(); } catch (e) {}
   }
   function bindWiz(){
     const box = document.getElementById('earth-wiz');
@@ -16989,6 +17064,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
             </div>
           </div>
         </div>
+        <div id="earth-hist" class="ew-hist"></div>
         <div id="earth-wiz" class="earth-wiz"></div>
       </div>
       <div class="glass earth-pa">
@@ -17112,7 +17188,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         places.push({ name: c[1], lat, lng });
       });
       const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.90494, lng:49.31398 };
-      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', pid: coursePlayerSel });
+      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], pid: coursePlayerSel });
     })();
   }
 

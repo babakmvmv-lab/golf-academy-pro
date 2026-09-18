@@ -416,7 +416,16 @@ tr.off-row{opacity:.5}
 .earth-map .leaflet-tooltip-pane,
 .earth-map .leaflet-shadow-pane{pointer-events:none !important}
 .em-dist{pointer-events:auto;cursor:pointer}
-.earth-wiz{margin-top:12px;direction:rtl}
+.earth-wiz{margin-top:8px;direction:rtl}
+.ew-hist{display:none;gap:4px;margin:6px 0 0;direction:rtl;width:100%}
+.ew-hist.on{display:flex}
+.ew-hist-cell{
+  flex:1 1 0;min-width:0;text-align:center;padding:2px 2px 3px;
+  border-radius:8px;border:1px solid rgba(212,175,55,.22);
+  background:rgba(10,14,20,.45);
+}
+.ew-hist-n{font-size:13.5px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+.ew-hist-l{font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;line-height:1.2}
 .ew-st{font-size:13.5px;font-weight:800;color:var(--gold-l);margin:2px 0 10px}
 .ew-st small{font-weight:600;color:var(--muted);margin-right:6px}
 .ew-back{background:none;border:0;color:var(--muted);cursor:pointer;font:inherit;font-size:12px;padding:0 0 8px}

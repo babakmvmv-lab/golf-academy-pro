@@ -607,6 +607,71 @@
         + '<div class="ew-actions"><button type="button" class="btn sm ghost" data-ew-hole="'+n+'">ویرایش این میدان</button></div></details>';
     }).join('')+'</div>';
   }
+  function vsStrokeColor(vs){
+    if (vs == null || !isFinite(vs)) return 'var(--muted)';
+    if (vs < 0) return '#0d9a62';
+    if (vs === 0) return '#8fe8c4';
+    if (vs <= 2) return '#E9C766';
+    return '#E74C3C';
+  }
+  function lastCourseRounds(){
+    const st = (window.APP && APP.state) ? APP.state() : null;
+    if (!st || !st.S) return [];
+    const pid = playerId();
+    const cid = optsRef.tourCourse != null ? +optsRef.tourCourse : null;
+    if (!pid || cid == null || isNaN(cid)) return [];
+    const D = window.Data;
+    const hidden = (D && D.isTourHidden) ? function(id){ return D.isTourHidden(id); } : function(){ return false; };
+    const tours = (st.S.tournaments || []).filter(function(t){ return +t[3] === cid && !hidden(t[0]); });
+    const cards = (st.S.scorecards || []).filter(function(c){ return +c.pid === pid; });
+    const rows = [];
+    tours.forEach(function(t){
+      const sc = cards.find(function(c){ return +c.tour === +t[0]; });
+      if (!sc || !sc.strokes) return;
+      rows.push({
+        id: t[0], name: t[1], date: t[5] || '', holes: t[4] || 18,
+        pars: (D && D.parsOf) ? D.parsOf(t[3]) : [],
+        strokes: sc.strokes, total: +sc.total || 0
+      });
+    });
+    rows.sort(function(a,b){ return String(b.date).localeCompare(String(a.date)); });
+    return rows.slice(0, 10);
+  }
+  function renderHist(){
+    let box = document.getElementById('earth-hist');
+    if (!box){
+      const wiz = document.getElementById('earth-wiz');
+      if (!wiz || !wiz.parentNode) return;
+      box = document.createElement('div');
+      box.id = 'earth-hist';
+      box.className = 'ew-hist';
+      wiz.parentNode.insertBefore(box, wiz);
+    }
+    const rows = lastCourseRounds();
+    if (!rows.length){ box.classList.remove('on'); box.innerHTML = ''; return; }
+    const hole = holeSel === 'all' ? null : +holeSel;
+    box.classList.add('on');
+    box.innerHTML = rows.map(function(r){
+      let strokes = null, par = null;
+      if (hole){
+        strokes = r.strokes[hole] != null ? +r.strokes[hole] : null;
+        par = r.pars[hole-1] != null ? +r.pars[hole-1] : null;
+      } else {
+        let tot = 0, psum = 0, n = 0;
+        for (let h = 1; h <= r.holes; h++){
+          const s = r.strokes[h];
+          if (s == null) continue;
+          tot += +s; psum += +(r.pars[h-1] || 0); n++;
+        }
+        if (n){ strokes = tot; par = psum; }
+        else if (r.total){ strokes = r.total; par = r.pars.slice(0, r.holes).reduce(function(a,b){ return a+(+b||0); }, 0); }
+      }
+      const vs = (strokes != null && par != null) ? (strokes - par) : null;
+      const col = vsStrokeColor(vs);
+      const num = strokes != null ? fa(strokes) : '—';
+      return '<div class="ew-hist-cell" title="'+esc(r.name)+'"><div class="ew-hist-n" style="color:'+col+'">'+num+'</div><div class="ew-hist-l">'+esc(r.name)+'</div></div>';
+    }).join('');
+  }
   function renderWiz(){
     let box = document.getElementById('earth-wiz');
     if (!box){
@@ -642,6 +707,7 @@
     }
     box.innerHTML = h;
     bindWiz();
+    try { renderHist(); } catch (e) {}
   }
   function bindWiz(){
     const box = document.getElementById('earth-wiz');

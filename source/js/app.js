@@ -1646,6 +1646,7 @@
             </div>
           </div>
         </div>
+        <div id="earth-hist" class="ew-hist"></div>
         <div id="earth-wiz" class="earth-wiz"></div>
       </div>
       <div class="glass earth-pa">
@@ -1769,7 +1770,7 @@
         places.push({ name: c[1], lat, lng });
       });
       const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.90494, lng:49.31398 };
-      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', pid: coursePlayerSel });
+      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], pid: coursePlayerSel });
     })();
   }
 

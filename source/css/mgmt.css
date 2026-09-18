@@ -337,7 +337,7 @@ tr.off-row{opacity:.5}
 .em-zoom{display:flex;flex-direction:column;gap:4px}
 .em-pair{display:flex;flex-direction:column;gap:4px;position:relative}
 .em-tr{position:absolute;top:8px;right:8px}
-.em-bl{position:absolute;bottom:8px;left:8px;display:flex;align-items:center;gap:6px}
+.em-bl{position:absolute;bottom:8px;left:8px;display:flex;align-items:flex-end;gap:6px}
 .em-btn,.em-swatch,.em-bg button,.em-seg-btn{
   width:30px;height:30px;border-radius:8px;border:1px solid rgba(240,217,137,.42);
   background:rgba(10,14,20,.82);color:#f0d989;cursor:pointer;display:inline-flex;

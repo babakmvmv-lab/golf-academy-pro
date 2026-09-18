@@ -1024,6 +1024,35 @@
       + '<div class="pa-club-c">Maximum Carry Distance</div>'
       + '<div class="pa-club-y">' + (cy ? D.fa(cy) : '—') + '</div>';
   }
+  function paClubMerged(pid, club){
+    const groups = paData(pid, 'all');
+    const acc = { straight:0, slice:0, hook:0, miss:0, n:0, maxY:0 };
+    groups.forEach(function(g){
+      const cl = g.clubs[club]; if (!cl) return;
+      acc.straight += cl.straight|0; acc.slice += cl.slice|0; acc.hook += cl.hook|0; acc.miss += cl.miss|0;
+      acc.n += cl.n|0;
+      if ((cl.maxY||0) > acc.maxY) acc.maxY = cl.maxY;
+    });
+    return acc.n ? acc : null;
+  }
+  function paClubCardHtml(cl, cn, shotLabel, px){
+    px = px || 56;
+    let h = '<div style="text-align:center;background:rgba(255,255,255,.02);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:6px 4px 7px;margin:0 0 7px;min-width:0">';
+    if (shotLabel) h += '<div style="font-size:7.5px;color:#8b96a4;margin-bottom:2px">' + shotLabel + '</div>';
+    if (cl && cl.n){
+      const st = paStraightPct(cl), cy = paCarryYd(cl);
+      h += paSvgDonut(cl, px, 12)
+        + '<div style="font-size:9px;font-weight:800;margin-top:3px;color:#e9eef5">' + esc(cn) + '</div>'
+        + '<div style="font-size:7.5px;color:#8b96a4">' + D.fa(cl.n) + ' ضربه</div>'
+        + '<div style="font-size:8px;font-weight:800;color:' + SP_RES_COLOR.straight + ';margin-top:1px">صاف ' + D.fa(st) + '٪</div>'
+        + '<div style="font-size:6.5px;color:#8b96a4;margin-top:3px;direction:ltr">Maximum Carry Distance</div>'
+        + '<div style="font-size:11px;font-weight:900;color:#7ee8b8;direction:ltr">' + (cy ? D.fa(cy) : '—') + '</div>';
+    } else {
+      h += '<div style="font-size:9px;font-weight:800;color:#e9eef5">' + esc(cn||'') + '</div>'
+        + '<div style="font-size:7.5px;color:#8b96a4;margin-top:4px">بدون تمرین ثبت‌شده</div>';
+    }
+    return h + '</div>';
+  }
   /* دیتای گروه‌بندی‌شده: هر گروه تمرین ← جلسات تمام‌شدهٔ بازیکن (با برش «N تمرین آخرِ آن گروه») ← شمارش نتیجهٔ ضربه به‌ازای هر کلاب */
   function paData(pid, nSel){
     const mine = spShots().filter(x => x.pid === pid);
@@ -3292,5 +3321,6 @@
     isMain: () => isMain(currentUser),
     isAdmin: () => isAdmin(currentUser),
     users: { list: loadUsers, save: saveUsers, seed: seedUsers, rec: userRec, isMain, isAdmin, label: userLabelFor },
+    paClubMerged, paClubCardHtml, paSvgDonut, paData,
   };
 })();

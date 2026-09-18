@@ -824,21 +824,28 @@
         arr.forEach(function(sh){ distM += totalM(sh.pts||[]); });
         const hh = holesData()[String(n)] || {};
         const data = drawHoleSnap(ok ? img : null, n);
+        const pid = playerId();
+        const cardFn = window.APP && APP.paClubCardHtml;
+        const mergeFn = window.APP && APP.paClubMerged;
+        const side = cardFn ? ('<div style="width:142px;flex:none">' + arr.map(function(sh,i){
+          const cl = mergeFn ? mergeFn(pid, sh.club) : null;
+          return cardFn(cl, sh.club, 'ضربه ' + fa(i+1), 50);
+        }).join('') + '</div>') : '';
+        const tbl = '<table style="width:100%;border-collapse:collapse;margin-top:4px"><thead><tr>'
+          + ['ضربه','کلاب','متراژ','توضیح'].map(function(x){ return '<th style="background:rgba(212,175,55,.12);color:#f3d779;font-size:9px;font-weight:800;padding:5px 4px;border:1px solid rgba(212,175,55,.22)">'+x+'</th>'; }).join('')
+          + '</tr></thead><tbody>' + arr.map(function(sh,i){
+            return '<tr><td style="padding:4px;font-size:10px;text-align:center">'+fa(i+1)+'</td>'
+              + '<td style="padding:4px;font-size:10px;text-align:center"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+esc(sh.color||'#D4AF37')+';margin-left:5px;vertical-align:middle"></span>'+esc(sh.club||'')+'</td>'
+              + '<td style="padding:4px;font-size:10px;text-align:center">'+fmtDist(totalM(sh.pts||[]))+'</td>'
+              + '<td style="padding:4px;font-size:10px;text-align:center">'+esc(sh.note||'')+'</td></tr>';
+          }).join('') + '</tbody></table>';
+        const mapCol = '<div style="flex:1;min-width:0">'
+          + (data ? ('<img src="'+data+'" alt="" style="width:100%;max-height:250px;object-fit:cover;border-radius:10px;border:1px solid rgba(212,175,55,.28);display:block">') : '')
+          + tbl + '</div>';
         sections.push({
           h: '⛳ میدان ' + n + (hh.yards ? (' · ' + hh.yards + ' yd') : '') + (hh.par ? (' · پار ' + hh.par) : ''),
           sub: arr.length + ' ضربه',
-          html: data ? ('<img src="'+data+'" alt="" style="width:100%;border-radius:10px;border:1px solid rgba(212,175,55,.28);display:block;margin:6px 0 8px">') : '',
-          table: {
-            head: ['ضربه', 'کلاب', 'متراژ', 'توضیح'],
-            rows: arr.map(function(sh,i){
-              return [
-                fa(i+1),
-                '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+esc(sh.color||'#D4AF37')+';margin-left:5px;vertical-align:middle"></span>'+esc(sh.club||''),
-                fmtDist(totalM(sh.pts||[])),
-                esc(sh.note||'')
-              ];
-            })
-          }
+          html: '<div style="display:flex;gap:8px;align-items:flex-start;margin-top:4px">' + mapCol + side + '</div>'
         });
       });
       holeSel = keep;

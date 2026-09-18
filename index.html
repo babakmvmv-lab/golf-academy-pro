@@ -1167,7 +1167,7 @@ tr.off-row{opacity:.5}
 .em-zoom{display:flex;flex-direction:column;gap:4px}
 .em-pair{display:flex;flex-direction:column;gap:4px;position:relative}
 .em-tr{position:absolute;top:8px;right:8px}
-.em-bl{position:absolute;bottom:8px;left:8px;display:flex;align-items:center;gap:6px}
+.em-bl{position:absolute;bottom:8px;left:8px;display:flex;align-items:flex-end;gap:6px}
 .em-btn,.em-swatch,.em-bg button,.em-seg-btn{
   width:30px;height:30px;border-radius:8px;border:1px solid rgba(240,217,137,.42);
   background:rgba(10,14,20,.82);color:#f0d989;cursor:pointer;display:inline-flex;
@@ -15266,21 +15266,28 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         arr.forEach(function(sh){ distM += totalM(sh.pts||[]); });
         const hh = holesData()[String(n)] || {};
         const data = drawHoleSnap(ok ? img : null, n);
+        const pid = playerId();
+        const cardFn = window.APP && APP.paClubCardHtml;
+        const mergeFn = window.APP && APP.paClubMerged;
+        const side = cardFn ? ('<div style="width:142px;flex:none">' + arr.map(function(sh,i){
+          const cl = mergeFn ? mergeFn(pid, sh.club) : null;
+          return cardFn(cl, sh.club, 'ضربه ' + fa(i+1), 50);
+        }).join('') + '</div>') : '';
+        const tbl = '<table style="width:100%;border-collapse:collapse;margin-top:4px"><thead><tr>'
+          + ['ضربه','کلاب','متراژ','توضیح'].map(function(x){ return '<th style="background:rgba(212,175,55,.12);color:#f3d779;font-size:9px;font-weight:800;padding:5px 4px;border:1px solid rgba(212,175,55,.22)">'+x+'</th>'; }).join('')
+          + '</tr></thead><tbody>' + arr.map(function(sh,i){
+            return '<tr><td style="padding:4px;font-size:10px;text-align:center">'+fa(i+1)+'</td>'
+              + '<td style="padding:4px;font-size:10px;text-align:center"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+esc(sh.color||'#D4AF37')+';margin-left:5px;vertical-align:middle"></span>'+esc(sh.club||'')+'</td>'
+              + '<td style="padding:4px;font-size:10px;text-align:center">'+fmtDist(totalM(sh.pts||[]))+'</td>'
+              + '<td style="padding:4px;font-size:10px;text-align:center">'+esc(sh.note||'')+'</td></tr>';
+          }).join('') + '</tbody></table>';
+        const mapCol = '<div style="flex:1;min-width:0">'
+          + (data ? ('<img src="'+data+'" alt="" style="width:100%;max-height:250px;object-fit:cover;border-radius:10px;border:1px solid rgba(212,175,55,.28);display:block">') : '')
+          + tbl + '</div>';
         sections.push({
           h: '⛳ میدان ' + n + (hh.yards ? (' · ' + hh.yards + ' yd') : '') + (hh.par ? (' · پار ' + hh.par) : ''),
           sub: arr.length + ' ضربه',
-          html: data ? ('<img src="'+data+'" alt="" style="width:100%;border-radius:10px;border:1px solid rgba(212,175,55,.28);display:block;margin:6px 0 8px">') : '',
-          table: {
-            head: ['ضربه', 'کلاب', 'متراژ', 'توضیح'],
-            rows: arr.map(function(sh,i){
-              return [
-                fa(i+1),
-                '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+esc(sh.color||'#D4AF37')+';margin-left:5px;vertical-align:middle"></span>'+esc(sh.club||''),
-                fmtDist(totalM(sh.pts||[])),
-                esc(sh.note||'')
-              ];
-            })
-          }
+          html: '<div style="display:flex;gap:8px;align-items:flex-start;margin-top:4px">' + mapCol + side + '</div>'
         });
       });
       holeSel = keep;
@@ -16359,6 +16366,35 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     return '<div class="pa-club-r" style="color:' + SP_RES_COLOR.straight + '">صاف ' + D.fa(st) + '٪</div>'
       + '<div class="pa-club-c">Maximum Carry Distance</div>'
       + '<div class="pa-club-y">' + (cy ? D.fa(cy) : '—') + '</div>';
+  }
+  function paClubMerged(pid, club){
+    const groups = paData(pid, 'all');
+    const acc = { straight:0, slice:0, hook:0, miss:0, n:0, maxY:0 };
+    groups.forEach(function(g){
+      const cl = g.clubs[club]; if (!cl) return;
+      acc.straight += cl.straight|0; acc.slice += cl.slice|0; acc.hook += cl.hook|0; acc.miss += cl.miss|0;
+      acc.n += cl.n|0;
+      if ((cl.maxY||0) > acc.maxY) acc.maxY = cl.maxY;
+    });
+    return acc.n ? acc : null;
+  }
+  function paClubCardHtml(cl, cn, shotLabel, px){
+    px = px || 56;
+    let h = '<div style="text-align:center;background:rgba(255,255,255,.02);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:6px 4px 7px;margin:0 0 7px;min-width:0">';
+    if (shotLabel) h += '<div style="font-size:7.5px;color:#8b96a4;margin-bottom:2px">' + shotLabel + '</div>';
+    if (cl && cl.n){
+      const st = paStraightPct(cl), cy = paCarryYd(cl);
+      h += paSvgDonut(cl, px, 12)
+        + '<div style="font-size:9px;font-weight:800;margin-top:3px;color:#e9eef5">' + esc(cn) + '</div>'
+        + '<div style="font-size:7.5px;color:#8b96a4">' + D.fa(cl.n) + ' ضربه</div>'
+        + '<div style="font-size:8px;font-weight:800;color:' + SP_RES_COLOR.straight + ';margin-top:1px">صاف ' + D.fa(st) + '٪</div>'
+        + '<div style="font-size:6.5px;color:#8b96a4;margin-top:3px;direction:ltr">Maximum Carry Distance</div>'
+        + '<div style="font-size:11px;font-weight:900;color:#7ee8b8;direction:ltr">' + (cy ? D.fa(cy) : '—') + '</div>';
+    } else {
+      h += '<div style="font-size:9px;font-weight:800;color:#e9eef5">' + esc(cn||'') + '</div>'
+        + '<div style="font-size:7.5px;color:#8b96a4;margin-top:4px">بدون تمرین ثبت‌شده</div>';
+    }
+    return h + '</div>';
   }
   /* دیتای گروه‌بندی‌شده: هر گروه تمرین ← جلسات تمام‌شدهٔ بازیکن (با برش «N تمرین آخرِ آن گروه») ← شمارش نتیجهٔ ضربه به‌ازای هر کلاب */
   function paData(pid, nSel){
@@ -18628,6 +18664,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     isMain: () => isMain(currentUser),
     isAdmin: () => isAdmin(currentUser),
     users: { list: loadUsers, save: saveUsers, seed: seedUsers, rec: userRec, isMain, isAdmin, label: userLabelFor },
+    paClubMerged, paClubCardHtml, paSvgDonut, paData,
   };
 })();
 </script>

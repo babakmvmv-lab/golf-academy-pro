@@ -1011,6 +1011,19 @@
     ['straight','slice','hook','miss'].forEach(k => { if ((cl[k]|0) > bn){ bn = cl[k]|0; best = k; } });
     return { k: best, pct: cl.n ? Math.round((cl[best]|0) / cl.n * 100) : 0 };
   }
+  function paStraightPct(cl){
+    return cl.n ? Math.round((cl.straight|0) / cl.n * 100) : 0;
+  }
+  function paCarryYd(cl){
+    return cl.maxY ? Math.round(cl.maxY / 5) * 5 : 0;
+  }
+  function paClubStatsHtml(cl){
+    const st = paStraightPct(cl);
+    const cy = paCarryYd(cl);
+    return '<div class="pa-club-r" style="color:' + SP_RES_COLOR.straight + '">صاف ' + D.fa(st) + '٪</div>'
+      + '<div class="pa-club-c">Maximum Carry Distance</div>'
+      + '<div class="pa-club-y">' + (cy ? D.fa(cy) : '—') + '</div>';
+  }
   /* دیتای گروه‌بندی‌شده: هر گروه تمرین ← جلسات تمام‌شدهٔ بازیکن (با برش «N تمرین آخرِ آن گروه») ← شمارش نتیجهٔ ضربه به‌ازای هر کلاب */
   function paData(pid, nSel){
     const mine = spShots().filter(x => x.pid === pid);
@@ -1054,14 +1067,12 @@
       return `<section class="pa-row">
         <div class="pa-row-h"><b>${SP_TYPE_LBL[g.ty]}</b><span>${D.fa(g.sesN)} تمرین • ${D.fa(g.shotsN)} ضربه</span></div>
         <div class="pa-row-grid">${keys.map(cn => {
-          const cl = g.clubs[cn]; const dom = paTopRes(cl);
+          const cl = g.clubs[cn];
           return `<article class="pa-club">
             ${paSvgDonut(cl, 76, 14)}
             <div class="pa-club-n">${esc(cn)}</div>
             <div class="pa-club-m">${D.fa(cl.n)} ضربه</div>
-            <div class="pa-club-r" style="color:${SP_RES_COLOR[dom.k]}">${SP_RES_LABEL[dom.k]} ${D.fa(dom.pct)}٪</div>
-            <div class="pa-club-c">Maximum Carry Distance</div>
-            <div class="pa-club-y">${cl.maxY ? D.fa(Math.round(cl.maxY / 5) * 5) : '—'}</div>
+            ${paClubStatsHtml(cl)}
           </article>`;
         }).join('')}</div>
       </section>`;
@@ -1695,12 +1706,12 @@
           return `<section class="pa-row">
             <div class="pa-row-h"><b>${SP_TYPE_LBL[g.ty]||g.ty}</b><span>${D.fa(g.sesN)} تمرین</span></div>
             <div class="pa-row-grid earth-pa-grid">${keys.map(cn => {
-              const cl = g.clubs[cn]; const dom = paTopRes(cl);
+              const cl = g.clubs[cn];
               return `<article class="pa-club">
                 ${paSvgDonut(cl, 64, 13)}
                 <div class="pa-club-n">${esc(cn)}</div>
                 <div class="pa-club-m">${D.fa(cl.n)} ضربه</div>
-                <div class="pa-club-r" style="color:${SP_RES_COLOR[dom.k]}">${SP_RES_LABEL[dom.k]} ${D.fa(dom.pct)}٪</div>
+                ${paClubStatsHtml(cl)}
               </article>`;
             }).join('')}</div>
           </section>`;
@@ -3281,5 +3292,8 @@
     isMain: () => isMain(currentUser),
     isAdmin: () => isAdmin(currentUser),
     users: { list: loadUsers, save: saveUsers, seed: seedUsers, rec: userRec, isMain, isAdmin, label: userLabelFor },
+  };
+})();
+save: saveUsers, seed: seedUsers, rec: userRec, isMain, isAdmin, label: userLabelFor },
   };
 })();

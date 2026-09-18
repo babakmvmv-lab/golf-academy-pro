@@ -237,6 +237,18 @@
     all[cid][pid][key] = arr;
     savePlans(all);
   }
+  function holePlanOf(n){
+    const { all, cid, pid } = planPath();
+    return all[cid][pid][String(n)] || [];
+  }
+  function setHolePlanOf(n, arr){
+    const { all, cid, pid } = planPath();
+    all[cid][pid][String(n)] = arr;
+    savePlans(all);
+  }
+  function doneHoles(){
+    return holeNums().filter(n => holePlanOf(n).length);
+  }
   function drawSavedPlan(){
     if (holeSel === 'all') return;
     holePlan().forEach(function(sh){
@@ -539,8 +551,9 @@
     }
 
     bindUi();
-    drawCourse();
-    renderWiz();
+    try { renderWiz(); } catch (e) {}
+    try { drawCourse(); } catch (e) {}
+    try { renderWiz(); } catch (e) {}
 
     map.on('click', function(ev){
       const ap = document.getElementById('earth-alpha-pop');
@@ -570,7 +583,7 @@
       if (mode === 'club' && clubDraw && clubDraw.pts.length){ clubDraw.pts.pop(); clearPreview(); redrawClubDraw(); if (wizStep==='draw') renderWiz(); }
     });
 
-    setTimeout(function(){ try { map.invalidateSize(); drawCourse(); } catch(e){} }, 250);
+    setTimeout(function(){ try { map.invalidateSize(); drawCourse(); renderWiz(); } catch(e){} }, 250);
     syncModeBtns();
   }
 
@@ -595,8 +608,15 @@
     }).join('')+'</div>';
   }
   function renderWiz(){
-    const box = document.getElementById('earth-wiz');
-    if (!box) return;
+    let box = document.getElementById('earth-wiz');
+    if (!box){
+      const pane = document.querySelector('.earth-pane') || (document.getElementById('earth-map') && document.getElementById('earth-map').parentElement && document.getElementById('earth-map').parentElement.parentElement);
+      if (!pane) return;
+      box = document.createElement('div');
+      box.id = 'earth-wiz';
+      box.className = 'earth-wiz';
+      pane.appendChild(box);
+    }
     const holes = holeNums();
     const done = doneHoles();
     let h = '';

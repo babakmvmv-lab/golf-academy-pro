@@ -365,7 +365,7 @@ tr.off-row{opacity:.5}
 .cm-tee-box small{font-size:9px;font-weight:800;margin-top:1px;text-shadow:0 1px 2px #000}
 
 .earth-layout{display:grid;grid-template-columns:minmax(0,75%) minmax(220px,1fr);gap:14px;align-items:stretch;margin-bottom:18px}
-.earth-pane{overflow:hidden;min-width:0}
+.earth-pane{overflow:visible;min-width:0}
 .earth-pa{overflow:auto;min-width:0;max-height:100%}
 .earth-pa-legend{display:flex;flex-wrap:wrap;gap:8px;font-size:10.5px;color:var(--muted);margin:4px 0 8px}
 .earth-pa-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-left:4px;vertical-align:-1px}

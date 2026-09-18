@@ -1195,7 +1195,7 @@ tr.off-row{opacity:.5}
 .cm-tee-box small{font-size:9px;font-weight:800;margin-top:1px;text-shadow:0 1px 2px #000}
 
 .earth-layout{display:grid;grid-template-columns:minmax(0,75%) minmax(220px,1fr);gap:14px;align-items:stretch;margin-bottom:18px}
-.earth-pane{overflow:hidden;min-width:0}
+.earth-pane{overflow:visible;min-width:0}
 .earth-pa{overflow:auto;min-width:0;max-height:100%}
 .earth-pa-legend{display:flex;flex-wrap:wrap;gap:8px;font-size:10.5px;color:var(--muted);margin:4px 0 8px}
 .earth-pa-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-left:4px;vertical-align:-1px}
@@ -14590,6 +14590,18 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     all[cid][pid][key] = arr;
     savePlans(all);
   }
+  function holePlanOf(n){
+    const { all, cid, pid } = planPath();
+    return all[cid][pid][String(n)] || [];
+  }
+  function setHolePlanOf(n, arr){
+    const { all, cid, pid } = planPath();
+    all[cid][pid][String(n)] = arr;
+    savePlans(all);
+  }
+  function doneHoles(){
+    return holeNums().filter(n => holePlanOf(n).length);
+  }
   function drawSavedPlan(){
     if (holeSel === 'all') return;
     holePlan().forEach(function(sh){
@@ -14892,8 +14904,9 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     }
 
     bindUi();
-    drawCourse();
-    renderWiz();
+    try { renderWiz(); } catch (e) {}
+    try { drawCourse(); } catch (e) {}
+    try { renderWiz(); } catch (e) {}
 
     map.on('click', function(ev){
       const ap = document.getElementById('earth-alpha-pop');
@@ -14923,7 +14936,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       if (mode === 'club' && clubDraw && clubDraw.pts.length){ clubDraw.pts.pop(); clearPreview(); redrawClubDraw(); if (wizStep==='draw') renderWiz(); }
     });
 
-    setTimeout(function(){ try { map.invalidateSize(); drawCourse(); } catch(e){} }, 250);
+    setTimeout(function(){ try { map.invalidateSize(); drawCourse(); renderWiz(); } catch(e){} }, 250);
     syncModeBtns();
   }
 
@@ -14948,8 +14961,15 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     }).join('')+'</div>';
   }
   function renderWiz(){
-    const box = document.getElementById('earth-wiz');
-    if (!box) return;
+    let box = document.getElementById('earth-wiz');
+    if (!box){
+      const pane = document.querySelector('.earth-pane') || (document.getElementById('earth-map') && document.getElementById('earth-map').parentElement && document.getElementById('earth-map').parentElement.parentElement);
+      if (!pane) return;
+      box = document.createElement('div');
+      box.id = 'earth-wiz';
+      box.className = 'earth-wiz';
+      pane.appendChild(box);
+    }
     const holes = holeNums();
     const done = doneHoles();
     let h = '';

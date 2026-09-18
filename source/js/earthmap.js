@@ -579,20 +579,37 @@
   function wizBack(step, label){
     return '<button type="button" class="ew-back" data-ew-back="'+step+'">← '+(label||'بازگشت')+'</button>';
   }
+  function shotArticle(sh, i, hn){
+    const holeAttr = hn != null ? ' data-ew-hn="'+hn+'"' : '';
+    return '<article class="ew-shot" style="border-color:'+esc(sh.color||'#D4AF37')+'"><div class="ew-shot-h"><b>ضربه '+(i+1)+'</b><i class="ew-dot" style="background:'+esc(sh.color)+'"></i><span>'+esc(sh.club||'')+' · '+fmtDist(totalM(sh.pts||[]))+'</span><button type="button" class="ew-ico" data-ew-edit="'+i+'"'+holeAttr+' title="ویرایش">✎</button><button type="button" class="ew-ico del" data-ew-del="'+i+'"'+holeAttr+' title="حذف">✕</button></div>'+(sh.note?('<p>'+esc(sh.note)+'</p>'):'')+'</article>';
+  }
+  function doneAccordion(openN){
+    const done = doneHoles();
+    if (!done.length) return '';
+    return '<div class="ew-done">'+done.map(function(n){
+      const arr = holePlanOf(n);
+      const tot = arr.reduce(function(s, sh){ return s + totalM(sh.pts||[]); }, 0);
+      return '<details class="ew-acc"'+(String(openN)===String(n)?' open':'')+'><summary><b>میدان '+n+'</b><span>'+arr.length+' ضربه · '+fmtDist(tot)+'</span></summary>'
+        + '<div class="ew-shots">'+arr.map(function(sh,i){ return shotArticle(sh,i,n); }).join('')+'</div>'
+        + '<div class="ew-actions"><button type="button" class="btn sm ghost" data-ew-hole="'+n+'">ویرایش این میدان</button></div></details>';
+    }).join('')+'</div>';
+  }
   function renderWiz(){
     const box = document.getElementById('earth-wiz');
     if (!box) return;
     const holes = holeNums();
+    const done = doneHoles();
     let h = '';
     if (wizStep === 'hole'){
-      h = '<div class="ew-st">میدان را انتخاب کنید</div><div class="ew-grid">'+holes.map(n => '<button type="button" class="ew-hbtn" data-ew-hole="'+n+'">'+n+'</button>').join('')+'</div>';
+      h = '<div class="ew-st">میدان را انتخاب کنید</div><div class="ew-grid">'+holes.map(n => '<button type="button" class="ew-hbtn'+(done.indexOf(n)>=0?' done':'')+'" data-ew-hole="'+n+'">'+n+(done.indexOf(n)>=0?' ✓':'')+'</button>').join('')+'</div>'
+        + doneAccordion()
+        + (done.length ? '<div class="ew-actions"><button type="button" class="btn sm" id="ew-rep-all">گزارش کامل</button></div>' : '');
     } else if (wizStep === 'ready'){
       const arr = holePlan();
       h = wizBack('hole','تغییر میدان')+'<div class="ew-head"><b>میدان '+holeSel+'</b><span>'+arr.length+' ضربه</span></div>'
         + '<button type="button" class="btn" id="ew-add">＋ افزودن ضربه</button>'
-        + '<div class="ew-shots">'+(arr.length ? arr.map(function(sh,i){
-            return '<article class="ew-shot" style="border-color:'+esc(sh.color||'#D4AF37')+'"><div class="ew-shot-h"><b>ضربه '+(i+1)+'</b><i class="ew-dot" style="background:'+esc(sh.color)+'"></i><span>'+esc(sh.club||'')+' · '+fmtDist(totalM(sh.pts||[]))+'</span><button type="button" class="ew-ico" data-ew-edit="'+i+'" title="ویرایش">✎</button><button type="button" class="ew-ico del" data-ew-del="'+i+'" title="حذف">✕</button></div>'+(sh.note?('<p>'+esc(sh.note)+'</p>'):'')+'</article>';
-          }).join('') : '<div class="ew-empty">هنوز ضربه‌ای ثبت نشده.</div>')+'</div>'
+        + '<div class="ew-shots">'+(arr.length ? arr.map(function(sh,i){ return shotArticle(sh,i); }).join('') : '<div class="ew-empty">هنوز ضربه‌ای ثبت نشده.</div>')+'</div>'
+        + '<button type="button" class="btn" id="ew-lock">ثبت میدان</button>'
         + '<div class="ew-actions"><button type="button" class="btn sm ghost" id="ew-rep-one">گزارش این میدان</button><button type="button" class="btn sm" id="ew-rep-all">گزارش کامل</button></div>';
     } else if (wizStep === 'club'){
       h = wizBack('ready','انصراف')+'<div class="ew-st">کلاب ضربه '+(wizEdit>=0?(wizEdit+1):(holePlan().length+1))+'</div><div class="ew-grid">'+CLUBS.map(function(c){ return '<button type="button" class="ew-cbtn'+(c===wizDraft.club?' on':'')+'" data-ew-club="'+esc(c)+'">'+esc(c)+'</button>'; }).join('')+'</div>';
@@ -635,6 +652,15 @@
       wizDraft={ club:'', color: SHOT_COLORS[holePlan().length % SHOT_COLORS.length], pts:[], note:'' };
       wizEdit=-1; wizStep='club'; renderWiz();
     };
+    const lock = document.getElementById('ew-lock');
+    if (lock) lock.onclick = function(){
+      if (!holePlan().length){
+        if (window.APP && APP.toast) APP.toast('اول حداقل یک ضربه ثبت کنید', 'orange');
+        return;
+      }
+      holeSel = 'all'; clubDraw = null; mode = 'pan'; wizEdit = -1; wizStep = 'hole';
+      drawCourse(); renderWiz();
+    };
     box.querySelectorAll('[data-ew-club]').forEach(function(b){
       b.onclick = function(){ wizDraft.club = b.getAttribute('data-ew-club'); wizStep='color'; renderWiz(); };
     });
@@ -671,13 +697,23 @@
       drawCourse(); renderWiz();
     };
     box.querySelectorAll('[data-ew-del]').forEach(function(b){
-      b.onclick = function(){ const arr = holePlan(); arr.splice(+b.getAttribute('data-ew-del'),1); setHolePlan(arr); drawCourse(); renderWiz(); };
+      b.onclick = function(){
+        const hn = b.getAttribute('data-ew-hn');
+        if (hn){
+          const arr = holePlanOf(hn); arr.splice(+b.getAttribute('data-ew-del'),1); setHolePlanOf(hn, arr);
+        } else {
+          const arr = holePlan(); arr.splice(+b.getAttribute('data-ew-del'),1); setHolePlan(arr);
+        }
+        drawCourse(); renderWiz();
+      };
     });
     box.querySelectorAll('[data-ew-edit]').forEach(function(b){
       b.onclick = function(){
+        const hn = b.getAttribute('data-ew-hn');
+        if (hn){ holeSel = String(hn); }
         const i = +b.getAttribute('data-ew-edit'); const sh = holePlan()[i]; if (!sh) return;
         wizEdit=i; wizDraft={ club:sh.club||'', color:sh.color||'#D4AF37', pts:(sh.pts||[]).slice(), note:sh.note||'' };
-        wizStep='club'; renderWiz();
+        wizStep='club'; drawCourse(); renderWiz();
       };
     });
     const r1 = document.getElementById('ew-rep-one');

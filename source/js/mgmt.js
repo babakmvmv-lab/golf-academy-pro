@@ -2848,7 +2848,97 @@
     .catch(e => { if (window.APP && APP.toast) APP.toast('سرویس PDF در دسترس نیست — اتصال اینترنت را بررسی و دوباره تلاش کنید', 'red'); throw e; })
     .finally(restore);
   }
-  window.PDFK = { libs: mgPdfLibs, a4: mgPdfA4 };
+  function mgPdfA4Pages(opts){
+    const pages = opts.pages && opts.pages.length ? opts.pages : [opts];
+    const btn = opts.btn || null, old = btn ? btn.textContent : '';
+    const restore = () => { if (btn){ btn.disabled = false; btn.textContent = old; } };
+    if (btn){ btn.disabled = true; btn.textContent = '⏳ در حال ساخت PDF…'; }
+    return mgPdfLibs().then(() => {
+      const G = '#d4af37', GL = '#f3d779';
+      const todayFa = D.isoToShamsi ? D.fa(D.isoToShamsi(new Date().toISOString().slice(0, 10))) : '';
+      const trow = (r, i) => '<tr style="background:' + (i % 2 ? 'rgba(255,255,255,.024)' : 'transparent') + '">'
+        + r.map(c => '<td style="padding:5.5px 6px;font-size:10.5px;text-align:center;border-bottom:1px solid rgba(255,255,255,.05)">' + c + '</td>').join('') + '</tr>';
+      function buildEl(pg, no, tot){
+        const sectHtml = (pg.sections || []).map(sc => {
+          let h = '<div style="margin:10px 0 4px;display:flex;align-items:baseline;gap:8px">'
+            + '<span style="width:4px;height:13px;border-radius:2px;background:linear-gradient(' + G + ',#8a6d1f);align-self:center"></span>'
+            + '<b style="font-size:12px;color:' + GL + '">' + sc.h + '</b>' + (sc.sub ? '<span style="font-size:8.5px;color:#8794a3">' + sc.sub + '</span>' : '') + '</div>';
+          if (sc.html) h += sc.html;
+          if (sc.table) h += '<table style="width:100%;border-collapse:collapse"><thead><tr>'
+            + sc.table.head.map(x => '<th style="background:rgba(212,175,55,.12);color:' + GL + ';font-size:9.5px;font-weight:800;padding:6px 5px;border:1px solid rgba(212,175,55,.22)">' + x + '</th>').join('')
+            + '</tr></thead><tbody>' + (sc.table.rows || []).map(trow).join('') + '</tbody></table>';
+          return h;
+        }).join('');
+        const kpiHtml = (pg.kpis && pg.kpis.length) ? '<div style="display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 2px">'
+          + pg.kpis.map(k => '<div style="flex:1;min-width:90px;text-align:center;border:1px solid rgba(212,175,55,.25);background:rgba(255,255,255,.025);border-radius:11px;padding:7px 6px">'
+            + '<div style="font-size:13px;font-weight:900;color:' + GL + '">' + k.v + '</div>'
+            + '<div style="font-size:8.5px;color:#8b96a4;margin-top:3px">' + k.l + '</div></div>').join('') + '</div>' : '';
+        const metaHtml = (pg.meta && pg.meta.length) ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'
+          + pg.meta.map(m => '<span style="font-size:9.5px;color:#c9d2dd;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:99px;padding:4px 10px">' + m + '</span>').join('') + '</div>' : '';
+        const el = document.createElement('div');
+        el.dir = 'rtl';
+        el.style.cssText = 'position:fixed;left:-40000px;top:0;width:794px;height:1123px;overflow:hidden;background:#0b1017;color:#e9eef5;font-family:Vazirmatn,Tahoma,sans-serif';
+        el.innerHTML =
+            '<div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#7a5f17,' + G + ',#f7e7ac,' + G + ',#7a5f17)"></div>'
+          + '<div class="pdfk-head" style="display:flex;align-items:center;gap:14px;padding:14px 28px 10px;border-bottom:1px solid rgba(212,175,55,.35)">'
+          +   '<img src="' + ((window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.png') + '" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid ' + G + '">'
+          +   '<div style="flex:1"><div style="font-size:18px;font-weight:900;color:' + GL + '">' + ((window.GA_BRAND && GA_BRAND.get().nameFa) || '') + '</div>'
+          +   '<div style="font-size:8px;letter-spacing:3px;color:rgba(212,175,55,.85);margin-top:3px;direction:ltr;text-align:right">' + ((window.GA_BRAND && GA_BRAND.get().nameEn) || '') + '</div></div>'
+          +   '<div style="text-align:left"><div style="font-size:10px;color:#9aa7b5">' + (opts.kind || pg.kind || 'گزارش') + '</div>'
+          +   '<div style="font-size:11px;color:#dde5ee;font-weight:800;margin-top:3px">' + todayFa + '</div>'
+          +   '<div style="font-size:8px;color:#8a7445;margin-top:3px">صفحه ' + no + ' از ' + tot + '</div></div>'
+          + '</div>'
+          + '<div class="pdfk-main" style="padding:8px 28px 6px">'
+          +   '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">'
+          +     '<div style="font-size:15px;font-weight:900">' + (pg.title || opts.title || '') + '</div>'
+          +     ((pg.sub || opts.sub) ? '<div style="font-size:10px;color:#8a97a6">' + (pg.sub || opts.sub) + '</div>' : '')
+          +   '</div>'
+          +   metaHtml + kpiHtml + sectHtml
+          + '</div>'
+          + '<div class="pdfk-foot" style="position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:8px 28px;background:#0d141e;border-top:2px solid rgba(212,175,55,.45)">'
+          +   '<span style="font-size:9px;color:#8a97a6">«' + ((window.GA_BRAND && GA_BRAND.get().nameShortFa) || '') + '» — ' + ((window.GA_BRAND && GA_BRAND.get().nameFa) || '') + '</span>'
+          +   '<span style="font-size:9px;color:#8a97a6;direction:ltr">' + ((window.GA_BRAND && GA_BRAND.get().nameEn) || '') + '</span>'
+          + '</div>';
+        return el;
+      }
+      const PDF = window.jspdf.jsPDF;
+      const pdf = new PDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
+      let i = 0;
+      function paintPage(){
+        if (i >= pages.length){
+          pdf.save(opts.fileName);
+          if (window.APP && APP.toast) APP.toast('📄 PDF ' + pages.length + ' برگیِ A4 دانلود شد ✓', 'green');
+          return;
+        }
+        const el = buildEl(pages[i], i + 1, pages.length);
+        document.body.appendChild(el);
+        const lim = 1123 - el.querySelector('.pdfk-head').offsetHeight - el.querySelector('.pdfk-foot').offsetHeight - 4;
+        const main = el.querySelector('.pdfk-main');
+        if (main.scrollHeight > lim){
+          const z = Math.max(.42, lim / main.scrollHeight);
+          main.style.transform = 'scale(' + z + ')';
+          main.style.transformOrigin = 'top right';
+        }
+        return window.html2canvas(el, { backgroundColor: '#0b1017', scale: 2, useCORS: true, logging: false }).then(cv => {
+          el.remove();
+          if (i > 0) pdf.addPage();
+          const out = document.createElement('canvas');
+          out.width = 1588; out.height = 2246;
+          const oc = out.getContext('2d');
+          oc.fillStyle = '#0b1017'; oc.fillRect(0, 0, out.width, out.height);
+          const fit = Math.min(1, out.height / cv.height, out.width / cv.width);
+          oc.drawImage(cv, 0, 0, Math.round(cv.width * fit), Math.round(cv.height * fit));
+          pdf.addImage(out.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, 210, 297);
+          i++;
+          return paintPage();
+        }, e => { el.remove(); throw e; });
+      }
+      return paintPage();
+    })
+    .catch(e => { if (window.APP && APP.toast) APP.toast('سرویس PDF در دسترس نیست — اتصال اینترنت را بررسی و دوباره تلاش کنید', 'red'); throw e; })
+    .finally(restore);
+  }
+  window.PDFK = { libs: mgPdfLibs, a4: mgPdfA4, a4pages: mgPdfA4Pages };
 
   /* ═══ 📱 خروجی عکس استوری اینستاگرام (۱۰۸۰×۱۹۲۰) — برنددار: لوگو بالا + تاریخ/زمین/شرکت‌کنندگان + سکو و نتایج + سایت/شبکه‌های اجتماعی پایین ═══ */
   function storyReportPng(t, btn){

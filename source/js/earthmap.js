@@ -847,24 +847,39 @@
         return;
       }
       const pn = playerName();
-      PDFK.a4({
-        kind: 'گزارش برنامهٔ شات',
-        title: 'برنامهٔ شات' + (pn ? (' — «' + esc(pn) + '»') : ''),
-        sub: 'مسجدسلیمان · MIS GOLF',
-        meta: [
-          (nums.length === 1 ? ('میدان ' + nums[0]) : (sections.length + ' میدان')),
-          shotN + ' ضربه',
-          fmtDist(distM)
-        ],
-        kpis: [
-          { v: fa(sections.length), l: 'میدان' },
-          { v: fa(shotN), l: 'ضربه' },
-          { v: fmtDist(distM), l: 'مجموع متراژ' }
-        ],
-        sections: sections,
-        fileName: 'گزارش-شات-' + (nums.length===1 ? ('میدان-'+nums[0]) : 'کامل') + '.pdf',
-        btn: btn || null
-      }).catch(function(){});
+      const title = 'برنامهٔ شات' + (pn ? (' — «' + esc(pn) + '»') : '');
+      const fileName = 'گزارش-شات-' + (sections.length===1 ? ('میدان-'+nums[0]) : 'کامل') + '.pdf';
+      if (sections.length > 1 && PDFK.a4pages){
+        const pages = [];
+        for (let i = 0; i < sections.length; i += 2){
+          pages.push({
+            title: title,
+            sub: 'مسجدسلیمان · MIS GOLF',
+            meta: ['میدان ' + (i+1) + (sections[i+1] ? ' و ' + (i+2) : '') + ' از ' + sections.length],
+            sections: sections.slice(i, i+2)
+          });
+        }
+        PDFK.a4pages({ kind: 'گزارش برنامهٔ شات', fileName: fileName, btn: btn || null, pages: pages }).catch(function(){});
+      } else {
+        PDFK.a4({
+          kind: 'گزارش برنامهٔ شات',
+          title: title,
+          sub: 'مسجدسلیمان · MIS GOLF',
+          meta: [
+            (sections.length === 1 ? ('میدان ' + nums[0]) : (sections.length + ' میدان')),
+            shotN + ' ضربه',
+            fmtDist(distM)
+          ],
+          kpis: [
+            { v: fa(sections.length), l: 'میدان' },
+            { v: fa(shotN), l: 'ضربه' },
+            { v: fmtDist(distM), l: 'مجموع متراژ' }
+          ],
+          sections: sections,
+          fileName: fileName,
+          btn: btn || null
+        }).catch(function(){});
+      }
     };
     if (sat && sat.url){
       img.onload = function(){ go(true); };

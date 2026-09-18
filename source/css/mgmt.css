@@ -331,12 +331,11 @@ tr.off-row{opacity:.5}
 .em-hud{position:absolute;inset:0;z-index:800;pointer-events:none;direction:ltr}
 .em-hud *{box-sizing:border-box}
 .em-hud svg{width:15px;height:15px;display:block;flex:none}
-.em-tl{position:absolute;top:8px;left:8px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;pointer-events:none;max-width:148px}
-.em-layers,.em-main,.em-zoom,.em-colors,.em-pair,.em-tr,.em-bl{pointer-events:auto}
-.em-layers{display:flex;flex-direction:row;gap:4px}
-.em-main{display:flex;flex-direction:row;align-items:flex-start;gap:6px}
-.em-zoom,.em-colors{display:flex;flex-direction:column;gap:4px}
-.em-pair{display:flex;flex-direction:row;gap:4px;position:relative}
+.em-tl{position:absolute;top:8px;left:8px;display:flex;flex-direction:row;align-items:flex-start;gap:4px;pointer-events:none}
+.em-col,.em-zoom,.em-pair,.em-tr,.em-bl{pointer-events:auto}
+.em-col{display:flex;flex-direction:column;gap:4px;position:relative}
+.em-zoom{display:flex;flex-direction:column;gap:4px}
+.em-pair{display:flex;flex-direction:column;gap:4px;position:relative}
 .em-tr{position:absolute;top:8px;right:8px}
 .em-bl{position:absolute;bottom:8px;left:8px;display:flex;align-items:center;gap:6px}
 .em-btn,.em-swatch,.em-bg button,.em-seg-btn{
@@ -353,7 +352,7 @@ tr.off-row{opacity:.5}
 .em-bg{display:flex;border-radius:8px;overflow:hidden;border:1px solid rgba(240,217,137,.42);background:rgba(10,14,20,.82);backdrop-filter:blur(10px)}
 .em-bg button{width:28px;height:26px;border:0;border-radius:0;box-shadow:none;background:transparent}
 .em-bg button + button{border-right:1px solid rgba(240,217,137,.2)}
-.em-pop{display:none;position:absolute;left:0;top:34px;z-index:30;padding:8px 10px;border-radius:8px;
+.em-pop{display:none;position:absolute;left:34px;top:0;z-index:30;padding:8px 10px;border-radius:8px;
   background:rgba(10,14,20,.94);border:1px solid rgba(240,217,137,.4);box-shadow:0 8px 18px rgba(0,0,0,.45)}
 .em-pop.open{display:block}
 .em-pop input[type=range]{width:88px;accent-color:#D4AF37}

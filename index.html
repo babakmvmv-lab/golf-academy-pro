@@ -1276,8 +1276,8 @@ tr.off-row{opacity:.5}
 .ew-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .ew-hint{font-size:12px;color:var(--muted);line-height:1.9;margin:0 0 10px}
 .ew-note{width:100%;min-height:90px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,22,.75);color:inherit;font:inherit;padding:10px;resize:vertical;box-sizing:border-box}
-#ew-add,#ew-lock{width:100%}
-#ew-lock{margin-top:8px;background:linear-gradient(135deg,var(--gold),#b08a28);color:#1a1407;font-weight:900}
+.ew-main-acts{margin:0 0 8px}
+#ew-add,#ew-lock{width:auto;padding:5px 12px;font-size:12px;font-weight:700}
 .ew-hbtn.done{border-color:rgba(30,187,138,.55);background:rgba(30,187,138,.14);color:#8fe3c4}
 .ew-done{margin-top:14px;display:flex;flex-direction:column;gap:8px}
 .ew-acc{border:1px solid rgba(212,175,55,.28);border-radius:12px;background:rgba(255,255,255,.03);overflow:hidden}
@@ -14980,9 +14980,8 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     } else if (wizStep === 'ready'){
       const arr = holePlan();
       h = wizBack('hole','تغییر میدان')+'<div class="ew-head"><b>میدان '+holeSel+'</b><span>'+arr.length+' ضربه</span></div>'
-        + '<button type="button" class="btn" id="ew-add">＋ افزودن ضربه</button>'
+        + '<div class="ew-actions ew-main-acts"><button type="button" class="btn sm" id="ew-add">＋ افزودن ضربه</button><button type="button" class="btn sm" id="ew-lock">ثبت میدان</button></div>'
         + '<div class="ew-shots">'+(arr.length ? arr.map(function(sh,i){ return shotArticle(sh,i); }).join('') : '<div class="ew-empty">هنوز ضربه‌ای ثبت نشده.</div>')+'</div>'
-        + '<button type="button" class="btn" id="ew-lock">ثبت میدان</button>'
         + '<div class="ew-actions"><button type="button" class="btn sm ghost" id="ew-rep-one">گزارش این میدان</button><button type="button" class="btn sm" id="ew-rep-all">گزارش کامل</button></div>';
     } else if (wizStep === 'club'){
       h = wizBack('ready','انصراف')+'<div class="ew-st">کلاب ضربه '+(wizEdit>=0?(wizEdit+1):(holePlan().length+1))+'</div><div class="ew-grid">'+CLUBS.map(function(c){ return '<button type="button" class="ew-cbtn'+(c===wizDraft.club?' on':'')+'" data-ew-club="'+esc(c)+'">'+esc(c)+'</button>'; }).join('')+'</div>';

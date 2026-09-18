@@ -15023,34 +15023,134 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     });
     const r1 = document.getElementById('ew-rep-one');
     const rA = document.getElementById('ew-rep-all');
-    if (r1) r1.onclick = function(){ exportShotReport([+holeSel]); };
-    if (rA) rA.onclick = function(){ exportShotReport(holeNums()); };
+    if (r1) r1.onclick = function(){ exportShotReport([+holeSel], r1); };
+    if (rA) rA.onclick = function(){ exportShotReport(holeNums(), rA); };
   }
 
-  function exportShotReport(nums){
+  function playerName(){
+    const pid = playerId();
+    try { if (window.Data && Data.nameOf && pid) return Data.nameOf(pid) || ''; } catch(e){}
+    return '';
+  }
+  function drawHoleSnap(satImg, n){
+    const H = holesData();
+    const h = H[String(n)]; if (!h) return '';
+    const sat = satInfo();
+    const W = 980, Ht = 560;
+    const cvs = document.createElement('canvas');
+    cvs.width = W; cvs.height = Ht;
+    const c = cvs.getContext('2d');
+    c.fillStyle = '#1a140c'; c.fillRect(0,0,W,Ht);
+    let minLat=90, maxLat=-90, minLng=180, maxLng=-180;
+    [h.tee, h.green].forEach(function(p){ if (!p) return; minLat=Math.min(minLat,p.lat); maxLat=Math.max(maxLat,p.lat); minLng=Math.min(minLng,p.lng); maxLng=Math.max(maxLng,p.lng); });
+    (h.fairways||[]).forEach(function(fw){ fw.latlngs.forEach(function(ll){ minLat=Math.min(minLat,ll[0]); maxLat=Math.max(maxLat,ll[0]); minLng=Math.min(minLng,ll[1]); maxLng=Math.max(maxLng,ll[1]); }); });
+    const keep = holeSel; holeSel = String(n);
+    holePlan().forEach(function(sh){ (sh.pts||[]).forEach(function(p){ minLat=Math.min(minLat,p.lat); maxLat=Math.max(maxLat,p.lat); minLng=Math.min(minLng,p.lng); maxLng=Math.max(maxLng,p.lng); }); });
+    holeSel = keep;
+    const pad = 0.00028;
+    minLat-=pad; maxLat+=pad; minLng-=pad; maxLng+=pad;
+    function xy(lat, lng){
+      return [ (lng - minLng) / (maxLng - minLng) * W, (maxLat - lat) / (maxLat - minLat) * Ht ];
+    }
+    if (satImg && sat){
+      try {
+        const sx = (minLng - sat.west) / (sat.east - sat.west) * satImg.width;
+        const sy = (sat.north - maxLat) / (sat.north - sat.south) * satImg.height;
+        const sw = (maxLng - minLng) / (sat.east - sat.west) * satImg.width;
+        const shh = (maxLat - minLat) / (sat.north - sat.south) * satImg.height;
+        c.drawImage(satImg, sx, sy, sw, shh, 0, 0, W, Ht);
+      } catch (e) {}
+    }
+    if (showFw) (h.fairways||[]).forEach(function(fw){
+      c.beginPath();
+      fw.latlngs.forEach(function(ll,i){ const p=xy(ll[0],ll[1]); i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]); });
+      c.closePath(); c.fillStyle=sty.fw; c.globalAlpha=+sty.fwAlpha||0; c.fill(); c.globalAlpha=1; c.strokeStyle=sty.fw; c.lineWidth=1.4; c.stroke();
+    });
+    if (h.tee && h.green && showDash){
+      const a=xy(h.tee.lat,h.tee.lng), b=xy(h.green.lat,h.green.lng);
+      c.setLineDash([6,5]); c.strokeStyle=sty.line; c.lineWidth=2; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); c.setLineDash([]);
+    }
+    if (showTee && h.tee){
+      const p=xy(h.tee.lat,h.tee.lng);
+      c.fillStyle=sty.tee; c.beginPath(); c.moveTo(p[0],p[1]-8); c.lineTo(p[0]+7,p[1]+6); c.lineTo(p[0]-7,p[1]+6); c.closePath(); c.fill();
+    }
+    if (showGreen && h.green){
+      const p=xy(h.green.lat,h.green.lng);
+      c.fillStyle=sty.hole; c.beginPath(); c.arc(p[0],p[1],9,0,Math.PI*2); c.fill();
+      c.fillStyle=sty.holeFont; c.font='800 11px Tahoma'; c.textAlign='center'; c.fillText(String(n), p[0], p[1]+4);
+    }
+    holeSel = String(n);
+    holePlan().forEach(function(sh){
+      if (!sh.pts || sh.pts.length<2) return;
+      c.strokeStyle = sh.color || '#D4AF37'; c.lineWidth=3.5; c.lineCap='round'; c.lineJoin='round'; c.beginPath();
+      sh.pts.forEach(function(pt,i){ const p=xy(pt.lat,pt.lng); i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]); });
+      c.stroke();
+    });
+    holeSel = keep;
+    return cvs.toDataURL('image/jpeg', 0.88);
+  }
+  function exportShotReport(nums, btn){
+    if (!window.PDFK || !PDFK.a4){
+      if (window.APP && APP.toast) APP.toast('موتور PDF در دسترس نیست', 'red');
+      return;
+    }
     const sat = satInfo();
     const img = new Image();
     let once = false;
     const go = function(ok){
       if (once) return; once = true;
-      const parts = [];
       const keep = holeSel;
+      const sections = [];
+      let shotN = 0, distM = 0;
       nums.forEach(function(n){
         holeSel = String(n);
         const arr = holePlan();
         if (!arr.length) return;
-        const data = drawPoster(ok ? img : null, true);
-        const rows = arr.map(function(sh,i){
-          return '<tr><td>'+(i+1)+'</td><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+esc(sh.color)+';margin-left:6px"></span>'+esc(sh.club)+'</td><td>'+fmtDist(totalM(sh.pts||[]))+'</td><td>'+esc(sh.note||'')+'</td></tr>';
-        }).join('');
-        parts.push('<section class="rep-hole"><h2>Hole '+n+(holesData()[String(n)]&&holesData()[String(n)].yards?(' · '+holesData()[String(n)].yards+' yd'):'')+(holesData()[String(n)]&&holesData()[String(n)].par?(' · Par '+holesData()[String(n)].par):'')+'</h2>'+(data?('<img src="'+data+'" alt="hole '+n+'">'):'')+'<table><thead><tr><th>#</th><th>Club</th><th>Distance</th><th>Notes</th></tr></thead><tbody>'+rows+'</tbody></table></section>');
+        shotN += arr.length;
+        arr.forEach(function(sh){ distM += totalM(sh.pts||[]); });
+        const hh = holesData()[String(n)] || {};
+        const data = drawHoleSnap(ok ? img : null, n);
+        sections.push({
+          h: '⛳ میدان ' + n + (hh.yards ? (' · ' + hh.yards + ' yd') : '') + (hh.par ? (' · پار ' + hh.par) : ''),
+          sub: arr.length + ' ضربه',
+          html: data ? ('<img src="'+data+'" alt="" style="width:100%;border-radius:10px;border:1px solid rgba(212,175,55,.28);display:block;margin:6px 0 8px">') : '',
+          table: {
+            head: ['ضربه', 'کلاب', 'متراژ', 'توضیح'],
+            rows: arr.map(function(sh,i){
+              return [
+                fa(i+1),
+                '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+esc(sh.color||'#D4AF37')+';margin-left:5px;vertical-align:middle"></span>'+esc(sh.club||''),
+                fmtDist(totalM(sh.pts||[])),
+                esc(sh.note||'')
+              ];
+            })
+          }
+        });
       });
       holeSel = keep;
-      if (!parts.length){ alert('هنوز ضربه‌ای برای گزارش نیست'); return; }
-      const w = window.open('', '_blank');
-      if (!w){ alert('پنجرهٔ گزارش باز نشد'); return; }
-      w.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>Shot Plan Report</title><style>body{font-family:Tahoma,sans-serif;background:#f4efe4;color:#1e3d2f;margin:24px}h1{font-size:22px;margin:0 0 6px}.sub{color:#6b5e4a;margin:0 0 22px}.rep-hole{page-break-inside:avoid;margin:0 0 28px;padding-bottom:18px;border-bottom:1px solid #d9d0c0}h2{font-size:16px;margin:0 0 10px}img{width:100%;max-width:920px;border:1px solid #cfc6b6;border-radius:8px;display:block;margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid #e0d8ca;padding:8px 6px;text-align:right}th{color:#6b5e4a;font-size:11px}</style></head><body><h1>MIS GOLF — Shot Plan</h1><p class="sub">مسجدسلیمان · گزارش برنامهٔ شات</p>'+parts.join('')+'<script>setTimeout(function(){window.print()},400)<\\/script></body></html>');
-      w.document.close();
+      if (!sections.length){
+        if (window.APP && APP.toast) APP.toast('هنوز ضربه‌ای برای گزارش نیست', 'orange');
+        return;
+      }
+      const pn = playerName();
+      PDFK.a4({
+        kind: 'گزارش برنامهٔ شات',
+        title: 'برنامهٔ شات' + (pn ? (' — «' + esc(pn) + '»') : ''),
+        sub: 'مسجدسلیمان · MIS GOLF',
+        meta: [
+          (nums.length === 1 ? ('میدان ' + nums[0]) : (sections.length + ' میدان')),
+          shotN + ' ضربه',
+          fmtDist(distM)
+        ],
+        kpis: [
+          { v: fa(sections.length), l: 'میدان' },
+          { v: fa(shotN), l: 'ضربه' },
+          { v: fmtDist(distM), l: 'مجموع متراژ' }
+        ],
+        sections: sections,
+        fileName: 'گزارش-شات-' + (nums.length===1 ? ('میدان-'+nums[0]) : 'کامل') + '.pdf',
+        btn: btn || null
+      }).catch(function(){});
     };
     if (sat && sat.url){
       img.onload = function(){ go(true); };
@@ -15059,7 +15159,6 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       if (img.complete && img.width) go(true);
     } else go(false);
   }
-
 
   window.EarthMap = { mount, destroy };
 })();

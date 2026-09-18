@@ -3294,6 +3294,3 @@
     users: { list: loadUsers, save: saveUsers, seed: seedUsers, rec: userRec, isMain, isAdmin, label: userLabelFor },
   };
 })();
-save: saveUsers, seed: seedUsers, rec: userRec, isMain, isAdmin, label: userLabelFor },
-  };
-})();

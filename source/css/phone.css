@@ -99,7 +99,7 @@ html.phone-mode .main{
 }
 html.phone-mode .topbar{
   position:sticky; top:0; z-index:46;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;
   align-items:center;
   gap:8px;
   margin-bottom:12px;
@@ -115,26 +115,28 @@ html.phone-mode .topbar h1{
 html.phone-mode .topbar h1 svg.si{width:20px; height:20px; flex:none}
 html.phone-mode .topbar .crumb{font-size:11px; margin-top:2px}
 html.phone-mode .topbar .hud{
-  flex:1 1 100%;
-  order:3;
-  width:100%;
-  max-width:none;
+  flex:0 1 auto;
+  max-width:48%;
+  width:auto !important;
   flex-wrap:nowrap;
   overflow-x:auto;
-  justify-content:flex-start;
-  gap:6px;
+  overflow-y:hidden;
+  gap:8px;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+  justify-content:flex-end;
 }
 html.phone-mode .topbar .hud::-webkit-scrollbar{display:none}
 html.phone-mode .hud-chip{
   flex:0 0 auto;
-  min-height:40px;
-  padding:8px 12px;
-  gap:8px;
-  font-size:11.5px;
+  min-height:0;
+  padding:6px 10px;
+  gap:6px;
+  font-size:11px;
   border-radius:12px;
 }
 html.phone-mode .hud-chip.hud-online{display:none !important}
-html.phone-mode .hud-chip.hud-sub{padding:7px 12px}
+html.phone-mode .hud-chip.hud-sub{padding:5px 10px}
 
 /* نوار اعضا */
 html.phone-mode .member-mobile-nav.ready{

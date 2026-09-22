@@ -1759,15 +1759,15 @@ html.phone-mode .main{
   padding:8px 12px calc(28px + env(safe-area-inset-bottom, 0px));
 }
 html.phone-mode .topbar{
-  position:sticky; top:0; z-index:40;
-  flex-wrap:nowrap;
+  position:sticky; top:0; z-index:46;
+  flex-wrap:wrap;
   align-items:center;
   gap:8px;
   margin-bottom:12px;
   padding:6px 0 10px;
   background:linear-gradient(180deg, rgba(11,15,20,.97) 40%, rgba(11,15,20,.78) 80%, transparent);
 }
-html.phone-mode .topbar > div:nth-child(2){flex:1; min-width:0}
+html.phone-mode .topbar > div:nth-child(2){flex:1 1 0; min-width:0}
 html.phone-mode .topbar h1{
   font-size:16.5px;
   display:flex; align-items:center; gap:8px;
@@ -1776,11 +1776,13 @@ html.phone-mode .topbar h1{
 html.phone-mode .topbar h1 svg.si{width:20px; height:20px; flex:none}
 html.phone-mode .topbar .crumb{font-size:11px; margin-top:2px}
 html.phone-mode .topbar .hud{
-  flex:0 0 auto;
+  flex:1 1 100%;
+  order:3;
+  width:100%;
   max-width:none;
-  width:auto;
   flex-wrap:nowrap;
-  overflow:visible;
+  overflow-x:auto;
+  justify-content:flex-start;
   gap:6px;
 }
 html.phone-mode .topbar .hud::-webkit-scrollbar{display:none}
@@ -4374,6 +4376,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
 
     Object.entries(CARDS).forEach(([pid, arr]) => {
       const s = ST[pid];
+      if (!s) return;
       arr.forEach(c => {
         s.matches++;
         if (c.result === 'اول') s.win++;
@@ -4511,7 +4514,10 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
       const acc = {3:[],4:[],5:[]};
       (CARDS[r.pid]||[]).forEach(c => {
         const pars = parsOf(c.course);
-        Object.entries(c.strokes).forEach(([h,s]) => acc[pars[h-1]].push(+s));
+        Object.entries(c.strokes || {}).forEach(([h,s]) => {
+          const bucket = acc[pars[h-1]];
+          if (bucket) bucket.push(+s);
+        });
       });
       PAR_TYPE[r.pid] = {
         p3: acc[3].length ? Math.round(acc[3].reduce((a,b)=>a+b,0)/acc[3].length*100)/100 : null,
@@ -15688,8 +15694,12 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
   let currentUser = 'admin';
 
   function recompute(){
-    A = D.compute(S);
-    applyStateToForms();
+    try {
+      A = D.compute(S);
+      applyStateToForms();
+    } catch (e) {
+      console.error('recompute', e);
+    }
   }
 
   /* ── ابزارهای کمکی UI ── */
@@ -15871,7 +15881,12 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     const p = PAGES[page];
     $('#top-title').innerHTML = `${p.i} ${esc(p.t)}`;
     $('#top-crumb').textContent = page.startsWith('a') ? 'ابزار طراح / ' + p.t : L('group.dashboard','داشبورد') + ' / ' + p.t;
-    RENDERERS[page]();
+    try {
+      RENDERERS[page]();
+    } catch (err) {
+      console.error('render', page, err);
+      viewEl.innerHTML = `<div class="glass" style="padding:28px;text-align:center;color:var(--muted)">نمایش این صفحه کامل نشد. یک‌بار صفحه را تازه کنید.</div>`;
+    }
     if (document.documentElement.classList.contains('phone-mode')){
       requestAnimationFrame(() => { viewEl.classList.add('phone-enter'); });
     }
@@ -17144,11 +17159,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
 
   /* ═══════════ صفحه: فرماندهی مسابقه ═══════════ */
   function pageMatch(){
-
-  if (!MGMT.getSettings().chMatch){
+    const v = $('#view');
+    if (!MGMT.getSettings().chMatch){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🥇 ${esc(L('nav.match','فرماندهی مسابقه'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
-    }    const v = $('#view');
+    }
     const t = S.tournaments.find(x => x[0] === matchSel) || S.tournaments[0];
     const cards = S.scorecards.filter(c => c.tour === matchSel).map(c => {
       const pars = D.parsOf(t[3]);
@@ -17238,11 +17253,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
 
   /* ═══════════ صفحه: هوش زمین ═══════════ */
   function pageCourse(){
-
-  if (!MGMT.getSettings().chCourse){
+    const v = $('#view');
+    if (!MGMT.getSettings().chCourse){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🗺️ نمودار ${esc(L('nav.course','هوش زمین'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
-    }    const v = $('#view');
+    }
     const crs = S.courses.find(c => c[0] === courseSel) || S.courses[0];
     const pars = D.parsOf(crs[0]);
     const holes = crs[3];
@@ -17443,11 +17458,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
 
   /* ═══════════ صفحه: رکوردها ═══════════ */
   function pageRecords(){
-
-  if (!MGMT.getSettings().chRecords){
+    const v = $('#view');
+    if (!MGMT.getSettings().chRecords){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🎖️ ${esc(L('nav.records','رکوردها'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
-    }    const v = $('#view');
+    }
     const bestPrac = A.LB.reduce((a,b) => b.prac > a.prac ? b : a);
     const bestCourse = A.LB.reduce((a,b) => b.course > a.course ? b : a);
     const mostWin = A.LB.reduce((a,b) => b.win > a.win ? b : a);
@@ -17757,11 +17772,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
   }
 
   function pageTv(){
-
-  if (!MGMT.getSettings().chTv){
+    const v = $('#view');
+    if (!MGMT.getSettings().chTv){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">📺 گرافیک ${esc(L('nav.tv','نمایش تلویزیونی'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
-    }    const v = $('#view');
+    }
     const next = A.NEXT_T;
     const { LB: TV, yr: tvYr } = tvLB();
     v.innerHTML = `
@@ -18735,7 +18750,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
 
   /* ═══════════ بارگذاری مجدد ═══════════ */
   function reloadData(){
-    S = D.loadState();
+    try { S = D.loadState(); } catch (e) { console.error('loadState', e); }
     recompute();
   }
   function applyStateToForms(){}

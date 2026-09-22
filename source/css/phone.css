@@ -98,15 +98,15 @@ html.phone-mode .main{
   padding:8px 12px calc(28px + env(safe-area-inset-bottom, 0px));
 }
 html.phone-mode .topbar{
-  position:sticky; top:0; z-index:40;
-  flex-wrap:nowrap;
+  position:sticky; top:0; z-index:46;
+  flex-wrap:wrap;
   align-items:center;
   gap:8px;
   margin-bottom:12px;
   padding:6px 0 10px;
   background:linear-gradient(180deg, rgba(11,15,20,.97) 40%, rgba(11,15,20,.78) 80%, transparent);
 }
-html.phone-mode .topbar > div:nth-child(2){flex:1; min-width:0}
+html.phone-mode .topbar > div:nth-child(2){flex:1 1 0; min-width:0}
 html.phone-mode .topbar h1{
   font-size:16.5px;
   display:flex; align-items:center; gap:8px;
@@ -115,11 +115,13 @@ html.phone-mode .topbar h1{
 html.phone-mode .topbar h1 svg.si{width:20px; height:20px; flex:none}
 html.phone-mode .topbar .crumb{font-size:11px; margin-top:2px}
 html.phone-mode .topbar .hud{
-  flex:0 0 auto;
+  flex:1 1 100%;
+  order:3;
+  width:100%;
   max-width:none;
-  width:auto;
   flex-wrap:nowrap;
-  overflow:visible;
+  overflow-x:auto;
+  justify-content:flex-start;
   gap:6px;
 }
 html.phone-mode .topbar .hud::-webkit-scrollbar{display:none}

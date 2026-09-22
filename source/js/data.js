@@ -562,6 +562,7 @@
 
     Object.entries(CARDS).forEach(([pid, arr]) => {
       const s = ST[pid];
+      if (!s) return;
       arr.forEach(c => {
         s.matches++;
         if (c.result === 'اول') s.win++;
@@ -699,7 +700,10 @@
       const acc = {3:[],4:[],5:[]};
       (CARDS[r.pid]||[]).forEach(c => {
         const pars = parsOf(c.course);
-        Object.entries(c.strokes).forEach(([h,s]) => acc[pars[h-1]].push(+s));
+        Object.entries(c.strokes || {}).forEach(([h,s]) => {
+          const bucket = acc[pars[h-1]];
+          if (bucket) bucket.push(+s);
+        });
       });
       PAR_TYPE[r.pid] = {
         p3: acc[3].length ? Math.round(acc[3].reduce((a,b)=>a+b,0)/acc[3].length*100)/100 : null,

@@ -96,14 +96,21 @@
   let currentUser = 'admin';
 
   function recompute(){
-    A = D.compute(S);
-    applyStateToForms();
+    try {
+      A = D.compute(S);
+      applyStateToForms();
+    } catch (e) {
+      console.error('recompute', e);
+    }
   }
 
   /* ── ابزارهای کمکی UI ── */
   const avatar = pid => (window.Data && Data.photoOf) ? Data.photoOf(pid) : (pid % 2 ? 'assets/avatar_m.webp' : 'assets/avatar_f.webp');
   const ringColor = rk => rk === 'Gold Elite' ? 'gold' : rk === 'Red' ? 'red' : rk === 'Blue' ? 'blue' : rk === 'Green' ? 'green' : 'dim';
-  function rankPill(rk){ return `<span class="rank-pill" style="background:${D.RANK_DEF.find(r=>r[0]===rk)[3]}22;color:${D.RANK_DEF.find(r=>r[0]===rk)[3]};border:1px solid ${D.RANK_DEF.find(r=>r[0]===rk)[3]}55">${D.RANK_TEXT[rk]}</span>`; }
+  function rankPill(rk){
+    const def = D.RANK_DEF.find(r => r[0] === rk) || D.RANK_DEF[0];
+    return `<span class="rank-pill" style="background:${def[3]}22;color:${def[3]};border:1px solid ${def[3]}55">${D.RANK_TEXT[rk] || def[1]}</span>`;
+  }
   /* Honor Rank — چیپ رنک برای کل سایت */
   function honorOfPid(pid){
     let u = null;
@@ -279,7 +286,12 @@
     const p = PAGES[page];
     $('#top-title').innerHTML = `${p.i} ${esc(p.t)}`;
     $('#top-crumb').textContent = page.startsWith('a') ? 'ابزار طراح / ' + p.t : L('group.dashboard','داشبورد') + ' / ' + p.t;
-    RENDERERS[page]();
+    try {
+      RENDERERS[page]();
+    } catch (err) {
+      console.error('render', page, err);
+      viewEl.innerHTML = `<div class="glass" style="padding:28px;text-align:center;color:var(--muted)">نمایش این صفحه کامل نشد. یک‌بار صفحه را تازه کنید.</div>`;
+    }
     if (document.documentElement.classList.contains('phone-mode')){
       requestAnimationFrame(() => { viewEl.classList.add('phone-enter'); });
     }
@@ -1552,11 +1564,11 @@
 
   /* ═══════════ صفحه: فرماندهی مسابقه ═══════════ */
   function pageMatch(){
-
-  if (!MGMT.getSettings().chMatch){
+    const v = $('#view');
+    if (!MGMT.getSettings().chMatch){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🥇 ${esc(L('nav.match','فرماندهی مسابقه'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
-    }    const v = $('#view');
+    }
     const t = S.tournaments.find(x => x[0] === matchSel) || S.tournaments[0];
     const cards = S.scorecards.filter(c => c.tour === matchSel).map(c => {
       const pars = D.parsOf(t[3]);
@@ -1646,11 +1658,11 @@
 
   /* ═══════════ صفحه: هوش زمین ═══════════ */
   function pageCourse(){
-
-  if (!MGMT.getSettings().chCourse){
+    const v = $('#view');
+    if (!MGMT.getSettings().chCourse){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🗺️ نمودار ${esc(L('nav.course','هوش زمین'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
-    }    const v = $('#view');
+    }
     const crs = S.courses.find(c => c[0] === courseSel) || S.courses[0];
     const pars = D.parsOf(crs[0]);
     const holes = crs[3];
@@ -1851,11 +1863,11 @@
 
   /* ═══════════ صفحه: رکوردها ═══════════ */
   function pageRecords(){
-
-  if (!MGMT.getSettings().chRecords){
+    const v = $('#view');
+    if (!MGMT.getSettings().chRecords){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🎖️ ${esc(L('nav.records','رکوردها'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
-    }    const v = $('#view');
+    }
     const bestPrac = A.LB.reduce((a,b) => b.prac > a.prac ? b : a);
     const bestCourse = A.LB.reduce((a,b) => b.course > a.course ? b : a);
     const mostWin = A.LB.reduce((a,b) => b.win > a.win ? b : a);
@@ -2165,11 +2177,11 @@
   }
 
   function pageTv(){
-
-  if (!MGMT.getSettings().chTv){
+    const v = $('#view');
+    if (!MGMT.getSettings().chTv){
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">📺 گرافیک ${esc(L('nav.tv','نمایش تلویزیونی'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
-    }    const v = $('#view');
+    }
     const next = A.NEXT_T;
     const { LB: TV, yr: tvYr } = tvLB();
     v.innerHTML = `
@@ -3143,7 +3155,7 @@
 
   /* ═══════════ بارگذاری مجدد ═══════════ */
   function reloadData(){
-    S = D.loadState();
+    try { S = D.loadState(); } catch (e) { console.error('loadState', e); }
     recompute();
   }
   function applyStateToForms(){}

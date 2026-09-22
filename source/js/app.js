@@ -653,6 +653,44 @@
   /* خواندن دیتای خام اسمارت‌پلی از حافظهٔ محلی */
   function spShots(){ try { return JSON.parse(localStorage.getItem('ga_sp_shots') || '[]'); } catch(e){ return []; } }
   function spSessions(){ try { return JSON.parse(localStorage.getItem('ga_sp_sessions') || '{}'); } catch(e){ return {}; } }
+  function spSaveShots(a){ try { localStorage.setItem('ga_sp_shots', JSON.stringify(a)); } catch(e){} }
+  function spSaveSessions(o){ try { localStorage.setItem('ga_sp_sessions', JSON.stringify(o)); } catch(e){} }
+  function spAfterShotChange(sid){
+    const left = spShots().filter(x => String(x.sid) === String(sid));
+    const ss = spSessions();
+    if (!ss[sid]) return;
+    if (!left.length){ delete ss[sid]; }
+    else { ss[sid].analysis = null; }
+    spSaveSessions(ss);
+  }
+  function spDeleteSession(sid){
+    spSaveShots(spShots().filter(x => String(x.sid) !== String(sid)));
+    const ss = spSessions(); delete ss[sid]; spSaveSessions(ss);
+  }
+  function spDeleteWhere(pred){
+    const arr = spShots();
+    const hit = arr.filter(pred);
+    if (!hit.length) return 0;
+    const sids = {};
+    hit.forEach(x => { sids[x.sid] = 1; });
+    spSaveShots(arr.filter(x => !pred(x)));
+    Object.keys(sids).forEach(spAfterShotChange);
+    return hit.length;
+  }
+  function spDeleteOneShot(sid, pid, club, t){
+    let gone = false;
+    const left = spShots().filter(x => {
+      if (gone) return true;
+      if (String(x.sid) === String(sid) && +x.pid === +pid && x.club === club && String(x.t) === String(t)){
+        gone = true; return false;
+      }
+      return true;
+    });
+    if (!gone) return 0;
+    spSaveShots(left);
+    spAfterShotChange(sid);
+    return 1;
+  }
   /* بازگردانی دیتای قدیمی تمرین: اگر کلید ga_sp_restore_v1 از ابر آمده باشد، جلسات/ضربه‌هایش را یک‌بار (union) با محلی مرج می‌کند — هرگز بازنویسی نمی‌کند تا تمرین‌های پوش‌نشدهٔ محلی حفظ شوند */
   function restoreLegacyPractice(){
     try {
@@ -1281,6 +1319,34 @@
   /* ── آرشیو نمودار جلسات تمام‌شده: از جدیدترین جلسه به قدیمی‌ترین؛ گروه (جلسه × کلاب) مطابق فیلتر بازیکن/نوع/کلاب ── */
   function renderSmartHist(){
     const body = $('#sph-body'); if (!body) return;
+    if (!body.dataset.delBound){
+      body.dataset.delBound = '1';
+      body.addEventListener('click', e => {
+        const b = e.target.closest('[data-spdel]'); if (!b) return;
+        const kind = b.dataset.spdel, sid = b.dataset.sid, pid = +b.dataset.pid;
+        const club = b.dataset.club || '', t = b.dataset.t;
+        const pname = (D.nameOf ? D.nameOf(pid) : '') || ('بازیکن ' + pid);
+        if (kind === 'session'){
+          if (!confirm('جلسهٔ کامل با همهٔ ضربه‌های همهٔ بازیکن‌ها برای همیشه حذف شود؟ این کار برگشت‌ناپذیر است.')) return;
+          spDeleteSession(sid);
+          toast('جلسه حذف شد 🗑', 'ok');
+        } else if (kind === 'player'){
+          if (!confirm('همهٔ ضربه‌های «' + pname + '» در این جلسه حذف شود؟')) return;
+          const n = spDeleteWhere(x => String(x.sid) === String(sid) && +x.pid === pid);
+          toast(n ? (D.fa(n) + ' ضربهٔ «' + pname + '» حذف شد ✓') : 'چیزی برای حذف نبود', n ? 'ok' : 'orange');
+        } else if (kind === 'club'){
+          if (!confirm('همهٔ ضربه‌های «' + club + '» متعلق به «' + pname + '» در این جلسه حذف شود؟')) return;
+          const n = spDeleteWhere(x => String(x.sid) === String(sid) && +x.pid === pid && x.club === club);
+          toast(n ? (D.fa(n) + ' ضربهٔ ' + club + ' حذف شد ✓') : 'چیزی برای حذف نبود', n ? 'ok' : 'orange');
+        } else if (kind === 'shot'){
+          if (!confirm('این ضربه حذف شود؟')) return;
+          const n = spDeleteOneShot(sid, pid, club, t);
+          toast(n ? 'ضربه حذف شد ✓' : 'ضربه پیدا نشد', n ? 'ok' : 'orange');
+        } else return;
+        renderSmartHist();
+        try { renderSmartNotes(); } catch (err){}
+      });
+    }
     const pidS = $('#sph-player'), typS = $('#sph-type'), clbS = $('#sph-club');
     const pid = pidS ? +pidS.value : 0, typ = typS ? typS.value : 'all', clb = clbS ? clbS.value : 'all';
     const shots = spShots(), ssn = spSessions();
@@ -1335,7 +1401,13 @@
           <span class="tag gold">${esc(g._o.tag)}</span>
           <span class="tag" style="margin-right:0">${esc(g.sn.dateFa || '')}</span>
         </div>
+        <div class="sp-hist-acts">
+          <button type="button" class="btn sm ghost" data-spdel="session" data-sid="${esc(g.sn.id)}">🗑 جلسه</button>
+          <button type="button" class="btn sm ghost" data-spdel="player" data-sid="${esc(g.sn.id)}" data-pid="${pid}">🗑 بازیکن در جلسه</button>
+          <button type="button" class="btn sm ghost" data-spdel="club" data-sid="${esc(g.sn.id)}" data-pid="${pid}" data-club="${esc(g.cn)}">🗑 کلاب</button>
+        </div>
         ${g._o.html}
+        <div class="sp-hist-shots">${g.shots.map(x => `<span class="sp-hist-shot"><i style="background:${SP_RES_COLOR[x.res]||'#8490A3'}"></i>${D.faNum(x.yds,0)} yd · ${esc(SP_RES_LABEL[x.res]||x.res)}<button type="button" class="sp-hist-x" data-spdel="shot" data-sid="${esc(g.sn.id)}" data-pid="${pid}" data-club="${esc(g.cn)}" data-t="${esc(x.t)}" title="حذف این ضربه" aria-label="حذف این ضربه">×</button></span>`).join('')}</div>
       </div>`).join('')
       + (groups.length > shown ? `<button type="button" class="btn ghost" id="sph-more" style="width:100%">نمایش ${D.fa(Math.min(SP_HIST_PAGE, groups.length - shown))} نمودار دیگر — ${D.fa(groups.length - shown)} مانده</button>` : '');
     part.forEach(g => drawShotChart(g._o));

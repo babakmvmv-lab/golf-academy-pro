@@ -628,8 +628,9 @@
     tours.forEach(function(t){
       const sc = cards.find(function(c){ return +c.tour === +t[0]; });
       if (!sc || !sc.strokes) return;
+      const hs = (D && D.tourHoleIds) ? D.tourHoleIds(t) : Array.from({length: t[4]||18}, function(_,i){ return i+1; });
       rows.push({
-        id: t[0], name: t[1], date: t[5] || '', holes: t[4] || 18,
+        id: t[0], name: t[1], date: t[5] || '', holes: hs.length, holeIds: hs,
         pars: (D && D.parsOf) ? D.parsOf(t[3]) : [],
         strokes: sc.strokes, total: +sc.total || 0
       });
@@ -658,13 +659,15 @@
         par = r.pars[hole-1] != null ? +r.pars[hole-1] : null;
       } else {
         let tot = 0, psum = 0, n = 0;
-        for (let h = 1; h <= r.holes; h++){
-          const s = r.strokes[h];
-          if (s == null) continue;
-          tot += +s; psum += +(r.pars[h-1] || 0); n++;
+        const ids = r.holeIds || Array.from({length: r.holes}, function(_,i){ return i+1; });
+        for (let i = 0; i < ids.length; i++){
+          const h = ids[i];
+          const sv = r.strokes[h];
+          if (sv == null) continue;
+          tot += +sv; psum += +(r.pars[h-1] || 0); n++;
         }
         if (n){ strokes = tot; par = psum; }
-        else if (r.total){ strokes = r.total; par = r.pars.slice(0, r.holes).reduce(function(a,b){ return a+(+b||0); }, 0); }
+        else if (r.total){ strokes = r.total; par = ids.reduce(function(a,h){ return a+(+r.pars[h-1]||0); }, 0); }
       }
       const vs = (strokes != null && par != null) ? (strokes - par) : null;
       const col = vsStrokeColor(vs);

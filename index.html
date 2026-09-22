@@ -1304,6 +1304,14 @@ tr.off-row{opacity:.5}
 .ew-acc[open] summary{border-bottom:1px solid rgba(255,255,255,.07);color:var(--gold-l)}
 .ew-acc .ew-shots{padding:8px 10px}
 .ew-acc .ew-actions{padding:0 10px 10px}
+
+.hp-grid{display:flex;flex-wrap:wrap;gap:7px}
+.hp-chip{cursor:pointer;border-radius:12px;padding:8px 10px;min-width:92px;text-align:center;border:1px solid var(--line-soft);background:rgba(255,255,255,.03);color:inherit}
+.hp-chip b{display:block;font-size:12px;font-weight:800}
+.hp-chip span{display:block;font-size:10px;color:var(--muted);margin-top:3px}
+.hp-chip.on{border-color:rgba(212,175,55,.7);background:rgba(212,175,55,.12)}
+.hp-chip.on b{color:var(--gold-l)}
+.hp-par{text-align:center}
 </style>
     <style>/* ═══ فروشگاه آواتار v8 — تم تیره + زمردی + طلایی، شیشه‌ای و سه‌بعدی ═══ */
 .ashop{display:grid;grid-template-columns:212px minmax(0,1fr) 306px;min-width:0;gap:14px;direction:rtl;align-items:start}
@@ -4023,10 +4031,53 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     1:[4,4,3,5,4,4,3,4,5,4,4,3,4,5,4,4,3,5],
   };
   const COURSE_NAME = {}; COURSES.forEach(c => COURSE_NAME[c[0]] = c[1]);
-  /* رجیستری پار (شامل زمین‌های سفارشی طراح) */
+  /* رجیستری پار (شامل زمین‌های سفارشی طراح + ویرایش زمین پایه) */
   const PAR_MAP = {};
-  Object.keys(COURSE_PARS).forEach(k => PAR_MAP[k] = COURSE_PARS[k]);
+  Object.keys(COURSE_PARS).forEach(k => PAR_MAP[k] = COURSE_PARS[k].slice());
   const parsOf = id => PAR_MAP[id] || COURSE_PARS[id] || [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4];
+  function loadCourseOverride(){
+    try { const o = JSON.parse(localStorage.getItem('ga_course_override') || '{}'); return o && typeof o === 'object' ? o : {}; } catch(e){ return {}; }
+  }
+  function loadTourOverride(){
+    try { const o = JSON.parse(localStorage.getItem('ga_tour_override') || '{}'); return o && typeof o === 'object' ? o : {}; } catch(e){ return {}; }
+  }
+  function applyCourseOverrides(){
+    Object.keys(COURSE_PARS).forEach(k => { PAR_MAP[k] = COURSE_PARS[k].slice(); });
+    COURSES.forEach(c => { COURSE_NAME[c[0]] = c[1]; });
+    const ov = loadCourseOverride();
+    Object.keys(ov).forEach(id => {
+      const o = ov[id]; if (!o) return;
+      if (Array.isArray(o.pars) && o.pars.length) PAR_MAP[+id] = o.pars.map(x => Math.max(3, Math.min(6, +x || 4)));
+      if (o.name) COURSE_NAME[+id] = o.name;
+    });
+    return ov;
+  }
+  function holeName(n){ return 'میدان ' + fa(n); }
+  function tourHoleIds(t){
+    if (!t) return [];
+    const id = +t[0];
+    let ids = null;
+    if (id >= 1000){
+      try {
+        const ex = loadExtraTours()[id - 1000];
+        if (ex && Array.isArray(ex.holeIds) && ex.holeIds.length) ids = ex.holeIds;
+      } catch(e){}
+    } else {
+      try {
+        const ov = loadTourOverride()[id];
+        if (ov && Array.isArray(ov.holeIds) && ov.holeIds.length) ids = ov.holeIds;
+      } catch(e){}
+    }
+    if (ids && ids.length) return ids.map(Number).filter(n => n >= 1);
+    const n = +t[4] || 18;
+    const courseN = (parsOf(t[3]) || []).length || n;
+    const take = Math.max(1, Math.min(n, courseN));
+    return Array.from({ length: take }, (_, i) => i + 1);
+  }
+  function tourPars(t){
+    const pars = parsOf(t[3]) || [];
+    return tourHoleIds(t).map(h => +pars[h - 1] || 4);
+  }
 
   /* مسابقات ماهانه: جمعهٔ آخر هر ماه، ۱۸ حفره، زمین مسجدسلیمان */
   const TOURNAMENTS = [
@@ -4102,14 +4153,16 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
       const [code, name, lvl, cid, holes, dstr] = t;
       const d = dateFrom(dstr);
       if (d >= TODAY) return;
-      const pars = parsOf(cid).slice(0, holes);
+      const hs = tourHoleIds(t);
+      const parsAll = parsOf(cid);
+      const pars = hs.map(h => parsAll[h-1] || 4);
       const parTotal = pars.reduce((a,b)=>a+b,0);
       const field = ACT.filter(p => dateFrom(p[4]) <= d);
       field.forEach(p => {
         const target = targetTotal(p[0], ti, p[3]);
         const st = buildStrokes(pars, target, makeRNG(10000 + ti * 100 + p[0]));
         const strokes = {};
-        st.forEach((v, i) => strokes[i+1] = v);
+        st.forEach((v, i) => strokes[hs[i]] = v);
         cards.push({ tour: code, pid: p[0], strokes, total: st.reduce((a,b)=>a+b,0) });
       });
     });
@@ -4253,17 +4306,17 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
         MONTH_PTS[j.monthFa][c.pid] = (MONTH_PTS[j.monthFa][c.pid] || 0) + pts;
       }
       const pars = parsOf(t[3]);
-      const holes = t[4];
+      const hs = tourHoleIds(t);
       let birdies = 0, parsN = 0, bogeys = 0, dbog = 0;
-      for (let h = 1; h <= holes; h++){
+      hs.forEach(h => {
         const s = c.strokes[h], p = pars[h-1];
         if (s === p - 1) birdies++;
         else if (s === p) parsN++;
         else if (s === p + 1) bogeys++;
         else if (s > p + 1) dbog++;
-      }
+      });
       TOTAL_BIRDIES += birdies;
-      const parTotal = pars.slice(0, holes).reduce((a,b)=>a+b,0);
+      const parTotal = hs.reduce((a,h)=>a+(pars[h-1]||0),0);
       const vspar = c.total - parTotal;
       CARDS[c.pid] = CARDS[c.pid] || [];
       CARDS[c.pid].push({
@@ -4415,10 +4468,10 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
       if (!t) return;
       HOLE_DIFF[c.tour] = HOLE_DIFF[c.tour] || {};
       const pars = parsOf(t[3]);
-      for (let h = 1; h <= t[4]; h++){
+      tourHoleIds(t).forEach(h => {
         HOLE_DIFF[c.tour][h] = HOLE_DIFF[c.tour][h] || [];
-        HOLE_DIFF[c.tour][h].push(c.strokes[h] - pars[h-1]);
-      }
+        HOLE_DIFF[c.tour][h].push((c.strokes[h]||0) - (pars[h-1]||0));
+      });
     });
     Object.keys(HOLE_DIFF).forEach(t => {
       Object.keys(HOLE_DIFF[t]).forEach(h => {
@@ -4433,10 +4486,10 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
         const t = info[sc.tour];
         if (!t || t[3] !== c[0]) return;
         const pars = parsOf(c[0]);
-        for (let h = 1; h <= t[4]; h++){
+        tourHoleIds(t).forEach(h => {
           acc[h] = acc[h] || [];
-          acc[h].push(sc.strokes[h] - pars[h-1]);
-        }
+          acc[h].push((sc.strokes[h]||0) - (pars[h-1]||0));
+        });
       });
       COURSE_STATS[c[0]] = {};
       Object.keys(acc).forEach(h => {
@@ -4493,12 +4546,14 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     let extra = { courses: [], tournaments: [], scorecards: [] };
     try {
       extra.courses = JSON.parse(localStorage.getItem('ga_courses') || '[]');
-      extra.tournaments = JSON.parse(localStorage.getItem('ga_tournaments') || '[]');
+      extra.tournaments = loadExtraTours();
       extra.scorecards = JSON.parse(localStorage.getItem('ga_scorecards') || '[]');
     } catch(e) {}
+    const cov = applyCourseOverrides();
     extra.courses.forEach((c, i) => {
       const cid = 1000 + i;
-      PAR_MAP[cid] = c.pars;
+      if (c && Array.isArray(c.pars) && c.pars.length) PAR_MAP[cid] = c.pars;
+      if (c && c.name) COURSE_NAME[cid] = c.name;
     });
     const players = loadPlayers().concat(loadCustomPlayers().map((p, i) => [9000+i, (p.name + ' ' + (p.family||'')).trim(), p.gender, +p.hcp, p.join || '2026-01-01', p.active === false ? 0 : 1]));
     // اطمینان: پلیرهای سفارشی که کاربر یوزر/پسورد برایشان ساخته، در USERS معتبرند (در app.js خوانده میشود)
@@ -4506,8 +4561,21 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     const ACTIVE_EXT = players.filter(p => p[5]);
     return {
       players, active: ACTIVE_EXT,
-      courses: COURSES.concat(extra.courses.map((c, i) => [1000+i, c.name, c.loc, c.holes])),
-      tournaments: visibleTours().concat(extra.tournaments.map((t, i) => [1000+i, t.name, +t.lvl, +t.course, +t.holes, t.date])),
+      courses: COURSES.map(c => {
+        const o = cov[c[0]];
+        if (!o) return c;
+        const holes = (o.pars && o.pars.length) ? o.pars.length : (o.holes || c[3]);
+        return [c[0], o.name || c[1], o.loc || c[2], holes];
+      }).concat(extra.courses.map((c, i) => [1000+i, c.name, c.loc, (c.pars && c.pars.length) ? c.pars.length : c.holes])),
+      tournaments: visibleTours().map(t => {
+        const ov = loadTourOverride()[t[0]];
+        if (!ov) return t;
+        const holeN = (Array.isArray(ov.holeIds) && ov.holeIds.length) ? ov.holeIds.length : (ov.holes != null ? +ov.holes : t[4]);
+        return [t[0], ov.name || t[1], ov.lvl != null ? +ov.lvl : t[2], ov.course != null ? +ov.course : t[3], holeN, ov.date || t[5]];
+      }).concat(extra.tournaments.map((t, i) => {
+        const n = (Array.isArray(t.holeIds) && t.holeIds.length) ? t.holeIds.length : +t.holes;
+        return [1000+i, t.name, +t.lvl, +t.course, n, t.date];
+      })),
       scorecards: genScorecards(players).concat(extra.scorecards.map(s => {
         const tour = +s.tour, pid = +s.pid;
         const ex = extra.tournaments[tour - 1000];
@@ -4565,7 +4633,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   function seedSeason(force){
     try {
       if (!force && localStorage.getItem('ga_seed_v2') === '1405') return;
-      const keys = ['ga_tour_rules','ga_results','ga_tour_override','ga_tour_hidden','ga_programs','ga_courses','ga_tournaments','ga_scorecards','ga_del_acts','ga_events','ga_custom_players','ga_player_users','ga_players'];
+      const keys = ['ga_tour_rules','ga_results','ga_tour_override','ga_tour_hidden','ga_programs','ga_courses','ga_course_override','ga_tournaments','ga_scorecards','ga_del_acts','ga_events','ga_custom_players','ga_player_users','ga_players'];
       keys.forEach(k => { try { localStorage.removeItem(k); } catch(e){} });
       // تولد اعضا (برای نمایش سن/تولد در مدیریت)
       const births = {1:'1987-03-21',2:'2009-03-21',3:'2009-08-01',4:'2008-09-01',5:'2011-04-15',6:'2010-05-10',7:'2010-08-20',8:'2017-03-21'};
@@ -4605,7 +4673,8 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
-    parsOf, compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
+    parsOf, PAR_MAP, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
+    compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason,
   };
@@ -10654,15 +10723,19 @@ window.addEventListener('ga:brand-changed', function(){
   function mgmtCourses(body){
     const S = gstate().S;
     const extra = extraCourses();
-    const rows = D.COURSES.map((c,i) => ({ id:c[0], name:c[1], loc:c[2], holes:c[3], pars:D.COURSE_PARS[c[0]], base:true, lat:24.7136, lng:46.6753 }))
-      .concat(extra.map((c,i) => ({ id:1000+i, name:c.name, loc:c.loc||'ریاض', holes:c.holes, pars:c.pars, base:false, idx:i, lat:c.lat, lng:c.lng })));
+    const ov = (D.loadCourseOverride ? D.loadCourseOverride() : {}) || {};
+    const rows = D.COURSES.map((c) => {
+      const o = ov[c[0]] || {};
+      const pars = (o.pars && o.pars.length) ? o.pars : (D.parsOf(c[0]) || D.COURSE_PARS[c[0]] || []);
+      const isMis = c[0] === 1 || String(c[1]).indexOf('مسجدسلیمان') >= 0;
+      return { id:c[0], name: o.name || c[1], loc: o.loc || c[2], holes: pars.length || c[3], pars, base:true, lat: o.lat != null ? o.lat : (isMis ? 31.90494 : 24.7136), lng: o.lng != null ? o.lng : (isMis ? 49.31398 : 46.6753) };
+    }).concat(extra.map((c,i) => ({ id:1000+i, name:c.name, loc:c.loc||'ریاض', holes:(c.pars&&c.pars.length)?c.pars.length:c.holes, pars:c.pars, base:false, idx:i, lat:c.lat, lng:c.lng })));
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
-      <div class="card-head"><span class="ic">➕</span><h3>طراح زمین — ثبت زمین جدید</h3><span class="tag">3 / 9 / 18</span></div>
+      <div class="card-head"><span class="ic">➕</span><h3>طراح زمین — ثبت زمین جدید</h3><span class="tag">افزودن / حذف میدان</span></div>
       <div class="field-grid" style="margin-top:10px">
         <div><label>نام زمین</label><input class="input" id="mc-name" style="width:100%" placeholder="زمین جدید"></div>
         <div><label>محل / شهر</label><input class="input" id="mc-loc" style="width:100%" value="ریاض"></div>
-        <div><label>تعداد میدان</label><select class="sel" id="mc-holes" style="width:100%"><option>3</option><option>9</option><option selected>18</option></select></div>
         <div><label>مختصات (lat, lng)</label>
           <div style="display:flex;gap:6px"><input class="input" id="mc-lat" value="24.7136" style="width:50%;direction:ltr"><input class="input" id="mc-lng" value="46.6753" style="width:50%;direction:ltr"></div>
         </div>
@@ -10680,30 +10753,19 @@ window.addEventListener('ga:brand-changed', function(){
         <th>#</th><th>نام</th><th>محل</th><th>میدان</th><th>پار کل</th><th>موقعیت</th><th>عملیات</th>
       </tr></thead><tbody id="mc-rows"></tbody></table></div>
     </div>`;
-    let parVals = [];
-    function drawPars(){
-      const n = +$('#mc-holes').value;
-      if (parVals.length !== n) parVals = Array.from({length:n}, () => 4);
-      $('#mc-pars').innerHTML = parVals.map((p,i) => `
-        <div style="text-align:center">
-          <div style="font-size:10px;color:var(--muted)">ح${D.fa(i+1)}</div>
-          <input class="input" type="number" min="3" max="6" value="${p}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
-        </div>`).join('');
-      $$('#mc-pars input').forEach(inp => inp.addEventListener('change', () => { parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4)); }));
-    }
-    drawPars();
-    $('#mc-holes').addEventListener('change', drawPars);
+    let parVals = Array.from({length:18}, () => 4);
+    bindParEditor($('#mc-pars'), parVals);
     $('#mc-pick').addEventListener('click', () => openMapPicker(c => {
       $('#mc-lat').value = c.lat; $('#mc-lng').value = c.lng;
       APP.toast('موقعیت انتخاب شد: ' + c.lat + ' , ' + c.lng, 'green');
     }, { lat:+$('#mc-lat').value, lng:+$('#mc-lng').value }));
-    $('#mc-map').addEventListener('click', () => showSatelliteModal({ id:999, name:$('#mc-name').value||'زمین جدید', lat:+$('#mc-lat').value, lng:+$('#mc-lng').value }, +$('#mc-holes').value));
+    $('#mc-map').addEventListener('click', () => showSatelliteModal({ id:999, name:$('#mc-name').value||'زمین جدید', lat:+$('#mc-lat').value, lng:+$('#mc-lng').value }, parVals.length));
     $('#mc-add').addEventListener('click', () => {
       const name = $('#mc-name').value.trim();
       if (!name){ APP.toast('نام زمین را وارد کنید', 'red'); return; }
-      const holes = +$('#mc-holes').value;
-      const pars = parVals.slice(0, holes);
-      extra.push({ name, loc: $('#mc-loc').value.trim() || 'ریاض', holes, pars, lat:+$('#mc-lat').value, lng:+$('#mc-lng').value });
+      const pars = parVals.slice();
+      if (!pars.length){ APP.toast('حداقل یک میدان لازم است', 'red'); return; }
+      extra.push({ name, loc: $('#mc-loc').value.trim() || 'ریاض', holes: pars.length, pars, lat:+$('#mc-lat').value, lng:+$('#mc-lng').value });
       saveCourses(extra); APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
       APP.toast('زمین «' + name + '» ثبت شد ✓', 'green');
     });
@@ -10776,35 +10838,35 @@ window.addEventListener('ga:brand-changed', function(){
         <div><label>مختصات lng</label><input class="input" id="ec-lng" style="width:100%;direction:ltr" value="${r.lng||46.6753}"></div>
       </div>
       <div style="margin-top:10px"><button class="btn sm ghost" id="ec-pick">📍 انتخاب روی نقشه</button></div>
-      <div style="margin-top:12px;display:flex;gap:7px;flex-wrap:wrap" id="ec-pars">
-        ${r.pars.map((p,i) => `<div style="text-align:center">
-          <div style="font-size:10px;color:var(--muted)">ح${D.fa(i+1)}</div>
-          <input class="input" type="number" min="3" max="6" value="${p}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
-        </div>`).join('')}
-      </div>
+      <div style="margin-top:12px;font-size:11px;color:var(--muted)">پار هر میدان — می‌توانید میدان اضافه یا حذف کنید</div>
+      <div style="margin-top:8px;display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end" id="ec-pars"></div>
       <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
         <button class="btn sm ghost" id="ec-cancel">انصراف</button>
         <button class="btn sm" id="ec-save">💾 ذخیره</button>
       </div>
     </div>`;
     m.style.display = 'flex';
+    const parVals = (r.pars && r.pars.length) ? r.pars.slice() : Array.from({length: r.holes || 18}, () => 4);
+    bindParEditor($('#ec-pars'), parVals);
     $('#ec-pick').addEventListener('click', () => openMapPicker(c => { $('#ec-lat').value = c.lat; $('#ec-lng').value = c.lng; }, { lat:+$('#ec-lat').value, lng:+$('#ec-lng').value }));
     $('#ec-cancel').addEventListener('click', () => m.style.display = 'none');
     $('#ec-save').addEventListener('click', () => {
       const name = $('#ec-name').value.trim();
       if (!name){ APP.toast('نام زمین را وارد کنید','red'); return; }
-      const pars = $$('#ec-pars input').map(inp => Math.max(3, Math.min(6, +inp.value || 4)));
+      const pars = parVals.map(v => Math.max(3, Math.min(6, +v || 4)));
+      if (!pars.length){ APP.toast('حداقل یک میدان لازم است','red'); return; }
       const lat = +$('#ec-lat').value || 24.7136, lng = +$('#ec-lng').value || 46.6753;
       if (r.base){
         let ov = {};
         try { ov = JSON.parse(localStorage.getItem('ga_course_override') || '{}'); } catch(e){}
-        ov[r.id] = { name, loc: $('#ec-loc').value.trim(), pars, lat, lng };
+        ov[r.id] = { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng };
         localStorage.setItem('ga_course_override', JSON.stringify(ov));
-        if (D.PAR_MAP) D.PAR_MAP[r.id] = pars;
+        if (D.PAR_MAP) D.PAR_MAP[r.id] = pars.slice();
+        if (D.COURSE_NAME) D.COURSE_NAME[r.id] = name;
       } else {
         const lst = extraCourses();
         const c = lst[r.idx];
-        if (c){ c.name = name; c.loc = $('#ec-loc').value.trim(); c.pars = pars; c.lat = lat; c.lng = lng; }
+        if (c){ c.name = name; c.loc = $('#ec-loc').value.trim(); c.pars = pars; c.holes = pars.length; c.lat = lat; c.lng = lng; }
         saveCourses(lst);
       }
       APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
@@ -10841,13 +10903,13 @@ window.addEventListener('ga:brand-changed', function(){
           <option value="normal" selected>قانون عادی — همهٔ ضربه‌ها محاسبه می‌شود</option>
           <option value="full">قانون فول — سقف ضربهٔ هر حفره: پار۳ حداکثر ۷ • پار۴ حداکثر ۹ • پار۵ حداکثر ۱۱</option>
         </select></div>
-        <div><label>زمین</label><select class="sel" id="mt-crs" style="width:100%">${S.courses.map(c=>`<option value="${c[0]}">${esc(c[1])}</option>`).join('')}</select></div>
-        <div><label>حفره</label><select class="sel" id="mt-holes" style="width:100%"><option>3</option><option>9</option><option selected>18</option></select></div>
+        <div class="span2"><label>زمین</label><select class="sel" id="mt-crs" style="width:100%">${S.courses.map(c=>`<option value="${c[0]}">${esc(c[1])}</option>`).join('')}</select></div>
         <div><label>🏆 امتیاز نفر اول</label><input class="input" id="mt-p1" type="number" min="0" value="20" style="width:100%"></div>
         <div><label>🥈 امتیاز نفر دوم</label><input class="input" id="mt-p2" type="number" min="0" value="15" style="width:100%"></div>
         <div><label>🥉 امتیاز نفر سوم</label><input class="input" id="mt-p3" type="number" min="0" value="10" style="width:100%"></div>
         <div><label>🎟 امتیاز شرکت</label><input class="input" id="mt-entry" type="number" min="0" value="5" style="width:100%"></div>
       </div>
+      <div id="mt-holes-box" style="margin-top:12px"></div>
       <div class="field-grid" style="margin-top:10px">
         <div><label>تاریخ شروع <small>(شمسی)</small></label><div id="mt-start"></div></div>
         <div><label>تاریخ پایان <small>(شمسی)</small></label><div id="mt-end"></div></div>
@@ -10859,7 +10921,7 @@ window.addEventListener('ga:brand-changed', function(){
     <div class="glass">
       <div class="card-head"><span class="ic">📅</span><h3>مسابقات فصل</h3><span class="tag">${D.fa(S.tournaments.length)} رویداد</span></div>
       <div style="overflow-x:auto"><table class="tbl"><thead><tr>
-        <th>#</th><th>نام</th><th>سطح</th><th>زمین</th><th>حفره</th><th>تاریخ</th><th>وضعیت</th><th>عملیات</th>
+        <th>#</th><th>نام</th><th>سطح</th><th>زمین</th><th>میدان‌ها</th><th>تاریخ</th><th>وضعیت</th><th>عملیات</th>
       </tr></thead><tbody id="mt-rows"></tbody></table></div>
       <div id="mt-hidden"></div>
     </div>`;
@@ -10872,7 +10934,7 @@ window.addEventListener('ga:brand-changed', function(){
           <div style="font-size:10px;color:var(--muted);margin-top:3px">🏆${D.fa(pr[0])} 🥈${D.fa(pr[1])} 🥉${D.fa(pr[2])} 🎟${D.fa(pr[3])}</div></td>
         <td><span class="chip ${t[2]===1?'gold':t[2]===2?'green':'blue'}">سطح ${D.fa(t[2])}</span></td>
         <td style="color:var(--muted)">${esc(D.COURSE_NAME[t[3]]||'—')}</td>
-        <td class="num">${D.fa(t[4])}</td>
+        <td style="color:var(--muted);font-size:11px">${esc((D.tourHoleIds(t)||[]).map(h => holeName(h)).join('، ') || (D.fa(t[4]) + ' میدان'))}</td>
         <td class="ltr" style="color:var(--muted);font-size:11.5px">${D.fa(j.dd)} ${j.monthFa}</td>
         <td><span class="chip ${past?'dim':'green'}">${past?'برگزار شده':'آینده'}</span></td>
         <td><div class="row-actions">
@@ -10918,6 +10980,13 @@ window.addEventListener('ga:brand-changed', function(){
       D.saveTourRules(r);
       APP.toast('قوانین امتیازدهی فصل ذخیره شد ✓', 'green');
     });
+    function paintMtHoles(){
+      const box = $('#mt-holes-box'); if (!box) return;
+      box.innerHTML = holePickerHtml(+$('#mt-crs').value);
+      bindHolePicker(box);
+    }
+    paintMtHoles();
+    $('#mt-crs').addEventListener('change', paintMtHoles);
     $('#mt-lvl').addEventListener('change', () => {
       const r = D.loadTourRules ? D.loadTourRules() : D.PTS_RULE;
       const pr = r[+$('#mt-lvl').value] || [15,10,7,3];
@@ -10932,7 +11001,9 @@ window.addEventListener('ga:brand-changed', function(){
       $$('.mt-day-sel').forEach(s => schedule.push({ offset: +s.dataset.i, label: s.value }));
       /* 🐞 فیکس: «extra» آرایهٔ تبدیل‌شدهٔ نمایشی بود و با push به همان فرم ذخیره می‌شد ⟸ آبجکت مسابقهٔ بعدی روی قبلی می‌نشست */
       const rawTours = extraTours();
-      rawTours.push({ name: name || 'مسابقه ' + D.fa(rawTours.length+1), lvl: +$('#mt-lvl').value, course: +$('#mt-crs').value, holes: +$('#mt-holes').value, date: start, end, time: $('#mt-time').value,
+      const holeIds = selectedHoleIds($('#mt-holes-box'));
+      if (!holeIds.length){ APP.toast('حداقل یک میدان را با کلیک انتخاب کنید', 'red'); return; }
+      rawTours.push({ name: name || 'مسابقه ' + D.fa(rawTours.length+1), lvl: +$('#mt-lvl').value, course: +$('#mt-crs').value, holes: holeIds.length, holeIds, date: start, end, time: $('#mt-time').value,
         rule: ($('#mt-rule') ? $('#mt-rule').value : 'normal'),
         p1: +($('#mt-p1').value||0), p2: +($('#mt-p2').value||0), p3: +($('#mt-p3').value||0), entry: +($('#mt-entry').value||0), schedule });
       saveTours(rawTours); APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
@@ -10988,13 +11059,13 @@ window.addEventListener('ga:brand-changed', function(){
         <div class="span2"><label>نام</label><input class="input" id="et-name" style="width:100%" value="${esc(t[1])}"></div>
         <div class="span2"><label>تاریخ</label><div class="jdate" id="et-date" data-iso="${t[5]}"></div></div>
         <div><label>سطح</label><select class="sel" id="et-lvl" style="width:100%"><option value="1" ${t[2]===1?'selected':''}>سطح ۱</option><option value="2" ${t[2]===2?'selected':''}>سطح ۲</option><option value="3" ${t[2]===3?'selected':''}>سطح ۳</option></select></div>
-        <div><label>زمین</label><select class="sel" id="et-crs" style="width:100%">${S.courses.map(c=>`<option value="${c[0]}" ${c[0]===t[3]?'selected':''}>${esc(c[1])}</option>`).join('')}</select></div>
-        <div><label>حفره</label><select class="sel" id="et-holes" style="width:100%"><option ${t[4]===3?'selected':''}>3</option><option ${t[4]===9?'selected':''}>9</option><option ${t[4]===18?'selected':''}>18</option></select></div>
+        <div class="span2"><label>زمین</label><select class="sel" id="et-crs" style="width:100%">${S.courses.map(c=>`<option value="${c[0]}" ${c[0]===t[3]?'selected':''}>${esc(c[1])}</option>`).join('')}</select></div>
         <div class="span2"><label>⚖️ قانون مسابقه</label><select class="sel" id="et-rule" style="width:100%" ${base?'disabled title="فقط برای مسابقات سفارشی"':''}>
           ${(() => { const cr = base ? 'normal' : ((extraTours()[idx] && extraTours()[idx].rule) || 'normal');
             return `<option value="normal" ${cr==='normal'?'selected':''}>قانون عادی — همهٔ ضربه‌ها محاسبه</option><option value="full" ${cr==='full'?'selected':''}>قانون فول — سقف ضربهٔ حفره (پار۳≤۷ • پار۴≤۹ • پار۵≤۱۱)</option>`; })()}
         </select></div>
       </div>
+      <div id="et-holes-box" style="margin-top:12px"></div>
       <div class="form-section" style="margin-top:10px">🏆 امتیازهای مسابقه</div>
       <div class="field-grid">
         <div><label>نفر اول</label><input class="input" id="et-p1" type="number" min="0" value="${D.prizesOf(t)[0]}" style="width:100%"></div>
@@ -11009,11 +11080,22 @@ window.addEventListener('ga:brand-changed', function(){
     </div>`;
     if (window.JDate && $('#et-date')) JDate.render($('#et-date'));
     m.style.display = 'flex';
+    function paintEtHoles(){
+      const box = $('#et-holes-box'); if (!box) return;
+      const cid = +$('#et-crs').value;
+      const cur = (D.tourHoleIds && D.tourHoleIds(t)) || [];
+      box.innerHTML = holePickerHtml(cid, cid === t[3] ? cur : null);
+      bindHolePicker(box);
+    }
+    paintEtHoles();
+    $('#et-crs').addEventListener('change', paintEtHoles);
     $('#et-cancel').addEventListener('click', () => m.style.display = 'none');
     $('#et-save').addEventListener('click', () => {
       const name = $('#et-name').value.trim();
       if (!name){ APP.toast('نام مسابقه را وارد کنید','red'); return; }
-      const data = { name, date: $('#et-date')._value(), lvl: +$('#et-lvl').value, course: +$('#et-crs').value, holes: +$('#et-holes').value,
+      const holeIds = selectedHoleIds($('#et-holes-box'));
+      if (!holeIds.length){ APP.toast('حداقل یک میدان را انتخاب کنید','red'); return; }
+      const data = { name, date: $('#et-date')._value(), lvl: +$('#et-lvl').value, course: +$('#et-crs').value, holes: holeIds.length, holeIds,
         p1: +($('#et-p1').value||0), p2: +($('#et-p2').value||0), p3: +($('#et-p3').value||0), entry: +($('#et-entry').value||0) };
       if (base){
         let ov = {};
@@ -11022,7 +11104,7 @@ window.addEventListener('ga:brand-changed', function(){
         localStorage.setItem('ga_tour_override', JSON.stringify(ov));
       } else {
         const lst = extraTours();
-        if (lst[idx]){ Object.assign(lst[idx], data); lst[idx].rule = ($('#et-rule') ? $('#et-rule').value : lst[idx].rule) || 'normal'; }
+        if (lst[idx]){ Object.assign(lst[idx], data); lst[idx].rule = ($('#et-rule') ? $('#et-rule').value : lst[idx].rule) || 'normal'; lst[idx].holeIds = holeIds; }
         saveTours(lst);
       }
       APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
@@ -11574,7 +11656,7 @@ window.addEventListener('ga:brand-changed', function(){
   /* 🏁 ثبت نهایی مسابقه: کارت‌های آماده نهایی می‌شوند، نتیجه به «نتایج ثبت‌شده» می‌رود و امتیازها بر اساس جوایز طراحی‌شده محاسبه می‌گردند */
   function finalizeTournament(t){
     Object.entries(scDraftTour(t[0])).forEach(([pid, d]) => {
-      if (!d.final && Object.keys(d.holes || {}).length >= (t[4] || 18)) scFinalize(t, pid.startsWith('free:') ? pid : +pid);
+      if (!d.final && Object.keys(d.holes || {}).length >= ((D.tourHoleIds ? D.tourHoleIds(t).length : t[4]) || 18)) scFinalize(t, pid.startsWith('free:') ? pid : +pid);
     });
     if (!extraCards().some(c => c.tour === t[0])){ APP.toast('هنوز هیچ کارت نهایی برای این مسابقه نیست', 'red'); return false; }
     const metaS = ((scDraftLoad()[t[0]] || {}).__meta) || {};
@@ -11816,7 +11898,7 @@ window.addEventListener('ga:brand-changed', function(){
     const old = btn ? btn.textContent : '';
     const finish = () => { if (btn){ btn.disabled = false; btn.textContent = old; } };
     if (btn){ btn.disabled = true; btn.textContent = '⏳ در حال ساخت استوری…'; }
-    const pars = (D.parsOf(t[3]) || []).slice(0, t[4] || 18);
+    const pars = (D.parsOf(t[3]) || []);
     const pr = D.prizesOf(t);
     const ptsOfRank = k => k === 1 ? pr[0] : k === 2 ? pr[1] : k === 3 ? pr[2] : pr[3];
     const nameOf = pid => { const s2 = String(pid); if (s2.startsWith('free:')) return s2.slice(5); const pl = gstate().S.players.find(p => p[0] === pid); return pl ? pl[1] : ('بازیکن ' + D.fa(pid)); };
@@ -11992,8 +12074,9 @@ window.addEventListener('ga:brand-changed', function(){
 
   /* ── گزارش پایانی مسابقه: سکو + رتبه‌بندی بر اساس کمترین ضربه (نسبت به مجموع پار) ── */
   function tourReport(t, onChange){
-    const pars = (D.parsOf(t[3]) || []).slice(0, t[4] || 18);
-    const tourPar = pars.reduce((a, b) => a + b, 0);
+    const holeIds = (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]||18}, (_,i)=>i+1));
+    const pars = (D.parsOf(t[3]) || []);
+    const tourPar = holeIds.reduce((a, h) => a + (pars[h-1] || 0), 0);
     const pr = D.prizesOf(t); /* امتیازهای طراحی‌شدهٔ مسابقه: اول/دوم/سوم/شرکت */
     const ptsOfRank = k => k === 1 ? pr[0] : k === 2 ? pr[1] : k === 3 ? pr[2] : pr[3];
     const nameOf = pid => {
@@ -12009,7 +12092,7 @@ window.addEventListener('ga:brand-changed', function(){
     }).sort((a, b) => a.diff - b.diff || a.total - b.total)
       .map((r, i, arr) => { r.rank = (i > 0 && arr[i-1].diff === r.diff && arr[i-1].total === r.total) ? arr[i-1].rank : i + 1; r.pts = ptsOfRank(r.rank); return r; });
     const pending = () => Object.entries(scDraftTour(t[0]))
-      .filter(([, d]) => !d.final && Object.keys(d.holes || {}).length >= (t[4] || 18))
+      .filter(([, d]) => !d.final && Object.keys(d.holes || {}).length >= holeIds.length)
       .map(([pid]) => pid.startsWith('free:') ? pid : +pid);
     const diffChip = d => d === 0
       ? '<span class="chip dim" style="font-weight:800">E</span>'
@@ -12032,7 +12115,7 @@ window.addEventListener('ga:brand-changed', function(){
         <div class="tr-head" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
           <div style="flex:1">
             <div style="font-weight:900;font-size:17px">🏁 گزارش پایانی — ${esc(t[1])}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:4px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(t[4] || 18)} میدان • <b style="color:var(--gold-l)">مجموع پار: ${D.fa(tourPar)}</b> • 🏆${D.fa(pr[0])} 🥈${D.fa(pr[1])} 🥉${D.fa(pr[2])} 🎟 شرکت ${D.fa(pr[3])} امتیاز • تاریخ ${D.isoToShamsi ? D.fa(D.isoToShamsi(String((t[5] || '')).slice(0, 10))) : ''}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${esc(holeIds.map(h => holeName(h)).join('، '))} • <b style="color:var(--gold-l)">مجموع پار: ${D.fa(tourPar)}</b> • 🏆${D.fa(pr[0])} 🥈${D.fa(pr[1])} 🥉${D.fa(pr[2])} 🎟 شرکت ${D.fa(pr[3])} امتیاز • تاریخ ${D.isoToShamsi ? D.fa(D.isoToShamsi(String((t[5] || '')).slice(0, 10))) : ''}</div>
           </div>
           <button class="btn sm ghost" id="tr-part" data-no-pdf title="ویرایش لیست شرکت‌کنندگان (شامل بازیکن آزاد)">👥 شرکت‌کنندگان</button>
           <button class="btn sm ghost" id="tr-x" title="بستن گزارش" data-no-pdf>✕</button>
@@ -12137,7 +12220,7 @@ window.addEventListener('ga:brand-changed', function(){
         mgPdfA4({
           kind: 'گزارش مسابقه',
           title: '🏁 گزارش پایانی مسابقهٔ «' + esc(t[1]) + '»',
-          sub: esc(D.COURSE_NAME[t[3]] || '') + ' • ' + D.fa(t[4] || 18) + ' میدان • مجموع پار ' + D.fa(tourPar),
+          sub: esc(D.COURSE_NAME[t[3]] || '') + ' • ' + holeIds.map(h => holeName(h)).join('، ') + ' • مجموع پار ' + D.fa(tourPar),
           meta: ['📅 ' + dateF, '🏆 اول ' + D.fa(pr[0]) + ' امتیاز', '🥈 دوم ' + D.fa(pr[1]), '🥉 سوم ' + D.fa(pr[2]), '🎟 شرکت ' + D.fa(pr[3])],
           kpis: podium,
           sections: [{
@@ -12180,8 +12263,10 @@ window.addEventListener('ga:brand-changed', function(){
       w.style.cssText = 'position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;background:linear-gradient(160deg,#0a0f16,#0d1420);overflow:hidden';
       document.body.appendChild(w);
     }
-    const pars = (D.parsOf(t[3]) || []).slice(0, t[4] || 18);
-    const nHoles = t[4] || 18;
+    const holeIds = (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]||18}, (_,i)=>i+1));
+    const parsAll = D.parsOf(t[3]) || [];
+    const pars = holeIds.map(h => parsAll[h-1] || 4);
+    const nHoles = holeIds.length;
     const res = (D.loadResults() || {})[t[0]];
     let state = { step: 1, pid: null, hole: null };
     const curU = APP.currentUser();
@@ -12215,7 +12300,7 @@ window.addEventListener('ga:brand-changed', function(){
         <button class="btn sm ghost" id="sw-close" title="بستن (پیش‌نویس نگه داشته می‌شود)">✕</button>
         <div style="flex:1 1 140px;min-width:0">
           <div style="font-weight:800;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📋 ویزارد اسکورکارت — ${esc(t[1])}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:2px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(nHoles)} حفره</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(nHoles)} میدان</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px">
           <span class="chip ${done ? 'green' : 'gold'}" style="font-size:10.5px">${D.fa(done)} کارت</span>
@@ -12258,10 +12343,10 @@ window.addEventListener('ga:brand-changed', function(){
           <span class="chip dim">${D.fa(holesDone(state.pid))}/${D.fa(nHoles)} میدان</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:7px">
-        ${Array.from({length:nHoles}, (_,i) => {
-          const h = i + 1, e = dr.holes[h];
+        ${holeIds.map((h,i) => {
+          const e = dr.holes[h];
           return `<button type="button" class="sw-hole" data-hole="${h}" style="cursor:pointer;border-radius:12px;padding:10px 8px;text-align:center;border:1px solid ${e ? 'rgba(30,187,138,.45)' : 'var(--line-soft)'};background:${e ? 'rgba(30,187,138,.07)' : 'rgba(255,255,255,.025)'};color:inherit">
-            <div style="font-size:10px;color:var(--muted)">حفره ${D.fa(h)} • پار <b style="color:var(--gold-l)">${D.fa(pars[i] || '—')}</b></div>
+            <div style="font-size:10px;color:var(--muted)">${esc(holeName(h))} • پار <b style="color:var(--gold-l)">${D.fa(pars[i] || '—')}</b></div>
             <div style="font-size:17px;font-weight:800;margin-top:4px;direction:ltr">${e ? D.fa(e.s + (e.pen || 0)) : '—'}</div>
             ${e && e.pen ? `<div style="font-size:9px;color:#ffb3b3">جریمه +${D.fa(e.pen)}</div>` : (e && e.note ? '<div style="font-size:9px;color:var(--muted)">📝 یادداشت</div>' : '')}
           </button>`;
@@ -12282,7 +12367,7 @@ window.addEventListener('ga:brand-changed', function(){
 
     function stepHole(){
       const p = playersOf().find(x => x.pid === state.pid);
-      const h = state.hole, par = pars[h - 1];
+      const h = state.hole, par = parsAll[h - 1];
       const dr = draftFor(state.pid);
       const e = dr.holes[h] || {};
       return `<div style="padding:16px;overflow:auto;flex:1;display:flex;justify-content:center">
@@ -12290,7 +12375,7 @@ window.addEventListener('ga:brand-changed', function(){
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
             <button class="btn sm ghost" data-swback="2">→ میدان‌ها</button>
             <div style="flex:1;text-align:center">
-              <div style="font-weight:800;font-size:15px">حفرهٔ ${D.fa(h)}</div>
+              <div style="font-weight:800;font-size:15px">${esc(holeName(h))}</div>
               <div style="font-size:10.5px;color:var(--muted);margin-top:3px">${esc(p ? p.name : '')} • پار این میدان: <b style="color:var(--gold-l)">${D.fa(par || '—')}</b>${D.tourRuleOf && D.tourRuleOf(t[0]) === 'full' ? ` • سقف قانون فول: ${D.fa(D.holeCap(par))}` : ''}</div>
             </div>
           </div>
@@ -12346,7 +12431,7 @@ window.addEventListener('ga:brand-changed', function(){
               lst[i].strokes = strokes; saveCards(lst);
             }
           }
-          APP.toast(`حفرهٔ ${D.fa(state.hole)} ثبت شد ✓`, 'green');
+          APP.toast(`${holeName(state.hole)} ثبت شد ✓`, 'green');
           state = { step: 1, pid: null, hole: null }; /* طبق خواسته: برگشت به لیست بازیکن */
           render();
         });
@@ -12360,7 +12445,9 @@ window.addEventListener('ga:brand-changed', function(){
   function openScorecardModal(t, live){
     if (openScorecardModal._tm){ clearInterval(openScorecardModal._tm); openScorecardModal._tm = null; }
     const S = gstate().S;
-    const pars = (D.parsOf(t[3]) || []).slice(0, t[4] || 18);
+    const holeIds = (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]||18}, (_,i)=>i+1));
+    const parsAll = D.parsOf(t[3]) || [];
+    const pars = holeIds.map(h => parsAll[h-1] || 4);
     const parTotal = pars.reduce((a,b)=>a+b,0);
     const j = D.jalaliInfo(D.dateFrom(t[5]));
     let m = $('#modal-scorecard');
@@ -12398,10 +12485,10 @@ window.addEventListener('ga:brand-changed', function(){
       });
     }
     rows.forEach(r => {
-      const hs = Object.keys(r.strokes).map(Number).filter(h => h >= 1 && h <= pars.length);
+      const hs = Object.keys(r.strokes).map(Number).filter(h => holeIds.indexOf(h) >= 0);
       r.played = hs.length;
       r.total  = hs.reduce((a,h) => a + (r.strokes[h] || 0), 0);
-      r.parP   = hs.reduce((a,h) => a + (pars[h-1] || 0), 0);
+      r.parP   = hs.reduce((a,h) => a + (parsAll[h-1] || 0), 0);
       r.delta  = r.total - r.parP;   /* نسبت به پارِ میدان‌های بازی‌شده — معیار رتبه‌بندی زنده */
     });
     rows.sort(live
@@ -12410,13 +12497,14 @@ window.addEventListener('ga:brand-changed', function(){
 
     const rule = D.tourRuleOf ? D.tourRuleOf(t[0]) : 'normal';
     const holeCell = (r, hi) => {
-      const v = r.strokes[hi+1];
+      const hid = holeIds[hi];
+      const v = r.strokes[hid];
       if (v == null) return '<td class="num" style="opacity:.35">—</td>';
       const p = pars[hi];
-      const wasCapped = r.caps && r.caps[hi+1] !== undefined;
+      const wasCapped = r.caps && r.caps[hid] !== undefined;
       const style = wasCapped ? 'color:#ffcf6b;font-weight:700'
         : (v < p ? 'color:#7ee8b8;font-weight:700' : (v > p ? 'color:#ff9d9d' : ''));
-      const title = wasCapped ? ` title="ضربهٔ واقعی: ${D.fa(r.caps[hi+1])} — سقف قانون فول اعمال شد"` : '';
+      const title = wasCapped ? ` title="ضربهٔ واقعی: ${D.fa(r.caps[hid])} — سقف قانون فول اعمال شد"` : '';
       return `<td class="num" style="${style}"${title}>${D.fa(v)}${wasCapped ? '<span style="color:#ffcf6b">*</span>' : ''}</td>`;
     };
     const deltaTxt = (r) => {
@@ -12431,7 +12519,7 @@ window.addEventListener('ga:brand-changed', function(){
     m.innerHTML = `
     <div class="glass gold-border sc-scroll" style="width:min(920px,96vw);max-height:92vh;overflow:auto;padding:20px 22px">
       <div class="card-head"><span class="ic">${live ? '📡' : '📋'}</span><h3>${live ? 'جدول زندهٔ ' : 'اسکورکارت '}«${esc(t[1])}»</h3>
-        <span class="tag">${D.fa(j.dd)} ${j.monthFa} • ${esc(D.COURSE_NAME[t[3]] || '—')} • ${D.fa(t[4] || pars.length)} حفره • پار ${D.fa(parTotal)}${rule === 'full' ? ' • ⚖️ قانون فول' : ''}</span></div>
+        <span class="tag">${D.fa(j.dd)} ${j.monthFa} • ${esc(D.COURSE_NAME[t[3]] || '—')} • ${esc(holeIds.map(h => holeName(h)).join('، '))} • پار ${D.fa(parTotal)}${rule === 'full' ? ' • ⚖️ قانون فول' : ''}</span></div>
       ${live ? `<div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
         <span class="chip green" style="font-size:10px">🟢 زنده — با هر ضربهٔ ثبت‌شده به‌روز می‌شود</span>
         <span class="chip dim" style="font-size:10px">${D.fa(liveN)} پیش‌نویس در حال ثبت • ${D.fa(rows.length - liveN)} نهایی</span>
@@ -12440,7 +12528,7 @@ window.addEventListener('ga:brand-changed', function(){
       ${rule === 'full' ? `<div style="margin-top:8px;font-size:11px;color:#ffcf6b;background:rgba(255,207,107,.06);border:1px dashed rgba(255,207,107,.35);border-radius:9px;padding:7px 10px">⚖️ قانون فول فعال: سقف ضربهٔ هر حفره — پار۳ حداکثر ۷ • پار۴ حداکثر ۹ • پار۵ حداکثر ۱۱${capN ? ` • ${D.fa(capN)} ضربه اصلاح شد (*دار)` : ''}</div>` : ''}
       ${rows.length ? `
       <div style="overflow-x:auto;margin-top:12px"><table class="tbl" style="min-width:560px">
-        <thead><tr><th>#</th><th>بازیکن</th>${pars.map((p,i) => `<th class="num" title="پار حفره ${D.fa(i+1)}: ${D.fa(p)}">${D.fa(i+1)}</th>`).join('')}<th class="num">جمع</th><th class="num">±</th></tr>
+        <thead><tr><th>#</th><th>بازیکن</th>${pars.map((p,i) => `<th class="num" title="پار ${esc(holeName(holeIds[i]))}: ${D.fa(p)}">${esc(holeName(holeIds[i]))}</th>`).join('')}<th class="num">جمع</th><th class="num">±</th></tr>
         <tr style="color:var(--muted);font-size:10.5px"><td></td><td style="color:var(--muted)">پار</td>${pars.map(p => `<td class="num">${D.fa(p)}</td>`).join('')}<td class="num">${D.fa(parTotal)}</td><td></td></tr></thead>
         <tbody>${rows.map((r,i) => {
           const ref = live ? r.delta : (r.total - parTotal);
@@ -13754,8 +13842,82 @@ window.addEventListener('ga:brand-changed', function(){
   /* بازگشایی رکوردهای «رپشده» (اثر باگ قدیمی push روی آرایهٔ نمایشی) */
   function unwrapTour(x){
     if (x && typeof x === 'object' && Array.isArray(x.t) && x.name === undefined)
-      return { name: x.t[1] || '', lvl: +x.t[2] || 2, course: +x.t[3] || 0, holes: +x.t[4] || 18, date: x.t[5] || '', end: x.end || '', time: x.time || '', rule: x.rule || 'normal', p1: x.p1, p2: x.p2, p3: x.p3, entry: x.entry, schedule: Array.isArray(x.schedule) ? x.schedule : [] };
+      return { name: x.t[1] || '', lvl: +x.t[2] || 2, course: +x.t[3] || 0, holes: +x.t[4] || 18, date: x.t[5] || '', end: x.end || '', time: x.time || '', rule: x.rule || 'normal', p1: x.p1, p2: x.p2, p3: x.p3, entry: x.entry, schedule: Array.isArray(x.schedule) ? x.schedule : [], holeIds: x.holeIds };
     return x;
+  }
+  function holeName(n){ return (D.holeName ? D.holeName(n) : ('میدان ' + D.fa(n))); }
+  function selectedHoleIds(root){
+    return [...(root || document).querySelectorAll('.hp-chip.on')].map(b => +b.dataset.h).filter(n => n >= 1).sort((a,b)=>a-b);
+  }
+  function holePickerHtml(courseId, selected){
+    const pars = (D.parsOf(courseId) || []);
+    const all = pars.map((_, i) => i + 1);
+    const sel = new Set((selected && selected.length) ? selected.map(Number) : all);
+    return `<div class="hp-box">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <label style="margin:0">میدان‌های مسابقه</label>
+        <span class="chip gold hp-count">${D.fa(sel.size)} از ${D.fa(pars.length)}</span>
+        <button type="button" class="btn sm ghost hp-q" data-q="all">همه</button>
+        <button type="button" class="btn sm ghost hp-q" data-q="none">هیچ</button>
+        ${pars.length >= 3 ? '<button type="button" class="btn sm ghost hp-q" data-q="3">۳ اول</button>' : ''}
+        ${pars.length >= 9 ? '<button type="button" class="btn sm ghost hp-q" data-q="f9">جلو ۹</button>' : ''}
+        ${pars.length >= 18 ? '<button type="button" class="btn sm ghost hp-q" data-q="b9">عقب ۹</button>' : ''}
+      </div>
+      <div class="hp-grid">${pars.map((p,i) => {
+        const h = i + 1;
+        return `<button type="button" class="hp-chip${sel.has(h) ? ' on' : ''}" data-h="${h}"><b>${esc(holeName(h))}</b><span>پار ${D.fa(p)}</span></button>`;
+      }).join('')}</div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:6px">با یک کلیک انتخاب یا لغو کنید. در نتایج همان نام اصلی میدان می‌آید (مثلاً میدان ۳)، نه شمارهٔ ترتیبی.</div>
+    </div>`;
+  }
+  function bindHolePicker(root){
+    const box = root.querySelector('.hp-box') || root;
+    function paint(){
+      const n = box.querySelectorAll('.hp-chip').length;
+      const c = box.querySelector('.hp-count');
+      if (c) c.textContent = D.fa(selectedHoleIds(box).length) + ' از ' + D.fa(n);
+    }
+    box.querySelectorAll('.hp-chip').forEach(b => b.addEventListener('click', () => { b.classList.toggle('on'); paint(); }));
+    box.querySelectorAll('.hp-q').forEach(b => b.addEventListener('click', () => {
+      const q = b.dataset.q;
+      [...box.querySelectorAll('.hp-chip')].forEach((ch, i) => {
+        let on = false;
+        if (q === 'all') on = true;
+        else if (q === 'none') on = false;
+        else if (q === '3') on = i < 3;
+        else if (q === 'f9') on = i < 9;
+        else if (q === 'b9') on = i >= 9 && i < 18;
+        ch.classList.toggle('on', on);
+      });
+      paint();
+    }));
+    return () => selectedHoleIds(box);
+  }
+  function parEditorHtml(pars){
+    return (pars || []).map((p,i) => `<div class="hp-par" data-i="${i}">
+      <div style="font-size:10px;color:var(--muted)">${esc(holeName(i+1))}</div>
+      <input class="input" type="number" min="3" max="6" value="${p}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
+      <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" style="padding:2px 7px;font-size:11px">✕</button>
+    </div>`).join('') + `<button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>`;
+  }
+  function bindParEditor(box, parVals, onDraw){
+    function sync(){
+      $$('input', box).forEach(inp => { parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4)); });
+    }
+    function draw(){
+      box.innerHTML = parEditorHtml(parVals);
+      $$('input', box).forEach(inp => inp.addEventListener('input', () => { parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4)); }));
+      $$('.pe-del', box).forEach(b => b.addEventListener('click', () => {
+        sync();
+        if (parVals.length <= 1){ APP.toast('حداقل یک میدان لازم است', 'red'); return; }
+        parVals.splice(+b.dataset.i, 1); draw();
+      }));
+      const add = box.querySelector('#pe-add');
+      if (add) add.addEventListener('click', () => { sync(); parVals.push(4); draw(); });
+      if (onDraw) onDraw();
+    }
+    draw();
+    return draw;
   }
   function extraTours(){ try{ const a = JSON.parse(localStorage.getItem('ga_tournaments')||'[]'); return Array.isArray(a) ? a.map(unwrapTour) : []; }catch(e){ return []; } }
   function extraCards(){ try{ return JSON.parse(localStorage.getItem('ga_scorecards')||'[]'); }catch(e){ return []; } }
@@ -15086,8 +15248,9 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     tours.forEach(function(t){
       const sc = cards.find(function(c){ return +c.tour === +t[0]; });
       if (!sc || !sc.strokes) return;
+      const hs = (D && D.tourHoleIds) ? D.tourHoleIds(t) : Array.from({length: t[4]||18}, function(_,i){ return i+1; });
       rows.push({
-        id: t[0], name: t[1], date: t[5] || '', holes: t[4] || 18,
+        id: t[0], name: t[1], date: t[5] || '', holes: hs.length, holeIds: hs,
         pars: (D && D.parsOf) ? D.parsOf(t[3]) : [],
         strokes: sc.strokes, total: +sc.total || 0
       });
@@ -15116,13 +15279,15 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         par = r.pars[hole-1] != null ? +r.pars[hole-1] : null;
       } else {
         let tot = 0, psum = 0, n = 0;
-        for (let h = 1; h <= r.holes; h++){
-          const s = r.strokes[h];
-          if (s == null) continue;
-          tot += +s; psum += +(r.pars[h-1] || 0); n++;
+        const ids = r.holeIds || Array.from({length: r.holes}, function(_,i){ return i+1; });
+        for (let i = 0; i < ids.length; i++){
+          const h = ids[i];
+          const sv = r.strokes[h];
+          if (sv == null) continue;
+          tot += +sv; psum += +(r.pars[h-1] || 0); n++;
         }
         if (n){ strokes = tot; par = psum; }
-        else if (r.total){ strokes = r.total; par = r.pars.slice(0, r.holes).reduce(function(a,b){ return a+(+b||0); }, 0); }
+        else if (r.total){ strokes = r.total; par = ids.reduce(function(a,h){ return a+(+r.pars[h-1]||0); }, 0); }
       }
       const vs = (strokes != null && par != null) ? (strokes - par) : null;
       const col = vsStrokeColor(vs);
@@ -16956,13 +17121,14 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       return;
     }
     const pars = D.parsOf(t[3]);
+    const hs = (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]}, (_,i)=>i+1));
     const strokes = [], parsArr = [];
-    for (let h = 1; h <= t[4]; h++){ strokes.push(card.strokes[h]); parsArr.push(pars[h-1]); }
-    Charts.line(cv, [strokes, parsArr], parsArr.map((_,i)=>'ح'+D.fa(i+1)), {
+    hs.forEach(h => { strokes.push(card.strokes[h]); parsArr.push(pars[h-1]); });
+    Charts.line(cv, [strokes, parsArr], hs.map(h => (D.holeName ? D.holeName(h) : ('میدان '+D.fa(h)))), {
       colors:['#E9C766','#2E86DE'], fill:true, points:true, min: Math.min(...parsArr)-2, max: Math.max(...strokes)+2,
     });
     $('#pl-holes-tbl').innerHTML = `
-    <table class="tbl"><thead><tr><th>حفره</th>${parsArr.map((_,i)=>`<th>${D.fa(i+1)}</th>`).join('')}</tr></thead>
+    <table class="tbl"><thead><tr><th>میدان</th>${hs.map(h=>`<th>${D.fa(h)}</th>`).join('')}</tr></thead>
     <tbody><tr><td><b>پار</b></td>${parsArr.map(p2=>`<td class="num" style="color:var(--gold-l)">${D.fa(p2)}</td>`).join('')}</tr>
     <tr><td><b>ضربات</b></td>${strokes.map((s,i)=>{
       const c = s < parsArr[i] ? 'color:var(--green-l);font-weight:800' : s === parsArr[i] ? 'color:var(--white)' : 'color:#ff8f82;font-weight:800';
@@ -16983,9 +17149,10 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     const t = S.tournaments.find(x => x[0] === matchSel) || S.tournaments[0];
     const cards = S.scorecards.filter(c => c.tour === matchSel).map(c => {
       const pars = D.parsOf(t[3]);
+      const hs = (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]}, (_,i)=>i+1));
       let bird = 0;
-      for (let h = 1; h <= t[4]; h++) if (c.strokes[h] === pars[h-1]-1) bird++;
-      const parTotal = pars.slice(0, t[4]).reduce((a,b)=>a+b,0);
+      hs.forEach(h => { if (c.strokes[h] === pars[h-1]-1) bird++; });
+      const parTotal = hs.reduce((a,h)=>a+(pars[h-1]||0),0);
       return { ...c, bird, par: parTotal, vspar: c.total - parTotal };
     }).sort((a,b) => a.total - b.total);
     const info = D.jalaliInfo(D.dateFrom(t[5]));
@@ -17039,7 +17206,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         <div class="glass">
           <div class="card-head"><span class="ic">🌋</span><h3>سختترین حفرهها</h3><span class="tag">Avg vs Par</span></div>
           <div class="chart-box short"><canvas id="mt-hard"></canvas></div>
-          ${hardest ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">سختترین: <b style="color:#ff8f82">حفره ${D.fa(hardest.h)}</b> — میانگین ${hardest.d>0?'+':''}${D.fa(hardest.d.toFixed(2))} نسبت به پار</div>` : ''}
+          ${hardest ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">سختترین: <b style="color:#ff8f82">${esc(D.holeName ? D.holeName(hardest.h) : ('میدان '+D.fa(hardest.h)))}</b> — میانگین ${hardest.d>0?'+':''}${D.fa(hardest.d.toFixed(2))} نسبت به پار</div>` : ''}
         </div>
       </div>
     </div>`;
@@ -17058,7 +17225,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       const top8 = cards.slice(0, 8);
       Charts.barsH($('#mt-bird'), top8.map(c => D.nameOf(c.pid).slice(0,12)), top8.map(c => c.bird), { color:'#1EBB8A', showVal:true });
       const hs = Object.keys(diff).map(Number).sort((a,b)=>a-b);
-      Charts.barsV($('#mt-hard'), hs.map(h=>'ح'+D.fa(h)), hs.map(h => diff[h]), {
+      Charts.barsV($('#mt-hard'), hs.map(h => (D.holeName ? D.holeName(h) : ('میدان '+D.fa(h)))), hs.map(h => diff[h]), {
         color:'#E74C3C', showVal:true, fmt:v=>(v>0?'+':'')+v.toFixed(1),
         max: Math.max(...hs.map(h=>diff[h]), 0.5) * 1.3,
       });
@@ -17189,7 +17356,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       let s = 0, n = 0;
       S.scorecards.forEach(c => {
         const t = S.tournaments.find(x => x[0] === c.tour);
-        if (t && t[3] === crs[0]){ s += c.total - pars.slice(0, t[4]).reduce((a,b)=>a+b,0); n++; }
+        if (t && t[3] === crs[0]){ const hs = (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]}, (_,i)=>i+1)); s += c.total - hs.reduce((a,h)=>a+(pars[h-1]||0),0); n++; }
       });
       return n ? Math.round(s/n*100)/100 : null;
     })() : null;
@@ -18348,7 +18515,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
 
   /* ═══════════ ابزار طراح ═══════════ */
   function extraCourses(){ try{ return JSON.parse(store.get('ga_courses')||'[]'); }catch(e){ return []; } }
-  function extraTours(){ try{ const a = JSON.parse(store.get('ga_tournaments')||'[]'); return Array.isArray(a) ? a.map(x => (x && typeof x === 'object' && Array.isArray(x.t) && x.name === undefined) ? { name:x.t[1]||'', lvl:+x.t[2]||2, course:+x.t[3]||0, holes:+x.t[4]||18, date:x.t[5]||'', end:x.end||'', time:x.time||'', rule:x.rule||'normal', p1:x.p1, p2:x.p2, p3:x.p3, entry:x.entry, schedule:Array.isArray(x.schedule)?x.schedule:[] } : x) : []; }catch(e){ return []; } }
+  function extraTours(){ try{ const a = JSON.parse(store.get('ga_tournaments')||'[]'); return Array.isArray(a) ? a.map(x => (x && typeof x === 'object' && Array.isArray(x.t) && x.name === undefined) ? { name:x.t[1]||'', lvl:+x.t[2]||2, course:+x.t[3]||0, holes:+x.t[4]||18, date:x.t[5]||'', end:x.end||'', time:x.time||'', rule:x.rule||'normal', p1:x.p1, p2:x.p2, p3:x.p3, entry:x.entry, schedule:Array.isArray(x.schedule)?x.schedule:[], holeIds:x.holeIds } : x) : []; }catch(e){ return []; } }
   function extraCards(){ try{ return JSON.parse(store.get('ga_scorecards')||'[]'); }catch(e){ return []; } }
   function saveCourses(a){ try{ store.set('ga_courses', JSON.stringify(a)); }catch(e){} }
   function saveTours(a){ try{ store.set('ga_tournaments', JSON.stringify(a)); }catch(e){} }
@@ -18488,13 +18655,13 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     let holeVals = [];
     function drawHoles(){
       const t = S.tournaments.find(x => x[0] === +$('#as-tour').value);
-      const n = t ? t[4] : 9;
+      const hs = t ? (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]}, (_,i)=>i+1)) : [1,2,3,4,5,6,7,8,9];
       const pars = t ? D.parsOf(t[3]) : [];
-      holeVals = Array.from({length:n}, () => '');
-      $('#as-holes').innerHTML = Array.from({length:n}, (_,i) => `
+      holeVals = hs.map(() => '');
+      $('#as-holes').innerHTML = hs.map((h,i) => `
         <div style="text-align:center">
-          <div style="font-size:10px;color:var(--muted)">ح${D.fa(i+1)} <small style="color:var(--gold-l)">پ${D.fa(pars[i])}</small></div>
-          <input class="input" type="number" min="1" max="12" value="" data-i="${i}" style="width:52px;text-align:center;direction:ltr" placeholder="—">
+          <div style="font-size:10px;color:var(--muted)">${esc(D.holeName ? D.holeName(h) : ('میدان '+D.fa(h)))} <small style="color:var(--gold-l)">پ${D.fa(pars[h-1])}</small></div>
+          <input class="input" type="number" min="1" max="12" value="" data-i="${i}" data-h="${h}" style="width:52px;text-align:center;direction:ltr" placeholder="—">
         </div>`).join('');
       $$('#as-holes input').forEach(inp => inp.addEventListener('input', () => { holeVals[+inp.dataset.i] = +inp.value || null; }));
     }
@@ -18503,13 +18670,14 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     $('#as-add').addEventListener('click', () => {
       const tour = +$('#as-tour').value, pid = +$('#as-pl').value;
       const t = S.tournaments.find(x => x[0] === tour);
+      const hs = t ? (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]}, (_,i)=>i+1)) : [];
       const strokes = {};
       let ok = 0;
-      for (let h = 1; h <= t[4]; h++){
-        const val = holeVals[h-1];
+      hs.forEach((h,i) => {
+        const val = holeVals[i];
         if (val !== null && val > 0){ strokes[h] = val; ok++; }
-      }
-      if (ok < t[4]){ toast('همه میدانها را پر کنید', 'red'); return; }
+      });
+      if (ok < hs.length){ toast('همه میدانها را پر کنید', 'red'); return; }
       const lst = extraCards();
       lst.push({ tour, pid, strokes });
       saveCards(lst); reloadData(); go('ascorecards');

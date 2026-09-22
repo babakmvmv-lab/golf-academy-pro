@@ -217,10 +217,53 @@
     1:[4,4,3,5,4,4,3,4,5,4,4,3,4,5,4,4,3,5],
   };
   const COURSE_NAME = {}; COURSES.forEach(c => COURSE_NAME[c[0]] = c[1]);
-  /* رجیستری پار (شامل زمین‌های سفارشی طراح) */
+  /* رجیستری پار (شامل زمین‌های سفارشی طراح + ویرایش زمین پایه) */
   const PAR_MAP = {};
-  Object.keys(COURSE_PARS).forEach(k => PAR_MAP[k] = COURSE_PARS[k]);
+  Object.keys(COURSE_PARS).forEach(k => PAR_MAP[k] = COURSE_PARS[k].slice());
   const parsOf = id => PAR_MAP[id] || COURSE_PARS[id] || [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4];
+  function loadCourseOverride(){
+    try { const o = JSON.parse(localStorage.getItem('ga_course_override') || '{}'); return o && typeof o === 'object' ? o : {}; } catch(e){ return {}; }
+  }
+  function loadTourOverride(){
+    try { const o = JSON.parse(localStorage.getItem('ga_tour_override') || '{}'); return o && typeof o === 'object' ? o : {}; } catch(e){ return {}; }
+  }
+  function applyCourseOverrides(){
+    Object.keys(COURSE_PARS).forEach(k => { PAR_MAP[k] = COURSE_PARS[k].slice(); });
+    COURSES.forEach(c => { COURSE_NAME[c[0]] = c[1]; });
+    const ov = loadCourseOverride();
+    Object.keys(ov).forEach(id => {
+      const o = ov[id]; if (!o) return;
+      if (Array.isArray(o.pars) && o.pars.length) PAR_MAP[+id] = o.pars.map(x => Math.max(3, Math.min(6, +x || 4)));
+      if (o.name) COURSE_NAME[+id] = o.name;
+    });
+    return ov;
+  }
+  function holeName(n){ return 'میدان ' + fa(n); }
+  function tourHoleIds(t){
+    if (!t) return [];
+    const id = +t[0];
+    let ids = null;
+    if (id >= 1000){
+      try {
+        const ex = loadExtraTours()[id - 1000];
+        if (ex && Array.isArray(ex.holeIds) && ex.holeIds.length) ids = ex.holeIds;
+      } catch(e){}
+    } else {
+      try {
+        const ov = loadTourOverride()[id];
+        if (ov && Array.isArray(ov.holeIds) && ov.holeIds.length) ids = ov.holeIds;
+      } catch(e){}
+    }
+    if (ids && ids.length) return ids.map(Number).filter(n => n >= 1);
+    const n = +t[4] || 18;
+    const courseN = (parsOf(t[3]) || []).length || n;
+    const take = Math.max(1, Math.min(n, courseN));
+    return Array.from({ length: take }, (_, i) => i + 1);
+  }
+  function tourPars(t){
+    const pars = parsOf(t[3]) || [];
+    return tourHoleIds(t).map(h => +pars[h - 1] || 4);
+  }
 
   /* مسابقات ماهانه: جمعهٔ آخر هر ماه، ۱۸ حفره، زمین مسجدسلیمان */
   const TOURNAMENTS = [
@@ -296,14 +339,16 @@
       const [code, name, lvl, cid, holes, dstr] = t;
       const d = dateFrom(dstr);
       if (d >= TODAY) return;
-      const pars = parsOf(cid).slice(0, holes);
+      const hs = tourHoleIds(t);
+      const parsAll = parsOf(cid);
+      const pars = hs.map(h => parsAll[h-1] || 4);
       const parTotal = pars.reduce((a,b)=>a+b,0);
       const field = ACT.filter(p => dateFrom(p[4]) <= d);
       field.forEach(p => {
         const target = targetTotal(p[0], ti, p[3]);
         const st = buildStrokes(pars, target, makeRNG(10000 + ti * 100 + p[0]));
         const strokes = {};
-        st.forEach((v, i) => strokes[i+1] = v);
+        st.forEach((v, i) => strokes[hs[i]] = v);
         cards.push({ tour: code, pid: p[0], strokes, total: st.reduce((a,b)=>a+b,0) });
       });
     });
@@ -447,17 +492,17 @@
         MONTH_PTS[j.monthFa][c.pid] = (MONTH_PTS[j.monthFa][c.pid] || 0) + pts;
       }
       const pars = parsOf(t[3]);
-      const holes = t[4];
+      const hs = tourHoleIds(t);
       let birdies = 0, parsN = 0, bogeys = 0, dbog = 0;
-      for (let h = 1; h <= holes; h++){
+      hs.forEach(h => {
         const s = c.strokes[h], p = pars[h-1];
         if (s === p - 1) birdies++;
         else if (s === p) parsN++;
         else if (s === p + 1) bogeys++;
         else if (s > p + 1) dbog++;
-      }
+      });
       TOTAL_BIRDIES += birdies;
-      const parTotal = pars.slice(0, holes).reduce((a,b)=>a+b,0);
+      const parTotal = hs.reduce((a,h)=>a+(pars[h-1]||0),0);
       const vspar = c.total - parTotal;
       CARDS[c.pid] = CARDS[c.pid] || [];
       CARDS[c.pid].push({
@@ -609,10 +654,10 @@
       if (!t) return;
       HOLE_DIFF[c.tour] = HOLE_DIFF[c.tour] || {};
       const pars = parsOf(t[3]);
-      for (let h = 1; h <= t[4]; h++){
+      tourHoleIds(t).forEach(h => {
         HOLE_DIFF[c.tour][h] = HOLE_DIFF[c.tour][h] || [];
-        HOLE_DIFF[c.tour][h].push(c.strokes[h] - pars[h-1]);
-      }
+        HOLE_DIFF[c.tour][h].push((c.strokes[h]||0) - (pars[h-1]||0));
+      });
     });
     Object.keys(HOLE_DIFF).forEach(t => {
       Object.keys(HOLE_DIFF[t]).forEach(h => {
@@ -627,10 +672,10 @@
         const t = info[sc.tour];
         if (!t || t[3] !== c[0]) return;
         const pars = parsOf(c[0]);
-        for (let h = 1; h <= t[4]; h++){
+        tourHoleIds(t).forEach(h => {
           acc[h] = acc[h] || [];
-          acc[h].push(sc.strokes[h] - pars[h-1]);
-        }
+          acc[h].push((sc.strokes[h]||0) - (pars[h-1]||0));
+        });
       });
       COURSE_STATS[c[0]] = {};
       Object.keys(acc).forEach(h => {
@@ -687,12 +732,14 @@
     let extra = { courses: [], tournaments: [], scorecards: [] };
     try {
       extra.courses = JSON.parse(localStorage.getItem('ga_courses') || '[]');
-      extra.tournaments = JSON.parse(localStorage.getItem('ga_tournaments') || '[]');
+      extra.tournaments = loadExtraTours();
       extra.scorecards = JSON.parse(localStorage.getItem('ga_scorecards') || '[]');
     } catch(e) {}
+    const cov = applyCourseOverrides();
     extra.courses.forEach((c, i) => {
       const cid = 1000 + i;
-      PAR_MAP[cid] = c.pars;
+      if (c && Array.isArray(c.pars) && c.pars.length) PAR_MAP[cid] = c.pars;
+      if (c && c.name) COURSE_NAME[cid] = c.name;
     });
     const players = loadPlayers().concat(loadCustomPlayers().map((p, i) => [9000+i, (p.name + ' ' + (p.family||'')).trim(), p.gender, +p.hcp, p.join || '2026-01-01', p.active === false ? 0 : 1]));
     // اطمینان: پلیرهای سفارشی که کاربر یوزر/پسورد برایشان ساخته، در USERS معتبرند (در app.js خوانده میشود)
@@ -700,8 +747,21 @@
     const ACTIVE_EXT = players.filter(p => p[5]);
     return {
       players, active: ACTIVE_EXT,
-      courses: COURSES.concat(extra.courses.map((c, i) => [1000+i, c.name, c.loc, c.holes])),
-      tournaments: visibleTours().concat(extra.tournaments.map((t, i) => [1000+i, t.name, +t.lvl, +t.course, +t.holes, t.date])),
+      courses: COURSES.map(c => {
+        const o = cov[c[0]];
+        if (!o) return c;
+        const holes = (o.pars && o.pars.length) ? o.pars.length : (o.holes || c[3]);
+        return [c[0], o.name || c[1], o.loc || c[2], holes];
+      }).concat(extra.courses.map((c, i) => [1000+i, c.name, c.loc, (c.pars && c.pars.length) ? c.pars.length : c.holes])),
+      tournaments: visibleTours().map(t => {
+        const ov = loadTourOverride()[t[0]];
+        if (!ov) return t;
+        const holeN = (Array.isArray(ov.holeIds) && ov.holeIds.length) ? ov.holeIds.length : (ov.holes != null ? +ov.holes : t[4]);
+        return [t[0], ov.name || t[1], ov.lvl != null ? +ov.lvl : t[2], ov.course != null ? +ov.course : t[3], holeN, ov.date || t[5]];
+      }).concat(extra.tournaments.map((t, i) => {
+        const n = (Array.isArray(t.holeIds) && t.holeIds.length) ? t.holeIds.length : +t.holes;
+        return [1000+i, t.name, +t.lvl, +t.course, n, t.date];
+      })),
       scorecards: genScorecards(players).concat(extra.scorecards.map(s => {
         const tour = +s.tour, pid = +s.pid;
         const ex = extra.tournaments[tour - 1000];
@@ -759,7 +819,7 @@
   function seedSeason(force){
     try {
       if (!force && localStorage.getItem('ga_seed_v2') === '1405') return;
-      const keys = ['ga_tour_rules','ga_results','ga_tour_override','ga_tour_hidden','ga_programs','ga_courses','ga_tournaments','ga_scorecards','ga_del_acts','ga_events','ga_custom_players','ga_player_users','ga_players'];
+      const keys = ['ga_tour_rules','ga_results','ga_tour_override','ga_tour_hidden','ga_programs','ga_courses','ga_course_override','ga_tournaments','ga_scorecards','ga_del_acts','ga_events','ga_custom_players','ga_player_users','ga_players'];
       keys.forEach(k => { try { localStorage.removeItem(k); } catch(e){} });
       // تولد اعضا (برای نمایش سن/تولد در مدیریت)
       const births = {1:'1987-03-21',2:'2009-03-21',3:'2009-08-01',4:'2008-09-01',5:'2011-04-15',6:'2010-05-10',7:'2010-08-20',8:'2017-03-21'};
@@ -799,7 +859,8 @@
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
-    parsOf, compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
+    parsOf, PAR_MAP, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
+    compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason,
   };

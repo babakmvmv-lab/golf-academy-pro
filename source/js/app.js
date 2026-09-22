@@ -1531,13 +1531,14 @@
       return;
     }
     const pars = D.parsOf(t[3]);
+    const hs = (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]}, (_,i)=>i+1));
     const strokes = [], parsArr = [];
-    for (let h = 1; h <= t[4]; h++){ strokes.push(card.strokes[h]); parsArr.push(pars[h-1]); }
-    Charts.line(cv, [strokes, parsArr], parsArr.map((_,i)=>'ح'+D.fa(i+1)), {
+    hs.forEach(h => { strokes.push(card.strokes[h]); parsArr.push(pars[h-1]); });
+    Charts.line(cv, [strokes, parsArr], hs.map(h => (D.holeName ? D.holeName(h) : ('میدان '+D.fa(h)))), {
       colors:['#E9C766','#2E86DE'], fill:true, points:true, min: Math.min(...parsArr)-2, max: Math.max(...strokes)+2,
     });
     $('#pl-holes-tbl').innerHTML = `
-    <table class="tbl"><thead><tr><th>حفره</th>${parsArr.map((_,i)=>`<th>${D.fa(i+1)}</th>`).join('')}</tr></thead>
+    <table class="tbl"><thead><tr><th>میدان</th>${hs.map(h=>`<th>${D.fa(h)}</th>`).join('')}</tr></thead>
     <tbody><tr><td><b>پار</b></td>${parsArr.map(p2=>`<td class="num" style="color:var(--gold-l)">${D.fa(p2)}</td>`).join('')}</tr>
     <tr><td><b>ضربات</b></td>${strokes.map((s,i)=>{
       const c = s < parsArr[i] ? 'color:var(--green-l);font-weight:800' : s === parsArr[i] ? 'color:var(--white)' : 'color:#ff8f82;font-weight:800';
@@ -1558,9 +1559,10 @@
     const t = S.tournaments.find(x => x[0] === matchSel) || S.tournaments[0];
     const cards = S.scorecards.filter(c => c.tour === matchSel).map(c => {
       const pars = D.parsOf(t[3]);
+      const hs = (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]}, (_,i)=>i+1));
       let bird = 0;
-      for (let h = 1; h <= t[4]; h++) if (c.strokes[h] === pars[h-1]-1) bird++;
-      const parTotal = pars.slice(0, t[4]).reduce((a,b)=>a+b,0);
+      hs.forEach(h => { if (c.strokes[h] === pars[h-1]-1) bird++; });
+      const parTotal = hs.reduce((a,h)=>a+(pars[h-1]||0),0);
       return { ...c, bird, par: parTotal, vspar: c.total - parTotal };
     }).sort((a,b) => a.total - b.total);
     const info = D.jalaliInfo(D.dateFrom(t[5]));
@@ -1614,7 +1616,7 @@
         <div class="glass">
           <div class="card-head"><span class="ic">🌋</span><h3>سختترین حفرهها</h3><span class="tag">Avg vs Par</span></div>
           <div class="chart-box short"><canvas id="mt-hard"></canvas></div>
-          ${hardest ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">سختترین: <b style="color:#ff8f82">حفره ${D.fa(hardest.h)}</b> — میانگین ${hardest.d>0?'+':''}${D.fa(hardest.d.toFixed(2))} نسبت به پار</div>` : ''}
+          ${hardest ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">سختترین: <b style="color:#ff8f82">${esc(D.holeName ? D.holeName(hardest.h) : ('میدان '+D.fa(hardest.h)))}</b> — میانگین ${hardest.d>0?'+':''}${D.fa(hardest.d.toFixed(2))} نسبت به پار</div>` : ''}
         </div>
       </div>
     </div>`;
@@ -1633,7 +1635,7 @@
       const top8 = cards.slice(0, 8);
       Charts.barsH($('#mt-bird'), top8.map(c => D.nameOf(c.pid).slice(0,12)), top8.map(c => c.bird), { color:'#1EBB8A', showVal:true });
       const hs = Object.keys(diff).map(Number).sort((a,b)=>a-b);
-      Charts.barsV($('#mt-hard'), hs.map(h=>'ح'+D.fa(h)), hs.map(h => diff[h]), {
+      Charts.barsV($('#mt-hard'), hs.map(h => (D.holeName ? D.holeName(h) : ('میدان '+D.fa(h)))), hs.map(h => diff[h]), {
         color:'#E74C3C', showVal:true, fmt:v=>(v>0?'+':'')+v.toFixed(1),
         max: Math.max(...hs.map(h=>diff[h]), 0.5) * 1.3,
       });
@@ -1764,7 +1766,7 @@
       let s = 0, n = 0;
       S.scorecards.forEach(c => {
         const t = S.tournaments.find(x => x[0] === c.tour);
-        if (t && t[3] === crs[0]){ s += c.total - pars.slice(0, t[4]).reduce((a,b)=>a+b,0); n++; }
+        if (t && t[3] === crs[0]){ const hs = (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]}, (_,i)=>i+1)); s += c.total - hs.reduce((a,h)=>a+(pars[h-1]||0),0); n++; }
       });
       return n ? Math.round(s/n*100)/100 : null;
     })() : null;
@@ -2923,7 +2925,7 @@
 
   /* ═══════════ ابزار طراح ═══════════ */
   function extraCourses(){ try{ return JSON.parse(store.get('ga_courses')||'[]'); }catch(e){ return []; } }
-  function extraTours(){ try{ const a = JSON.parse(store.get('ga_tournaments')||'[]'); return Array.isArray(a) ? a.map(x => (x && typeof x === 'object' && Array.isArray(x.t) && x.name === undefined) ? { name:x.t[1]||'', lvl:+x.t[2]||2, course:+x.t[3]||0, holes:+x.t[4]||18, date:x.t[5]||'', end:x.end||'', time:x.time||'', rule:x.rule||'normal', p1:x.p1, p2:x.p2, p3:x.p3, entry:x.entry, schedule:Array.isArray(x.schedule)?x.schedule:[] } : x) : []; }catch(e){ return []; } }
+  function extraTours(){ try{ const a = JSON.parse(store.get('ga_tournaments')||'[]'); return Array.isArray(a) ? a.map(x => (x && typeof x === 'object' && Array.isArray(x.t) && x.name === undefined) ? { name:x.t[1]||'', lvl:+x.t[2]||2, course:+x.t[3]||0, holes:+x.t[4]||18, date:x.t[5]||'', end:x.end||'', time:x.time||'', rule:x.rule||'normal', p1:x.p1, p2:x.p2, p3:x.p3, entry:x.entry, schedule:Array.isArray(x.schedule)?x.schedule:[], holeIds:x.holeIds } : x) : []; }catch(e){ return []; } }
   function extraCards(){ try{ return JSON.parse(store.get('ga_scorecards')||'[]'); }catch(e){ return []; } }
   function saveCourses(a){ try{ store.set('ga_courses', JSON.stringify(a)); }catch(e){} }
   function saveTours(a){ try{ store.set('ga_tournaments', JSON.stringify(a)); }catch(e){} }
@@ -3063,13 +3065,13 @@
     let holeVals = [];
     function drawHoles(){
       const t = S.tournaments.find(x => x[0] === +$('#as-tour').value);
-      const n = t ? t[4] : 9;
+      const hs = t ? (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]}, (_,i)=>i+1)) : [1,2,3,4,5,6,7,8,9];
       const pars = t ? D.parsOf(t[3]) : [];
-      holeVals = Array.from({length:n}, () => '');
-      $('#as-holes').innerHTML = Array.from({length:n}, (_,i) => `
+      holeVals = hs.map(() => '');
+      $('#as-holes').innerHTML = hs.map((h,i) => `
         <div style="text-align:center">
-          <div style="font-size:10px;color:var(--muted)">ح${D.fa(i+1)} <small style="color:var(--gold-l)">پ${D.fa(pars[i])}</small></div>
-          <input class="input" type="number" min="1" max="12" value="" data-i="${i}" style="width:52px;text-align:center;direction:ltr" placeholder="—">
+          <div style="font-size:10px;color:var(--muted)">${esc(D.holeName ? D.holeName(h) : ('میدان '+D.fa(h)))} <small style="color:var(--gold-l)">پ${D.fa(pars[h-1])}</small></div>
+          <input class="input" type="number" min="1" max="12" value="" data-i="${i}" data-h="${h}" style="width:52px;text-align:center;direction:ltr" placeholder="—">
         </div>`).join('');
       $$('#as-holes input').forEach(inp => inp.addEventListener('input', () => { holeVals[+inp.dataset.i] = +inp.value || null; }));
     }
@@ -3078,13 +3080,14 @@
     $('#as-add').addEventListener('click', () => {
       const tour = +$('#as-tour').value, pid = +$('#as-pl').value;
       const t = S.tournaments.find(x => x[0] === tour);
+      const hs = t ? (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]}, (_,i)=>i+1)) : [];
       const strokes = {};
       let ok = 0;
-      for (let h = 1; h <= t[4]; h++){
-        const val = holeVals[h-1];
+      hs.forEach((h,i) => {
+        const val = holeVals[i];
         if (val !== null && val > 0){ strokes[h] = val; ok++; }
-      }
-      if (ok < t[4]){ toast('همه میدانها را پر کنید', 'red'); return; }
+      });
+      if (ok < hs.length){ toast('همه میدانها را پر کنید', 'red'); return; }
       const lst = extraCards();
       lst.push({ tour, pid, strokes });
       saveCards(lst); reloadData(); go('ascorecards');

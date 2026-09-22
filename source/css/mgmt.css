@@ -467,3 +467,11 @@ tr.off-row{opacity:.5}
 .ew-acc[open] summary{border-bottom:1px solid rgba(255,255,255,.07);color:var(--gold-l)}
 .ew-acc .ew-shots{padding:8px 10px}
 .ew-acc .ew-actions{padding:0 10px 10px}
+
+.hp-grid{display:flex;flex-wrap:wrap;gap:7px}
+.hp-chip{cursor:pointer;border-radius:12px;padding:8px 10px;min-width:92px;text-align:center;border:1px solid var(--line-soft);background:rgba(255,255,255,.03);color:inherit}
+.hp-chip b{display:block;font-size:12px;font-weight:800}
+.hp-chip span{display:block;font-size:10px;color:var(--muted);margin-top:3px}
+.hp-chip.on{border-color:rgba(212,175,55,.7);background:rgba(212,175,55,.12)}
+.hp-chip.on b{color:var(--gold-l)}
+.hp-par{text-align:center}

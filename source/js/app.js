@@ -184,19 +184,17 @@
 
   /* ═══════════ ساعت و تاریخ ═══════════ */
   function tickClock(){
-    try {
-      const now = (D.now ? D.now() : new Date());
-      const src = (now && !isNaN(+now)) ? now : new Date();
-      const j = D.jalaliInfo(src);
-      const tp = D.tehranParts ? D.tehranParts(src) : null;
-      const hh = String(tp && tp.h != null ? tp.h : src.getHours()).padStart(2,'0');
-      const mm = String(tp && tp.min != null ? tp.min : src.getMinutes()).padStart(2,'0');
-      const ss = String(tp && tp.s != null ? tp.s : src.getSeconds()).padStart(2,'0');
-      const el = $('#hud-clock');
-      if (el) el.textContent = `${D.fa(hh)}:${D.fa(mm)}:${D.fa(ss)}`;
-      const dt = $('#hud-date');
-      if (dt && j) dt.textContent = `${D.fa(j.dd)} ${j.monthFa} ${D.fa(j.yy)}`;
-    } catch (e) {}
+    const now = D.now ? D.now() : new Date();
+    const src = (now && !isNaN(+now)) ? now : new Date();
+    const j = D.jalaliInfo(src);
+    const tp = D.tehranParts ? D.tehranParts(src) : null;
+    const hh = String(tp && tp.h != null ? tp.h : src.getHours()).padStart(2,'0');
+    const mm = String(tp && tp.min != null ? tp.min : src.getMinutes()).padStart(2,'0');
+    const ss = String(tp && tp.s != null ? tp.s : src.getSeconds()).padStart(2,'0');
+    const el = $('#hud-clock');
+    if (el) el.textContent = `${D.fa(hh)}:${D.fa(mm)}:${D.fa(ss)}`;
+    const dt = $('#hud-date');
+    if (dt && j) dt.textContent = `${D.fa(j.dd)} ${j.monthFa} ${D.fa(j.yy)}`;
   }
 
   /* ═══════════ روتر ═══════════ */
@@ -244,9 +242,8 @@
     }).join('');
     nav.classList.add('ready');
     nav.querySelectorAll('[data-member-page]').forEach(b => b.addEventListener('click', () => {
+      go(b.dataset.memberPage);
       closeNav();
-      const pg = b.dataset.memberPage;
-      requestAnimationFrame(() => go(pg));
     }));
     const active = nav.querySelector('.member-mobile-link.active');
     if (active) setTimeout(() => active.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' }), 20);
@@ -3257,11 +3254,7 @@
     document.body.classList.remove('nav-open');
   }
   function initNav(){
-    $$('.nav-item').forEach(n => n.addEventListener('click', () => {
-      closeNav(); /* اول کشو بسته شود، بعد صفحه — روی گوشی معطل رندر نماند */
-      const pg = n.dataset.page;
-      requestAnimationFrame(() => go(pg));
-    }));
+    $$('.nav-item').forEach(n => n.addEventListener('click', () => { go(n.dataset.page); closeNav(); }));
     const mb = $('#menu-btn');
     if (mb) mb.addEventListener('click', () => document.body.classList.toggle('nav-open'));
     const ov = $('#nav-overlay');
@@ -3358,6 +3351,8 @@
     initParticles();
     initAuth();
     initNav();
+    tickClock();
+    if (!enterApp._clk) enterApp._clk = setInterval(tickClock, 1000);
     const sess = store.get('ga_session');
     if (sess && buildUsers()[sess] !== undefined){
       if (!window.GA_SUB || GA_SUB.isAllowed(sess)) enterApp(sess);

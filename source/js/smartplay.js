@@ -94,8 +94,10 @@
     return mx + 1;
   }
   function todayFa() {
-    /* جلسهٔ تمرینی رویدادِ واقعیِ «همین امروز» است — نه تاریخ فریزشدهٔ فصل (D.TODAY) */
-    try { return ctx.D.isoToShamsi(new Date().toISOString().slice(0, 10)); } catch (e) { return ''; }
+    try {
+      var iso = (ctx.D.todayISO && ctx.D.todayISO()) || (ctx.D.tehranISODate && ctx.D.tehranISODate());
+      return ctx.D.isoToShamsi(iso);
+    } catch (e) { return ''; }
   }
 
   /* ══════════ هدر صفحهٔ مجزا: ✕ بستن صفحه + ⏹ بستن جلسه ══════════ */

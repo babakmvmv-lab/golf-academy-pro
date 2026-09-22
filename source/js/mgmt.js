@@ -893,7 +893,7 @@
       <div id="bt-match-list" style="margin-top:14px"></div>
     </div>`;
 
-    if (window.JDate && $('#bt-m-date')) JDate.render($('#bt-m-date'), { value: D.shamsiToISO(1405,7,15), onChange(){} });
+    if (window.JDate && $('#bt-m-date')) JDate.render($('#bt-m-date'), { value: D.todayISO(), onChange(){} });
 
     function renderTeamList(){
       const box = $('#bt-team-list'); if (!box) return;
@@ -1416,7 +1416,7 @@
       const wrap = root.querySelector('[data-join]');
       const jiso = birthEl ? '' : ''; // placeholder no-op
       const jv = (wrap ? wrap.getAttribute('data-join') : '') || '';
-      JDate.render(joinEl, { value: jv || new Date().toISOString().slice(0,10), onChange(){} });
+      JDate.render(joinEl, { value: jv || D.todayISO(), onChange(){} });
       if (jv && joinEl._set) joinEl._set(jv);
     }
     // تولید رمز
@@ -2006,8 +2006,8 @@
     const hidTours = D.loadHiddenTours().map(id => D.TOURNAMENTS.find(t => t[0] === id)).filter(Boolean);
     const hb = $('#mt-hidden');
     if (hb) hb.innerHTML = hidTours.length ? `<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);margin-top:10px;border-top:1px dashed var(--line-soft);padding-top:10px"><span>🗑 حذف‌شده از فصل:</span>${hidTours.map(t => `<span class="chip dim" style="display:inline-flex;align-items:center;gap:6px">${esc(t[1])}<button class="btn sm ghost" data-act="unhide" data-id="${t[0]}" style="padding:2px 8px;font-size:10px">↩ بازیابی</button></span>`).join('')}</div>` : '';
-    JDate.render($('#mt-start'), { value: D.shamsiToISO(1405,7,4), onChange(){ renderTourSch(); } });
-    JDate.render($('#mt-end'),   { value: D.shamsiToISO(1405,7,4), onChange(){ renderTourSch(); } });
+    JDate.render($('#mt-start'), { value: D.todayISO(), onChange(){ renderTourSch(); } });
+    JDate.render($('#mt-end'),   { value: D.todayISO(), onChange(){ renderTourSch(); } });
     function tourDays(){
       try {
         if (!$('#mt-end')._value || !$('#mt-start')._value) return 1;
@@ -2346,8 +2346,8 @@
       <div class="card-head"><span class="ic">🎓</span><h3>دوره‌های آموزشی / تمرین / اردو</h3><span class="tag">${D.fa(D.loadPrograms().length)} دوره</span></div>
       <div id="pr-list" style="margin-top:8px"></div>
     </div>`;
-    JDate.render($('#pr-start'), { value: D.shamsiToISO(1405,6,10), onChange(){} });
-    JDate.render($('#pr-end'),   { value: D.shamsiToISO(1405,6,10), onChange(){} });
+    JDate.render($('#pr-start'), { value: D.todayISO(), onChange(){} });
+    JDate.render($('#pr-end'),   { value: D.todayISO(), onChange(){} });
     function renderList(){
       const lst = D.loadPrograms();
       $('#pr-list').innerHTML = lst.length ? lst.map((p, i) => {
@@ -2492,8 +2492,8 @@
     `;
 
     const SCHED_OPTS = ['ورود','مسابقه','تمرین','کلاس','اهدای جام','تور','جلسه','مراسم','آزاد'];
-    JDate.render($('#me-start'), { value: D.isoToShamsi(new Date().toISOString().slice(0,10)) && D.shamsiToISO(1405,6,10), onChange(){ renderSchedule(); } });
-    JDate.render($('#me-end'),   { value: D.shamsiToISO(1405,6,10), onChange(){ renderSchedule(); } });
+    JDate.render($('#me-start'), { value: D.todayISO(), onChange(){ renderSchedule(); } });
+    JDate.render($('#me-end'),   { value: D.todayISO(), onChange(){ renderSchedule(); } });
 
     function daysBetween(aIso, bIso){
       return Math.round((D.dateFrom(bIso) - D.dateFrom(aIso))/86400000) + 1;
@@ -2790,7 +2790,7 @@
     if (btn){ btn.disabled = true; btn.textContent = '⏳ در حال ساخت PDF…'; }
     return mgPdfLibs().then(() => {
       const G = '#d4af37', GL = '#f3d779';
-      const todayFa = D.isoToShamsi ? D.fa(D.isoToShamsi(new Date().toISOString().slice(0, 10))) : '';
+      const todayFa = D.isoToShamsi ? D.fa(D.isoToShamsi(D.todayISO ? D.todayISO() : D.tehranISODate())) : '';
       const trow = (r, i) => '<tr style="background:' + (i % 2 ? 'rgba(255,255,255,.024)' : 'transparent') + '">'
         + r.map(c => '<td style="padding:5.5px 6px;font-size:10.5px;text-align:center;border-bottom:1px solid rgba(255,255,255,.05)">' + c + '</td>').join('') + '</tr>';
       const sectHtml = (opts.sections || []).map(sc => {
@@ -2868,7 +2868,7 @@
     if (btn){ btn.disabled = true; btn.textContent = '⏳ در حال ساخت PDF…'; }
     return mgPdfLibs().then(() => {
       const G = '#d4af37', GL = '#f3d779';
-      const todayFa = D.isoToShamsi ? D.fa(D.isoToShamsi(new Date().toISOString().slice(0, 10))) : '';
+      const todayFa = D.isoToShamsi ? D.fa(D.isoToShamsi(D.todayISO ? D.todayISO() : D.tehranISODate())) : '';
       const trow = (r, i) => '<tr style="background:' + (i % 2 ? 'rgba(255,255,255,.024)' : 'transparent') + '">'
         + r.map(c => '<td style="padding:5.5px 6px;font-size:10.5px;text-align:center;border-bottom:1px solid rgba(255,255,255,.05)">' + c + '</td>').join('') + '</tr>';
       function buildEl(pg, no, tot){

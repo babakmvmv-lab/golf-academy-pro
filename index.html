@@ -3989,6 +3989,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   }
   const dateFrom = s => new Date(s + 'T00:00:00Z');
   function todayStart(){ return dateFrom(tehranISODate(now())); }
+  function todayISO(){ return tehranISODate(now()); } /* امروز کاری سایت — نه ساعت دستگاه، نه تاریخ فریز فصل */
   const TODAY = todayStart(); /* امروز به تقویم تهران — نه UTC */
   const SEASON_START = dateFrom('2026-03-21');  /* ⚑ سال فصل از همین پوشیده می‌شود — برای رول اور به ۱۴۰۶ فقط این را عوض کنید */
 
@@ -4666,7 +4667,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   }
 
   window.Data = {
-    fa, faNum, jalaliInfo, weekOf, dayFmt, dateFrom, todayStart, tehranParts, tehranISODate, now, nowMs, syncClock, clockReady, SEASON_START,
+    fa, faNum, jalaliInfo, weekOf, dayFmt, dateFrom, todayStart, todayISO, tehranParts, tehranISODate, now, nowMs, syncClock, clockReady, SEASON_START,
     toJalaali, jalaaliToDateObject, j2d, shamsiToISO, isoToShamsi, parseShamsi,
     PLAYERS, PLAYER_NAME, ACTIVE, COURSES, COURSE_PARS, COURSE_NAME, TOURNAMENTS, seasonYear: (function(){ const j = jalaliInfo(SEASON_START); return j.yy; })(),
     PTS_RULE, RESULT_LABEL, MONTHS_FA, RANK_DEF, RANK_TEXT, rankOf, FORM_META, GOLD_ELITE,
@@ -7041,13 +7042,14 @@ window.addEventListener('ga:brand-changed', function(){
       if (p){ sy.value = p[0]; sm.value = p[1]; setDayOptions(false); sd.value = String(p[2]); emit(); }
     };
 
-    // مقدار اولیه
+    // مقدار اولیه: امروز کاری سایت (نه تاریخ فریز، نه ساعت دستگاه)
     let jy = 1405, jm = 1, jd = 1;
-    if (opts.value){
-      const p = D.parseShamsi(D.isoToShamsi(opts.value));
+    const iso0 = opts.value || el.getAttribute('data-iso') || (D.todayISO ? D.todayISO() : null);
+    if (iso0){
+      const p = D.parseShamsi(D.isoToShamsi(iso0));
       if (p){ jy = p[0]; jm = p[1]; jd = p[2]; }
     } else {
-      const t = D.jalaliInfo(new Date());
+      const t = D.jalaliInfo(D.now ? D.now() : new Date());
       jy = t.yy; jm = t.mm; jd = t.dd;
     }
     sy.value = String(jy); sm.value = String(jm);
@@ -9833,7 +9835,7 @@ window.addEventListener('ga:brand-changed', function(){
       <div id="bt-match-list" style="margin-top:14px"></div>
     </div>`;
 
-    if (window.JDate && $('#bt-m-date')) JDate.render($('#bt-m-date'), { value: D.shamsiToISO(1405,7,15), onChange(){} });
+    if (window.JDate && $('#bt-m-date')) JDate.render($('#bt-m-date'), { value: D.todayISO(), onChange(){} });
 
     function renderTeamList(){
       const box = $('#bt-team-list'); if (!box) return;
@@ -10356,7 +10358,7 @@ window.addEventListener('ga:brand-changed', function(){
       const wrap = root.querySelector('[data-join]');
       const jiso = birthEl ? '' : ''; // placeholder no-op
       const jv = (wrap ? wrap.getAttribute('data-join') : '') || '';
-      JDate.render(joinEl, { value: jv || new Date().toISOString().slice(0,10), onChange(){} });
+      JDate.render(joinEl, { value: jv || D.todayISO(), onChange(){} });
       if (jv && joinEl._set) joinEl._set(jv);
     }
     // تولید رمز
@@ -10946,8 +10948,8 @@ window.addEventListener('ga:brand-changed', function(){
     const hidTours = D.loadHiddenTours().map(id => D.TOURNAMENTS.find(t => t[0] === id)).filter(Boolean);
     const hb = $('#mt-hidden');
     if (hb) hb.innerHTML = hidTours.length ? `<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);margin-top:10px;border-top:1px dashed var(--line-soft);padding-top:10px"><span>🗑 حذف‌شده از فصل:</span>${hidTours.map(t => `<span class="chip dim" style="display:inline-flex;align-items:center;gap:6px">${esc(t[1])}<button class="btn sm ghost" data-act="unhide" data-id="${t[0]}" style="padding:2px 8px;font-size:10px">↩ بازیابی</button></span>`).join('')}</div>` : '';
-    JDate.render($('#mt-start'), { value: D.shamsiToISO(1405,7,4), onChange(){ renderTourSch(); } });
-    JDate.render($('#mt-end'),   { value: D.shamsiToISO(1405,7,4), onChange(){ renderTourSch(); } });
+    JDate.render($('#mt-start'), { value: D.todayISO(), onChange(){ renderTourSch(); } });
+    JDate.render($('#mt-end'),   { value: D.todayISO(), onChange(){ renderTourSch(); } });
     function tourDays(){
       try {
         if (!$('#mt-end')._value || !$('#mt-start')._value) return 1;
@@ -11286,8 +11288,8 @@ window.addEventListener('ga:brand-changed', function(){
       <div class="card-head"><span class="ic">🎓</span><h3>دوره‌های آموزشی / تمرین / اردو</h3><span class="tag">${D.fa(D.loadPrograms().length)} دوره</span></div>
       <div id="pr-list" style="margin-top:8px"></div>
     </div>`;
-    JDate.render($('#pr-start'), { value: D.shamsiToISO(1405,6,10), onChange(){} });
-    JDate.render($('#pr-end'),   { value: D.shamsiToISO(1405,6,10), onChange(){} });
+    JDate.render($('#pr-start'), { value: D.todayISO(), onChange(){} });
+    JDate.render($('#pr-end'),   { value: D.todayISO(), onChange(){} });
     function renderList(){
       const lst = D.loadPrograms();
       $('#pr-list').innerHTML = lst.length ? lst.map((p, i) => {
@@ -11432,8 +11434,8 @@ window.addEventListener('ga:brand-changed', function(){
     `;
 
     const SCHED_OPTS = ['ورود','مسابقه','تمرین','کلاس','اهدای جام','تور','جلسه','مراسم','آزاد'];
-    JDate.render($('#me-start'), { value: D.isoToShamsi(new Date().toISOString().slice(0,10)) && D.shamsiToISO(1405,6,10), onChange(){ renderSchedule(); } });
-    JDate.render($('#me-end'),   { value: D.shamsiToISO(1405,6,10), onChange(){ renderSchedule(); } });
+    JDate.render($('#me-start'), { value: D.todayISO(), onChange(){ renderSchedule(); } });
+    JDate.render($('#me-end'),   { value: D.todayISO(), onChange(){ renderSchedule(); } });
 
     function daysBetween(aIso, bIso){
       return Math.round((D.dateFrom(bIso) - D.dateFrom(aIso))/86400000) + 1;
@@ -11730,7 +11732,7 @@ window.addEventListener('ga:brand-changed', function(){
     if (btn){ btn.disabled = true; btn.textContent = '⏳ در حال ساخت PDF…'; }
     return mgPdfLibs().then(() => {
       const G = '#d4af37', GL = '#f3d779';
-      const todayFa = D.isoToShamsi ? D.fa(D.isoToShamsi(new Date().toISOString().slice(0, 10))) : '';
+      const todayFa = D.isoToShamsi ? D.fa(D.isoToShamsi(D.todayISO ? D.todayISO() : D.tehranISODate())) : '';
       const trow = (r, i) => '<tr style="background:' + (i % 2 ? 'rgba(255,255,255,.024)' : 'transparent') + '">'
         + r.map(c => '<td style="padding:5.5px 6px;font-size:10.5px;text-align:center;border-bottom:1px solid rgba(255,255,255,.05)">' + c + '</td>').join('') + '</tr>';
       const sectHtml = (opts.sections || []).map(sc => {
@@ -11808,7 +11810,7 @@ window.addEventListener('ga:brand-changed', function(){
     if (btn){ btn.disabled = true; btn.textContent = '⏳ در حال ساخت PDF…'; }
     return mgPdfLibs().then(() => {
       const G = '#d4af37', GL = '#f3d779';
-      const todayFa = D.isoToShamsi ? D.fa(D.isoToShamsi(new Date().toISOString().slice(0, 10))) : '';
+      const todayFa = D.isoToShamsi ? D.fa(D.isoToShamsi(D.todayISO ? D.todayISO() : D.tehranISODate())) : '';
       const trow = (r, i) => '<tr style="background:' + (i % 2 ? 'rgba(255,255,255,.024)' : 'transparent') + '">'
         + r.map(c => '<td style="padding:5.5px 6px;font-size:10.5px;text-align:center;border-bottom:1px solid rgba(255,255,255,.05)">' + c + '</td>').join('') + '</tr>';
       function buildEl(pg, no, tot){
@@ -14032,8 +14034,10 @@ window.addEventListener('ga:brand-changed', function(){
     return mx + 1;
   }
   function todayFa() {
-    /* جلسهٔ تمرینی رویدادِ واقعیِ «همین امروز» است — نه تاریخ فریزشدهٔ فصل (D.TODAY) */
-    try { return ctx.D.isoToShamsi(new Date().toISOString().slice(0, 10)); } catch (e) { return ''; }
+    try {
+      var iso = (ctx.D.todayISO && ctx.D.todayISO()) || (ctx.D.tehranISODate && ctx.D.tehranISODate());
+      return ctx.D.isoToShamsi(iso);
+    } catch (e) { return ''; }
   }
 
   /* ══════════ هدر صفحهٔ مجزا: ✕ بستن صفحه + ⏹ بستن جلسه ══════════ */
@@ -18597,7 +18601,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         <div><label style="font-size:11px;color:var(--muted)">سطح</label><select class="sel" id="at-lvl" style="width:100%;margin-top:5px"><option value="1">سطح ۱</option><option value="2" selected>سطح ۲</option><option value="3">سطح ۳</option></select></div>
         <div><label style="font-size:11px;color:var(--muted)">زمین</label><select class="sel" id="at-crs" style="width:100%;margin-top:5px">${S.courses.map(c=>`<option value="${c[0]}">${esc(c[1])}</option>`).join('')}</select></div>
         <div><label style="font-size:11px;color:var(--muted)">حفره</label><select class="sel" id="at-holes" style="width:100%;margin-top:5px"><option>9</option><option selected>18</option></select></div>
-        <div style="grid-column:span 2"><label style="font-size:11px;color:var(--muted)">تاریخ</label><div class="jdate" id="at-date" data-iso="2026-09-25" style="margin-top:5px"></div></div>
+        <div style="grid-column:span 2"><label style="font-size:11px;color:var(--muted)">تاریخ</label><div class="jdate" id="at-date" data-iso="${D.todayISO ? D.todayISO() : ''}" style="margin-top:5px"></div></div>
       </div>
       <button class="btn sm" id="at-add" style="margin-top:14px">+ ثبت مسابقه</button>
     </div>

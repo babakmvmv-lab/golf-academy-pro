@@ -175,6 +175,7 @@
   }
   const dateFrom = s => new Date(s + 'T00:00:00Z');
   function todayStart(){ return dateFrom(tehranISODate(now())); }
+  function todayISO(){ return tehranISODate(now()); } /* امروز کاری سایت — نه ساعت دستگاه، نه تاریخ فریز فصل */
   const TODAY = todayStart(); /* امروز به تقویم تهران — نه UTC */
   const SEASON_START = dateFrom('2026-03-21');  /* ⚑ سال فصل از همین پوشیده می‌شود — برای رول اور به ۱۴۰۶ فقط این را عوض کنید */
 
@@ -852,7 +853,7 @@
   }
 
   window.Data = {
-    fa, faNum, jalaliInfo, weekOf, dayFmt, dateFrom, todayStart, tehranParts, tehranISODate, now, nowMs, syncClock, clockReady, SEASON_START,
+    fa, faNum, jalaliInfo, weekOf, dayFmt, dateFrom, todayStart, todayISO, tehranParts, tehranISODate, now, nowMs, syncClock, clockReady, SEASON_START,
     toJalaali, jalaaliToDateObject, j2d, shamsiToISO, isoToShamsi, parseShamsi,
     PLAYERS, PLAYER_NAME, ACTIVE, COURSES, COURSE_PARS, COURSE_NAME, TOURNAMENTS, seasonYear: (function(){ const j = jalaliInfo(SEASON_START); return j.yy; })(),
     PTS_RULE, RESULT_LABEL, MONTHS_FA, RANK_DEF, RANK_TEXT, rankOf, FORM_META, GOLD_ELITE,

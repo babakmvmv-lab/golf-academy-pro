@@ -91,13 +91,14 @@
       if (p){ sy.value = p[0]; sm.value = p[1]; setDayOptions(false); sd.value = String(p[2]); emit(); }
     };
 
-    // مقدار اولیه
+    // مقدار اولیه: امروز کاری سایت (نه تاریخ فریز، نه ساعت دستگاه)
     let jy = 1405, jm = 1, jd = 1;
-    if (opts.value){
-      const p = D.parseShamsi(D.isoToShamsi(opts.value));
+    const iso0 = opts.value || el.getAttribute('data-iso') || (D.todayISO ? D.todayISO() : null);
+    if (iso0){
+      const p = D.parseShamsi(D.isoToShamsi(iso0));
       if (p){ jy = p[0]; jm = p[1]; jd = p[2]; }
     } else {
-      const t = D.jalaliInfo(new Date());
+      const t = D.jalaliInfo(D.now ? D.now() : new Date());
       jy = t.yy; jm = t.mm; jd = t.dd;
     }
     sy.value = String(jy); sm.value = String(jm);

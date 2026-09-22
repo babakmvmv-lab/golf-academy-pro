@@ -3007,7 +3007,7 @@
         <div><label style="font-size:11px;color:var(--muted)">سطح</label><select class="sel" id="at-lvl" style="width:100%;margin-top:5px"><option value="1">سطح ۱</option><option value="2" selected>سطح ۲</option><option value="3">سطح ۳</option></select></div>
         <div><label style="font-size:11px;color:var(--muted)">زمین</label><select class="sel" id="at-crs" style="width:100%;margin-top:5px">${S.courses.map(c=>`<option value="${c[0]}">${esc(c[1])}</option>`).join('')}</select></div>
         <div><label style="font-size:11px;color:var(--muted)">حفره</label><select class="sel" id="at-holes" style="width:100%;margin-top:5px"><option>9</option><option selected>18</option></select></div>
-        <div style="grid-column:span 2"><label style="font-size:11px;color:var(--muted)">تاریخ</label><div class="jdate" id="at-date" data-iso="2026-09-25" style="margin-top:5px"></div></div>
+        <div style="grid-column:span 2"><label style="font-size:11px;color:var(--muted)">تاریخ</label><div class="jdate" id="at-date" data-iso="${D.todayISO ? D.todayISO() : ''}" style="margin-top:5px"></div></div>
       </div>
       <button class="btn sm" id="at-add" style="margin-top:14px">+ ثبت مسابقه</button>
     </div>

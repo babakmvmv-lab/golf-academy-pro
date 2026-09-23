@@ -224,8 +224,65 @@
     return { holes: nums.length, teesF:f, teesM:m, greens:g, fairways:fw, pars: nums.map(function(n){ return H[n].par || 4; }) };
   }
 
+  function copyTees(courseId, fromG, toG){
+    const p = pack(courseId);
+    let n = 0;
+    Object.keys(p.holes || {}).forEach(function(k){
+      const h = p.holes[k];
+      const src = teeOf(h, fromG);
+      if (!src) return;
+      if (teeOf(h, toG)) return;
+      moveTee(courseId, k, toG, src.lat, src.lng);
+      n++;
+    });
+    return n;
+  }
+  function xmlEsc(s){
+    return String(s == null ? '' : s).replace(/[&<>\"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);
+    });
+  }
+  function toKml(p){
+    p = p || { holes:{} };
+    const H = p.holes || {};
+    const nums = Object.keys(H).map(Number).sort(function(a,b){ return a-b; });
+    let body = '';
+    function pt(name, lat, lng){
+      body += '<Placemark><name>'+xmlEsc(name)+'</name><Point><coordinates>'+lng+','+lat+',0</coordinates></Point></Placemark>\n';
+    }
+    function poly(name, latlngs){
+      const ring = (latlngs || []).map(function(ll){ return ll[1]+','+ll[0]+',0'; }).join(' ');
+      body += '<Placemark><name>'+xmlEsc(name)+'</name><Polygon><outerBoundaryIs><LinearRing><coordinates>'+ring+'</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>\n';
+    }
+    nums.forEach(function(n){
+      const h = H[n];
+      const par = h.par || 4;
+      if (h.teeF || h.tee){
+        const t = h.teeF || h.tee;
+        const yd = h.yardsF || h.yards || '';
+        pt('T.'+n+' -'+(yd||'')+'Y -Par'+par+' -W', t.lat, t.lng);
+      }
+      if (h.teeM){
+        const yd = h.yardsM || '';
+        pt('T.'+n+' -'+(yd||'')+'Y -Par'+par+' -M', h.teeM.lat, h.teeM.lng);
+      }
+      if (h.green) pt('Hole '+n, h.green.lat, h.green.lng);
+      (h.fairways || []).forEach(function(fw){ poly(fw.name || ('fairway '+n), fw.latlngs); });
+    });
+    return '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>'+xmlEsc(p.name||'course')+'</name>\n'+body+'</Document></kml>';
+  }
+  function downloadKml(courseId){
+    const p = pack(courseId);
+    const txt = toKml(p);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([txt], { type:'application/vnd.google-earth.kml+xml' }));
+    a.download = (p.name || 'course').replace(/\s+/g,'_') + '.kml';
+    a.click();
+  }
+
   window.CourseGeo = {
     parseKml, parseName, pack, keyOf, teeOf, yardsOf,
-    moveTee, moveGreen, moveFairwayVertex, set, loadAll, summary
+    moveTee, moveGreen, moveFairwayVertex, set, loadAll, summary,
+    copyTees, toKml, downloadKml
   };
 })();

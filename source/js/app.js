@@ -3409,6 +3409,7 @@
 
   window.APP = {
     go, reloadData, recompute, refreshLabels, state: () => ({ S, A }), toast,
+    openCourse: (id) => { courseSel = +id; go('course'); },
     currentUser: () => currentUser,
     isMain: () => isMain(currentUser),
     isAdmin: () => isAdmin(currentUser),

@@ -574,6 +574,17 @@
         syncModeBtns();
       };
     }
+    const bCopy = document.getElementById('earth-copy-tees');
+    if (bCopy) bCopy.onclick = function(){
+      if (!window.CourseGeo) return;
+      const n = CourseGeo.copyTees(courseKey(), 'F', 'M');
+      if (window.APP && APP.toast) APP.toast(n ? (n + ' تی آقا از روی تی خانم ساخته شد — جایش را اصلاح کنید') : 'تی آقا از قبل هست یا تی خانم نیست', n ? 'green' : 'orange');
+      drawCourse();
+    };
+    const bKml = document.getElementById('earth-export-kml');
+    if (bKml) bKml.onclick = function(){
+      if (window.CourseGeo && CourseGeo.downloadKml) CourseGeo.downloadKml(courseKey());
+    };
     if (bNext) bNext.onclick = function(){
       const nums = holeNums();
       let i = nums.indexOf(+holeSel);
@@ -635,6 +646,13 @@
       const lat = ev.latlng.lat, lng = ev.latlng.lng;
       if (mode === 'measure'){ measurePts.push({ lat, lng }); clearPreview(); redrawMeasure(); return; }
       if (mode === 'club' && clubDraw){ clubDraw.pts.push({ lat, lng }); clearPreview(); redrawClubDraw(); if (wizStep==='draw') renderWiz(); return; }
+      if (editOn && holeSel !== 'all' && window.CourseGeo){
+        const h = holesData()[String(holeSel)];
+        if (h && !holeTee(h)){
+          CourseGeo.moveTee(courseKey(), +holeSel, geoGender(), lat, lng);
+          drawCourse();
+        }
+      }
     });
     map.on('mousemove', function(ev){
       const to = { lat: ev.latlng.lat, lng: ev.latlng.lng };

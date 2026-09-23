@@ -1779,6 +1779,37 @@
     });
   }
 
+  function previewKmlMap(el, g){
+    if (!el || typeof L === 'undefined' || !g || !g.holes) return;
+    el.style.display = 'block';
+    if (el._leaf){ try { el._leaf.remove(); } catch(e){} el._leaf = null; }
+    el.innerHTML = '';
+    const map = L.map(el, { zoomControl:true, attributionControl:false }).setView([31.90, 49.31], 16);
+    el._leaf = map;
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:20, subdomains:'abcd' }).addTo(map);
+    const group = [];
+    Object.keys(g.holes).forEach(function(k){
+      const h = g.holes[k];
+      (h.fairways||[]).forEach(function(fw){
+        group.push(L.polygon(fw.latlngs, { color:'#3d9e6a', weight:1.4, fillOpacity:0.22 }).addTo(map));
+      });
+      if (h.teeF || h.tee){
+        const t = h.teeF || h.tee;
+        group.push(L.circleMarker([t.lat,t.lng], { radius:6, color:'#f0d989', fillColor:'#f0d989', fillOpacity:1 }).bindTooltip('T'+k+' W', { permanent:false }).addTo(map));
+      }
+      if (h.teeM){
+        group.push(L.circleMarker([h.teeM.lat,h.teeM.lng], { radius:6, color:'#2E86DE', fillColor:'#2E86DE', fillOpacity:1 }).bindTooltip('T'+k+' M', { permanent:false }).addTo(map));
+      }
+      if (h.green){
+        group.push(L.circleMarker([h.green.lat,h.green.lng], { radius:7, color:'#1e3d2f', fillColor:'#1e3d2f', fillOpacity:1 }).bindTooltip('H'+k, { permanent:false }).addTo(map));
+      }
+    });
+    if (group.length){
+      try { map.fitBounds(L.featureGroup(group).getBounds().pad(0.2), { maxZoom:18 }); } catch(e){}
+    }
+    setTimeout(function(){ try { map.invalidateSize(); } catch(e){} }, 80);
+  }
+
   /* ── تب زمین‌ها ── */
   function mgmtCourses(body){
     const S = gstate().S;
@@ -1808,6 +1839,7 @@
         <label>فایل گوگل‌ارث (KML)</label>
         <input class="input" type="file" id="mc-kml" accept=".kml,.xml,application/vnd.google-earth.kml+xml" style="width:100%">
         <div id="mc-kml-rep" style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.7">نام تی: <b dir="ltr">T.12 -260Y -Par4 -W</b> خانم‌ها · <b dir="ltr">T.12 -260Y -Par4 -M</b> آقایان · <b dir="ltr">Hole 12</b> · <b dir="ltr">fairway 12</b>. بدون پسوند جنسیت = تی خانم.</div>
+        <div id="mc-kml-map" style="display:none;height:280px;margin-top:10px;border-radius:14px;overflow:hidden;border:1px solid var(--line-soft)"></div>
       </div>
       <div id="mc-pars" style="margin-top:14px;display:flex;gap:7px;flex-wrap:wrap"></div>
       <button class="btn sm" id="mc-add" style="margin-top:14px">+ ثبت زمین</button>
@@ -1842,6 +1874,7 @@
           }
           if (!($('#mc-name').value || '').trim() && f.name) $('#mc-name').value = f.name.replace(/\.kml$/i,'');
           $('#mc-kml-rep').innerHTML = `خوانده شد: ${D.fa(sm.holes)} میدان · تی خانم ${D.fa(sm.teesF)} · تی آقا ${D.fa(sm.teesM)} · حفره ${D.fa(sm.greens)} · فروی ${D.fa(sm.fairways)}` + (sm.teesM ? '' : ' — تی آقایان در فایل نیست (بعداً با -M یا ویرایش نقشه).');
+          previewKmlMap($('#mc-kml-map'), g);
         } catch(err){
           kmlDraft = null;
           APP.toast('خواندن KML ناموفق بود', 'red');

@@ -10727,6 +10727,37 @@ window.addEventListener('ga:brand-changed', function(){
     });
   }
 
+  function previewKmlMap(el, g){
+    if (!el || typeof L === 'undefined' || !g || !g.holes) return;
+    el.style.display = 'block';
+    if (el._leaf){ try { el._leaf.remove(); } catch(e){} el._leaf = null; }
+    el.innerHTML = '';
+    const map = L.map(el, { zoomControl:true, attributionControl:false }).setView([31.90, 49.31], 16);
+    el._leaf = map;
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:20, subdomains:'abcd' }).addTo(map);
+    const group = [];
+    Object.keys(g.holes).forEach(function(k){
+      const h = g.holes[k];
+      (h.fairways||[]).forEach(function(fw){
+        group.push(L.polygon(fw.latlngs, { color:'#3d9e6a', weight:1.4, fillOpacity:0.22 }).addTo(map));
+      });
+      if (h.teeF || h.tee){
+        const t = h.teeF || h.tee;
+        group.push(L.circleMarker([t.lat,t.lng], { radius:6, color:'#f0d989', fillColor:'#f0d989', fillOpacity:1 }).bindTooltip('T'+k+' W', { permanent:false }).addTo(map));
+      }
+      if (h.teeM){
+        group.push(L.circleMarker([h.teeM.lat,h.teeM.lng], { radius:6, color:'#2E86DE', fillColor:'#2E86DE', fillOpacity:1 }).bindTooltip('T'+k+' M', { permanent:false }).addTo(map));
+      }
+      if (h.green){
+        group.push(L.circleMarker([h.green.lat,h.green.lng], { radius:7, color:'#1e3d2f', fillColor:'#1e3d2f', fillOpacity:1 }).bindTooltip('H'+k, { permanent:false }).addTo(map));
+      }
+    });
+    if (group.length){
+      try { map.fitBounds(L.featureGroup(group).getBounds().pad(0.2), { maxZoom:18 }); } catch(e){}
+    }
+    setTimeout(function(){ try { map.invalidateSize(); } catch(e){} }, 80);
+  }
+
   /* ── تب زمین‌ها ── */
   function mgmtCourses(body){
     const S = gstate().S;
@@ -10756,6 +10787,7 @@ window.addEventListener('ga:brand-changed', function(){
         <label>فایل گوگل‌ارث (KML)</label>
         <input class="input" type="file" id="mc-kml" accept=".kml,.xml,application/vnd.google-earth.kml+xml" style="width:100%">
         <div id="mc-kml-rep" style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.7">نام تی: <b dir="ltr">T.12 -260Y -Par4 -W</b> خانم‌ها · <b dir="ltr">T.12 -260Y -Par4 -M</b> آقایان · <b dir="ltr">Hole 12</b> · <b dir="ltr">fairway 12</b>. بدون پسوند جنسیت = تی خانم.</div>
+        <div id="mc-kml-map" style="display:none;height:280px;margin-top:10px;border-radius:14px;overflow:hidden;border:1px solid var(--line-soft)"></div>
       </div>
       <div id="mc-pars" style="margin-top:14px;display:flex;gap:7px;flex-wrap:wrap"></div>
       <button class="btn sm" id="mc-add" style="margin-top:14px">+ ثبت زمین</button>
@@ -10790,6 +10822,7 @@ window.addEventListener('ga:brand-changed', function(){
           }
           if (!($('#mc-name').value || '').trim() && f.name) $('#mc-name').value = f.name.replace(/\.kml$/i,'');
           $('#mc-kml-rep').innerHTML = `خوانده شد: ${D.fa(sm.holes)} میدان · تی خانم ${D.fa(sm.teesF)} · تی آقا ${D.fa(sm.teesM)} · حفره ${D.fa(sm.greens)} · فروی ${D.fa(sm.fairways)}` + (sm.teesM ? '' : ' — تی آقایان در فایل نیست (بعداً با -M یا ویرایش نقشه).');
+          previewKmlMap($('#mc-kml-map'), g);
         } catch(err){
           kmlDraft = null;
           APP.toast('خواندن KML ناموفق بود', 'red');
@@ -14926,9 +14959,66 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     return { holes: nums.length, teesF:f, teesM:m, greens:g, fairways:fw, pars: nums.map(function(n){ return H[n].par || 4; }) };
   }
 
+  function copyTees(courseId, fromG, toG){
+    const p = pack(courseId);
+    let n = 0;
+    Object.keys(p.holes || {}).forEach(function(k){
+      const h = p.holes[k];
+      const src = teeOf(h, fromG);
+      if (!src) return;
+      if (teeOf(h, toG)) return;
+      moveTee(courseId, k, toG, src.lat, src.lng);
+      n++;
+    });
+    return n;
+  }
+  function xmlEsc(s){
+    return String(s == null ? '' : s).replace(/[&<>\"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);
+    });
+  }
+  function toKml(p){
+    p = p || { holes:{} };
+    const H = p.holes || {};
+    const nums = Object.keys(H).map(Number).sort(function(a,b){ return a-b; });
+    let body = '';
+    function pt(name, lat, lng){
+      body += '<Placemark><name>'+xmlEsc(name)+'</name><Point><coordinates>'+lng+','+lat+',0</coordinates></Point></Placemark>\n';
+    }
+    function poly(name, latlngs){
+      const ring = (latlngs || []).map(function(ll){ return ll[1]+','+ll[0]+',0'; }).join(' ');
+      body += '<Placemark><name>'+xmlEsc(name)+'</name><Polygon><outerBoundaryIs><LinearRing><coordinates>'+ring+'</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>\n';
+    }
+    nums.forEach(function(n){
+      const h = H[n];
+      const par = h.par || 4;
+      if (h.teeF || h.tee){
+        const t = h.teeF || h.tee;
+        const yd = h.yardsF || h.yards || '';
+        pt('T.'+n+' -'+(yd||'')+'Y -Par'+par+' -W', t.lat, t.lng);
+      }
+      if (h.teeM){
+        const yd = h.yardsM || '';
+        pt('T.'+n+' -'+(yd||'')+'Y -Par'+par+' -M', h.teeM.lat, h.teeM.lng);
+      }
+      if (h.green) pt('Hole '+n, h.green.lat, h.green.lng);
+      (h.fairways || []).forEach(function(fw){ poly(fw.name || ('fairway '+n), fw.latlngs); });
+    });
+    return '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>'+xmlEsc(p.name||'course')+'</name>\n'+body+'</Document></kml>';
+  }
+  function downloadKml(courseId){
+    const p = pack(courseId);
+    const txt = toKml(p);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([txt], { type:'application/vnd.google-earth.kml+xml' }));
+    a.download = (p.name || 'course').replace(/\s+/g,'_') + '.kml';
+    a.click();
+  }
+
   window.CourseGeo = {
     parseKml, parseName, pack, keyOf, teeOf, yardsOf,
-    moveTee, moveGreen, moveFairwayVertex, set, loadAll, summary
+    moveTee, moveGreen, moveFairwayVertex, set, loadAll, summary,
+    copyTees, toKml, downloadKml
   };
 })();
 </script>
@@ -15508,6 +15598,17 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         syncModeBtns();
       };
     }
+    const bCopy = document.getElementById('earth-copy-tees');
+    if (bCopy) bCopy.onclick = function(){
+      if (!window.CourseGeo) return;
+      const n = CourseGeo.copyTees(courseKey(), 'F', 'M');
+      if (window.APP && APP.toast) APP.toast(n ? (n + ' تی آقا از روی تی خانم ساخته شد — جایش را اصلاح کنید') : 'تی آقا از قبل هست یا تی خانم نیست', n ? 'green' : 'orange');
+      drawCourse();
+    };
+    const bKml = document.getElementById('earth-export-kml');
+    if (bKml) bKml.onclick = function(){
+      if (window.CourseGeo && CourseGeo.downloadKml) CourseGeo.downloadKml(courseKey());
+    };
     if (bNext) bNext.onclick = function(){
       const nums = holeNums();
       let i = nums.indexOf(+holeSel);
@@ -15569,6 +15670,13 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       const lat = ev.latlng.lat, lng = ev.latlng.lng;
       if (mode === 'measure'){ measurePts.push({ lat, lng }); clearPreview(); redrawMeasure(); return; }
       if (mode === 'club' && clubDraw){ clubDraw.pts.push({ lat, lng }); clearPreview(); redrawClubDraw(); if (wizStep==='draw') renderWiz(); return; }
+      if (editOn && holeSel !== 'all' && window.CourseGeo){
+        const h = holesData()[String(holeSel)];
+        if (h && !holeTee(h)){
+          CourseGeo.moveTee(courseKey(), +holeSel, geoGender(), lat, lng);
+          drawCourse();
+        }
+      }
     });
     map.on('mousemove', function(ev){
       const to = { lat: ev.latlng.lat, lng: ev.latlng.lng };
@@ -19385,6 +19493,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
 
   window.APP = {
     go, reloadData, recompute, refreshLabels, state: () => ({ S, A }), toast,
+    openCourse: (id) => { courseSel = +id; go('course'); },
     currentUser: () => currentUser,
     isMain: () => isMain(currentUser),
     isAdmin: () => isAdmin(currentUser),

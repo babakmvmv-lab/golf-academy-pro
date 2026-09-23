@@ -1804,6 +1804,11 @@
         <button class="btn sm ghost" id="mc-pick">📍 انتخاب روی نقشه</button>
         <button class="btn sm ghost" id="mc-map">🛰 پیش‌نمایش ماهواره‌ای</button>
       </div>
+      <div style="margin-top:12px">
+        <label>فایل گوگل‌ارث (KML)</label>
+        <input class="input" type="file" id="mc-kml" accept=".kml,.xml,application/vnd.google-earth.kml+xml" style="width:100%">
+        <div id="mc-kml-rep" style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.7">نام تی: <b dir="ltr">T.12 -260Y -Par4 -W</b> خانم‌ها · <b dir="ltr">T.12 -260Y -Par4 -M</b> آقایان · <b dir="ltr">Hole 12</b> · <b dir="ltr">fairway 12</b>. بدون پسوند جنسیت = تی خانم.</div>
+      </div>
       <div id="mc-pars" style="margin-top:14px;display:flex;gap:7px;flex-wrap:wrap"></div>
       <button class="btn sm" id="mc-add" style="margin-top:14px">+ ثبت زمین</button>
     </div>
@@ -1814,7 +1819,36 @@
       </tr></thead><tbody id="mc-rows"></tbody></table></div>
     </div>`;
     let parVals = Array.from({length:18}, () => 4);
+    let kmlDraft = null;
     bindParEditor($('#mc-pars'), parVals);
+    const kmlInp = $('#mc-kml');
+    if (kmlInp) kmlInp.addEventListener('change', function(){
+      const f = kmlInp.files && kmlInp.files[0];
+      if (!f){ kmlDraft = null; return; }
+      if (!window.CourseGeo){ APP.toast('ماژول زمین بار نشده', 'red'); return; }
+      const reader = new FileReader();
+      reader.onload = function(){
+        try {
+          const g = CourseGeo.parseKml(String(reader.result || ''));
+          const sm = CourseGeo.summary(g);
+          kmlDraft = g;
+          if (sm.pars && sm.pars.length){
+            parVals = sm.pars.slice();
+            bindParEditor($('#mc-pars'), parVals);
+          }
+          if (g.center){
+            $('#mc-lat').value = g.center.lat.toFixed(6);
+            $('#mc-lng').value = g.center.lng.toFixed(6);
+          }
+          if (!($('#mc-name').value || '').trim() && f.name) $('#mc-name').value = f.name.replace(/\.kml$/i,'');
+          $('#mc-kml-rep').innerHTML = `خوانده شد: ${D.fa(sm.holes)} میدان · تی خانم ${D.fa(sm.teesF)} · تی آقا ${D.fa(sm.teesM)} · حفره ${D.fa(sm.greens)} · فروی ${D.fa(sm.fairways)}` + (sm.teesM ? '' : ' — تی آقایان در فایل نیست (بعداً با -M یا ویرایش نقشه).');
+        } catch(err){
+          kmlDraft = null;
+          APP.toast('خواندن KML ناموفق بود', 'red');
+        }
+      };
+      reader.readAsText(f);
+    });
     $('#mc-pick').addEventListener('click', () => openMapPicker(c => {
       $('#mc-lat').value = c.lat; $('#mc-lng').value = c.lng;
       APP.toast('موقعیت انتخاب شد: ' + c.lat + ' , ' + c.lng, 'green');
@@ -1825,7 +1859,13 @@
       if (!name){ APP.toast('نام زمین را وارد کنید', 'red'); return; }
       const pars = parVals.slice();
       if (!pars.length){ APP.toast('حداقل یک میدان لازم است', 'red'); return; }
-      extra.push({ name, loc: $('#mc-loc').value.trim() || 'ریاض', holes: pars.length, pars, lat:+$('#mc-lat').value, lng:+$('#mc-lng').value });
+      const rec = { name, loc: $('#mc-loc').value.trim() || 'ریاض', holes: pars.length, pars, lat:+$('#mc-lat').value, lng:+$('#mc-lng').value };
+      if (kmlDraft && window.CourseGeo){
+        rec.geoId = 'c' + Date.now();
+        kmlDraft.name = name;
+        CourseGeo.set(rec.geoId, kmlDraft);
+      }
+      extra.push(rec);
       saveCourses(extra); APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
       APP.toast('زمین «' + name + '» ثبت شد ✓', 'green');
     });
@@ -1897,7 +1937,11 @@
         <div><label>مختصات lat</label><input class="input" id="ec-lat" style="width:100%;direction:ltr" value="${r.lat||24.7136}"></div>
         <div><label>مختصات lng</label><input class="input" id="ec-lng" style="width:100%;direction:ltr" value="${r.lng||46.6753}"></div>
       </div>
-      <div style="margin-top:10px"><button class="btn sm ghost" id="ec-pick">📍 انتخاب روی نقشه</button></div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm ghost" id="ec-pick">📍 انتخاب روی نقشه</button>
+        <label class="btn sm ghost" style="cursor:pointer">📥 جایگزینی KML<input type="file" id="ec-kml" accept=".kml,.xml" style="display:none"></label>
+      </div>
+      <div id="ec-kml-rep" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
       <div style="margin-top:12px;font-size:11px;color:var(--muted)">پار هر میدان — می‌توانید میدان اضافه یا حذف کنید</div>
       <div style="margin-top:8px;display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end" id="ec-pars"></div>
       <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
@@ -1909,6 +1953,34 @@
     const parVals = (r.pars && r.pars.length) ? r.pars.slice() : Array.from({length: r.holes || 18}, () => 4);
     bindParEditor($('#ec-pars'), parVals);
     $('#ec-pick').addEventListener('click', () => openMapPicker(c => { $('#ec-lat').value = c.lat; $('#ec-lng').value = c.lng; }, { lat:+$('#ec-lat').value, lng:+$('#ec-lng').value }));
+    const ecKml = $('#ec-kml');
+    if (ecKml) ecKml.addEventListener('change', function(){
+      const f = ecKml.files && ecKml.files[0];
+      if (!f || !window.CourseGeo) return;
+      const reader = new FileReader();
+      reader.onload = function(){
+        try {
+          const g = CourseGeo.parseKml(String(reader.result || ''));
+          const sm = CourseGeo.summary(g);
+          const geoId = r.base ? String(r.id) : (extraCourses()[r.idx] && extraCourses()[r.idx].geoId) || ('c'+Date.now());
+          g.name = ($('#ec-name').value || '').trim() || g.name;
+          CourseGeo.set(geoId, g);
+          if (!r.base){
+            const lst = extraCourses();
+            if (lst[r.idx]) lst[r.idx].geoId = geoId;
+            saveCourses(lst);
+          }
+          if (sm.pars && sm.pars.length){
+            parVals.splice(0, parVals.length, ...sm.pars);
+            bindParEditor($('#ec-pars'), parVals);
+          }
+          if (g.center){ $('#ec-lat').value = g.center.lat.toFixed(6); $('#ec-lng').value = g.center.lng.toFixed(6); }
+          $('#ec-kml-rep').textContent = `KML ذخیره شد: ${sm.holes} میدان · تی خانم ${sm.teesF} · تی آقا ${sm.teesM}`;
+          APP.toast('نقشهٔ زمین از KML به‌روز شد ✓', 'green');
+        } catch(e){ APP.toast('خواندن KML ناموفق بود', 'red'); }
+      };
+      reader.readAsText(f);
+    });
     $('#ec-cancel').addEventListener('click', () => m.style.display = 'none');
     $('#ec-save').addEventListener('click', () => {
       const name = $('#ec-name').value.trim();

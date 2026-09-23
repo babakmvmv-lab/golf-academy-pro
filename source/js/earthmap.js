@@ -8,6 +8,7 @@
 
   let map = null, measurePts = [], measureLine = null, measureMarks = [], mode = 'pan';
   let unit = 'yd', holeSel = 'all', showTee = true, showGreen = true, showFw = true, showDash = true;
+  let editOn = false;
   let courseLayers = [], clubDraw = null, clubLine = null, clubMarks = [];
   let optsRef = {};
   let bgLayer = null, bgMode = 'sat';
@@ -58,13 +59,32 @@
     const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
     return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
   }
+  function courseKey(){ return optsRef.tourCourse != null ? optsRef.tourCourse : (optsRef.courseId || 1); }
+  function geoGender(){ return String(optsRef.gender || 'F').toUpperCase() === 'M' ? 'M' : 'F'; }
   function holesData(){
+    if (window.CourseGeo && CourseGeo.pack){
+      const p = CourseGeo.pack(courseKey());
+      return (p && p.holes) ? p.holes : {};
+    }
     const g = window.MIS_GOLF;
     return (g && g.holes) ? g.holes : {};
   }
   function satInfo(){
+    if (window.CourseGeo && CourseGeo.pack){
+      const p = CourseGeo.pack(courseKey());
+      if (p && p.sat) return p.sat;
+    }
     const g = window.MIS_GOLF;
-    return (g && g.sat) ? g.sat : null;
+    if (String(courseKey()) === '1' || optsRef.courseId === 'mis') return (g && g.sat) ? g.sat : null;
+    return (g && g.sat && (+courseKey() === 1)) ? g.sat : null;
+  }
+  function holeTee(h){
+    if (window.CourseGeo && CourseGeo.teeOf) return CourseGeo.teeOf(h, geoGender());
+    return h && h.tee;
+  }
+  function holeYards(h){
+    if (window.CourseGeo && CourseGeo.yardsOf) return CourseGeo.yardsOf(h, geoGender());
+    return h && h.yards;
   }
   function bgUrl(){
     const s = satInfo();
@@ -186,35 +206,70 @@
     const group = [];
     nums.forEach(function(n){
       const h = H[String(n)]; if (!h) return;
+      const tee = holeTee(h);
+      const yds = holeYards(h);
       if (showFw && h.fairways){
-        h.fairways.forEach(function(fw){
+        h.fairways.forEach(function(fw, fi){
           const poly = L.polygon(fw.latlngs, { color: sty.fw, weight:1.6, fillColor: sty.fw, fillOpacity: +sty.fwAlpha || 0, interactive:false });
           poly.addTo(map); addLayer(poly); group.push(poly);
+          if (editOn && holeSel !== 'all' && window.CourseGeo){
+            (fw.latlngs || []).forEach(function(ll, vi){
+              const vm = L.marker([ll[0], ll[1]], { icon: dotIcon(sty.fw), draggable:true, interactive:true });
+              vm.on('dragend', function(){
+                const p = vm.getLatLng();
+                CourseGeo.moveFairwayVertex(courseKey(), n, fi, vi, p.lat, p.lng);
+                drawCourse();
+              });
+              vm.addTo(map); addLayer(vm);
+            });
+          }
         });
       }
-      if (h.tee && h.green && showDash){
-        const ln = L.polyline([[h.tee.lat,h.tee.lng],[h.green.lat,h.green.lng]], { color: sty.line, weight:2, dashArray:'6 5', opacity:0.9, interactive:false });
-        const d = hav(h.tee, h.green);
+      if (tee && h.green && showDash){
+        const ln = L.polyline([[tee.lat,tee.lng],[h.green.lat,h.green.lng]], { color: sty.line, weight:2, dashArray:'6 5', opacity:0.9, interactive:false });
+        const d = hav(tee, h.green);
         ln.addTo(map); addLayer(ln); group.push(ln);
-        const mid = { lat:(h.tee.lat+h.green.lat)/2, lng:(h.tee.lng+h.green.lng)/2 };
+        const mid = { lat:(tee.lat+h.green.lat)/2, lng:(tee.lng+h.green.lng)/2 };
         const lab = L.marker([mid.lat, mid.lng], {
-          icon: L.divIcon({ className:'earth-divicon', html:`<div class="earth-seg">${h.yards? (h.yards+' yd') : fmtDist(d)}</div>`, iconSize:[70,18], iconAnchor:[35,9] }),
+          icon: L.divIcon({ className:'earth-divicon', html:`<div class="earth-seg">${yds? (yds+' yd') : fmtDist(d)}</div>`, iconSize:[70,18], iconAnchor:[35,9] }),
           interactive:false
         });
         lab.addTo(map); addLayer(lab);
       }
-      if (showTee && h.tee){
-        const deg = (h.green) ? bearingDeg(h.tee, h.green) : 0;
-        const m = L.marker([h.tee.lat, h.tee.lng], { icon: teeIcon(n, deg), interactive:false });
+      if (showTee && tee){
+        const deg = (h.green) ? bearingDeg(tee, h.green) : 0;
+        const m = L.marker([tee.lat, tee.lng], { icon: teeIcon(n, deg), draggable: !!editOn, interactive: !!editOn });
+        if (editOn && window.CourseGeo){
+          m.on('dragend', function(){
+            const p = m.getLatLng();
+            CourseGeo.moveTee(courseKey(), n, geoGender(), p.lat, p.lng);
+            drawCourse();
+          });
+        }
         m.addTo(map); addLayer(m); group.push(m);
       }
       if (showGreen && h.green){
-        const m = L.marker([h.green.lat, h.green.lng], { icon: holeIcon(n), interactive:false });
+        const m = L.marker([h.green.lat, h.green.lng], { icon: holeIcon(n), draggable: !!editOn, interactive: !!editOn });
+        if (editOn && window.CourseGeo){
+          m.on('dragend', function(){
+            const p = m.getLatLng();
+            CourseGeo.moveGreen(courseKey(), n, p.lat, p.lng);
+            drawCourse();
+          });
+        }
         m.addTo(map); addLayer(m); group.push(m);
       }
     });
+    const hint = document.getElementById('earth-geo-hint');
+    if (hint){
+      const g = geoGender();
+      const missing = nums.filter(function(n){ return !holeTee(H[String(n)]); }).length;
+      if (g === 'M' && missing) hint.textContent = 'تی آقایان برای ' + missing + ' میدان ثبت نشده — فایل KML با -M یا کشیدن تی در ویرایش';
+      else if (editOn) hint.textContent = holeSel==='all' ? 'تی و حفره را بکشید. برای فروی یک میدان را انتخاب کنید.' : 'رأس‌های فروی، تی و حفره قابل کشیدن‌اند.';
+      else hint.textContent = '';
+    }
     drawSavedPlan();
-    if (group.length){
+    if (group.length && !editOn){
       try { map.fitBounds(L.featureGroup(group).getBounds().pad(holeSel==='all'?0.18:0.35), { maxZoom: holeSel==='all'?17:19 }); } catch(e){}
     }
   }
@@ -306,6 +361,7 @@
     courseLayers = []; clubDraw = null; clubLine = null; clubMarks = [];
     bgLayer = null; previewLine = null; previewMark = null;
     wizStep = 'hole'; wizEdit = -1; wizDraft = { club:'', color:'#D4AF37', pts:[], note:'' };
+    editOn = false;
   }
 
   function exportPoster(){
@@ -412,7 +468,11 @@
   function bindUi(){
     const hole = document.getElementById('earth-hole');
     if (hole){
-      hole.innerHTML = '<option value="all">همهٔ میدان‌ها</option>' + holeNums().map(n => `<option value="${n}">میدان ${n}${holesData()[n]&&holesData()[n].par?(' • پار '+holesData()[n].par):''}${holesData()[n]&&holesData()[n].yards?(' • '+holesData()[n].yards+' yd'):''}</option>`).join('');
+      hole.innerHTML = '<option value="all">همهٔ میدان‌ها</option>' + holeNums().map(n => {
+        const hh = holesData()[n];
+        const yd = holeYards(hh);
+        return `<option value="${n}">میدان ${n}${hh&&hh.par?(' • پار '+hh.par):''}${yd?(' • '+yd+' yd'):''}</option>`;
+      }).join('');
       hole.value = holeSel;
       hole.onchange = function(){ holeSel = hole.value; clubDraw=null; mode='pan'; drawCourse(); syncModeBtns(); };
     }
@@ -486,7 +546,8 @@
       const color = CLUB_COLORS[arr.length % CLUB_COLORS.length];
       const last = arr.length && arr[arr.length-1].pts && arr[arr.length-1].pts.length ? arr[arr.length-1].pts[arr[arr.length-1].pts.length-1] : null;
       const H = holesData()[String(holeSel)];
-      const start = last || (H && H.tee ? { lat:H.tee.lat, lng:H.tee.lng } : null);
+      const t0 = holeTee(H);
+      const start = last || (t0 ? { lat:t0.lat, lng:t0.lng } : null);
       clubDraw = { club: nm, color, pts: start ? [start] : [] };
       mode = 'club';
       redrawClubDraw();
@@ -502,6 +563,17 @@
       drawCourse();
       syncModeBtns();
     };
+    const bEdit = document.getElementById('earth-edit-geo');
+    if (bEdit){
+      bEdit.classList.toggle('on', editOn);
+      bEdit.onclick = function(){
+        editOn = !editOn;
+        bEdit.classList.toggle('on', editOn);
+        if (editOn){ mode = 'pan'; clearMeasure(); }
+        drawCourse();
+        syncModeBtns();
+      };
+    }
     if (bNext) bNext.onclick = function(){
       const nums = holeNums();
       let i = nums.indexOf(+holeSel);
@@ -965,5 +1037,5 @@
     } else go(false);
   }
 
-  window.EarthMap = { mount, destroy };
+  window.EarthMap = { mount, destroy, setEdit: function(on){ editOn = !!on; drawCourse(); } };
 })();

@@ -140,6 +140,91 @@
     if (r === 3) return '<span class="tv-medal bronze" title="برنز">★</span>';
     return '';
   };
+  function rankCell(r){
+    if (r === 1 || r === 2 || r === 3) return medal(r);
+    return `<span class="tv-rk">${D.fa(r)}</span>`;
+  }
+  function storyBtn(id){
+    return `<button type="button" class="btn sm" id="${id}" style="background:linear-gradient(135deg,#d62976,#fa7e1e);color:#fff;font-weight:800;padding:6px 12px" title="خروجی عکس ۱۰۸۰×۱۹۲۰ آمادهٔ استوری اینستاگرام">📱 استوری</button>`;
+  }
+  function showStoryPreview(blob, fname, shareTitle){
+    const url = URL.createObjectURL(blob);
+    let pr2 = document.getElementById('story-preview');
+    if (!pr2){ pr2 = document.createElement('div'); pr2.id = 'story-preview'; document.body.appendChild(pr2); }
+    pr2.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(3,7,12,.92);display:flex;align-items:center;justify-content:center;padding:14px';
+    pr2.innerHTML = '<div style="text-align:center;max-width:400px;width:100%">'
+      + '<img src="' + url + '" style="width:100%;max-height:70vh;object-fit:contain;border-radius:18px;border:2px solid rgba(212,175,55,.55);box-shadow:0 14px 60px rgba(0,0,0,.6)">'
+      + '<div style="color:#cdd7e1;font-size:12.5px;line-height:2;margin:12px 4px">📥 عکس ۱۰۸۰×۱۹۲۰ ساخته شد — اگر خودکار دانلود نشد، روی تصویر <b>لمس طولانی → Add to Photos</b> بزن؛ بعد اینستاگرام ← استوری ← انتخاب عکس</div>'
+      + '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'
+      + '<a id="spv-dl" href="' + url + '" download="' + fname + '" style="background:linear-gradient(135deg,#d4af37,#b08a28);color:#1a1407;font-weight:900;text-decoration:none;padding:10px 22px;border-radius:12px;display:inline-block;font-size:13px">⬇ دانلود عکس</a>'
+      + '<button class="btn sm" id="spv-share" style="background:linear-gradient(135deg,#d62976,#fa7e1e);font-weight:900;color:#fff">📤 اشتراک (مستقیم استوری)</button>'
+      + '<button class="btn sm ghost" id="spv-x">بستن</button></div></div>';
+    document.getElementById('spv-x').onclick = () => { pr2.style.display = 'none'; };
+    document.getElementById('spv-share').onclick = () => {
+      const f = new File([blob], fname, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) navigator.share({ files: [f], title: shareTitle || fname }).catch(() => {});
+      else toast('اشتراک مستقیم روی این مرورگر نیست — همان «⬇ دانلود عکس» را بزن', 'orange');
+    };
+    const fx = new File([blob], fname, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [fx] })){
+      navigator.share({ files: [fx], title: shareTitle || fname }).catch(() => {});
+    } else {
+      const a = document.createElement('a'); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+    }
+    toast('📱 عکس استوری آماده شد ✓', 'green');
+  }
+  function igStory(btn, fname, paint){
+    const old = btn ? btn.textContent : '';
+    const finish = () => { if (btn){ btn.disabled = false; btn.textContent = old; } };
+    if (btn){ btn.disabled = true; btn.textContent = '⏳ در حال ساخت استوری…'; }
+    const W = 1080, H = 1920, cvs = document.createElement('canvas');
+    cvs.width = W; cvs.height = H;
+    const c = cvs.getContext('2d');
+    const GOLD = '#d4af37', GL = '#f3d779', FG = '#e9eff6', MUT = '#9aa7b5';
+    const F = (w2, px) => { c.font = w2 + ' ' + px + 'px Vazirmatn, Tahoma, sans-serif'; };
+    const rrect = (x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
+    const txt = (t2, x, y, w2, px, col, align, maxW) => {
+      let s2 = px; F(w2, s2);
+      if (maxW){ while (s2 > 13 && c.measureText(t2).width > maxW){ s2 -= 2; F(w2, s2); } }
+      c.fillStyle = col; c.textAlign = align || 'center'; c.textBaseline = 'alphabetic'; c.direction = 'rtl'; c.fillText(t2, x, y);
+    };
+    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0a0f16'); g.addColorStop(.55, '#0d1420'); g.addColorStop(1, '#0a0f16');
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    const rg = (x, y, r, a) => { const rr = c.createRadialGradient(x, y, 0, x, y, r); rr.addColorStop(0, 'rgba(212,175,55,' + a + ')'); rr.addColorStop(1, 'rgba(212,175,55,0)'); c.fillStyle = rr; c.fillRect(x - r, y - r, r * 2, r * 2); };
+    rg(930, 120, 420, .14); rg(120, 1740, 460, .12); rg(540, 960, 700, .05);
+    const tg = c.createLinearGradient(0, 0, W, 0); tg.addColorStop(0, '#7a5f17'); tg.addColorStop(.25, GOLD); tg.addColorStop(.5, '#f7e7ac'); tg.addColorStop(.75, GOLD); tg.addColorStop(1, '#7a5f17');
+    c.fillStyle = tg; c.fillRect(0, 0, W, 14);
+    const helpers = { W, H, GOLD, GL, FG, MUT, F, rrect, txt, c };
+    const done = () => {
+      const fy = H - 118;
+      c.strokeStyle = 'rgba(212,175,55,.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(120, fy - 42); c.lineTo(W - 120, fy - 42); c.stroke();
+      txt(((window.GA_BRAND && GA_BRAND.host()) || 'puttclub.ir'), W / 2, fy + 8, '800', 34, GL);
+      const ig = ((window.GA_BRAND && GA_BRAND.get && GA_BRAND.get().instagram) || 'puttclub').replace(/^@/, '');
+      txt('📷 اینستاگرام  @' + ig, W / 2, fy + 58, '500', 24, MUT, 'center', 960);
+      cvs.toBlob(b => { showStoryPreview(b, fname, fname); finish(); }, 'image/png');
+    };
+    const run = () => {
+      Promise.resolve(paint(helpers)).then(() => done()).catch(() => done());
+    };
+    const img = new Image();
+    let drew = false;
+    const afterLogo = () => {
+      c.save(); c.beginPath(); c.arc(W / 2, 172, 82, 0, 7); c.lineWidth = 6; c.strokeStyle = GOLD; c.stroke(); c.restore();
+      txt(((window.GA_BRAND && GA_BRAND.get().nameFa) || 'آکادمی گلف پات کلاب'), W / 2, 308, '900', 46, GL);
+      txt(((window.GA_BRAND && GA_BRAND.get().nameEn) || 'PUTT CLUB').toUpperCase().split('').join(' '), W / 2, 352, '400', 21, 'rgba(212,175,55,.75)');
+      c.strokeStyle = 'rgba(212,175,55,.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(240, 386); c.lineTo(W - 240, 386); c.stroke();
+      run();
+    };
+    img.onload = () => {
+      if (drew) return; drew = true;
+      c.save(); c.beginPath(); c.arc(W / 2, 172, 76, 0, 7); c.clip();
+      try { c.drawImage(img, W / 2 - 76, 172 - 76, 152, 152); } catch (e) {}
+      c.restore(); afterLogo();
+    };
+    img.onerror = () => { if (!drew){ drew = true; afterLogo(); } };
+    img.src = (window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.png';
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {});
+  }
   function pbar(pct, cls='', w=0){
     return `<div class="pbar ${cls}"><i data-w="${Math.min(100, Math.round(w || pct))}"></i></div>`;
   }
@@ -354,7 +439,7 @@
     <div class="grid cols-4" id="cmd-stats"></div>
     <div class="grid cols-3" style="margin-top:18px">
       <div class="glass tilt" style="grid-column:span 2">
-        <div class="card-head"><span class="ic">🏆</span><h3>سکوی قهرمانی فصل</h3><span class="tag">FedEx Style</span></div>
+        <div class="card-head"><span class="ic">🏆</span><h3>سکوی قهرمانی فصل</h3><span class="tag">FedEx Style</span>${storyBtn('st-podium')}</div>
         <div class="podium">
           ${[1,0,2].map(k => {
             const r = top[k];
@@ -449,6 +534,45 @@
       if (apply){
         apply.addEventListener('click', () => drawMonthlyChart());
       }
+      const sp = $('#st-podium');
+      if (sp) sp.addEventListener('click', () => {
+        const top3 = raceLB().LB.slice(0, 3);
+        igStory(sp, 'استوری-سکوی-قهرمانی.png', ({ W, GOLD, GL, FG, MUT, rrect, txt, c }) => {
+          txt('🏆 سکوی قهرمانی فصل', W / 2, 446, '700', 28, MUT);
+          txt('FedEx Style  •  ' + D.fa(D.seasonYear), W / 2, 490, '500', 22, 'rgba(212,175,55,.7)');
+          const order = [top3[1], top3[0], top3[2]];
+          const cardW = 300;
+          return Promise.all(order.map((r, i) => new Promise(res => {
+            if (!r){ res(null); return; }
+            const im = new Image();
+            im.onload = () => res({ r, im, i });
+            im.onerror = () => res({ r, im: null, i });
+            im.src = avatar(r.pid);
+          }))).then(rows => {
+            rows.forEach(item => {
+              if (!item || !item.r) return;
+              const r = item.r, i = item.i;
+              const is1 = r.rank === 1;
+              const chH = is1 ? 420 : 360, cw = cardW;
+              const x = (W - (cardW * 3 + 28 * 2)) / 2 + i * (cardW + 28);
+              const y = 560 + (is1 ? 0 : 50);
+              c.fillStyle = is1 ? 'rgba(212,175,55,.10)' : 'rgba(255,255,255,.03)';
+              c.strokeStyle = is1 ? 'rgba(212,175,55,.8)' : 'rgba(255,255,255,.09)'; c.lineWidth = is1 ? 3.5 : 2;
+              rrect(x, y, cw, chH, 26); c.fill(); c.stroke();
+              const star = r.rank===1 ? '#d4af37' : r.rank===2 ? '#c5cdd6' : '#c67b3a';
+              txt('★', x + cw / 2, y + 70, '400', 48, star);
+              if (item.im){
+                c.save(); c.beginPath(); c.arc(x + cw / 2, y + 148, 52, 0, 7); c.clip();
+                try { c.drawImage(item.im, x + cw / 2 - 52, y + 96, 104, 104); } catch(e){}
+                c.restore();
+                c.beginPath(); c.arc(x + cw / 2, y + 148, 54, 0, 7); c.strokeStyle = star; c.lineWidth = 4; c.stroke();
+              }
+              txt(r.name, x + cw / 2, y + 240, '800', 28, FG, 'center', cw - 20);
+              txt(D.faNum(r.pts, 0) + ' امتیاز', x + cw / 2, y + 290, '800', 26, GL);
+            });
+          });
+        });
+      });
     }, 60);
   }
 
@@ -2014,6 +2138,7 @@
         <div style="font-size:11px;color:var(--muted)">رویدادهای فصل</div>
         <div style="font-size:16px;font-weight:800" class="gold-text">${D.fa(events.length)} رویداد</div>
       </div>
+        <button class="btn sm" id="st-cal" style="background:linear-gradient(135deg,#d62976,#fa7e1e);color:#fff;font-weight:800">📱 استوری</button>
         <button class="btn sm ghost" onclick="APP.go('mgmt')">⚙️ مدیریت ${esc(L('nav.cal','تقویم فصل'))}</button>
     </div>
 
@@ -2046,6 +2171,32 @@
         <div id="cal-month-hols" class="cal-month-hols"></div>
       </div>
     </div>`;
+
+    const stCal = $('#st-cal');
+    if (stCal) stCal.addEventListener('click', () => {
+      const nx = events[nextIdx];
+      const days = Math.max(0, Math.ceil((nx.d - D.TODAY)/86400000));
+      const j = D.jalaliInfo(nx.d);
+      igStory(stCal, 'استوری-تقویم-فصل.png', ({ W, GOLD, GL, FG, MUT, rrect, txt, c }) => {
+        txt('📅 تقویم فصل', W / 2, 446, '700', 28, MUT);
+        txt('رویداد بعدی', W / 2, 560, '500', 24, MUT);
+        txt((TYPE_ICON[nx.type]||'') + ' ' + nx.name, W / 2, 640, '900', 52, GL, 'center', 960);
+        txt(nx.type + '  •  ' + D.fa(j.dd) + ' ' + MONTHS[j.mm-1] + ' ' + D.fa(j.yy), W / 2, 700, '500', 26, FG);
+        rrect(340, 760, 400, 180, 28);
+        c.fillStyle = 'rgba(212,175,55,.10)'; c.strokeStyle = 'rgba(212,175,55,.55)'; c.lineWidth = 2; c.fill(); c.stroke();
+        txt(D.fa(days), W / 2, 860, '900', 72, GL);
+        txt('روز تا شروع', W / 2, 910, '500', 24, MUT);
+        txt(D.fa(events.length) + ' رویداد در فصل ' + D.fa(D.seasonYear), W / 2, 1060, '600', 28, FG);
+        const upcoming = events.filter(e => e.d >= D.TODAY).slice(0, 6);
+        let y = 1140;
+        upcoming.forEach(e => {
+          const jj = D.jalaliInfo(e.d);
+          txt((TYPE_ICON[e.type]||'📌') + '  ' + e.name, W / 2, y, '600', 26, FG, 'center', 900);
+          txt(D.fa(jj.dd) + ' ' + MONTHS[jj.mm-1], W / 2, y + 32, '400', 20, MUT);
+          y += 70;
+        });
+      });
+    });
 
     // ── لیست رویدادها ──
     function renderList(){
@@ -2213,8 +2364,8 @@
               <thead><tr><th>رتبه</th><th>بازیکن</th><th>رنگ</th><th>امتیاز</th></tr></thead>
               <tbody>
               ${(TV.length ? TV.slice(0,10).map(r => `<tr class="top${r.rank<=3?r.rank:0}" style="font-size:14px">
-                <td style="font-size:17px;font-weight:900">${medal(r.rank)} ${D.fa(r.rank)}</td>
-                <td><b style="font-size:15px">${esc(r.name)}</b>${r.streak>=2?' 🔥':''}</td>
+                <td class="tv-rank">${rankCell(r.rank)}</td>
+                <td class="tv-name"><b>${esc(r.name)}</b>${r.streak>=2?' 🔥':''}</td>
                 <td>${rankPill(r.color)}</td>
                 <td class="tv-pts">${D.faNum(r.pts,0)}</td>
               </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:18px">📺 هنوز در ' + D.fa(tvYr) + ' کسی حداقل ۱ امتیاز دریافت نکرده است</td></tr>')}

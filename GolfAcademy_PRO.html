@@ -39,7 +39,6 @@ if(location.protocol==='http:' && !/^(localhost|127\.0\.0\.1)$/.test(location.ho
   --white:#F8FAFC; --muted:#8A93A6; --dim:#8490A3;
   --line:rgba(212,175,55,.22); --line-soft:rgba(248,250,252,.08);
   --red:#E74C3C; --blue:#2E86DE; --purple:#9B59B6; --orange:#E67E22; --teal:#1ABC9C;
-  --scale-1:#146C43; --scale-2:#3DDC97; --scale-3:#F4C430; --scale-4:#E67E22; --scale-5:#E85D4C; --scale-6:#8B1A1A;
   --radius:18px;
   --shadow:0 10px 40px rgba(0,0,0,.5);
   --font:'Vazirmatn','Segoe UI',Tahoma,Arial,sans-serif;
@@ -470,8 +469,6 @@ canvas.glow-canvas{filter:drop-shadow(0 0 6px rgba(212,175,55,.25))}
   .podium{transform:scale(.82);transform-origin:top center}
   .toolbar{flex-wrap:wrap;gap:8px}
   .toolbar .input,.toolbar .sel{min-width:0!important;width:100%!important}
-  .hp-par-head,.hp-par{grid-template-columns:minmax(3.6rem,1fr) 3.6rem 3.6rem 1.8rem;gap:6px;padding:6px 8px}
-  .hp-par-n{font-size:12px}
   .field-grid{grid-template-columns:1fr 1fr;gap:10px}
   .field-grid .span2{grid-column:span 2}
   .jdate-selects{grid-template-columns:repeat(3,1fr);gap:5px}
@@ -841,61 +838,6 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   color:var(--gold-l);font-weight:900;font-size:16px;
   font-variant-numeric:tabular-nums;direction:ltr;text-align:center;
 }
-
-/* پار + Index — اسکورکارت دو ستون (۱–۹ | ۱۰–۱۸) */
-.hp-par-wrap{margin-top:14px}
-.hp-par-board{
-  display:grid;
-  grid-template-columns:1fr;
-  gap:14px;
-}
-@media (min-width:640px){
-  .hp-par-board{grid-template-columns:1fr 1fr;gap:14px 18px}
-}
-.hp-par-nine{
-  background:rgba(255,255,255,.03);
-  border:1px solid var(--line-soft);
-  border-radius:16px;
-  overflow:hidden;
-}
-.hp-par-nine-h{
-  font-size:12px;font-weight:800;color:var(--gold-l);
-  padding:10px 12px 8px;letter-spacing:.2px;
-  border-bottom:1px solid var(--line-soft);
-}
-.hp-par-head,
-.hp-par{
-  display:grid;
-  grid-template-columns:minmax(4.6rem,1.15fr) 4.6rem 4.6rem 2.1rem;
-  gap:8px;
-  align-items:center;
-  padding:7px 12px;
-}
-.hp-par-head{
-  font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.3px;
-  padding-top:8px;padding-bottom:4px;
-}
-.hp-par{
-  text-align:start;
-  border-top:1px solid rgba(255,255,255,.06);
-}
-.hp-par-n{font-size:12.5px;font-weight:800;color:var(--muted);white-space:nowrap}
-.hp-par .pe-par,
-.hp-par .pe-idx{
-  width:100%;min-width:0;max-width:100%;
-  text-align:center;direction:ltr;
-  padding:7px 4px;font-weight:800;font-size:14px;
-  box-sizing:border-box;
-}
-.hp-par .pe-idx{color:var(--gold-l);border-color:rgba(212,175,55,.35)}
-.hp-par .pe-del{
-  width:28px;height:28px;padding:0;border-radius:8px;
-  font-size:15px;line-height:1;opacity:.55;justify-self:center;
-}
-.hp-par .pe-del:hover{opacity:1}
-.hp-par-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
-.hp-par-hint{font-size:11px;color:var(--muted);line-height:1.6}
-.hp-par-grid{display:contents}
 </style>
     <style>
 /* ═══════════════ پنل مدیریت جامع + تنظیمات نمایش ═══════════════ */
@@ -1373,7 +1315,7 @@ tr.off-row{opacity:.5}
 .hp-chip span{display:block;font-size:10px;color:var(--muted);margin-top:3px}
 .hp-chip.on{border-color:rgba(212,175,55,.7);background:rgba(212,175,55,.12)}
 .hp-chip.on b{color:var(--gold-l)}
-.hp-par{text-align:start}
+.hp-par{text-align:center}
 </style>
     <style>/* ═══ فروشگاه آواتار v8 — تم تیره + زمردی + طلایی، شیشه‌ای و سه‌بعدی ═══ */
 .ashop{display:grid;grid-template-columns:212px minmax(0,1fr) 306px;min-width:0;gap:14px;direction:rtl;align-items:start}
@@ -3165,105 +3107,21 @@ svg.leaflet-image-layer.leaflet-interactive path {
     syncableKeys().forEach(function (k) { sweepCache[k] = L.getItem(k); });
   }
 
-  /* سنگ‌قبر حذف تمرین: مرجِ union ابر آیتم پاک‌شده را برنمی‌گرداند */
-  function spShotKey(x) {
-    return [x && x.sid, x && x.t, x && x.pid, x && x.club, x && x.res].join('|');
-  }
-  function readSpTomb(L) {
-    L = L || ls();
-    try {
-      var t = JSON.parse((L.getItem && L.getItem('ga_sp_tomb')) || '{"ses":{},"shot":{}}');
-      if (!t || typeof t !== 'object') t = {};
-      if (!t.ses || typeof t.ses !== 'object') t.ses = {};
-      if (!t.shot || typeof t.shot !== 'object') t.shot = {};
-      return t;
-    } catch (e) { return { ses: {}, shot: {} }; }
-  }
-  function writeSpTomb(t, L) {
-    L = L || ls();
-    try { L.setItem('ga_sp_tomb', JSON.stringify({ ses: t.ses || {}, shot: t.shot || {} })); } catch (e) {}
-  }
-  function mixTombMaps(a, b) {
-    var o = {};
-    a = a || {}; b = b || {};
-    Object.keys(a).forEach(function (k) { o[k] = a[k]; });
-    Object.keys(b).forEach(function (k) {
-      if (o[k] == null || b[k] > o[k]) o[k] = b[k];
-    });
-    return o;
-  }
-  function mixTombObj(a, b) {
-    a = a && typeof a === 'object' ? a : {};
-    b = b && typeof b === 'object' ? b : {};
-    return { ses: mixTombMaps(a.ses, b.ses), shot: mixTombMaps(a.shot, b.shot) };
-  }
-  function isTombedShot(x, t) {
-    if (!x) return true;
-    t = t || readSpTomb();
-    if (t.ses[String(x.sid)]) return true;
-    if (t.shot[spShotKey(x)]) return true;
-    return false;
-  }
-  function applyTombSessions(obj, t) {
-    obj = obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
-    t = t || readSpTomb();
-    Object.keys(t.ses || {}).forEach(function (id) { delete obj[id]; });
-    return obj;
-  }
-  function applyTombShots(arr, t) {
-    t = t || readSpTomb();
-    return (Array.isArray(arr) ? arr : []).filter(function (x) { return !isTombedShot(x, t); });
-  }
-  function stripSpStorage(L) {
-    L = L || ls();
-    var t = readSpTomb(L);
-    try {
-      var ses = JSON.parse(L.getItem('ga_sp_sessions') || '{}') || {};
-      L.setItem('ga_sp_sessions', JSON.stringify(applyTombSessions(ses, t)));
-    } catch (e) {}
-    try {
-      var arr = JSON.parse(L.getItem('ga_sp_shots') || '[]') || [];
-      L.setItem('ga_sp_shots', JSON.stringify(applyTombShots(arr, t)));
-    } catch (e) {}
-  }
-  function tombShots(arr) {
-    var t = readSpTomb();
-    var now = Date.now();
-    (arr || []).forEach(function (x) { if (x) t.shot[spShotKey(x)] = now; });
-    writeSpTomb(t);
-  }
-  function tombSession(sid, shots) {
-    var t = readSpTomb();
-    var now = Date.now();
-    t.ses[String(sid)] = now;
-    (shots || []).forEach(function (x) { if (x) t.shot[spShotKey(x)] = now; });
-    writeSpTomb(t);
-  }
-
-  /* کلیدهای ساختاری (جلسات/ضربه‌های تمرین): مرج union + سنگ‌قبر حذف */
+  /* کلیدهای ساختاری (جلسات/ضربه‌های تمرین): مرج union تا تغییرات پوش‌نشدهٔ محلی لایو نماند */
   function mergeSpKey(k, localRaw, remoteRaw) {
     try {
-      if (k === 'ga_sp_tomb') {
-        var rt = remoteRaw ? JSON.parse(typeof remoteRaw === 'string' ? remoteRaw : JSON.stringify(remoteRaw)) : {};
-        var lt = localRaw ? JSON.parse(typeof localRaw === 'string' ? localRaw : JSON.stringify(localRaw)) : {};
-        return JSON.stringify(mixTombObj(rt, lt));
-      }
-      if (!localRaw) {
-        if (k === 'ga_sp_sessions') return JSON.stringify(applyTombSessions(JSON.parse(remoteRaw || '{}')));
-        if (k === 'ga_sp_shots') return JSON.stringify(applyTombShots(JSON.parse(remoteRaw || '[]')));
-        return remoteRaw;
-      }
+      if (!localRaw) return remoteRaw;
       if (k === 'ga_sp_sessions') {
         var a = JSON.parse(remoteRaw) || {}, b = JSON.parse(localRaw) || {};
-        Object.keys(b).forEach(function (id) { a[id] = b[id]; });
-        return JSON.stringify(applyTombSessions(a));
+        Object.keys(b).forEach(function (id) { if (!a[id]) a[id] = b[id]; });
+        return JSON.stringify(a);
       }
       var arr = JSON.parse(remoteRaw) || [], loc = JSON.parse(localRaw) || [];
-      var seen = {}, keyFn = spShotKey;
+      var seen = {}, keyFn = function (x) { return [x.sid, x.t, x.pid, x.club, x.res].join('|'); };
       arr.forEach(function (x) { seen[keyFn(x)] = 1; });
       (Array.isArray(loc) ? loc : []).forEach(function (x) { if (x && !seen[keyFn(x)]) arr.push(x); });
-      arr.sort(function (x, y) { return (x.t || 0) - (y.t || 0); });
-      return JSON.stringify(applyTombShots(arr));
+      arr.sort(function (a, b) { return (a.t || 0) - (b.t || 0); });
+      return JSON.stringify(arr);
     } catch (e) { return remoteRaw; }
   }
   /* ── pull: اعمال دادهٔ جدیدترِ سرور روی این دستگاه ──────────────── */
@@ -3292,14 +3150,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
             if (!remoteNewer && localDirty === undefined && L.getItem(r.k) !== null) return;
             if (remoteNewer) {
               var newVal = decode(r.v);
-              if (r.k === 'ga_sp_sessions' || r.k === 'ga_sp_shots' || r.k === 'ga_sp_tomb') newVal = mergeSpKey(r.k, L.getItem(r.k), newVal);
+              if (r.k === 'ga_sp_sessions' || r.k === 'ga_sp_shots') newVal = mergeSpKey(r.k, L.getItem(r.k), newVal);
               try { L.setItem(r.k, newVal); } catch (e) {}
               ts[r.k] = r.updated_at;
               applied++;
               if (localDirty) delete d[r.k];
             }
           });
-          stripSpStorage(L);
           jwrite(DIRTY_KEY, d);
           jwrite(TS_KEY, ts);
           state.pulled += applied;
@@ -3337,13 +3194,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
     /* کلیدهای ساختاری تمرین (جلسات/ضربه‌ها): قبل از push، مقدار فعلی سرور گرفته و union مرج
        می‌شود تا pushِ دستگاهِ دارای دیتای قدیمی، ضربه‌های دستگاه دیگر را بازنویسی نکند */
-    var SP_MERGE = { ga_sp_sessions: 1, ga_sp_shots: 1, ga_sp_tomb: 1 };
+    var SP_MERGE = { ga_sp_sessions: 1, ga_sp_shots: 1 };
     var spRows = rows.filter(function (r) { return SP_MERGE[r.k] && !(r.v && r.v.__del); });
     var preMerge = spRows.length
       ? rest('ga_store?select=k,v&k=in.(' + spRows.map(function (r) { return r.k; }).join(',') + ')').then(function (rems) {
-          (rems || []).slice().sort(function (a, b) {
-            return a.k === 'ga_sp_tomb' ? -1 : b.k === 'ga_sp_tomb' ? 1 : 0;
-          }).forEach(function (rr) {
+          (rems || []).forEach(function (rr) {
             var row = null;
             spRows.forEach(function (x) { if (x.k === rr.k) row = x; });
             if (!row || !rr.v) return;
@@ -3588,9 +3443,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
     pull: pull,
     push: push,
     test: test,
-    tombShots: tombShots,
-    tombSession: tombSession,
-    stripSp: stripSpStorage,
     dirty: function () { return Object.keys(jread(DIRTY_KEY, {})); },
     cfg: cfg,
     setCfg: function (url, key, on) { jwrite(CFG_KEY, { url: url, key: key, on: on !== false }); },
@@ -4186,46 +4038,11 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   const COURSE_PARS = {
     1:[4,4,3,5,4,4,3,4,5,4,4,3,4,5,4,4,3,5],
   };
-  /* Index سختی هر میدان: ۱ سخت‌ترین، ۱۸ آسان‌ترین */
-  const COURSE_INDEX = {
-    1:[10,12,8,10,16,17,13,10,2,5,2,17,16,16,15,13,15,16],
-  };
   const COURSE_NAME = {}; COURSES.forEach(c => COURSE_NAME[c[0]] = c[1]);
   /* رجیستری پار (شامل زمین‌های سفارشی طراح + ویرایش زمین پایه) */
   const PAR_MAP = {};
   Object.keys(COURSE_PARS).forEach(k => PAR_MAP[k] = COURSE_PARS[k].slice());
-  const INDEX_MAP = {};
-  Object.keys(COURSE_INDEX).forEach(k => INDEX_MAP[k] = COURSE_INDEX[k].slice());
   const parsOf = id => PAR_MAP[id] || COURSE_PARS[id] || [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4];
-  function defaultIndex(n){ return Array.from({length: n || 18}, (_, i) => i + 1); }
-  function indexOf(id){
-    const n = (parsOf(id) || []).length || 18;
-    const ix = INDEX_MAP[id] || COURSE_INDEX[id];
-    if (ix && ix.length){
-      const out = ix.map(v => Math.max(1, Math.min(n, +v || 1)));
-      while (out.length < n) out.push(out.length + 1);
-      return out.slice(0, n);
-    }
-    return defaultIndex(n);
-  }
-  /* مقیاس استاندارد سایت: سبز تیره → سبز روشن → زرد → نارنجی → قرمز روشن → قرمز تیره */
-  const SCALE = ['#146C43', '#3DDC97', '#F4C430', '#E67E22', '#E85D4C', '#8B1A1A'];
-  function scaleStep(i){ return SCALE[Math.max(0, Math.min(5, i | 0))]; }
-  function scaleIndex(idx, n){
-    n = Math.max(2, +n || 18);
-    const i = Math.max(1, Math.min(n, +idx || n));
-    const t = (i - 1) / (n - 1);
-    return scaleStep(Math.min(5, Math.floor((1 - t) * 6)));
-  }
-  function scaleVsPar(d){
-    if (d == null || !isFinite(d)) return '#8A93A6';
-    if (d < 0) return SCALE[0];
-    if (d === 0) return SCALE[1];
-    if (d === 1) return SCALE[2];
-    if (d === 2) return SCALE[3];
-    if (d === 3) return SCALE[4];
-    return SCALE[5];
-  }
   function loadCourseOverride(){
     try { const o = JSON.parse(localStorage.getItem('ga_course_override') || '{}'); return o && typeof o === 'object' ? o : {}; } catch(e){ return {}; }
   }
@@ -4234,13 +4051,11 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   }
   function applyCourseOverrides(){
     Object.keys(COURSE_PARS).forEach(k => { PAR_MAP[k] = COURSE_PARS[k].slice(); });
-    Object.keys(COURSE_INDEX).forEach(k => { INDEX_MAP[k] = COURSE_INDEX[k].slice(); });
     COURSES.forEach(c => { COURSE_NAME[c[0]] = c[1]; });
     const ov = loadCourseOverride();
     Object.keys(ov).forEach(id => {
       const o = ov[id]; if (!o) return;
       if (Array.isArray(o.pars) && o.pars.length) PAR_MAP[+id] = o.pars.map(x => Math.max(3, Math.min(6, +x || 4)));
-      if (Array.isArray(o.index) && o.index.length) INDEX_MAP[+id] = o.index.map(x => +x || 1);
       if (o.name) COURSE_NAME[+id] = o.name;
     });
     return ov;
@@ -4750,7 +4565,6 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     extra.courses.forEach((c, i) => {
       const cid = 1000 + i;
       if (c && Array.isArray(c.pars) && c.pars.length) PAR_MAP[cid] = c.pars;
-      if (c && Array.isArray(c.index) && c.index.length) INDEX_MAP[cid] = c.index;
       if (c && c.name) COURSE_NAME[cid] = c.name;
     });
     const players = loadPlayers().concat(loadCustomPlayers().map((p, i) => [9000+i, (p.name + ' ' + (p.family||'')).trim(), p.gender, +p.hcp, p.join || '2026-01-01', p.active === false ? 0 : 1]));
@@ -4871,7 +4685,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
-    parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
+    parsOf, PAR_MAP, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
     compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason,
@@ -5741,7 +5555,7 @@ const Charts = (() => {
         // مقدار روی ستون
         if (opts.showVal){
           ctx.fillStyle = '#F8FAFC'; ctx.font = 'bold 9.5px Tahoma';
-          ctx.fillText(opts.valFmt ? opts.valFmt(v, i) : Math.round(v), x, y - 5);
+          ctx.fillText(opts.valFmt ? opts.valFmt(v) : Math.round(v), x, y - 5);
         }
       }
       /* خط راهنمای افقی روی میله‌ها — مثل «میانگین ضربه‌های صاف» */
@@ -6541,7 +6355,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   window.addEventListener('ga:homeskin-changed', function () { mount(); });
 })();
 </script>
-<script>/* ═══════════════════════════════════════════════════════════════════
+    <script>/* ═══════════════════════════════════════════════════════════════════
    پات کلاب • Putt Club Golf Academy — Landing سینمایی (بازطراحی کامل)
    ───────────────────────────────────────────────────────────────────
    • افتتاحیهٔ لایو-اکشن ۱۰ ثانیه‌ای به سبک MARVEL (لوگو-اسلم + مونتاژ سینمایی)
@@ -14746,7 +14560,7 @@ window.addEventListener('ga:brand-changed', function(){
     for (var i = 0; i < ks.length; i++) if (ss[ks[i]] && ss[ks[i]].status === 'open') return ss[ks[i]];
     return null;
   }
-  function shotsOf(sid) { return allShots().filter(function (x) { return String(x.sid) === String(sid); }); }
+  function shotsOf(sid) { return allShots().filter(function (x) { return x.sid === sid; }); }
   function saveSessions(o) { write(LS_SES, o); }
   function saveShots(a) { write(LS_SHOTS, a); }
 
@@ -14861,6 +14675,7 @@ window.addEventListener('ga:brand-changed', function(){
         + '<button type="button" class="btn spk-big" id="spk-go">ادامهٔ ثبت ضربه ←</button>'
         + '<button type="button" class="btn ghost" id="spk-end2">⏹ بستن جلسه تمرینی</button>'
         + '</div>'
+        + '<div class="spk-note">تا زمانی که جلسه بسته نشود، هر بار که وارد «ثبت رکورد» شوید همین جلسه ادامه می‌یابد — حتی از دستگاه دیگر.</div>'
         + '</div>';
     } else {
       h += '<div class="glass spk-newses">'
@@ -15220,11 +15035,9 @@ window.addEventListener('ga:brand-changed', function(){
   /* حذف ضربه‌هایی که pred برقرار است + بی‌اعتبارسازی تحلیل کش‌شدهٔ جلسه */
   function deleteShotsWhere(pred, msgFn) {
     var arr = allShots();
-    var hit = arr.filter(pred);
     var left = arr.filter(function (x) { return !pred(x); });
-    var n = hit.length;
+    var n = arr.length - left.length;
     if (!n) { toast('چیزی برای حذف نبود', 'ok'); return; }
-    try { if (window.GA_CLOUD && GA_CLOUD.tombShots) GA_CLOUD.tombShots(hit); } catch (e) {}
     saveShots(left);
     var ss = sessions();
     if (ss[sumSid]) { ss[sumSid].analysis = null; saveSessions(ss); }
@@ -15233,9 +15046,7 @@ window.addEventListener('ga:brand-changed', function(){
   }
   function deleteWholeSession() {
     var sid = sumSid;
-    var gone = allShots().filter(function (x) { return String(x.sid) === String(sid); });
-    try { if (window.GA_CLOUD && GA_CLOUD.tombSession) GA_CLOUD.tombSession(sid, gone); } catch (e) {}
-    var arr = allShots().filter(function (x) { return String(x.sid) !== String(sid); });
+    var arr = allShots().filter(function (x) { return x.sid !== sid; });
     saveShots(arr);
     var ss = sessions();
     if (ss[sid]) { delete ss[sid]; saveSessions(ss); }
@@ -15329,7 +15140,7 @@ window.addEventListener('ga:brand-changed', function(){
         var nm = (playerByPid(pid) || {}).name || ('بازیکن ' + fa(pid));
         var o2 = an.byPlayer[pid] || { n: 0 };
         confirmAsk('حذف بازیکن از جلسه؟', 'همهٔ ' + fa(o2.n) + ' ضربهٔ «' + esc(nm) + '» در این جلسه حذف می‌شود.', 'حذف ضربه‌های ' + esc(nm), function () {
-          deleteShotsWhere(function (x) { return String(x.sid) === String(sumSid) && +x.pid === +pid; }, function (n) { return fa(n) + ' ضربهٔ «' + nm + '» حذف شد ✓'; });
+          deleteShotsWhere(function (x) { return x.sid === sumSid && x.pid === pid; }, function (n) { return fa(n) + ' ضربهٔ «' + nm + '» حذف شد ✓'; });
         });
       };
     });
@@ -15339,7 +15150,7 @@ window.addEventListener('ga:brand-changed', function(){
         var nm = (playerByPid(pid) || {}).name || ('بازیکن ' + fa(pid));
         var o2 = (an.byPlayer[pid] && an.byPlayer[pid].clubs[cn]) || { n: 0 };
         confirmAsk('حذف ضربه‌های این کلاب؟', 'همهٔ ' + fa(o2.n) + ' ضربهٔ «' + esc(cn) + '» متعلق به «' + esc(nm) + '» در این جلسه حذف می‌شود.', 'حذف ' + esc(cn), function () {
-          deleteShotsWhere(function (x) { return String(x.sid) === String(sumSid) && +x.pid === +pid && String(x.club) === String(cn); }, function (n) { return fa(n) + ' ضربهٔ ' + cn + ' «' + nm + '» حذف شد ✓'; });
+          deleteShotsWhere(function (x) { return x.sid === sumSid && x.pid === pid && x.club === cn; }, function (n) { return fa(n) + ' ضربهٔ ' + cn + ' «' + nm + '» حذف شد ✓'; });
         });
       };
     });
@@ -15963,7 +15774,13 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       }
     });
     const hint = document.getElementById('earth-geo-hint');
-    if (hint) hint.textContent = '';
+    if (hint){
+      const g = geoGender();
+      const missing = nums.filter(function(n){ return !holeTee(H[String(n)]); }).length;
+      if (g === 'M' && missing) hint.textContent = 'تی آقایان برای ' + missing + ' میدان ثبت نشده — فایل KML با -M یا کشیدن تی در ویرایش';
+      else if (editOn) hint.textContent = holeSel==='all' ? 'تی و حفره را بکشید. برای فروی یک میدان را انتخاب کنید.' : 'رأس‌های فروی، تی و حفره قابل کشیدن‌اند.';
+      else hint.textContent = '';
+    }
     drawSavedPlan();
     if (group.length && !editOn){
       try { map.fitBounds(L.featureGroup(group).getBounds().pad(holeSel==='all'?0.18:0.35), { maxZoom: holeSel==='all'?17:19 }); } catch(e){}
@@ -16014,9 +15831,9 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
   function renderPlanList(){
     const box = document.getElementById('earth-plan-list');
     if (!box) return;
-    if (holeSel === 'all'){ box.innerHTML = ''; return; }
+    if (holeSel === 'all'){ box.innerHTML = '<span class="earth-pins-empty">یک میدان انتخاب کنید تا برنامهٔ شات همان میدان را بکشید.</span>'; return; }
     const arr = holePlan();
-    if (!arr.length){ box.innerHTML = ''; return; }
+    if (!arr.length){ box.innerHTML = '<span class="earth-pins-empty">کلاب را انتخاب کنید، «کشیدن» را بزنید و روی نقشه از تی به سمت حفره خط بکشید.</span>'; return; }
     box.innerHTML = arr.map((sh,i) =>
       `<span class="earth-pin-chip" style="border-color:${esc(sh.color)}"><span style="color:${esc(sh.color)}">●</span> ${esc(sh.club)} — ${fmtDist(totalM(sh.pts||[]))} <span class="earth-pin-x" data-plan-del="${i}">✕</span></span>`
     ).join('');
@@ -16167,11 +15984,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       hole.innerHTML = '<option value="all">همهٔ میدان‌ها</option>' + holeNums().map(n => {
         const hh = holesData()[n];
         const yd = holeYards(hh);
-        const Data = window.Data;
-        const cid = optsRef.tourCourse != null ? optsRef.tourCourse : 1;
-        const ixArr = (Data && Data.indexOf) ? Data.indexOf(cid) : [];
-        const ix = ixArr && ixArr[n - 1];
-        return `<option value="${n}">میدان ${n}${hh&&hh.par?(' • پار '+hh.par):''}${ix?(' • Index '+ix):''}${yd?(' • '+yd+' yd'):''}</option>`;
+        return `<option value="${n}">میدان ${n}${hh&&hh.par?(' • پار '+hh.par):''}${yd?(' • '+yd+' yd'):''}</option>`;
       }).join('');
       hole.value = holeSel;
       hole.onchange = function(){ holeSel = hole.value; clubDraw=null; mode='pan'; drawCourse(); syncModeBtns(); };
@@ -16333,9 +16146,9 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       }).addTo(map);
     }
 
-    try { bindUi(); } catch (e) { console.error('earth bindUi', e); }
-    try { renderWiz(); } catch (e) { console.error('earth wiz', e); }
-    try { drawCourse(); } catch (e) { console.error('earth draw', e); }
+    bindUi();
+    try { renderWiz(); } catch (e) {}
+    try { drawCourse(); } catch (e) {}
     try { renderWiz(); } catch (e) {}
 
     map.on('click', function(ev){
@@ -16398,14 +16211,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     }).join('')+'</div>';
   }
   function vsStrokeColor(vs){
-    if (window.Data && Data.scaleVsPar) return Data.scaleVsPar(vs);
     if (vs == null || !isFinite(vs)) return 'var(--muted)';
-    if (vs < 0) return '#146C43';
-    if (vs === 0) return '#3DDC97';
-    if (vs === 1) return '#F4C430';
-    if (vs === 2) return '#E67E22';
-    if (vs === 3) return '#E85D4C';
-    return '#8B1A1A';
+    if (vs < 0) return '#0d9a62';
+    if (vs === 0) return '#8fe8c4';
+    if (vs <= 2) return '#E9C766';
+    return '#E74C3C';
   }
   function lastCourseRounds(){
     const st = (window.APP && APP.state) ? APP.state() : null;
@@ -16497,7 +16307,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       h = wizBack('club','تغییر کلاب')+'<div class="ew-st">رنگ خط «'+esc(wizDraft.club)+'»</div><div class="ew-grid">'+SHOT_COLORS.map(function(c){ return '<button type="button" class="ew-col'+(c===wizDraft.color?' on':'')+'" data-ew-col="'+c+'" style="--c:'+c+'"></button>'; }).join('')+'</div>';
     } else if (wizStep === 'draw'){
       const n = (clubDraw && clubDraw.pts) ? clubDraw.pts.length : 0;
-      h = wizBack('color','تغییر رنگ')+'<div class="ew-st">خط را روی نقشه بکشید</div><div class="ew-actions"><button type="button" class="btn sm ghost" id="ew-undo-pt">حذف آخرین نقطه</button><button type="button" class="btn sm ghost" id="ew-clear-pt">پاک کردن خط</button><button type="button" class="btn" id="ew-ok-line"'+(n<2?' disabled':'')+'>تأیید خط ('+n+' نقطه)</button></div>';
+      h = wizBack('color','تغییر رنگ')+'<div class="ew-st">خط را روی نقشه بکشید</div><p class="ew-hint">کلیک اول شروع است. با حرکت موس متراژ زنده دیده می‌شود. کلیک بعدی نقطه را تثبیت می‌کند. حذف آخرین نقطه همیشه در دسترس است.</p><div class="ew-actions"><button type="button" class="btn sm ghost" id="ew-undo-pt">حذف آخرین نقطه</button><button type="button" class="btn sm ghost" id="ew-clear-pt">پاک کردن خط</button><button type="button" class="btn" id="ew-ok-line"'+(n<2?' disabled':'')+'>تأیید خط ('+n+' نقطه)</button></div>';
     } else if (wizStep === 'note'){
       h = wizBack('draw','اصلاح خط')+'<div class="ew-st">توضیح این ضربه <small>(اجباری)</small></div><textarea class="ew-note" id="ew-note" maxlength="400" placeholder="مثلاً: کمی سمت راست، باد مخالف…">'+esc(wizDraft.note||'')+'</textarea><div class="ew-actions"><button type="button" class="btn" id="ew-save-shot">ثبت ضربه</button></div>';
     }
@@ -17511,7 +17321,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     </div>
     <div class="grid cols-3">
       <div class="glass tilt" style="grid-column:span 2">
-        <div class="card-head"><span class="ic">🏁</span><h3>جدول ${esc(L('nav.race','رقابت فصل'))} ${D.fa(yr)}</h3><span class="tag">FedEx Cup</span></div>
+        <div class="card-head"><span class="ic">🏁</span><h3>جدول ${esc(L('nav.race','رقابت فصل'))} ${D.fa(yr)}</h3><div style="font-size:10px;color:var(--muted);margin-top:2px">فقط جمع امتیاز مسابقاتِ ${D.fa(yr)} — با آغاز سال جدید، جدول تازه می‌شود</div><span class="tag">FedEx Cup</span></div>
         <div style="overflow-x:auto"><table class="tbl" id="race-tbl"><thead><tr>
           <th>#</th><th>بازیکن</th><th>رنک</th><th>امتیاز</th><th>پیشرفت طلایی</th><th>تغییر</th><th>برد</th><th>میانگین</th><th>پرنده</th><th>فرم</th>
         </tr></thead><tbody></tbody></table></div>
@@ -17527,6 +17337,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
             <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><b>${z.n}</b><b>${D.fa(z.v)}</b></div>
             ${pbar(z.v/z.mx*100, z.c)}
           </div>`).join('')}
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">سه نفر اول به جام بزرگ فصل راه دارند؛ رتبه ۴ تا ۸ در رقابت پلیآف.</div>
         </div>
         <div class="glass">
           <div class="card-head"><span class="ic">⚔️</span><h3>نبرد صدر جدول</h3><span class="tag">Top Race</span></div>
@@ -17609,15 +17420,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     else { ss[sid].analysis = null; }
     spSaveSessions(ss);
   }
-  function spTombShots(arr){
-    try { if (window.GA_CLOUD && GA_CLOUD.tombShots) GA_CLOUD.tombShots(arr); } catch(e){}
-  }
-  function spTombSession(sid, shots){
-    try { if (window.GA_CLOUD && GA_CLOUD.tombSession) GA_CLOUD.tombSession(sid, shots); } catch(e){}
-  }
   function spDeleteSession(sid){
-    const gone = spShots().filter(x => String(x.sid) === String(sid));
-    spTombSession(sid, gone);
     spSaveShots(spShots().filter(x => String(x.sid) !== String(sid)));
     const ss = spSessions(); delete ss[sid]; spSaveSessions(ss);
   }
@@ -17627,22 +17430,20 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     if (!hit.length) return 0;
     const sids = {};
     hit.forEach(x => { sids[x.sid] = 1; });
-    spTombShots(hit);
     spSaveShots(arr.filter(x => !pred(x)));
     Object.keys(sids).forEach(spAfterShotChange);
     return hit.length;
   }
   function spDeleteOneShot(sid, pid, club, t){
-    let gone = null;
+    let gone = false;
     const left = spShots().filter(x => {
       if (gone) return true;
       if (String(x.sid) === String(sid) && +x.pid === +pid && x.club === club && String(x.t) === String(t)){
-        gone = x; return false;
+        gone = true; return false;
       }
       return true;
     });
     if (!gone) return 0;
-    spTombShots([gone]);
     spSaveShots(left);
     spAfterShotChange(sid);
     return 1;
@@ -17665,7 +17466,6 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       shots.sort((a, b) => (a.t || 0) - (b.t || 0));
       localStorage.setItem('ga_sp_sessions', JSON.stringify(ses));
       localStorage.setItem('ga_sp_shots', JSON.stringify(shots));
-      try { if (window.GA_CLOUD && GA_CLOUD.stripSp) GA_CLOUD.stripSp(); } catch(e){}
       localStorage.setItem('sp_restore_done_v1', '1');
       return added > 0;
     } catch(e){ return false; }
@@ -17816,6 +17616,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         </div>
         <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:10.5px;color:var(--muted);margin-bottom:8px">
           ${Object.keys(SP_RES_LABEL).map(k => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${SP_RES_COLOR[k]};margin-left:4px;vertical-align:-1px"></i>${SP_RES_LABEL[k]}</span>`).join('')}
+          <span style="color:var(--dim)">• بازه بر هر گروه، جداگانه اعمال می‌شود (جلسات تمام‌شده)</span>
         </div>
         <div id="pa-body" class="pa-body"></div>
         </div>
@@ -17956,7 +17757,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         <small style="color:var(--dim);min-width:38px;text-align:left">${D.fa(pct)}٪</small>
       </div>`;
     }).join('')
-      : `<div style="padding:22px 12px;text-align:center;color:var(--muted);font-size:12px;line-height:2.1">تمرینی ثبت نشده است.</div>`;
+      : `<div style="padding:22px 12px;text-align:center;color:var(--muted);font-size:12px;line-height:2.1">📭 با این فیلترها تمرینِ <b>تمام‌شده‌ای</b> برای «${esc(plS && plS.selectedIndex >= 0 ? plS.options[plS.selectedIndex].text : '')}» ثبت نشده.<br>از «بازیکن هوشمند → ➕ ثبت رکورد» تمرین کن و جلسه را «⏹ ببند» تا این نمودار پر شود.</div>`;
     if (cv) Charts.donut(cv, totShots
       ? segs.filter(g => g.count > 0).map(g => ({ value: g.count, color: g.color, glow: true }))
       : [{ value: 1, color: 'rgba(60,70,85,.35)' }], { inner: 0.66 });
@@ -18100,7 +17901,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         }).join('')}</div>
       </section>`;
     }).join('')
-      : `<div style="padding:26px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1;width:100%">تمرینی ثبت نشده است.</div>`;
+      : `<div style="padding:26px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1;width:100%">📭 برای این بازیکن تمرینِ تمام‌شده‌ای ثبت نشده.<br>از «بازیکن هوشمند → ➕ ثبت رکورد» تمرین کن و جلسه را «⏹ ببند» تا ردیف‌های رنج/پاتینگ/چیپینگ/… این‌جا با نمودار پر شوند.</div>`;
   }
   /* 📄 خروجی PDF برنددار یک‌برگه‌ای A4 — با همان موتور کارت‌های گزارش (سربرگ لوگو + نام آکادمی + تاریخ + puttclub.ir) */
   function bindPracticeAnalysisPdf(){
@@ -18227,7 +18028,8 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       </div>
       <div class="grid cols-2 sp-grid" id="sp-notes"></div>
     </div>
-    <div class="glass" style="padding:18px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end">
+    <div class="glass" style="padding:18px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between">
+      <div style="color:var(--muted);font-size:12.5px;line-height:1.9">💡 قابلیت موردنظرتان برای «بازیکن هوشمند» را به مدیر آکادمی اعلام کنید تا در اولویت فعال‌سازی قرار گیرد.</div>
       <button type="button" class="btn sm" id="sp-back">مشاهده تحلیل کلاسیک</button>
     </div>`;
     const sel = $('#pl-sel-smart');
@@ -18308,12 +18110,12 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     const isClosed = x => x && (x.status === 'closed' || (x.status == null && (x.closedAt || x.analysis)) && !!(x.closedAt || x.analysis));
     const done = Object.keys(ssn).map(k => ssn[k]).filter(isClosed)
       .sort((a, b) => String(b.closedAt || '').localeCompare(String(a.closedAt || '')) || ((b.no || 0) - (a.no || 0)));
-    const mine = shots.filter(x => +x.pid === +pid);
+    const mine = shots.filter(x => x.pid === pid);
     /* آپشن‌های کلاب از دیتای واقعی همان بازیکن+نوع — انتخاب فعلی در صورت معتبر بودن حفظ می‌شود */
     const clubSeen = {}, clubList = [];
     done.forEach(sn => {
       if (typ !== 'all' && sn.type !== typ) return;
-      shots.filter(x => String(x.sid) === String(sn.id) && +x.pid === +pid).forEach(x => { if (!clubSeen[x.club]){ clubSeen[x.club] = 1; clubList.push(x.club); } });
+      shots.filter(x => x.sid === sn.id && x.pid === pid).forEach(x => { if (!clubSeen[x.club]){ clubSeen[x.club] = 1; clubList.push(x.club); } });
     });
     if (clbS){
       clbS.innerHTML = `<option value="all">همهٔ کلاب‌ها</option>` + clubList.map(c => `<option value="${esc(c)}" ${c === clb ? 'selected' : ''}>${esc(c)}</option>`).join('');
@@ -18334,10 +18136,13 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     /* جلسهٔ بازِ مطابق فیلتر: دیتاش ذخیره است ولی طبق قانون «فقط تمرین‌های تمام‌شده» هنوز کارت نمی‌گیرد — اطلاع‌رسانی شود */
     const open = Object.keys(ssn).map(k => ssn[k]).find(x => x && x.status === 'open' && (typ === 'all' || x.type === typ));
     const openN = open ? mine.filter(x => x.sid === open.id && (club === 'all' || x.club === club)).length : 0;
-    const openHint = '';
+    const openHint = open ? `<div class="glass" style="padding:13px 16px;margin-bottom:12px;border:1px dashed rgba(233,199,102,.45);background:rgba(233,199,102,.05)">
+      ⏳ <b>جلسهٔ باز فعال است</b> (جلسهٔ ${D.fa(open.no)} — ${esc(SP_TYPE_LBL[open.type] || open.type)}): ${D.fa(openN)} ضربهٔ همین بازیکن/کلاب تا این لحظه داخلش ذخیره شده.
+      بعد از «⏹ بستن جلسهٔ تمرینی»، نمودارش به‌صورت خودکار همین‌جا می‌آید.
+    </div>` : '';
     if (!groups.length){
       body.innerHTML = openHint + `<div style="padding:24px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1">
-        جلسه‌ای پیدا نشد.</div>`;
+        با این فیلترها جلسهٔ تمام‌شده‌ای پیدا نشد.<br>از «ثبت رکورد» جلسه بزنید و «بستن جلسه» کنید — آرشیو اینجا انباشته می‌شود 📚</div>`;
       return;
     }
     /* صفحه‌بندی: هر بار ۱۰ نمودار از جدیدترین */
@@ -18388,12 +18193,13 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         <div class="sp-note-acts">
           <button type="button" class="btn sm spk-save" data-act="save" data-feat="${fk}" style="flex:1.4">ثبت یادداشت برای: ${esc(scopeTxt)}</button>
           <button type="button" class="btn sm ghost" data-act="cancel" style="flex:1">انصراف</button>
-        </div>`;
+        </div>
+        <div class="sp-note-hint">💾 ثبت = ذخیرهٔ ابری خودکار • متن خالی = حذف یادداشت همین قلمرو</div>`;
       } else if (shown){
         body = `<div class="sp-note-body">${esc(shown.text)}</div>
         <div class="sp-note-meta">${shown.__gen ? '<span class="sp-note-scope gen">یادداشت عمومی</span> ' : ''}✍️ ${esc(shown.by || 'ادمین')} • ${esc(noteAtFa(shown.at))}</div>`;
       } else {
-        body = `<div class="sp-note-empty">هنوز نظری برای «${esc(scopeTxt)}» ثبت نشده است.</div>`;
+        body = `<div class="sp-note-empty">هنوز نظری برای «${esc(scopeTxt)}» ثبت نشده است.${admon ? ' — با دکمهٔ ✎ بنویسید.' : ''}</div>`;
       }
       return `<div class="glass sp-note">
         <div class="sp-note-head">
@@ -18444,7 +18250,8 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       if (ttl) ttl.textContent = `تحلیل لحظه‌ای جلسهٔ باز — ${p.name}`;
       if (tg){ tg.textContent = 'بدون جلسهٔ باز'; tg.classList.remove('gold'); }
       box.innerHTML = `<div style="padding:28px 16px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1">
-        جلسه‌ای باز نیست.</div>`;
+        در حال حاضر جلسهٔ تمرینیِ بازی وجود ندارد.<br>
+        از دکمهٔ «ثبت رکورد» بالای صفحه جلسه را شروع کنید — تحلیل لحظه‌ای همین‌جا زنده می‌شود ⛳</div>`;
       return;
     }
     /* بازیکن = آخرین ضربهٔ همین جلسهٔ باز (نه سلکت بالای صفحه) */
@@ -18491,11 +18298,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     <table class="tbl"><thead><tr><th>میدان</th>${hs.map(h=>`<th>${D.fa(h)}</th>`).join('')}</tr></thead>
     <tbody><tr><td><b>پار</b></td>${parsArr.map(p2=>`<td class="num" style="color:var(--gold-l)">${D.fa(p2)}</td>`).join('')}</tr>
     <tr><td><b>ضربات</b></td>${strokes.map((s,i)=>{
-      const c = 'color:' + (D.scaleVsPar ? D.scaleVsPar(s - parsArr[i]) : '#fff') + ';font-weight:800';
+      const c = s < parsArr[i] ? 'color:var(--green-l);font-weight:800' : s === parsArr[i] ? 'color:var(--white)' : 'color:#ff8f82;font-weight:800';
       return `<td class="num" style="${c}">${D.fa(s)}</td>`;
     }).join('')}</tr></tbody></table>
     <div style="margin-top:8px;font-size:11.5px;color:var(--muted)">
-      مجموع: <b style="color:var(--white)">${D.fa(card.total)}</b> • در برابر پار: <b style="color:${D.scaleVsPar ? D.scaleVsPar(card.vspar) : 'var(--green-l)'}">${card.vspar>0?'+':''}${D.fa(card.vspar)}</b> • رتبه ${D.fa(card.rank)} • ${esc(card.result)}
+      مجموع: <b style="color:var(--white)">${D.fa(card.total)}</b> • در برابر پار: <b style="color:${card.vspar<=0?'var(--green-l)':'#ff8f82'}">${card.vspar>0?'+':''}${D.fa(card.vspar)}</b> • رتبه ${D.fa(card.rank)} • ${esc(card.result)}
     </div>`;
   }
 
@@ -18533,6 +18340,9 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       <div style="flex:1"></div>
       <span class="chip ${D.dateFrom(t[5]) >= D.TODAY ? 'blue' : 'green'}">${D.dateFrom(t[5]) >= D.TODAY ? 'آینده' : 'برگزار شده'}</span>
     </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;border-radius:12px;border:1px solid rgba(212,175,55,.4);background:linear-gradient(90deg,rgba(212,175,55,.1),rgba(30,187,138,.06));font-size:12.5px;color:var(--text,#dfe8f2)">
+      ⛳ <b style="color:#f0d989">قانون گلف:</b> برندهٔ مسابقه کسی است که ۱۸ حفره (مجموع پار ۷۲) را با <b style="color:#7ee8b8">کمترین ضربه</b> به پایان برساند — مثلاً ۶۵ ضربه نسبت به ۷۰ ضربه برنده است. پایین‌ترین مجموع = قهرمان.
+    </div>
     <div class="grid cols-4" id="mt-stats" style="margin-bottom:18px"></div>
     <div class="grid cols-3">
       <div class="glass tilt" style="grid-column:span 2">
@@ -18547,7 +18357,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
             <td><b>${esc(pl.name)}</b></td>
             <td class="num" style="font-weight:800">${D.fa(c.total)}</td>
             <td class="num" style="color:var(--gold-l)">${D.fa(c.par)}</td>
-            <td class="num" style="color:${D.scaleVsPar ? D.scaleVsPar(c.vspar) : 'var(--green-l)'};font-weight:800">${c.vspar>0?'+':''}${D.fa(c.vspar)}</td>
+            <td class="num" style="color:${c.vspar<=0?'var(--green-l)':'#ff8f82'};font-weight:800">${c.vspar>0?'+':''}${D.fa(c.vspar)}</td>
             <td class="num" style="color:var(--green-l)">${D.fa(c.bird)}</td>
             <td>${rank===1?'<span class="chip gold">قهرمان</span>':rank===2?'<span class="chip dim">دوم</span>':rank===3?'<span class="chip dim">سوم</span>':'<span class="chip dim">شرکتکننده</span>'}</td>
             <td class="num" style="color:var(--gold-l)">${D.fa(pts)}</td>
@@ -18563,7 +18373,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         <div class="glass">
           <div class="card-head"><span class="ic">🌋</span><h3>سختترین حفرهها</h3><span class="tag">Avg vs Par</span></div>
           <div class="chart-box short"><canvas id="mt-hard"></canvas></div>
-          ${hardest ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">سختترین: <b style="color:${D.SCALE ? D.SCALE[5] : '#8B1A1A'}">${esc(D.holeName ? D.holeName(hardest.h) : ('میدان '+D.fa(hardest.h)))}</b> — میانگین ${hardest.d>0?'+':''}${D.fa(hardest.d.toFixed(2))} نسبت به پار</div>` : ''}
+          ${hardest ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">سختترین: <b style="color:#ff8f82">${esc(D.holeName ? D.holeName(hardest.h) : ('میدان '+D.fa(hardest.h)))}</b> — میانگین ${hardest.d>0?'+':''}${D.fa(hardest.d.toFixed(2))} نسبت به پار</div>` : ''}
         </div>
       </div>
     </div>`;
@@ -18583,7 +18393,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       Charts.barsH($('#mt-bird'), top8.map(c => D.nameOf(c.pid).slice(0,12)), top8.map(c => c.bird), { color:'#1EBB8A', showVal:true });
       const hs = Object.keys(diff).map(Number).sort((a,b)=>a-b);
       Charts.barsV($('#mt-hard'), hs.map(h => (D.holeName ? D.holeName(h) : ('میدان '+D.fa(h)))), hs.map(h => diff[h]), {
-        color: hs.map(h => D.scaleVsPar ? D.scaleVsPar(diff[h]) : '#E74C3C'), showVal:true, fmt:v=>(v>0?'+':'')+v.toFixed(1),
+        color:'#E74C3C', showVal:true, fmt:v=>(v>0?'+':'')+v.toFixed(1),
         max: Math.max(...hs.map(h=>diff[h]), 0.5) * 1.3,
       });
     }, 80);
@@ -18597,39 +18407,25 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🗺️ نمودار ${esc(L('nav.course','هوش زمین'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
     }
-    try {
-    const list = (S && S.courses) || [];
-    const crs = list.find(c => c[0] === courseSel) || list[0];
-    if (!crs){
-      v.innerHTML = `<div class="glass" style="padding:28px;text-align:center;color:var(--muted)">زمینی ثبت نشده است.</div>`;
-      return;
-    }
-    const A0 = A || {};
-    const pars = (D.parsOf && D.parsOf(crs[0])) || [];
-    const holes = +crs[3] || pars.length || 18;
-    const stats = (A0.COURSE_STATS || {})[crs[0]] || {};
-    const pc = (A0.PLAYER_COURSE || {})[coursePlayerSel] || {};
-    const cardsAll = (S && S.scorecards) || [];
-    const toursAll = (S && S.tournaments) || [];
-    const rounds = cardsAll.filter(c => {
-      const t = toursAll.find(x => x[0] === c.tour);
-      return t && t[3] === crs[0];
-    }).length;
-    const recs = ((A0.CARDS || {})[coursePlayerSel] || []).filter(c => c.course === crs[0]);
-    const pl = (A0.LB || []).find(r => r.pid === coursePlayerSel);
-    const lbOpts = (A0.LB || []).map(r => `<option value="${r.pid}" ${r.pid===coursePlayerSel?'selected':''}>${esc(r.name)}</option>`).join('');
-    const crsOpts = list.map(c => `<option value="${c[0]}" ${c[0]===courseSel?'selected':''}>${esc(c[1])}</option>`).join('');
+    const crs = S.courses.find(c => c[0] === courseSel) || S.courses[0];
+    const pars = D.parsOf(crs[0]);
+    const holes = crs[3];
+    const stats = A.COURSE_STATS[crs[0]] || {};
+    const pc = A.PLAYER_COURSE[coursePlayerSel] || {};
+    const rounds = S.scorecards.filter(c => (S.tournaments.find(t=>t[0]===c.tour)||{}).course === crs[0]).length;
+    const recs = (A.CARDS[coursePlayerSel]||[]).filter(c => c.course === crs[0]);
+    const pl = A.LB.find(r => r.pid === coursePlayerSel);
     v.innerHTML = `
     <div class="toolbar">
       <span class="lbl">🗺️ زمین:</span>
-      <select class="sel" id="cs-sel">${crsOpts}</select>
+      <select class="sel" id="cs-sel">${S.courses.map(c => `<option value="${c[0]}" ${c[0]===courseSel?'selected':''}>${esc(c[1])}</option>`).join('')}</select>
       <span class="lbl">جنسیت:</span>
       <div class="em-seg" id="cs-gender">
         <button type="button" class="em-seg-btn${courseTeeGender!=='M'?' on':''}" data-gender="F">زن</button>
         <button type="button" class="em-seg-btn${courseTeeGender==='M'?' on':''}" data-gender="M">مرد</button>
       </div>
       <span class="lbl">🏌️ بازیکن:</span>
-      <select class="sel" id="cs-pl">${lbOpts}</select>
+      <select class="sel" id="cs-pl">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===coursePlayerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
       <div style="flex:1"></div>
       <span class="chip gold">${esc(crs[1])} — ${esc(crs[2])}</span>
       <span class="chip blue">${D.fa(holes)} حفره • پار ${D.fa(pars.slice(0,holes).reduce((a,b)=>a+b,0))}</span>
@@ -18685,6 +18481,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         <div id="earth-wiz" class="earth-wiz"></div>
         <div class="earth-tools" style="margin-top:10px;align-items:center">
           <select class="sel" id="earth-hole"></select>
+          ${(() => { try { const rec = userRec(currentUser); return rec && rec.role !== 'member'; } catch(e){ return false; } })() ? '<button type="button" class="btn sm ghost" id="earth-edit-geo">✏️ ویرایش تی / حفره / فروی</button>' : ''}
           <span id="earth-geo-hint" style="font-size:12px;color:var(--muted);line-height:1.5"></span>
         </div>
       </div>
@@ -18709,10 +18506,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       <div class="glass" style="grid-column:span 2">
         <div class="card-head"><span class="ic">🌋</span><h3>سختی حفرهها در این زمین</h3><span class="tag">${esc(crs[1])}</span></div>
         <div class="chart-box tall"><canvas id="cs-hard"></canvas></div>
-        <div class="scale-legend" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted)">
-          ${(D.SCALE || []).map((c,i) => `<span style="display:inline-flex;align-items:center;gap:4px"><i style="width:10px;height:10px;border-radius:3px;background:${c}"></i>${i===0?'آسان':i===5?'سخت':''}</span>`).join('')}
-          <span style="margin-right:auto">Index ۱ سخت‌ترین — ${D.fa(holes)} آسان‌ترین</span>
-        </div>
+        <div style="margin-top:6px;font-size:11.5px;color:var(--muted)">قرمز = میانگین ضربات نسبت به پار در همه مسابقات این زمین • آبی = پار حفره</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:18px">
         <div class="glass">
@@ -18720,7 +18514,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
           ${recs.length ? `<table class="tbl"><thead><tr><th>مسابقه</th><th>ضربات</th><th>vs پار</th><th>رتبه</th><th>نتیجه</th></tr></thead><tbody>
           ${recs.map(r => `<tr>
             <td>${esc(r.name)}</td><td class="num">${D.fa(r.total)}</td>
-            <td class="num" style="color:${D.scaleVsPar ? D.scaleVsPar(r.vspar) : 'var(--green-l)'}">${r.vspar>0?'+':''}${D.fa(r.vspar)}</td>
+            <td class="num" style="color:${r.vspar<=0?'var(--green-l)':'#ff8f82'}">${r.vspar>0?'+':''}${D.fa(r.vspar)}</td>
             <td class="num">${D.fa(r.rank)}</td><td>${r.rank===1?'<span class="chip gold">قهرمان</span>':'<span class="chip dim">'+esc(r.result)+'</span>'}</td>
           </tr>`).join('')}</tbody></table>` : '<div style="color:var(--muted);font-size:12.5px">این بازیکن هنوز در این زمین مسابقهای نداشته است.</div>'}
         </div>
@@ -18742,7 +18536,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       ['⛳','پار کل', D.fa(pars.slice(0,holes).reduce((a,b)=>a+b,0)), 'var(--gold)'], ['🏌️','میدانها', D.fa(holes), 'var(--blue)'],
       ['👥','دورهای برگزار', D.fa(rounds), 'var(--orange)'], ['📉','میانگین vs پار', avgAll===null?'—':(avgAll>0?'+':'')+D.fa(avgAll.toFixed(2)), 'var(--green-l)'],
     ];
-    const csStats = $('#cs-stats'); if (csStats) csStats.innerHTML = st.map(([ic,lbl,val,col]) => `
+    $('#cs-stats').innerHTML = st.map(([ic,lbl,val,col]) => `
       <div class="glass stat" style="min-height:88px">
         <div style="display:flex;align-items:center;gap:8px"><span class="ic" style="font-size:18px">${ic}</span><span class="lbl">${lbl}</span></div>
         <div class="val" style="font-size:21px;color:${col}">${val}</div>
@@ -18750,22 +18544,16 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     setTimeout(() => {
       const hs = [];
       for (let h = 1; h <= holes; h++) hs.push(h);
-      const idxs = hs.map(h => ((D.indexOf && D.indexOf(crs[0])[h - 1]) || h));
-      const nH = hs.length;
-      const heights = idxs.map(ix => nH + 1 - ix);
-      const cols = idxs.map(ix => (D.scaleIndex ? D.scaleIndex(ix, nH) : '#E74C3C'));
-      Charts.barsV($('#cs-hard'), hs.map(h=>D.fa(h)), heights, {
-        color: cols, showVal: true, valFmt: (_, i) => String(idxs[i]),
-        fmt: v => D.fa(Math.round(v)), max: nH * 1.18,
+      Charts.barsV($('#cs-hard'), hs.map(h=>'ح'+D.fa(h)), hs.map(h => stats[h] ?? 0), {
+        color:'#E74C3C', showVal:true, fmt:v=>(v>0?'+':'')+v.toFixed(1), max: Math.max(1.2, ...hs.map(h=>stats[h]??0)) * 1.25,
       });
       const allCrs = S.courses.map(c => c[0]);
       Charts.barsH($('#cs-fit'), allCrs.map(c => esc(D.COURSE_NAME[c])), allCrs.map(c => pc[c] ?? 0), {
         color:'#9B59B6', showVal:true, valFmt:v=>(v>0?'+':'')+v.toFixed(1),
       });
     }, 80);
-    const csSel = $('#cs-sel'), csPl = $('#cs-pl');
-    if (csSel) csSel.addEventListener('change', e => { courseSel = +e.target.value; go('course'); });
-    if (csPl) csPl.addEventListener('change', e => { coursePlayerSel = +e.target.value; go('course'); });
+    $('#cs-sel').addEventListener('change', e => { courseSel = +e.target.value; go('course'); });
+    $('#cs-pl').addEventListener('change', e => { coursePlayerSel = +e.target.value; go('course'); });
     document.querySelectorAll('#cs-gender [data-gender]').forEach(b => {
       b.addEventListener('click', () => { courseTeeGender = b.getAttribute('data-gender') || 'F'; go('course'); });
     });
@@ -18818,25 +18606,8 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         places.push({ name: c[1], lat, lng });
       });
       const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.90494, lng:49.31398 };
-      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], pid: coursePlayerSel, gender: courseTeeGender || 'F' });
+      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], pid: coursePlayerSel });
     })();
-    } catch (err) {
-      console.error('pageCourse', err);
-      try {
-        if (v && !v.querySelector('#earth-map')){
-          v.innerHTML = `<div class="glass earth-pane" style="padding:0">
-            <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین</h3></div>
-            <div class="earth-stage" dir="ltr"><div id="earth-map" class="earth-map" dir="ltr"></div></div>
-          </div>`;
-          if (window.EarthMap){
-            EarthMap.mount(document.getElementById('earth-map'), {
-              center:{ lat:31.90494, lng:49.31398 }, places:[{ name:'مسجدسلیمان', lat:31.90494, lng:49.31398 }],
-              zoom:16, courseId:'mis', tourCourse:1, pid: coursePlayerSel
-            });
-          }
-        }
-      } catch (e2) { console.error('pageCourse fallback', e2); }
-    }
   }
 
   /* ═══════════ صفحه: رکوردها ═══════════ */
@@ -19026,94 +18797,23 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       const nx = events[nextIdx];
       const days = Math.max(0, Math.ceil((nx.d - D.TODAY)/86400000));
       const j = D.jalaliInfo(nx.d);
-      igStory(stCal, 'استوری-تقویم-فصل.png', ({ W, H, GOLD, GL, FG, MUT, rrect, txt, c }) => {
-        const TCOL = { 'مسابقه':'#d4af37', 'کلاس':'#c39bd3', 'تمرین':'#1EBB8A', 'اردو':'#f0a15c' };
-        const near = events.filter(e => e.end >= D.TODAY).slice(0, 2);
-        const nx2 = near[0] || nx;
-        const j2 = D.jalaliInfo(nx2.d);
-        const left0 = Math.max(0, Math.ceil((nx2.d - D.TODAY) / 86400000));
-        const col0 = TCOL[nx2.type] || GOLD;
-        txt('تقویم فصل  ' + D.fa(D.seasonYear), W / 2, 418, '600', 22, MUT);
-        /* هیرو مثل نوار صفحه: عکس راست، اسم طلایی، عدد روز چپ */
-        const hx = 52, hy = 436, hw = 976, hh = 250;
-        rrect(hx, hy, hw, hh, 28);
-        c.fillStyle = 'rgba(255,255,255,.035)'; c.strokeStyle = 'rgba(212,175,55,.45)'; c.lineWidth = 2; c.fill(); c.stroke();
-        const imgS = 148, imgX = hx + hw - 36 - imgS, imgY = hy + (hh - imgS) / 2;
-        const tx = imgX - 22;
-        txt('رویداد بعدی', tx, hy + 72, '600', 22, MUT, 'right', 520);
-        txt((TYPE_ICON[nx2.type] || '🏆') + '  ' + nx2.name, tx, hy + 128, '900', 44, GL, 'right', 520);
-        txt(nx2.type + '  •  ' + D.fa(j2.dd) + ' ' + MONTHS[j2.mm - 1], tx, hy + 178, '500', 22, MUT, 'right', 520);
-        const nxNum = hx + 118;
-        txt(D.fa(left0), nxNum, hy + 128, '900', 92, GL);
-        txt('روز تا شروع', nxNum, hy + 178, '500', 20, MUT);
-        const drawBall = im => {
-          const g = c.createRadialGradient(imgX + imgS / 2, imgY + imgS / 2, 10, imgX + imgS / 2, imgY + imgS / 2, imgS);
-          g.addColorStop(0, 'rgba(30,187,138,.45)'); g.addColorStop(1, 'rgba(30,187,138,0)');
-          c.fillStyle = g; c.fillRect(imgX - 18, imgY - 18, imgS + 36, imgS + 36);
-          rrect(imgX, imgY, imgS, imgS, 28);
-          c.save(); c.clip();
-          if (im){ try { c.drawImage(im, imgX, imgY, imgS, imgS); } catch (e) {} }
-          else { c.fillStyle = '#122018'; c.fill(); }
-          c.restore();
-          rrect(imgX, imgY, imgS, imgS, 28); c.strokeStyle = 'rgba(30,187,138,.55)'; c.lineWidth = 2; c.stroke();
-        };
-        /* رویداد دوم — نوار باریک */
-        if (near[1]){
-          const e = near[1], jj = D.jalaliInfo(e.d), col = TCOL[e.type] || GOLD;
-          const left = Math.max(0, Math.ceil((e.d - D.TODAY) / 86400000));
-          const y = hy + hh + 18;
-          rrect(hx, y, hw, 96, 22);
-          c.fillStyle = 'rgba(255,255,255,.045)'; c.strokeStyle = col + '77'; c.lineWidth = 1.8; c.fill(); c.stroke();
-          rrect(hx, y, 12, 96, 8); c.fillStyle = col; c.fill();
-          txt((TYPE_ICON[e.type] || '') + '  ' + e.name, 560, y + 42, '800', 28, FG, 'center', 700);
-          txt(e.type + '  •  ' + D.fa(jj.dd) + ' ' + MONTHS[jj.mm - 1], 560, y + 74, '500', 18, MUT, 'center', 700);
-          txt(left <= 0 ? 'امروز' : D.fa(left) + ' روز', hx + hw - 70, y + 58, '900', 24, col);
-        }
-        /* تقویم پایین‌تر */
-        const mm = D.jalaliInfo(nx2.d).mm;
-        const dim = daysInJMonth(mm);
-        const first = jalMonthStart(mm);
-        const dow = (first.getUTCDay() + 1) % 7;
-        const todayJ = D.jalaliInfo(D.TODAY);
-        const nearIds = new Set(near.map(e => e.id));
-        const byDay = {};
-        events.forEach(e => {
-          const n = Math.max(1, daysBetween(e.d, e.end));
-          for (let k = 0; k < n; k++){
-            const di = new Date(e.d.getTime() + k * 86400000);
-            const ji = D.jalaliInfo(di);
-            if (ji.yy === D.seasonYear && ji.mm === mm) (byDay[ji.dd] = byDay[ji.dd] || []).push(e);
-          }
-        });
-        const cell = 84, gx = (W - cell * 7) / 2;
-        const rowsN = Math.ceil((dow + dim) / 7);
-        const panelH = 78 + rowsN * cell + 22;
-        const gy = 920;
-        rrect(48, gy, W - 96, panelH, 28);
-        c.fillStyle = 'rgba(255,255,255,.035)'; c.strokeStyle = 'rgba(212,175,55,.28)'; c.lineWidth = 1.6; c.fill(); c.stroke();
-        txt(MONTHS[mm - 1] + '  ' + D.fa(D.seasonYear), W / 2, gy + 38, '800', 26, GL);
-        WD.forEach((w, i) => txt(w, gx + i * cell + cell / 2, gy + 70, '700', 17, i === 6 ? '#e8b083' : MUT));
-        for (let d = 1; d <= dim; d++){
-          const col = (dow + d - 1) % 7, row = Math.floor((dow + d - 1) / 7);
-          const x = gx + col * cell, y = gy + 84 + row * cell;
-          const isToday = todayJ.yy === D.seasonYear && todayJ.mm === mm && todayJ.dd === d;
-          const hits = byDay[d] || [];
-          const featured = hits.some(e => nearIds.has(e.id));
-          rrect(x + 6, y + 3, cell - 12, cell - 10, 13);
-          c.fillStyle = featured ? 'rgba(212,175,55,.22)' : isToday ? 'rgba(212,175,55,.12)' : 'rgba(255,255,255,.03)';
-          c.strokeStyle = featured ? 'rgba(212,175,55,.85)' : isToday ? 'rgba(212,175,55,.45)' : 'rgba(255,255,255,.06)';
-          c.lineWidth = featured ? 2.2 : 1; c.fill(); c.stroke();
-          txt(D.fa(d), x + cell / 2, y + 36, featured || isToday ? '900' : '600', 22, featured ? GL : isToday ? GOLD : FG);
-          hits.slice(0, 3).forEach((e, k) => {
-            c.beginPath(); c.arc(x + cell / 2 - (Math.min(hits.length, 3) - 1) * 5 + k * 10, y + 56, featured ? 4.2 : 3, 0, 7);
-            c.fillStyle = TCOL[e.type] || GOLD; c.fill();
-          });
-        }
-        return new Promise(res => {
-          const im = new Image();
-          im.onload = () => { drawBall(im); res(); };
-          im.onerror = () => { drawBall(null); res(); };
-          im.src = 'data:image/jpeg;base64,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';
+      igStory(stCal, 'استوری-تقویم-فصل.png', ({ W, GOLD, GL, FG, MUT, rrect, txt, c }) => {
+        txt('📅 تقویم فصل', W / 2, 446, '700', 28, MUT);
+        txt('رویداد بعدی', W / 2, 560, '500', 24, MUT);
+        txt((TYPE_ICON[nx.type]||'') + ' ' + nx.name, W / 2, 640, '900', 52, GL, 'center', 960);
+        txt(nx.type + '  •  ' + D.fa(j.dd) + ' ' + MONTHS[j.mm-1] + ' ' + D.fa(j.yy), W / 2, 700, '500', 26, FG);
+        rrect(340, 760, 400, 180, 28);
+        c.fillStyle = 'rgba(212,175,55,.10)'; c.strokeStyle = 'rgba(212,175,55,.55)'; c.lineWidth = 2; c.fill(); c.stroke();
+        txt(D.fa(days), W / 2, 860, '900', 72, GL);
+        txt('روز تا شروع', W / 2, 910, '500', 24, MUT);
+        txt(D.fa(events.length) + ' رویداد در فصل ' + D.fa(D.seasonYear), W / 2, 1060, '600', 28, FG);
+        const upcoming = events.filter(e => e.d >= D.TODAY).slice(0, 6);
+        let y = 1140;
+        upcoming.forEach(e => {
+          const jj = D.jalaliInfo(e.d);
+          txt((TYPE_ICON[e.type]||'📌') + '  ' + e.name, W / 2, y, '600', 26, FG, 'center', 900);
+          txt(D.fa(jj.dd) + ' ' + MONTHS[jj.mm-1], W / 2, y + 32, '400', 20, MUT);
+          y += 70;
         });
       });
     });
@@ -19299,6 +18999,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
           ⚡ اخبار آکادمی: &nbsp; ${next ? esc(next[1]) + ' ' + D.fa(A.COUNTDOWN) + ' روز دیگر •' : ''} &nbsp; کلاس پوتینگ چهارشنبه • &nbsp; اردوی آمادهسازی جام بزرگ ۱۶ مهر • &nbsp; پرندهساز هفته: ${TV[0] ? esc(TV[0].name) : '—'} • &nbsp; ${TV[1] ? esc(TV[1].name) + ' با روند صعودی به صدر نزدیک میشود' : ''} • &nbsp; فصل ${D.fa(tvYr)} — امتیاز = مجموع همهٔ آیتم‌های امتیازی امسال
         </div>
       </div>
+      <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--dim)">📺 این صفحه برای نمایش روی تلویزیون آکادمی طراحی شده است — برای حالت تمامصفحه F11 را بزنید</div>
     </div>`;
     /* 🌤️ دما و بادِ لحظه‌ای اهواز (Open-Meteo، بدون کلید) — اگر آفلاین بود … می‌ماند */
     try {
@@ -20038,24 +19739,16 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       <div id="ac-list"></div>
     </div>`;
     let parVals = [];
-    let idxVals = [];
     function drawPars(){
       const n = +$('#ac-holes').value;
-      if (parVals.length !== n) parVals = Array.from({length:n}, () => 4);
-      if (idxVals.length !== n) idxVals = Array.from({length:n}, (_,i) => i + 1);
+      if (parVals.length !== n) parVals = Array.from({length:n}, (_,i) => [3,4,5][i%3] === 4 ? 4 : 4);
       $('#ac-pars').innerHTML = parVals.map((p,i) => `
         <div style="text-align:center">
           <div style="font-size:10px;color:var(--muted)">ح${D.fa(i+1)}</div>
-          <div style="font-size:9px;color:var(--dim)">پار</div>
-          <input class="input ac-par" type="number" min="3" max="6" value="${p}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
-          <div style="font-size:9px;color:var(--gold-l);margin-top:4px">Index</div>
-          <input class="input ac-idx" type="number" min="1" max="${n}" value="${idxVals[i]}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
+          <input class="input" type="number" min="3" max="6" value="${p}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
         </div>`).join('');
-      $$('#ac-pars .ac-par').forEach(inp => inp.addEventListener('change', () => {
+      $$('#ac-pars input').forEach(inp => inp.addEventListener('change', () => {
         parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4));
-      }));
-      $$('#ac-pars .ac-idx').forEach(inp => inp.addEventListener('change', () => {
-        idxVals[+inp.dataset.i] = Math.max(1, Math.min(n, +inp.value || 1));
       }));
     }
     drawPars();
@@ -20066,9 +19759,8 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       if (!name){ toast('نام زمین را وارد کنید', 'red'); return; }
       const holes = +$('#ac-holes').value;
       const pars = parVals.slice(0, holes).map(v => Math.max(3, Math.min(6, v)));
-      const index = idxVals.slice(0, holes).map((v,i) => Math.max(1, Math.min(holes, +v || (i+1))));
       const lst = extraCourses();
-      lst.push({ name, loc, holes, pars, index });
+      lst.push({ name, loc, holes, pars });
       saveCourses(lst);
       reloadData(); go('acourses');
       toast('زمین «' + name + '» ثبت شد ✓', 'green');

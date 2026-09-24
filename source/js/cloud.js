@@ -173,21 +173,105 @@
     syncableKeys().forEach(function (k) { sweepCache[k] = L.getItem(k); });
   }
 
-  /* کلیدهای ساختاری (جلسات/ضربه‌های تمرین): مرج union تا تغییرات پوش‌نشدهٔ محلی لایو نماند */
+  /* سنگ‌قبر حذف تمرین: مرجِ union ابر آیتم پاک‌شده را برنمی‌گرداند */
+  function spShotKey(x) {
+    return [x && x.sid, x && x.t, x && x.pid, x && x.club, x && x.res].join('|');
+  }
+  function readSpTomb(L) {
+    L = L || ls();
+    try {
+      var t = JSON.parse((L.getItem && L.getItem('ga_sp_tomb')) || '{"ses":{},"shot":{}}');
+      if (!t || typeof t !== 'object') t = {};
+      if (!t.ses || typeof t.ses !== 'object') t.ses = {};
+      if (!t.shot || typeof t.shot !== 'object') t.shot = {};
+      return t;
+    } catch (e) { return { ses: {}, shot: {} }; }
+  }
+  function writeSpTomb(t, L) {
+    L = L || ls();
+    try { L.setItem('ga_sp_tomb', JSON.stringify({ ses: t.ses || {}, shot: t.shot || {} })); } catch (e) {}
+  }
+  function mixTombMaps(a, b) {
+    var o = {};
+    a = a || {}; b = b || {};
+    Object.keys(a).forEach(function (k) { o[k] = a[k]; });
+    Object.keys(b).forEach(function (k) {
+      if (o[k] == null || b[k] > o[k]) o[k] = b[k];
+    });
+    return o;
+  }
+  function mixTombObj(a, b) {
+    a = a && typeof a === 'object' ? a : {};
+    b = b && typeof b === 'object' ? b : {};
+    return { ses: mixTombMaps(a.ses, b.ses), shot: mixTombMaps(a.shot, b.shot) };
+  }
+  function isTombedShot(x, t) {
+    if (!x) return true;
+    t = t || readSpTomb();
+    if (t.ses[String(x.sid)]) return true;
+    if (t.shot[spShotKey(x)]) return true;
+    return false;
+  }
+  function applyTombSessions(obj, t) {
+    obj = obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
+    t = t || readSpTomb();
+    Object.keys(t.ses || {}).forEach(function (id) { delete obj[id]; });
+    return obj;
+  }
+  function applyTombShots(arr, t) {
+    t = t || readSpTomb();
+    return (Array.isArray(arr) ? arr : []).filter(function (x) { return !isTombedShot(x, t); });
+  }
+  function stripSpStorage(L) {
+    L = L || ls();
+    var t = readSpTomb(L);
+    try {
+      var ses = JSON.parse(L.getItem('ga_sp_sessions') || '{}') || {};
+      L.setItem('ga_sp_sessions', JSON.stringify(applyTombSessions(ses, t)));
+    } catch (e) {}
+    try {
+      var arr = JSON.parse(L.getItem('ga_sp_shots') || '[]') || [];
+      L.setItem('ga_sp_shots', JSON.stringify(applyTombShots(arr, t)));
+    } catch (e) {}
+  }
+  function tombShots(arr) {
+    var t = readSpTomb();
+    var now = Date.now();
+    (arr || []).forEach(function (x) { if (x) t.shot[spShotKey(x)] = now; });
+    writeSpTomb(t);
+  }
+  function tombSession(sid, shots) {
+    var t = readSpTomb();
+    var now = Date.now();
+    t.ses[String(sid)] = now;
+    (shots || []).forEach(function (x) { if (x) t.shot[spShotKey(x)] = now; });
+    writeSpTomb(t);
+  }
+
+  /* کلیدهای ساختاری (جلسات/ضربه‌های تمرین): مرج union + سنگ‌قبر حذف */
   function mergeSpKey(k, localRaw, remoteRaw) {
     try {
-      if (!localRaw) return remoteRaw;
+      if (k === 'ga_sp_tomb') {
+        var rt = remoteRaw ? JSON.parse(typeof remoteRaw === 'string' ? remoteRaw : JSON.stringify(remoteRaw)) : {};
+        var lt = localRaw ? JSON.parse(typeof localRaw === 'string' ? localRaw : JSON.stringify(localRaw)) : {};
+        return JSON.stringify(mixTombObj(rt, lt));
+      }
+      if (!localRaw) {
+        if (k === 'ga_sp_sessions') return JSON.stringify(applyTombSessions(JSON.parse(remoteRaw || '{}')));
+        if (k === 'ga_sp_shots') return JSON.stringify(applyTombShots(JSON.parse(remoteRaw || '[]')));
+        return remoteRaw;
+      }
       if (k === 'ga_sp_sessions') {
         var a = JSON.parse(remoteRaw) || {}, b = JSON.parse(localRaw) || {};
-        Object.keys(b).forEach(function (id) { if (!a[id]) a[id] = b[id]; });
-        return JSON.stringify(a);
+        Object.keys(b).forEach(function (id) { a[id] = b[id]; });
+        return JSON.stringify(applyTombSessions(a));
       }
       var arr = JSON.parse(remoteRaw) || [], loc = JSON.parse(localRaw) || [];
-      var seen = {}, keyFn = function (x) { return [x.sid, x.t, x.pid, x.club, x.res].join('|'); };
+      var seen = {}, keyFn = spShotKey;
       arr.forEach(function (x) { seen[keyFn(x)] = 1; });
       (Array.isArray(loc) ? loc : []).forEach(function (x) { if (x && !seen[keyFn(x)]) arr.push(x); });
-      arr.sort(function (a, b) { return (a.t || 0) - (b.t || 0); });
-      return JSON.stringify(arr);
+      arr.sort(function (x, y) { return (x.t || 0) - (y.t || 0); });
+      return JSON.stringify(applyTombShots(arr));
     } catch (e) { return remoteRaw; }
   }
   /* ── pull: اعمال دادهٔ جدیدترِ سرور روی این دستگاه ──────────────── */
@@ -216,13 +300,14 @@
             if (!remoteNewer && localDirty === undefined && L.getItem(r.k) !== null) return;
             if (remoteNewer) {
               var newVal = decode(r.v);
-              if (r.k === 'ga_sp_sessions' || r.k === 'ga_sp_shots') newVal = mergeSpKey(r.k, L.getItem(r.k), newVal);
+              if (r.k === 'ga_sp_sessions' || r.k === 'ga_sp_shots' || r.k === 'ga_sp_tomb') newVal = mergeSpKey(r.k, L.getItem(r.k), newVal);
               try { L.setItem(r.k, newVal); } catch (e) {}
               ts[r.k] = r.updated_at;
               applied++;
               if (localDirty) delete d[r.k];
             }
           });
+          stripSpStorage(L);
           jwrite(DIRTY_KEY, d);
           jwrite(TS_KEY, ts);
           state.pulled += applied;
@@ -260,11 +345,13 @@
 
     /* کلیدهای ساختاری تمرین (جلسات/ضربه‌ها): قبل از push، مقدار فعلی سرور گرفته و union مرج
        می‌شود تا pushِ دستگاهِ دارای دیتای قدیمی، ضربه‌های دستگاه دیگر را بازنویسی نکند */
-    var SP_MERGE = { ga_sp_sessions: 1, ga_sp_shots: 1 };
+    var SP_MERGE = { ga_sp_sessions: 1, ga_sp_shots: 1, ga_sp_tomb: 1 };
     var spRows = rows.filter(function (r) { return SP_MERGE[r.k] && !(r.v && r.v.__del); });
     var preMerge = spRows.length
       ? rest('ga_store?select=k,v&k=in.(' + spRows.map(function (r) { return r.k; }).join(',') + ')').then(function (rems) {
-          (rems || []).forEach(function (rr) {
+          (rems || []).slice().sort(function (a, b) {
+            return a.k === 'ga_sp_tomb' ? -1 : b.k === 'ga_sp_tomb' ? 1 : 0;
+          }).forEach(function (rr) {
             var row = null;
             spRows.forEach(function (x) { if (x.k === rr.k) row = x; });
             if (!row || !rr.v) return;
@@ -509,6 +596,9 @@
     pull: pull,
     push: push,
     test: test,
+    tombShots: tombShots,
+    tombSession: tombSession,
+    stripSp: stripSpStorage,
     dirty: function () { return Object.keys(jread(DIRTY_KEY, {})); },
     cfg: cfg,
     setCfg: function (url, key, on) { jwrite(CFG_KEY, { url: url, key: key, on: on !== false }); },

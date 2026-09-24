@@ -847,7 +847,15 @@
     else { ss[sid].analysis = null; }
     spSaveSessions(ss);
   }
+  function spTombShots(arr){
+    try { if (window.GA_CLOUD && GA_CLOUD.tombShots) GA_CLOUD.tombShots(arr); } catch(e){}
+  }
+  function spTombSession(sid, shots){
+    try { if (window.GA_CLOUD && GA_CLOUD.tombSession) GA_CLOUD.tombSession(sid, shots); } catch(e){}
+  }
   function spDeleteSession(sid){
+    const gone = spShots().filter(x => String(x.sid) === String(sid));
+    spTombSession(sid, gone);
     spSaveShots(spShots().filter(x => String(x.sid) !== String(sid)));
     const ss = spSessions(); delete ss[sid]; spSaveSessions(ss);
   }
@@ -857,20 +865,22 @@
     if (!hit.length) return 0;
     const sids = {};
     hit.forEach(x => { sids[x.sid] = 1; });
+    spTombShots(hit);
     spSaveShots(arr.filter(x => !pred(x)));
     Object.keys(sids).forEach(spAfterShotChange);
     return hit.length;
   }
   function spDeleteOneShot(sid, pid, club, t){
-    let gone = false;
+    let gone = null;
     const left = spShots().filter(x => {
       if (gone) return true;
       if (String(x.sid) === String(sid) && +x.pid === +pid && x.club === club && String(x.t) === String(t)){
-        gone = true; return false;
+        gone = x; return false;
       }
       return true;
     });
     if (!gone) return 0;
+    spTombShots([gone]);
     spSaveShots(left);
     spAfterShotChange(sid);
     return 1;
@@ -893,6 +903,7 @@
       shots.sort((a, b) => (a.t || 0) - (b.t || 0));
       localStorage.setItem('ga_sp_sessions', JSON.stringify(ses));
       localStorage.setItem('ga_sp_shots', JSON.stringify(shots));
+      try { if (window.GA_CLOUD && GA_CLOUD.stripSp) GA_CLOUD.stripSp(); } catch(e){}
       localStorage.setItem('sp_restore_done_v1', '1');
       return added > 0;
     } catch(e){ return false; }
@@ -1537,12 +1548,12 @@
     const isClosed = x => x && (x.status === 'closed' || (x.status == null && (x.closedAt || x.analysis)) && !!(x.closedAt || x.analysis));
     const done = Object.keys(ssn).map(k => ssn[k]).filter(isClosed)
       .sort((a, b) => String(b.closedAt || '').localeCompare(String(a.closedAt || '')) || ((b.no || 0) - (a.no || 0)));
-    const mine = shots.filter(x => x.pid === pid);
+    const mine = shots.filter(x => +x.pid === +pid);
     /* آپشن‌های کلاب از دیتای واقعی همان بازیکن+نوع — انتخاب فعلی در صورت معتبر بودن حفظ می‌شود */
     const clubSeen = {}, clubList = [];
     done.forEach(sn => {
       if (typ !== 'all' && sn.type !== typ) return;
-      shots.filter(x => x.sid === sn.id && x.pid === pid).forEach(x => { if (!clubSeen[x.club]){ clubSeen[x.club] = 1; clubList.push(x.club); } });
+      shots.filter(x => String(x.sid) === String(sn.id) && +x.pid === +pid).forEach(x => { if (!clubSeen[x.club]){ clubSeen[x.club] = 1; clubList.push(x.club); } });
     });
     if (clbS){
       clbS.innerHTML = `<option value="all">همهٔ کلاب‌ها</option>` + clubList.map(c => `<option value="${esc(c)}" ${c === clb ? 'selected' : ''}>${esc(c)}</option>`).join('');

@@ -20,7 +20,7 @@
     for (var i = 0; i < ks.length; i++) if (ss[ks[i]] && ss[ks[i]].status === 'open') return ss[ks[i]];
     return null;
   }
-  function shotsOf(sid) { return allShots().filter(function (x) { return x.sid === sid; }); }
+  function shotsOf(sid) { return allShots().filter(function (x) { return String(x.sid) === String(sid); }); }
   function saveSessions(o) { write(LS_SES, o); }
   function saveShots(a) { write(LS_SHOTS, a); }
 
@@ -495,9 +495,11 @@
   /* حذف ضربه‌هایی که pred برقرار است + بی‌اعتبارسازی تحلیل کش‌شدهٔ جلسه */
   function deleteShotsWhere(pred, msgFn) {
     var arr = allShots();
+    var hit = arr.filter(pred);
     var left = arr.filter(function (x) { return !pred(x); });
-    var n = arr.length - left.length;
+    var n = hit.length;
     if (!n) { toast('چیزی برای حذف نبود', 'ok'); return; }
+    try { if (window.GA_CLOUD && GA_CLOUD.tombShots) GA_CLOUD.tombShots(hit); } catch (e) {}
     saveShots(left);
     var ss = sessions();
     if (ss[sumSid]) { ss[sumSid].analysis = null; saveSessions(ss); }
@@ -506,7 +508,9 @@
   }
   function deleteWholeSession() {
     var sid = sumSid;
-    var arr = allShots().filter(function (x) { return x.sid !== sid; });
+    var gone = allShots().filter(function (x) { return String(x.sid) === String(sid); });
+    try { if (window.GA_CLOUD && GA_CLOUD.tombSession) GA_CLOUD.tombSession(sid, gone); } catch (e) {}
+    var arr = allShots().filter(function (x) { return String(x.sid) !== String(sid); });
     saveShots(arr);
     var ss = sessions();
     if (ss[sid]) { delete ss[sid]; saveSessions(ss); }
@@ -600,7 +604,7 @@
         var nm = (playerByPid(pid) || {}).name || ('بازیکن ' + fa(pid));
         var o2 = an.byPlayer[pid] || { n: 0 };
         confirmAsk('حذف بازیکن از جلسه؟', 'همهٔ ' + fa(o2.n) + ' ضربهٔ «' + esc(nm) + '» در این جلسه حذف می‌شود.', 'حذف ضربه‌های ' + esc(nm), function () {
-          deleteShotsWhere(function (x) { return x.sid === sumSid && x.pid === pid; }, function (n) { return fa(n) + ' ضربهٔ «' + nm + '» حذف شد ✓'; });
+          deleteShotsWhere(function (x) { return String(x.sid) === String(sumSid) && +x.pid === +pid; }, function (n) { return fa(n) + ' ضربهٔ «' + nm + '» حذف شد ✓'; });
         });
       };
     });
@@ -610,7 +614,7 @@
         var nm = (playerByPid(pid) || {}).name || ('بازیکن ' + fa(pid));
         var o2 = (an.byPlayer[pid] && an.byPlayer[pid].clubs[cn]) || { n: 0 };
         confirmAsk('حذف ضربه‌های این کلاب؟', 'همهٔ ' + fa(o2.n) + ' ضربهٔ «' + esc(cn) + '» متعلق به «' + esc(nm) + '» در این جلسه حذف می‌شود.', 'حذف ' + esc(cn), function () {
-          deleteShotsWhere(function (x) { return x.sid === sumSid && x.pid === pid && x.club === cn; }, function (n) { return fa(n) + ' ضربهٔ ' + cn + ' «' + nm + '» حذف شد ✓'; });
+          deleteShotsWhere(function (x) { return String(x.sid) === String(sumSid) && +x.pid === +pid && String(x.club) === String(cn); }, function (n) { return fa(n) + ' ضربهٔ ' + cn + ' «' + nm + '» حذف شد ✓'; });
         });
       };
     });

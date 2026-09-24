@@ -73,7 +73,7 @@ def main():
                       '<style>' + lcss + '</style>', html)
 
     # 3) inline JS in load order
-    for jsname in ['device', 'cloud', 'labels', 'holidays', 'data', 'brand', 'sub', 'charts', 'qrcode.min', 'battle', 'landing', 'jdate', 'avatar', 'shop', 'mgmt', 'smartplay', 'leaflet', 'mis-golf', 'coursegeo', 'earthmap', 'app']:
+    for jsname in ['device', 'cloud', 'labels', 'holidays', 'data', 'brand', 'sub', 'charts', 'qrcode.min', 'battle', 'three.min', 'landing', 'jdate', 'avatar', 'shop', 'mgmt', 'smartplay', 'leaflet', 'mis-golf', 'coursegeo', 'earthmap', 'app']:
         js = open(os.path.join(ROOT, 'js', jsname + '.js'), encoding='utf-8').read()
         html = re.sub(rf'<script src="js/{jsname}\.js"></script>',
                       lambda m: '<script>' + js + '</script>', html)
@@ -83,6 +83,14 @@ def main():
         uri = img_uri(name)
         if not uri: continue
         html = html.replace(f'assets/{name}', uri)
+
+    # keep alpha for mascot (do not jpeg-crush)
+    mpath = os.path.join(ROOT, 'assets', 'mascot.webp')
+    if os.path.exists(mpath):
+        raw = open(mpath, 'rb').read()
+        uri = 'data:image/webp;base64,' + base64.b64encode(raw).decode('ascii')
+        html = html.replace('assets/mascot.webp', uri)
+        print(f'  mascot.webp: {len(raw)//1024}KB alpha data-uri')
 
     out = os.path.join(ROOT, 'GolfAcademy_PRO.html')
     with open(out, 'w', encoding='utf-8') as f:

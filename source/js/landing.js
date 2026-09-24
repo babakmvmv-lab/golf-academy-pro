@@ -62,16 +62,15 @@ var CSS = `
 #l3d-intro .l3d-brand{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:rgba(248,250,252,.55);font-size:12px;letter-spacing:2px;z-index:5}
 /* ═══ لابی (بازطراحی) ═══ */
 #l3d-stage{position:absolute;inset:0;perspective:1300px;transition:transform 1.1s cubic-bezier(.2,.9,.25,1),transform-origin 1.1s cubic-bezier(.2,.9,.25,1)}
-#l3d-bg{position:absolute;left:50%;top:50%;width:116%;height:116%;transform:translate(-50%,-50%);
-  background-image:url(assets/lobby_bg_v3.webp);background-size:cover;background-position:center;
-  will-change:transform;box-shadow:0 0 120px rgba(0,0,0,.5) inset}
+#l3d-bg{position:absolute;inset:0;overflow:hidden;background:#0b1a12}
+#l3d-3d{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1}
 #l3d-rays{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;opacity:.45;mix-blend-mode:screen;
   background:
    radial-gradient(ellipse 40% 28% at 78% 30%,rgba(212,175,55,.26),transparent 65%),
    radial-gradient(ellipse 50% 36% at 20% 62%,rgba(212,175,55,.13),transparent 70%)}
 #l3d-dust{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3}
 /* هات‌اسپات خانم رسپشن (داخل خود تصویر است) */
-#l3d-reception{position:absolute;left:34%;top:52%;width:42%;height:52%;transform:translate(-50%,-50%);z-index:6;cursor:pointer}
+#l3d-reception{position:absolute;left:52%;top:48%;width:48%;height:78%;transform:translate(-50%,-50%);z-index:6;cursor:pointer}
 #l3d-reception .ring{position:absolute;left:50%;top:50%;width:120px;height:120px;transform:translate(-50%,-50%);pointer-events:none;
   border:1.5px solid rgba(212,175,55,.8);border-radius:50%;box-shadow:0 0 26px rgba(212,175,55,.5),inset 0 0 18px rgba(212,175,55,.28);
   animation:l3dring 2.8s ease-in-out infinite}
@@ -161,9 +160,7 @@ var CSS = `
   #l3d-enter{top:10px;bottom:auto;left:50%;right:auto;transform:translateX(-50%);width:auto;max-width:72vw;white-space:nowrap;
     text-align:center;padding:8px 16px;font-size:12px;border-radius:30px;animation:none}
   #l3d-enter:hover{transform:translateX(-50%) translateY(-2px) scale(1.03)}
-  /* لابی: نمایش سمت چپ تصویر تا خانم رسپشن وسط قاب بیفتد */
-  #l3d-bg{background-position:22% center;width:124%;height:124%}
-  #l3d-reception{left:50%;width:56%;height:44%;top:53%}
+  #l3d-reception{left:52%;width:70%;height:70%;top:50%}
   #l3d-dock{bottom:10px;gap:7px;padding:10px 12px;border-radius:18px}
   #l3d-dock .di{min-width:60px;padding:7px 10px;gap:3px}
   #l3d-dock .di .ic{font-size:18px}
@@ -279,20 +276,93 @@ document.body.appendChild(root);
 
 var $ = function(s){ return root.querySelector(s); };
 var intro = $('#l3d-intro'), stage = $('#l3d-stage'), bg = $('#l3d-bg');
+var mascot3d = { on:false, mx:0, my:0, tx:0, ty:0 };
+function startMascot3D(){
+  if (mascot3d.on) return true;
+  if (!bg || typeof THREE === 'undefined') return false;
+  bg.style.backgroundImage = 'none';
+  bg.innerHTML = '';
+  var canvas = document.createElement('canvas');
+  canvas.id = 'l3d-3d';
+  bg.appendChild(canvas);
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+  renderer.setClearColor(0x0b1a12, 1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace || THREE.sRGBEncoding;
+  var scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x0b1a12, 7, 18);
+  var cam = new THREE.PerspectiveCamera(36, 1, 0.1, 40);
+  cam.position.set(0, 1.2, 5.4);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  var key = new THREE.DirectionalLight(0xfff6e0, 1.05);
+  key.position.set(-2.2, 4.2, 3.2);
+  scene.add(key);
+  var rim = new THREE.DirectionalLight(0xd4af37, 0.55);
+  rim.position.set(3.2, 1.8, -1.6);
+  scene.add(rim);
+  var floor = new THREE.Mesh(
+    new THREE.CircleGeometry(7, 64),
+    new THREE.MeshStandardMaterial({ color: 0x146C43, roughness: 0.88, metalness: 0.04 })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  scene.add(floor);
+  var ring = new THREE.Mesh(
+    new THREE.RingGeometry(1.15, 1.22, 64),
+    new THREE.MeshBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.01;
+  scene.add(ring);
+  var mesh = null;
+  var loader = new THREE.TextureLoader();
+  loader.load('assets/mascot.webp', function (tex) {
+    if (tex.colorSpace !== undefined) tex.colorSpace = THREE.SRGBColorSpace;
+    else tex.encoding = THREE.sRGBEncoding;
+    tex.anisotropy = 8;
+    var img = tex.image;
+    var aspect = (img && img.width && img.height) ? (img.width / img.height) : 0.64;
+    var h = 3.45, w = h * aspect;
+    var mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.06, depthWrite: false, side: THREE.DoubleSide });
+    mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+    mesh.position.set(0.12, h / 2, 0);
+    scene.add(mesh);
+  }, undefined, function () {
+    if (window.GA_BRAND && GA_BRAND.paintLobby) GA_BRAND.paintLobby(bg);
+  });
+  function fit() {
+    var w = Math.max(2, bg.clientWidth || innerWidth);
+    var h = Math.max(2, bg.clientHeight || innerHeight);
+    var dpr = Math.min(window.devicePixelRatio || 1, (innerWidth < 820) ? 1.2 : 1.6);
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(w, h, false);
+    cam.aspect = w / h;
+    cam.updateProjectionMatrix();
+  }
+  fit();
+  window.addEventListener('resize', fit);
+  mascot3d.on = true;
+  (function loop(t) {
+    if (!mascot3d.on) return;
+    requestAnimationFrame(loop);
+    mascot3d.tx += (mascot3d.mx - mascot3d.tx) * 0.06;
+    mascot3d.ty += (mascot3d.my - mascot3d.ty) * 0.06;
+    cam.position.x = mascot3d.tx * 0.55;
+    cam.position.y = 1.2 + mascot3d.ty * 0.18;
+    cam.lookAt(0, 1.05, 0);
+    if (mesh) mesh.rotation.y = mascot3d.tx * 0.18 + Math.sin((t || 0) * 0.0007) * 0.04;
+    if (ring) ring.rotation.z = (t || 0) * 0.00025;
+    renderer.render(scene, cam);
+  })(0);
+  return true;
+}
 function applyLobbyBg(){
   if (!bg) return;
+  if (startMascot3D()) return;
   if (window.GA_BRAND && GA_BRAND.paintLobby) { GA_BRAND.paintLobby(bg); return; }
-  var b = Bnd();
-  var phone = document.documentElement.classList.contains('phone-mode') || (window.innerWidth||1024) <= 820;
-  var src = (phone && b.lobbyBgMobile) ? b.lobbyBgMobile : (b.lobbyBg || 'assets/lobby_bg_v3.webp');
-  bg.style.backgroundImage = 'url(' + src + ')';
-  var x = (b.lobbyFocusX != null && b.lobbyFocusX !== '') ? b.lobbyFocusX : 50;
-  var y = (b.lobbyFocusY != null && b.lobbyFocusY !== '') ? b.lobbyFocusY : 50;
+  bg.style.backgroundImage = 'url(assets/lobby_bg_v3.webp)';
   bg.style.backgroundSize = 'cover';
-  bg.style.backgroundPosition = phone ? (x + '% ' + y + '%') : 'center center';
+  bg.style.backgroundPosition = 'center center';
 }
 applyLobbyBg();
-try { localStorage.removeItem('ga_home_skin'); } catch (e) {}
 var panel = $('#l3d-panel'), pbody = $('#l3d-pbody');
 var dock = $('#l3d-dock'), dust = $('#l3d-dust');
 var frames = intro.querySelectorAll('.fr');
@@ -511,13 +581,14 @@ var rotY = 0, rotX = 0, tRotY = 0, tRotX = 0;
 (function parallaxLoop(){
   rotY += (tRotY - rotY) * .06;
   rotX += (tRotX - rotX) * .06;
-  stage.style.transform = 'rotateY(' + rotY + 'deg) rotateX(' + rotX + 'deg)';
+  if (!mascot3d.on) stage.style.transform = 'rotateY(' + rotY + 'deg) rotateX(' + rotX + 'deg)';
   requestAnimationFrame(parallaxLoop);
 })();
 document.addEventListener('mousemove', function(e){
   if (STATE.mode !== 'lobby') return;
   var nx = (e.clientX / innerWidth) * 2 - 1;
   var ny = (e.clientY / innerHeight) * 2 - 1;
+  mascot3d.mx = nx; mascot3d.my = ny;
   tRotY = nx * 4.2;
   tRotX = -ny * 3.2;
 });

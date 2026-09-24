@@ -829,9 +829,9 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 .tv-medal.silver{background:linear-gradient(145deg,#f4f7fb,#b8c2cc 55%,#7d8792);color:#243040}
 .tv-medal.bronze{background:linear-gradient(145deg,#f0c49a,#c67b3a 55%,#8a4e1c);color:#2a1408}
 .tv-tbl{width:100%;table-layout:fixed}
-.tv-tbl th,.tv-tbl td{text-align:center}
-.tv-tbl th:nth-child(1),.tv-tbl td:nth-child(1){width:14%;white-space:nowrap}
-.tv-tbl th:nth-child(2),.tv-tbl td:nth-child(2){width:40%;text-align:right}
+.tv-tbl th,.tv-tbl td{text-align:center;white-space:nowrap;vertical-align:middle}
+.tv-tbl th:nth-child(1),.tv-tbl td:nth-child(1){width:16%}
+.tv-tbl th:nth-child(2),.tv-tbl td:nth-child(2){width:38%;text-align:right}
 .tv-tbl th:nth-child(3),.tv-tbl td:nth-child(3){width:22%}
 .tv-tbl th:nth-child(4),.tv-tbl td:nth-child(4){width:24%;text-align:center}
 .tv-tbl .tv-pts{
@@ -16625,12 +16625,21 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       const sp = $('#st-podium');
       if (sp) sp.addEventListener('click', () => {
         const top3 = raceLB().LB.slice(0, 3);
-        igStory(sp, 'استوری-سکوی-قهرمانی.png', ({ W, GOLD, GL, FG, MUT, rrect, txt, c }) => {
-          txt('🏆 سکوی قهرمانی فصل', W / 2, 446, '700', 28, MUT);
-          txt('FedEx Style  •  ' + D.fa(D.seasonYear), W / 2, 490, '500', 22, 'rgba(212,175,55,.7)');
-          const order = [top3[1], top3[0], top3[2]];
-          const cardW = 300;
-          return Promise.all(order.map((r, i) => new Promise(res => {
+        igStory(sp, 'استوری-سکوی-قهرمانی.png', ({ W, H, GOLD, GL, FG, MUT, rrect, txt, c }) => {
+          txt('🏆 سکوی قهرمانی فصل', W / 2, 440, '700', 30, MUT);
+          txt('FedEx Style  •  ' + D.fa(D.seasonYear), W / 2, 486, '500', 22, 'rgba(212,175,55,.7)');
+          /* چیدمان مثل صفحه: چپ ۳، وسط ۱، راست ۲ — پله با نام و امتیاز داخل سکو */
+          const visual = [top3[2], top3[0], top3[1]];
+          const cw = 280, gap = 36;
+          const x0 = (W - (cw * 3 + gap * 2)) / 2;
+          const floor = 1540;
+          const baseH = [300, 520, 390];
+          const medalCol = [
+            ['#f0c49a', '#c67b3a', '#8a4e1c'],
+            ['#ffe38a', '#d4af37', '#8c6e1d'],
+            ['#f4f7fb', '#b8c2cc', '#7d8792']
+          ];
+          return Promise.all(visual.map((r, i) => new Promise(res => {
             if (!r){ res(null); return; }
             const im = new Image();
             im.onload = () => res({ r, im, i });
@@ -16640,23 +16649,51 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
             rows.forEach(item => {
               if (!item || !item.r) return;
               const r = item.r, i = item.i;
-              const is1 = r.rank === 1;
-              const chH = is1 ? 420 : 360, cw = cardW;
-              const x = (W - (cardW * 3 + 28 * 2)) / 2 + i * (cardW + 28);
-              const y = 560 + (is1 ? 0 : 50);
-              c.fillStyle = is1 ? 'rgba(212,175,55,.10)' : 'rgba(255,255,255,.03)';
-              c.strokeStyle = is1 ? 'rgba(212,175,55,.8)' : 'rgba(255,255,255,.09)'; c.lineWidth = is1 ? 3.5 : 2;
-              rrect(x, y, cw, chH, 26); c.fill(); c.stroke();
-              const star = r.rank===1 ? '#d4af37' : r.rank===2 ? '#c5cdd6' : '#c67b3a';
-              txt('★', x + cw / 2, y + 70, '400', 48, star);
+              const x = x0 + i * (cw + gap);
+              const bh = baseH[i];
+              const by = floor - bh;
+              const cx = x + cw / 2;
+              const mc = medalCol[i];
+              const ring = r.colorHex || mc[1];
+              /* سکو */
+              const g = c.createLinearGradient(x, by, x, floor);
+              if (r.rank === 1){ g.addColorStop(0, 'rgba(212,175,55,.42)'); g.addColorStop(1, 'rgba(11,15,20,.72)'); }
+              else if (r.rank === 2){ g.addColorStop(0, 'rgba(192,192,192,.36)'); g.addColorStop(1, 'rgba(11,15,20,.72)'); }
+              else { g.addColorStop(0, 'rgba(205,127,50,.34)'); g.addColorStop(1, 'rgba(11,15,20,.72)'); }
+              c.fillStyle = g;
+              c.strokeStyle = r.rank === 1 ? 'rgba(212,175,55,.75)' : r.rank === 2 ? 'rgba(192,192,192,.5)' : 'rgba(205,127,50,.5)';
+              c.lineWidth = r.rank === 1 ? 3 : 2;
+              rrect(x, by, cw, bh, 18); c.fill(); c.stroke();
+              txt(r.name, cx, by + 56, '800', 30, FG, 'center', cw - 24);
+              txt(D.faNum(r.pts, 0) + ' امتیاز', cx, by + 104, '800', 26, GL);
+              const pill = D.RANK_TEXT[r.color] || r.color || '';
+              const pc = (D.RANK_DEF.find(d => d[0] === r.color) || [])[3] || GOLD;
+              const pw = 132, ph = 40, px = cx - pw / 2, py = by + 128;
+              c.fillStyle = pc + '22'; c.strokeStyle = pc + '88'; c.lineWidth = 2;
+              rrect(px, py, pw, ph, 12); c.fill(); c.stroke();
+              txt(pill, cx, py + 28, '800', 18, pc);
+              /* عکس روی لبهٔ سکو */
+              const ar = 62, ay = by - 8;
+              c.beginPath(); c.arc(cx, ay, ar + 5, 0, 7); c.fillStyle = '#0b0f14'; c.fill();
               if (item.im){
-                c.save(); c.beginPath(); c.arc(x + cw / 2, y + 148, 52, 0, 7); c.clip();
-                try { c.drawImage(item.im, x + cw / 2 - 52, y + 96, 104, 104); } catch(e){}
+                c.save(); c.beginPath(); c.arc(cx, ay, ar, 0, 7); c.clip();
+                try { c.drawImage(item.im, cx - ar, ay - ar, ar * 2, ar * 2); } catch(e){}
                 c.restore();
-                c.beginPath(); c.arc(x + cw / 2, y + 148, 54, 0, 7); c.strokeStyle = star; c.lineWidth = 4; c.stroke();
               }
-              txt(r.name, x + cw / 2, y + 240, '800', 28, FG, 'center', cw - 20);
-              txt(D.faNum(r.pts, 0) + ' امتیاز', x + cw / 2, y + 290, '800', 26, GL);
+              c.beginPath(); c.arc(cx, ay, ar + 3, 0, 7); c.strokeStyle = ring; c.lineWidth = 5; c.stroke();
+              /* مدال شماره‌دار مثل صفحه */
+              const my = ay - ar - 52;
+              c.save();
+              c.fillStyle = mc[1];
+              c.beginPath(); c.moveTo(cx - 10, my + 18); c.lineTo(cx - 22, my - 10); c.lineTo(cx - 4, my + 4); c.closePath(); c.fill();
+              c.beginPath(); c.moveTo(cx + 10, my + 18); c.lineTo(cx + 22, my - 10); c.lineTo(cx + 4, my + 4); c.closePath(); c.fill();
+              const mg = c.createRadialGradient(cx - 6, my - 6, 4, cx, my, 28);
+              mg.addColorStop(0, mc[0]); mg.addColorStop(.55, mc[1]); mg.addColorStop(1, mc[2]);
+              c.fillStyle = mg;
+              c.beginPath(); c.arc(cx, my, 26, 0, 7); c.fill();
+              c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.35)'; c.stroke();
+              c.restore();
+              txt(String(r.rank), cx, my + 10, '900', 26, '#2a1a08');
             });
           });
         });

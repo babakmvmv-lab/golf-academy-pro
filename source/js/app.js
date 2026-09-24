@@ -1725,11 +1725,11 @@
     <table class="tbl"><thead><tr><th>میدان</th>${hs.map(h=>`<th>${D.fa(h)}</th>`).join('')}</tr></thead>
     <tbody><tr><td><b>پار</b></td>${parsArr.map(p2=>`<td class="num" style="color:var(--gold-l)">${D.fa(p2)}</td>`).join('')}</tr>
     <tr><td><b>ضربات</b></td>${strokes.map((s,i)=>{
-      const c = s < parsArr[i] ? 'color:var(--green-l);font-weight:800' : s === parsArr[i] ? 'color:var(--white)' : 'color:#ff8f82;font-weight:800';
+      const c = 'color:' + (D.scaleVsPar ? D.scaleVsPar(s - parsArr[i]) : '#fff') + ';font-weight:800';
       return `<td class="num" style="${c}">${D.fa(s)}</td>`;
     }).join('')}</tr></tbody></table>
     <div style="margin-top:8px;font-size:11.5px;color:var(--muted)">
-      مجموع: <b style="color:var(--white)">${D.fa(card.total)}</b> • در برابر پار: <b style="color:${card.vspar<=0?'var(--green-l)':'#ff8f82'}">${card.vspar>0?'+':''}${D.fa(card.vspar)}</b> • رتبه ${D.fa(card.rank)} • ${esc(card.result)}
+      مجموع: <b style="color:var(--white)">${D.fa(card.total)}</b> • در برابر پار: <b style="color:${D.scaleVsPar ? D.scaleVsPar(card.vspar) : 'var(--green-l)'}">${card.vspar>0?'+':''}${D.fa(card.vspar)}</b> • رتبه ${D.fa(card.rank)} • ${esc(card.result)}
     </div>`;
   }
 
@@ -1784,7 +1784,7 @@
             <td><b>${esc(pl.name)}</b></td>
             <td class="num" style="font-weight:800">${D.fa(c.total)}</td>
             <td class="num" style="color:var(--gold-l)">${D.fa(c.par)}</td>
-            <td class="num" style="color:${c.vspar<=0?'var(--green-l)':'#ff8f82'};font-weight:800">${c.vspar>0?'+':''}${D.fa(c.vspar)}</td>
+            <td class="num" style="color:${D.scaleVsPar ? D.scaleVsPar(c.vspar) : 'var(--green-l)'};font-weight:800">${c.vspar>0?'+':''}${D.fa(c.vspar)}</td>
             <td class="num" style="color:var(--green-l)">${D.fa(c.bird)}</td>
             <td>${rank===1?'<span class="chip gold">قهرمان</span>':rank===2?'<span class="chip dim">دوم</span>':rank===3?'<span class="chip dim">سوم</span>':'<span class="chip dim">شرکتکننده</span>'}</td>
             <td class="num" style="color:var(--gold-l)">${D.fa(pts)}</td>
@@ -1800,7 +1800,7 @@
         <div class="glass">
           <div class="card-head"><span class="ic">🌋</span><h3>سختترین حفرهها</h3><span class="tag">Avg vs Par</span></div>
           <div class="chart-box short"><canvas id="mt-hard"></canvas></div>
-          ${hardest ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">سختترین: <b style="color:#ff8f82">${esc(D.holeName ? D.holeName(hardest.h) : ('میدان '+D.fa(hardest.h)))}</b> — میانگین ${hardest.d>0?'+':''}${D.fa(hardest.d.toFixed(2))} نسبت به پار</div>` : ''}
+          ${hardest ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">سختترین: <b style="color:${D.SCALE ? D.SCALE[5] : '#8B1A1A'}">${esc(D.holeName ? D.holeName(hardest.h) : ('میدان '+D.fa(hardest.h)))}</b> — میانگین ${hardest.d>0?'+':''}${D.fa(hardest.d.toFixed(2))} نسبت به پار</div>` : ''}
         </div>
       </div>
     </div>`;
@@ -1820,7 +1820,7 @@
       Charts.barsH($('#mt-bird'), top8.map(c => D.nameOf(c.pid).slice(0,12)), top8.map(c => c.bird), { color:'#1EBB8A', showVal:true });
       const hs = Object.keys(diff).map(Number).sort((a,b)=>a-b);
       Charts.barsV($('#mt-hard'), hs.map(h => (D.holeName ? D.holeName(h) : ('میدان '+D.fa(h)))), hs.map(h => diff[h]), {
-        color:'#E74C3C', showVal:true, fmt:v=>(v>0?'+':'')+v.toFixed(1),
+        color: hs.map(h => D.scaleVsPar ? D.scaleVsPar(diff[h]) : '#E74C3C'), showVal:true, fmt:v=>(v>0?'+':'')+v.toFixed(1),
         max: Math.max(...hs.map(h=>diff[h]), 0.5) * 1.3,
       });
     }, 80);
@@ -1941,7 +1941,7 @@
           ${recs.length ? `<table class="tbl"><thead><tr><th>مسابقه</th><th>ضربات</th><th>vs پار</th><th>رتبه</th><th>نتیجه</th></tr></thead><tbody>
           ${recs.map(r => `<tr>
             <td>${esc(r.name)}</td><td class="num">${D.fa(r.total)}</td>
-            <td class="num" style="color:${r.vspar<=0?'var(--green-l)':'#ff8f82'}">${r.vspar>0?'+':''}${D.fa(r.vspar)}</td>
+            <td class="num" style="color:${D.scaleVsPar ? D.scaleVsPar(r.vspar) : 'var(--green-l)'}">${r.vspar>0?'+':''}${D.fa(r.vspar)}</td>
             <td class="num">${D.fa(r.rank)}</td><td>${r.rank===1?'<span class="chip gold">قهرمان</span>':'<span class="chip dim">'+esc(r.result)+'</span>'}</td>
           </tr>`).join('')}</tbody></table>` : '<div style="color:var(--muted);font-size:12.5px">این بازیکن هنوز در این زمین مسابقهای نداشته است.</div>'}
         </div>
@@ -1971,8 +1971,13 @@
     setTimeout(() => {
       const hs = [];
       for (let h = 1; h <= holes; h++) hs.push(h);
-      Charts.barsV($('#cs-hard'), hs.map(h=>'ح'+D.fa(h)), hs.map(h => stats[h] ?? 0), {
-        color:'#E74C3C', showVal:true, fmt:v=>(v>0?'+':'')+v.toFixed(1), max: Math.max(1.2, ...hs.map(h=>stats[h]??0)) * 1.25,
+      const idxs = hs.map(h => ((D.indexOf && D.indexOf(crs[0])[h - 1]) || h));
+      const nH = hs.length;
+      const heights = idxs.map(ix => nH + 1 - ix);
+      const cols = idxs.map(ix => (D.scaleIndex ? D.scaleIndex(ix, nH) : '#E74C3C'));
+      Charts.barsV($('#cs-hard'), hs.map(h=>'ح'+D.fa(h)), heights, {
+        color: cols, showVal: true, valFmt: (_, i) => String(idxs[i]),
+        fmt: v => D.fa(Math.round(v)), max: nH * 1.18,
       });
       const allCrs = S.courses.map(c => c[0]);
       Charts.barsH($('#cs-fit'), allCrs.map(c => esc(D.COURSE_NAME[c])), allCrs.map(c => pc[c] ?? 0), {

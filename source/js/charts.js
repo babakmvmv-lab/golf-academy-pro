@@ -126,7 +126,7 @@ const Charts = (() => {
         // مقدار روی ستون
         if (opts.showVal){
           ctx.fillStyle = '#F8FAFC'; ctx.font = 'bold 9.5px Tahoma';
-          ctx.fillText(opts.valFmt ? opts.valFmt(v) : Math.round(v), x, y - 5);
+          ctx.fillText(opts.valFmt ? opts.valFmt(v, i) : Math.round(v), x, y - 5);
         }
       }
       /* خط راهنمای افقی روی میله‌ها — مثل «میانگین ضربه‌های صاف» */

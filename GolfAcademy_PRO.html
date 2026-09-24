@@ -39,6 +39,7 @@ if(location.protocol==='http:' && !/^(localhost|127\.0\.0\.1)$/.test(location.ho
   --white:#F8FAFC; --muted:#8A93A6; --dim:#8490A3;
   --line:rgba(212,175,55,.22); --line-soft:rgba(248,250,252,.08);
   --red:#E74C3C; --blue:#2E86DE; --purple:#9B59B6; --orange:#E67E22; --teal:#1ABC9C;
+  --scale-1:#146C43; --scale-2:#3DDC97; --scale-3:#F4C430; --scale-4:#E67E22; --scale-5:#E85D4C; --scale-6:#8B1A1A;
   --radius:18px;
   --shadow:0 10px 40px rgba(0,0,0,.5);
   --font:'Vazirmatn','Segoe UI',Tahoma,Arial,sans-serif;
@@ -4059,6 +4060,24 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     }
     return defaultIndex(n);
   }
+  /* مقیاس استاندارد سایت: سبز تیره → سبز روشن → زرد → نارنجی → قرمز روشن → قرمز تیره */
+  const SCALE = ['#146C43', '#3DDC97', '#F4C430', '#E67E22', '#E85D4C', '#8B1A1A'];
+  function scaleStep(i){ return SCALE[Math.max(0, Math.min(5, i | 0))]; }
+  function scaleIndex(idx, n){
+    n = Math.max(2, +n || 18);
+    const i = Math.max(1, Math.min(n, +idx || n));
+    const t = (i - 1) / (n - 1);
+    return scaleStep(Math.min(5, Math.floor((1 - t) * 6)));
+  }
+  function scaleVsPar(d){
+    if (d == null || !isFinite(d)) return '#8A93A6';
+    if (d < 0) return SCALE[0];
+    if (d === 0) return SCALE[1];
+    if (d === 1) return SCALE[2];
+    if (d === 2) return SCALE[3];
+    if (d === 3) return SCALE[4];
+    return SCALE[5];
+  }
   function loadCourseOverride(){
     try { const o = JSON.parse(localStorage.getItem('ga_course_override') || '{}'); return o && typeof o === 'object' ? o : {}; } catch(e){ return {}; }
   }
@@ -4704,7 +4723,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
-    parsOf, PAR_MAP, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
+    parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
     compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason,
@@ -5574,7 +5593,7 @@ const Charts = (() => {
         // مقدار روی ستون
         if (opts.showVal){
           ctx.fillStyle = '#F8FAFC'; ctx.font = 'bold 9.5px Tahoma';
-          ctx.fillText(opts.valFmt ? opts.valFmt(v) : Math.round(v), x, y - 5);
+          ctx.fillText(opts.valFmt ? opts.valFmt(v, i) : Math.round(v), x, y - 5);
         }
       }
       /* خط راهنمای افقی روی میله‌ها — مثل «میانگین ضربه‌های صاف» */
@@ -15779,11 +15798,14 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     }).join('')+'</div>';
   }
   function vsStrokeColor(vs){
+    if (window.Data && Data.scaleVsPar) return Data.scaleVsPar(vs);
     if (vs == null || !isFinite(vs)) return 'var(--muted)';
-    if (vs < 0) return '#0d9a62';
-    if (vs === 0) return '#8fe8c4';
-    if (vs <= 2) return '#E9C766';
-    return '#E74C3C';
+    if (vs < 0) return '#146C43';
+    if (vs === 0) return '#3DDC97';
+    if (vs === 1) return '#F4C430';
+    if (vs === 2) return '#E67E22';
+    if (vs === 3) return '#E85D4C';
+    return '#8B1A1A';
   }
   function lastCourseRounds(){
     const st = (window.APP && APP.state) ? APP.state() : null;
@@ -17866,11 +17888,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     <table class="tbl"><thead><tr><th>میدان</th>${hs.map(h=>`<th>${D.fa(h)}</th>`).join('')}</tr></thead>
     <tbody><tr><td><b>پار</b></td>${parsArr.map(p2=>`<td class="num" style="color:var(--gold-l)">${D.fa(p2)}</td>`).join('')}</tr>
     <tr><td><b>ضربات</b></td>${strokes.map((s,i)=>{
-      const c = s < parsArr[i] ? 'color:var(--green-l);font-weight:800' : s === parsArr[i] ? 'color:var(--white)' : 'color:#ff8f82;font-weight:800';
+      const c = 'color:' + (D.scaleVsPar ? D.scaleVsPar(s - parsArr[i]) : '#fff') + ';font-weight:800';
       return `<td class="num" style="${c}">${D.fa(s)}</td>`;
     }).join('')}</tr></tbody></table>
     <div style="margin-top:8px;font-size:11.5px;color:var(--muted)">
-      مجموع: <b style="color:var(--white)">${D.fa(card.total)}</b> • در برابر پار: <b style="color:${card.vspar<=0?'var(--green-l)':'#ff8f82'}">${card.vspar>0?'+':''}${D.fa(card.vspar)}</b> • رتبه ${D.fa(card.rank)} • ${esc(card.result)}
+      مجموع: <b style="color:var(--white)">${D.fa(card.total)}</b> • در برابر پار: <b style="color:${D.scaleVsPar ? D.scaleVsPar(card.vspar) : 'var(--green-l)'}">${card.vspar>0?'+':''}${D.fa(card.vspar)}</b> • رتبه ${D.fa(card.rank)} • ${esc(card.result)}
     </div>`;
   }
 
@@ -17925,7 +17947,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
             <td><b>${esc(pl.name)}</b></td>
             <td class="num" style="font-weight:800">${D.fa(c.total)}</td>
             <td class="num" style="color:var(--gold-l)">${D.fa(c.par)}</td>
-            <td class="num" style="color:${c.vspar<=0?'var(--green-l)':'#ff8f82'};font-weight:800">${c.vspar>0?'+':''}${D.fa(c.vspar)}</td>
+            <td class="num" style="color:${D.scaleVsPar ? D.scaleVsPar(c.vspar) : 'var(--green-l)'};font-weight:800">${c.vspar>0?'+':''}${D.fa(c.vspar)}</td>
             <td class="num" style="color:var(--green-l)">${D.fa(c.bird)}</td>
             <td>${rank===1?'<span class="chip gold">قهرمان</span>':rank===2?'<span class="chip dim">دوم</span>':rank===3?'<span class="chip dim">سوم</span>':'<span class="chip dim">شرکتکننده</span>'}</td>
             <td class="num" style="color:var(--gold-l)">${D.fa(pts)}</td>
@@ -17941,7 +17963,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         <div class="glass">
           <div class="card-head"><span class="ic">🌋</span><h3>سختترین حفرهها</h3><span class="tag">Avg vs Par</span></div>
           <div class="chart-box short"><canvas id="mt-hard"></canvas></div>
-          ${hardest ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">سختترین: <b style="color:#ff8f82">${esc(D.holeName ? D.holeName(hardest.h) : ('میدان '+D.fa(hardest.h)))}</b> — میانگین ${hardest.d>0?'+':''}${D.fa(hardest.d.toFixed(2))} نسبت به پار</div>` : ''}
+          ${hardest ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">سختترین: <b style="color:${D.SCALE ? D.SCALE[5] : '#8B1A1A'}">${esc(D.holeName ? D.holeName(hardest.h) : ('میدان '+D.fa(hardest.h)))}</b> — میانگین ${hardest.d>0?'+':''}${D.fa(hardest.d.toFixed(2))} نسبت به پار</div>` : ''}
         </div>
       </div>
     </div>`;
@@ -17961,7 +17983,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       Charts.barsH($('#mt-bird'), top8.map(c => D.nameOf(c.pid).slice(0,12)), top8.map(c => c.bird), { color:'#1EBB8A', showVal:true });
       const hs = Object.keys(diff).map(Number).sort((a,b)=>a-b);
       Charts.barsV($('#mt-hard'), hs.map(h => (D.holeName ? D.holeName(h) : ('میدان '+D.fa(h)))), hs.map(h => diff[h]), {
-        color:'#E74C3C', showVal:true, fmt:v=>(v>0?'+':'')+v.toFixed(1),
+        color: hs.map(h => D.scaleVsPar ? D.scaleVsPar(diff[h]) : '#E74C3C'), showVal:true, fmt:v=>(v>0?'+':'')+v.toFixed(1),
         max: Math.max(...hs.map(h=>diff[h]), 0.5) * 1.3,
       });
     }, 80);
@@ -18082,7 +18104,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
           ${recs.length ? `<table class="tbl"><thead><tr><th>مسابقه</th><th>ضربات</th><th>vs پار</th><th>رتبه</th><th>نتیجه</th></tr></thead><tbody>
           ${recs.map(r => `<tr>
             <td>${esc(r.name)}</td><td class="num">${D.fa(r.total)}</td>
-            <td class="num" style="color:${r.vspar<=0?'var(--green-l)':'#ff8f82'}">${r.vspar>0?'+':''}${D.fa(r.vspar)}</td>
+            <td class="num" style="color:${D.scaleVsPar ? D.scaleVsPar(r.vspar) : 'var(--green-l)'}">${r.vspar>0?'+':''}${D.fa(r.vspar)}</td>
             <td class="num">${D.fa(r.rank)}</td><td>${r.rank===1?'<span class="chip gold">قهرمان</span>':'<span class="chip dim">'+esc(r.result)+'</span>'}</td>
           </tr>`).join('')}</tbody></table>` : '<div style="color:var(--muted);font-size:12.5px">این بازیکن هنوز در این زمین مسابقهای نداشته است.</div>'}
         </div>
@@ -18112,8 +18134,13 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     setTimeout(() => {
       const hs = [];
       for (let h = 1; h <= holes; h++) hs.push(h);
-      Charts.barsV($('#cs-hard'), hs.map(h=>'ح'+D.fa(h)), hs.map(h => stats[h] ?? 0), {
-        color:'#E74C3C', showVal:true, fmt:v=>(v>0?'+':'')+v.toFixed(1), max: Math.max(1.2, ...hs.map(h=>stats[h]??0)) * 1.25,
+      const idxs = hs.map(h => ((D.indexOf && D.indexOf(crs[0])[h - 1]) || h));
+      const nH = hs.length;
+      const heights = idxs.map(ix => nH + 1 - ix);
+      const cols = idxs.map(ix => (D.scaleIndex ? D.scaleIndex(ix, nH) : '#E74C3C'));
+      Charts.barsV($('#cs-hard'), hs.map(h=>'ح'+D.fa(h)), heights, {
+        color: cols, showVal: true, valFmt: (_, i) => String(idxs[i]),
+        fmt: v => D.fa(Math.round(v)), max: nH * 1.18,
       });
       const allCrs = S.courses.map(c => c[0]);
       Charts.barsH($('#cs-fit'), allCrs.map(c => esc(D.COURSE_NAME[c])), allCrs.map(c => pc[c] ?? 0), {

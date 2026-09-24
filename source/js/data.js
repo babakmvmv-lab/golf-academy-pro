@@ -239,6 +239,24 @@
     }
     return defaultIndex(n);
   }
+  /* مقیاس استاندارد سایت: سبز تیره → سبز روشن → زرد → نارنجی → قرمز روشن → قرمز تیره */
+  const SCALE = ['#146C43', '#3DDC97', '#F4C430', '#E67E22', '#E85D4C', '#8B1A1A'];
+  function scaleStep(i){ return SCALE[Math.max(0, Math.min(5, i | 0))]; }
+  function scaleIndex(idx, n){
+    n = Math.max(2, +n || 18);
+    const i = Math.max(1, Math.min(n, +idx || n));
+    const t = (i - 1) / (n - 1);
+    return scaleStep(Math.min(5, Math.floor((1 - t) * 6)));
+  }
+  function scaleVsPar(d){
+    if (d == null || !isFinite(d)) return '#8A93A6';
+    if (d < 0) return SCALE[0];
+    if (d === 0) return SCALE[1];
+    if (d === 1) return SCALE[2];
+    if (d === 2) return SCALE[3];
+    if (d === 3) return SCALE[4];
+    return SCALE[5];
+  }
   function loadCourseOverride(){
     try { const o = JSON.parse(localStorage.getItem('ga_course_override') || '{}'); return o && typeof o === 'object' ? o : {}; } catch(e){ return {}; }
   }
@@ -884,7 +902,7 @@
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
-    parsOf, PAR_MAP, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
+    parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
     compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason,

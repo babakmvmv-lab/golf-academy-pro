@@ -699,11 +699,14 @@
     }).join('')+'</div>';
   }
   function vsStrokeColor(vs){
+    if (window.Data && Data.scaleVsPar) return Data.scaleVsPar(vs);
     if (vs == null || !isFinite(vs)) return 'var(--muted)';
-    if (vs < 0) return '#0d9a62';
-    if (vs === 0) return '#8fe8c4';
-    if (vs <= 2) return '#E9C766';
-    return '#E74C3C';
+    if (vs < 0) return '#146C43';
+    if (vs === 0) return '#3DDC97';
+    if (vs === 1) return '#F4C430';
+    if (vs === 2) return '#E67E22';
+    if (vs === 3) return '#E85D4C';
+    return '#8B1A1A';
   }
   function lastCourseRounds(){
     const st = (window.APP && APP.state) ? APP.state() : null;

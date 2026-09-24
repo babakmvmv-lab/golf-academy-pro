@@ -1979,6 +1979,20 @@
         <label class="btn sm ghost" style="cursor:pointer">📥 جایگزینی KML<input type="file" id="ec-kml" accept=".kml,.xml" style="display:none"></label>
       </div>
       <div id="ec-kml-rep" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+      <div style="margin-top:12px">
+        <div class="earth-stage" dir="ltr" style="height:300px;border-radius:14px;overflow:hidden;border:1px solid var(--line-soft)">
+          <div id="ec-geo-map" class="earth-map" dir="ltr"></div>
+        </div>
+        <div class="earth-tools" style="margin-top:8px;align-items:center">
+          <select class="sel" id="earth-hole"></select>
+          <div class="em-seg" id="ec-geo-gender">
+            <button type="button" class="em-seg-btn on" data-gender="F">زن</button>
+            <button type="button" class="em-seg-btn" data-gender="M">مرد</button>
+          </div>
+          <button type="button" class="btn sm ghost on" id="earth-edit-geo">✏️ ویرایش تی / حفره / فروی</button>
+          <span id="earth-geo-hint" style="font-size:12px;color:var(--muted);line-height:1.5"></span>
+        </div>
+      </div>
       <div style="margin-top:12px;font-size:11px;color:var(--muted)">پار و Index هر میدان — Index: ۱ سخت‌ترین</div>
       <div id="ec-pars" class="hp-par-wrap"></div>
       <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
@@ -1992,6 +2006,35 @@
     while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
     idxVals.length = parVals.length;
     bindParEditor($('#ec-pars'), parVals, idxVals);
+    let geoGender = 'F';
+    function mountGeoEdit(){
+      if (!window.EarthMap) return;
+      try { EarthMap.destroy(); } catch(e){}
+      const el = $('#ec-geo-map');
+      if (!el) return;
+      EarthMap.mount(el, {
+        center: { lat: +$('#ec-lat').value || 31.90494, lng: +$('#ec-lng').value || 49.31398 },
+        zoom: 16,
+        courseId: r.base ? 'mis' : String(r.id),
+        tourCourse: r.id,
+        gender: geoGender
+      });
+      if (EarthMap.setEdit) EarthMap.setEdit(true);
+      const b = $('#earth-edit-geo');
+      if (b) b.classList.add('on');
+    }
+    function closeEditModal(){
+      try { if (window.EarthMap) EarthMap.destroy(); } catch(e){}
+      m.style.display = 'none';
+    }
+    mountGeoEdit();
+    document.querySelectorAll('#ec-geo-gender [data-gender]').forEach(b => {
+      b.addEventListener('click', () => {
+        geoGender = b.getAttribute('data-gender') || 'F';
+        document.querySelectorAll('#ec-geo-gender [data-gender]').forEach(x => x.classList.toggle('on', x === b));
+        mountGeoEdit();
+      });
+    });
     $('#ec-pick').addEventListener('click', () => openMapPicker(c => { $('#ec-lat').value = c.lat; $('#ec-lng').value = c.lng; }, { lat:+$('#ec-lat').value, lng:+$('#ec-lng').value }));
     const ecKml = $('#ec-kml');
     if (ecKml) ecKml.addEventListener('change', function(){
@@ -2023,7 +2066,7 @@
       };
       reader.readAsText(f);
     });
-    $('#ec-cancel').addEventListener('click', () => m.style.display = 'none');
+    $('#ec-cancel').addEventListener('click', () => closeEditModal());
     $('#ec-save').addEventListener('click', () => {
       const name = $('#ec-name').value.trim();
       if (!name){ APP.toast('نام زمین را وارد کنید','red'); return; }
@@ -2044,6 +2087,7 @@
         saveCourses(lst);
       }
       APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
+      try { if (window.EarthMap) EarthMap.destroy(); } catch(err){}
       m.style.display = 'none';
       APP.toast('زمین ذخیره شد ✓', 'green');
     });

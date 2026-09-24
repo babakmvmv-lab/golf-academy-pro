@@ -1922,7 +1922,6 @@
         <div id="earth-wiz" class="earth-wiz"></div>
         <div class="earth-tools" style="margin-top:10px;align-items:center">
           <select class="sel" id="earth-hole"></select>
-          ${(() => { try { const rec = userRec(currentUser); return rec && rec.role !== 'member'; } catch(e){ return false; } })() ? '<button type="button" class="btn sm ghost" id="earth-edit-geo">✏️ ویرایش تی / حفره / فروی</button>' : ''}
           <span id="earth-geo-hint" style="font-size:12px;color:var(--muted);line-height:1.5"></span>
         </div>
       </div>
@@ -2056,7 +2055,7 @@
         places.push({ name: c[1], lat, lng });
       });
       const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.90494, lng:49.31398 };
-      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], pid: coursePlayerSel });
+      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], pid: coursePlayerSel, gender: courseTeeGender || 'F' });
     })();
     } catch (err) {
       console.error('pageCourse', err);

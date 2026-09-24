@@ -471,7 +471,10 @@
       hole.innerHTML = '<option value="all">همهٔ میدان‌ها</option>' + holeNums().map(n => {
         const hh = holesData()[n];
         const yd = holeYards(hh);
-        const ix = (D && D.indexOf) ? (D.indexOf(courseId())[n-1]) : null;
+        const Data = window.Data;
+        const cid = optsRef.tourCourse != null ? optsRef.tourCourse : 1;
+        const ixArr = (Data && Data.indexOf) ? Data.indexOf(cid) : [];
+        const ix = ixArr && ixArr[n - 1];
         return `<option value="${n}">میدان ${n}${hh&&hh.par?(' • پار '+hh.par):''}${ix?(' • Index '+ix):''}${yd?(' • '+yd+' yd'):''}</option>`;
       }).join('');
       hole.value = holeSel;
@@ -634,9 +637,9 @@
       }).addTo(map);
     }
 
-    bindUi();
-    try { renderWiz(); } catch (e) {}
-    try { drawCourse(); } catch (e) {}
+    try { bindUi(); } catch (e) { console.error('earth bindUi', e); }
+    try { renderWiz(); } catch (e) { console.error('earth wiz', e); }
+    try { drawCourse(); } catch (e) { console.error('earth draw', e); }
     try { renderWiz(); } catch (e) {}
 
     map.on('click', function(ev){

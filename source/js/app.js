@@ -3237,16 +3237,24 @@
       <div id="ac-list"></div>
     </div>`;
     let parVals = [];
+    let idxVals = [];
     function drawPars(){
       const n = +$('#ac-holes').value;
-      if (parVals.length !== n) parVals = Array.from({length:n}, (_,i) => [3,4,5][i%3] === 4 ? 4 : 4);
+      if (parVals.length !== n) parVals = Array.from({length:n}, () => 4);
+      if (idxVals.length !== n) idxVals = Array.from({length:n}, (_,i) => i + 1);
       $('#ac-pars').innerHTML = parVals.map((p,i) => `
         <div style="text-align:center">
           <div style="font-size:10px;color:var(--muted)">ح${D.fa(i+1)}</div>
-          <input class="input" type="number" min="3" max="6" value="${p}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
-        </div>`).join('');
-      $$('#ac-pars input').forEach(inp => inp.addEventListener('change', () => {
+          <div style="font-size:9px;color:var(--dim)">پار</div>
+          <input class="input ac-par" type="number" min="3" max="6" value="${p}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
+          <div style="font-size:9px;color:var(--gold-l);margin-top:4px">Index</div>
+          <input class="input ac-idx" type="number" min="1" max="${n}" value="${idxVals[i]}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
+        </div>`).join('') + `<div style="width:100%;font-size:11px;color:var(--muted)">Index: ۱ سخت‌ترین — ${D.fa(n)} آسان‌ترین</div>`;
+      $$('#ac-pars .ac-par').forEach(inp => inp.addEventListener('change', () => {
         parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4));
+      }));
+      $$('#ac-pars .ac-idx').forEach(inp => inp.addEventListener('change', () => {
+        idxVals[+inp.dataset.i] = Math.max(1, Math.min(n, +inp.value || 1));
       }));
     }
     drawPars();
@@ -3257,8 +3265,9 @@
       if (!name){ toast('نام زمین را وارد کنید', 'red'); return; }
       const holes = +$('#ac-holes').value;
       const pars = parVals.slice(0, holes).map(v => Math.max(3, Math.min(6, v)));
+      const index = idxVals.slice(0, holes).map((v,i) => Math.max(1, Math.min(holes, +v || (i+1))));
       const lst = extraCourses();
-      lst.push({ name, loc, holes, pars });
+      lst.push({ name, loc, holes, pars, index });
       saveCourses(lst);
       reloadData(); go('acourses');
       toast('زمین «' + name + '» ثبت شد ✓', 'green');

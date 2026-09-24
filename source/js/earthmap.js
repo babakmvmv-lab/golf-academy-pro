@@ -471,7 +471,8 @@
       hole.innerHTML = '<option value="all">همهٔ میدان‌ها</option>' + holeNums().map(n => {
         const hh = holesData()[n];
         const yd = holeYards(hh);
-        return `<option value="${n}">میدان ${n}${hh&&hh.par?(' • پار '+hh.par):''}${yd?(' • '+yd+' yd'):''}</option>`;
+        const ix = (D && D.indexOf) ? (D.indexOf(courseId())[n-1]) : null;
+        return `<option value="${n}">میدان ${n}${hh&&hh.par?(' • پار '+hh.par):''}${ix?(' • Index '+ix):''}${yd?(' • '+yd+' yd'):''}</option>`;
       }).join('');
       hole.value = holeSel;
       hole.onchange = function(){ holeSel = hole.value; clubDraw=null; mode='pan'; drawCourse(); syncModeBtns(); };

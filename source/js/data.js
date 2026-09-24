@@ -217,11 +217,28 @@
   const COURSE_PARS = {
     1:[4,4,3,5,4,4,3,4,5,4,4,3,4,5,4,4,3,5],
   };
+  /* Index سختی هر میدان: ۱ سخت‌ترین، ۱۸ آسان‌ترین */
+  const COURSE_INDEX = {
+    1:[10,12,8,10,16,17,13,10,2,5,2,17,16,16,15,13,15,16],
+  };
   const COURSE_NAME = {}; COURSES.forEach(c => COURSE_NAME[c[0]] = c[1]);
   /* رجیستری پار (شامل زمین‌های سفارشی طراح + ویرایش زمین پایه) */
   const PAR_MAP = {};
   Object.keys(COURSE_PARS).forEach(k => PAR_MAP[k] = COURSE_PARS[k].slice());
+  const INDEX_MAP = {};
+  Object.keys(COURSE_INDEX).forEach(k => INDEX_MAP[k] = COURSE_INDEX[k].slice());
   const parsOf = id => PAR_MAP[id] || COURSE_PARS[id] || [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4];
+  function defaultIndex(n){ return Array.from({length: n || 18}, (_, i) => i + 1); }
+  function indexOf(id){
+    const n = (parsOf(id) || []).length || 18;
+    const ix = INDEX_MAP[id] || COURSE_INDEX[id];
+    if (ix && ix.length){
+      const out = ix.map(v => Math.max(1, Math.min(n, +v || 1)));
+      while (out.length < n) out.push(out.length + 1);
+      return out.slice(0, n);
+    }
+    return defaultIndex(n);
+  }
   function loadCourseOverride(){
     try { const o = JSON.parse(localStorage.getItem('ga_course_override') || '{}'); return o && typeof o === 'object' ? o : {}; } catch(e){ return {}; }
   }
@@ -230,11 +247,13 @@
   }
   function applyCourseOverrides(){
     Object.keys(COURSE_PARS).forEach(k => { PAR_MAP[k] = COURSE_PARS[k].slice(); });
+    Object.keys(COURSE_INDEX).forEach(k => { INDEX_MAP[k] = COURSE_INDEX[k].slice(); });
     COURSES.forEach(c => { COURSE_NAME[c[0]] = c[1]; });
     const ov = loadCourseOverride();
     Object.keys(ov).forEach(id => {
       const o = ov[id]; if (!o) return;
       if (Array.isArray(o.pars) && o.pars.length) PAR_MAP[+id] = o.pars.map(x => Math.max(3, Math.min(6, +x || 4)));
+      if (Array.isArray(o.index) && o.index.length) INDEX_MAP[+id] = o.index.map(x => +x || 1);
       if (o.name) COURSE_NAME[+id] = o.name;
     });
     return ov;
@@ -744,6 +763,7 @@
     extra.courses.forEach((c, i) => {
       const cid = 1000 + i;
       if (c && Array.isArray(c.pars) && c.pars.length) PAR_MAP[cid] = c.pars;
+      if (c && Array.isArray(c.index) && c.index.length) INDEX_MAP[cid] = c.index;
       if (c && c.name) COURSE_NAME[cid] = c.name;
     });
     const players = loadPlayers().concat(loadCustomPlayers().map((p, i) => [9000+i, (p.name + ' ' + (p.family||'')).trim(), p.gender, +p.hcp, p.join || '2026-01-01', p.active === false ? 0 : 1]));

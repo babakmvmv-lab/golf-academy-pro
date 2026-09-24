@@ -1818,9 +1818,10 @@
     const rows = D.COURSES.map((c) => {
       const o = ov[c[0]] || {};
       const pars = (o.pars && o.pars.length) ? o.pars : (D.parsOf(c[0]) || D.COURSE_PARS[c[0]] || []);
+      const index = (o.index && o.index.length) ? o.index : ((D.indexOf && D.indexOf(c[0])) || []);
       const isMis = c[0] === 1 || String(c[1]).indexOf('مسجدسلیمان') >= 0;
-      return { id:c[0], name: o.name || c[1], loc: o.loc || c[2], holes: pars.length || c[3], pars, base:true, lat: o.lat != null ? o.lat : (isMis ? 31.90494 : 24.7136), lng: o.lng != null ? o.lng : (isMis ? 49.31398 : 46.6753) };
-    }).concat(extra.map((c,i) => ({ id:1000+i, name:c.name, loc:c.loc||'ریاض', holes:(c.pars&&c.pars.length)?c.pars.length:c.holes, pars:c.pars, base:false, idx:i, lat:c.lat, lng:c.lng })));
+      return { id:c[0], name: o.name || c[1], loc: o.loc || c[2], holes: pars.length || c[3], pars, index, base:true, lat: o.lat != null ? o.lat : (isMis ? 31.90494 : 24.7136), lng: o.lng != null ? o.lng : (isMis ? 49.31398 : 46.6753) };
+    }).concat(extra.map((c,i) => ({ id:1000+i, name:c.name, loc:c.loc||'ریاض', holes:(c.pars&&c.pars.length)?c.pars.length:c.holes, pars:c.pars, index:c.index||[], base:false, idx:i, lat:c.lat, lng:c.lng })));
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">➕</span><h3>طراح زمین — ثبت زمین جدید</h3><span class="tag">افزودن / حذف میدان</span></div>
@@ -1851,8 +1852,9 @@
       </tr></thead><tbody id="mc-rows"></tbody></table></div>
     </div>`;
     let parVals = Array.from({length:18}, () => 4);
+    let idxVals = Array.from({length:18}, (_,i) => i + 1);
     let kmlDraft = null;
-    bindParEditor($('#mc-pars'), parVals);
+    bindParEditor($('#mc-pars'), parVals, idxVals);
     const kmlInp = $('#mc-kml');
     if (kmlInp) kmlInp.addEventListener('change', function(){
       const f = kmlInp.files && kmlInp.files[0];
@@ -1866,7 +1868,9 @@
           kmlDraft = g;
           if (sm.pars && sm.pars.length){
             parVals = sm.pars.slice();
-            bindParEditor($('#mc-pars'), parVals);
+            while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
+            idxVals.length = parVals.length;
+            bindParEditor($('#mc-pars'), parVals, idxVals);
           }
           if (g.center){
             $('#mc-lat').value = g.center.lat.toFixed(6);
@@ -1892,7 +1896,7 @@
       if (!name){ APP.toast('نام زمین را وارد کنید', 'red'); return; }
       const pars = parVals.slice();
       if (!pars.length){ APP.toast('حداقل یک میدان لازم است', 'red'); return; }
-      const rec = { name, loc: $('#mc-loc').value.trim() || 'ریاض', holes: pars.length, pars, lat:+$('#mc-lat').value, lng:+$('#mc-lng').value };
+      const rec = { name, loc: $('#mc-loc').value.trim() || 'ریاض', holes: pars.length, pars, index: idxVals.slice(0, pars.length), lat:+$('#mc-lat').value, lng:+$('#mc-lng').value };
       if (kmlDraft && window.CourseGeo){
         rec.geoId = 'c' + Date.now();
         kmlDraft.name = name;
@@ -1975,7 +1979,7 @@
         <label class="btn sm ghost" style="cursor:pointer">📥 جایگزینی KML<input type="file" id="ec-kml" accept=".kml,.xml" style="display:none"></label>
       </div>
       <div id="ec-kml-rep" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
-      <div style="margin-top:12px;font-size:11px;color:var(--muted)">پار هر میدان — می‌توانید میدان اضافه یا حذف کنید</div>
+      <div style="margin-top:12px;font-size:11px;color:var(--muted)">پار و Index هر میدان — Index: ۱ سخت‌ترین</div>
       <div style="margin-top:8px;display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end" id="ec-pars"></div>
       <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
         <button class="btn sm ghost" id="ec-cancel">انصراف</button>
@@ -1984,7 +1988,10 @@
     </div>`;
     m.style.display = 'flex';
     const parVals = (r.pars && r.pars.length) ? r.pars.slice() : Array.from({length: r.holes || 18}, () => 4);
-    bindParEditor($('#ec-pars'), parVals);
+    const idxVals = (r.index && r.index.length) ? r.index.slice() : ((D.indexOf && r.id != null) ? D.indexOf(r.id).slice() : Array.from({length: parVals.length}, (_,i) => i + 1));
+    while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
+    idxVals.length = parVals.length;
+    bindParEditor($('#ec-pars'), parVals, idxVals);
     $('#ec-pick').addEventListener('click', () => openMapPicker(c => { $('#ec-lat').value = c.lat; $('#ec-lng').value = c.lng; }, { lat:+$('#ec-lat').value, lng:+$('#ec-lng').value }));
     const ecKml = $('#ec-kml');
     if (ecKml) ecKml.addEventListener('change', function(){
@@ -2005,7 +2012,9 @@
           }
           if (sm.pars && sm.pars.length){
             parVals.splice(0, parVals.length, ...sm.pars);
-            bindParEditor($('#ec-pars'), parVals);
+            while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
+            idxVals.length = parVals.length;
+            bindParEditor($('#ec-pars'), parVals, idxVals);
           }
           if (g.center){ $('#ec-lat').value = g.center.lat.toFixed(6); $('#ec-lng').value = g.center.lng.toFixed(6); }
           $('#ec-kml-rep').textContent = `KML ذخیره شد: ${sm.holes} میدان · تی خانم ${sm.teesF} · تی آقا ${sm.teesM}`;
@@ -3076,6 +3085,7 @@
       return { pid: c.pid, name: nameOf(c.pid), total, diff: total - par, free: String(c.pid).startsWith('free:') };
     }).sort((a, b) => a.diff - b.diff || a.total - b.total)
       .map((r, i, arr) => { r.rank = (i > 0 && arr[i-1].diff === r.diff && arr[i-1].total === r.total) ? arr[i-1].rank : i + 1; r.pts = ptsOfRank(r.rank); return r; });
+    const dateF r.pts = ptsOfRank(r.rank); return r; });
     const dateF = t[5] && D.isoToShamsi ? fa(D.isoToShamsi(String(t[5]).slice(0, 10))) : '—';
     const courseF = D.COURSE_NAME[t[3]] || '—';
     const freeN2 = (((D.loadResults()[t[0]] || {}).free) || []).filter(n => !list2.some(r => String(r.pid) === 'free:' + n)).length;
@@ -5016,6 +5026,7 @@
   }
   function holePickerHtml(courseId, selected){
     const pars = (D.parsOf(courseId) || []);
+    const idxs = (D.indexOf && D.indexOf(courseId)) || [];
     const all = pars.map((_, i) => i + 1);
     const sel = new Set((selected && selected.length) ? selected.map(Number) : all);
     return `<div class="hp-box">
@@ -5030,7 +5041,7 @@
       </div>
       <div class="hp-grid">${pars.map((p,i) => {
         const h = i + 1;
-        return `<button type="button" class="hp-chip${sel.has(h) ? ' on' : ''}" data-h="${h}"><b>${esc(holeName(h))}</b><span>پار ${D.fa(p)}</span></button>`;
+        return `<button type="button" class="hp-chip${sel.has(h) ? ' on' : ''}" data-h="${h}"><b>${esc(holeName(h))}</b><span>پار ${D.fa(p)}${idxs[i] ? ' · Index ' + idxs[i] : ''}</span></button>`;
       }).join('')}</div>
       <div style="font-size:10.5px;color:var(--muted);margin-top:6px">با یک کلیک انتخاب یا لغو کنید. در نتایج همان نام اصلی میدان می‌آید (مثلاً میدان ۳)، نه شمارهٔ ترتیبی.</div>
     </div>`;
@@ -5058,27 +5069,49 @@
     }));
     return () => selectedHoleIds(box);
   }
-  function parEditorHtml(pars){
-    return (pars || []).map((p,i) => `<div class="hp-par" data-i="${i}">
+  function parEditorHtml(pars, idxs){
+    const n = (pars || []).length;
+    return (pars || []).map((p,i) => `<div class="hp-par" data-i="${i}" style="text-align:center">
       <div style="font-size:10px;color:var(--muted)">${esc(holeName(i+1))}</div>
-      <input class="input" type="number" min="3" max="6" value="${p}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
-      <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" style="padding:2px 7px;font-size:11px">✕</button>
-    </div>`).join('') + `<button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>`;
+      <div style="font-size:9px;color:var(--dim);margin:2px 0 1px">پار</div>
+      <input class="input pe-par" type="number" min="3" max="6" value="${p}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
+      <div style="font-size:9px;color:var(--gold-l);margin:5px 0 1px;letter-spacing:.4px">Index</div>
+      <input class="input pe-idx" type="number" min="1" max="${n}" value="${(idxs && idxs[i]) || (i+1)}" data-i="${i}" title="۱ سخت‌ترین — ${n} آسان‌ترین" style="width:58px;text-align:center;direction:ltr">
+      <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" style="padding:2px 7px;font-size:11px;margin-top:4px">✕</button>
+    </div>`).join('') + `<button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
+    <div style="width:100%;font-size:11px;color:var(--muted);margin-top:4px">Index: ۱ سخت‌ترین — ${D.fa(n||18)} آسان‌ترین</div>`;
   }
-  function bindParEditor(box, parVals, onDraw){
+  function bindParEditor(box, parVals, idxVals, onDraw){
+    if (typeof idxVals === 'function'){ onDraw = idxVals; idxVals = null; }
+    if (!idxVals) idxVals = [];
+    function ensureIdx(){
+      while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
+      idxVals.length = parVals.length;
+    }
     function sync(){
-      $$('input', box).forEach(inp => { parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4)); });
+      $$('.pe-par', box).forEach(inp => { parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4)); });
+      ensureIdx();
+      $$('.pe-idx', box).forEach(inp => {
+        const n = parVals.length;
+        idxVals[+inp.dataset.i] = Math.max(1, Math.min(n, +inp.value || ( +inp.dataset.i + 1)));
+      });
     }
     function draw(){
-      box.innerHTML = parEditorHtml(parVals);
-      $$('input', box).forEach(inp => inp.addEventListener('input', () => { parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4)); }));
+      ensureIdx();
+      box.innerHTML = parEditorHtml(parVals, idxVals);
+      $$('.pe-par', box).forEach(inp => inp.addEventListener('input', () => { parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4)); }));
+      $$('.pe-idx', box).forEach(inp => inp.addEventListener('input', () => {
+        const n = parVals.length;
+        idxVals[+inp.dataset.i] = Math.max(1, Math.min(n, +inp.value || 1));
+      }));
       $$('.pe-del', box).forEach(b => b.addEventListener('click', () => {
         sync();
         if (parVals.length <= 1){ APP.toast('حداقل یک میدان لازم است', 'red'); return; }
-        parVals.splice(+b.dataset.i, 1); draw();
+        const i = +b.dataset.i;
+        parVals.splice(i, 1); idxVals.splice(i, 1); draw();
       }));
       const add = box.querySelector('#pe-add');
-      if (add) add.addEventListener('click', () => { sync(); parVals.push(4); draw(); });
+      if (add) add.addEventListener('click', () => { sync(); parVals.push(4); idxVals.push(parVals.length); draw(); });
       if (onDraw) onDraw();
     }
     draw();

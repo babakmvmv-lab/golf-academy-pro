@@ -1834,29 +1834,39 @@
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🗺️ نمودار ${esc(L('nav.course','هوش زمین'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
     }
-    const crs = S.courses.find(c => c[0] === courseSel) || S.courses[0];
+    try {
+    const list = (S && S.courses) || [];
+    const crs = list.find(c => c[0] === courseSel) || list[0];
     if (!crs){
       v.innerHTML = `<div class="glass" style="padding:28px;text-align:center;color:var(--muted)">زمینی ثبت نشده است.</div>`;
       return;
     }
-    const pars = D.parsOf(crs[0]) || [];
-    const holes = crs[3];
-    const stats = A.COURSE_STATS[crs[0]] || {};
-    const pc = A.PLAYER_COURSE[coursePlayerSel] || {};
-    const rounds = S.scorecards.filter(c => (S.tournaments.find(t=>t[0]===c.tour)||{}).course === crs[0]).length;
-    const recs = (A.CARDS[coursePlayerSel]||[]).filter(c => c.course === crs[0]);
-    const pl = A.LB.find(r => r.pid === coursePlayerSel);
+    const A0 = A || {};
+    const pars = (D.parsOf && D.parsOf(crs[0])) || [];
+    const holes = +crs[3] || pars.length || 18;
+    const stats = (A0.COURSE_STATS || {})[crs[0]] || {};
+    const pc = (A0.PLAYER_COURSE || {})[coursePlayerSel] || {};
+    const cardsAll = (S && S.scorecards) || [];
+    const toursAll = (S && S.tournaments) || [];
+    const rounds = cardsAll.filter(c => {
+      const t = toursAll.find(x => x[0] === c.tour);
+      return t && t[3] === crs[0];
+    }).length;
+    const recs = ((A0.CARDS || {})[coursePlayerSel] || []).filter(c => c.course === crs[0]);
+    const pl = (A0.LB || []).find(r => r.pid === coursePlayerSel);
+    const lbOpts = (A0.LB || []).map(r => `<option value="${r.pid}" ${r.pid===coursePlayerSel?'selected':''}>${esc(r.name)}</option>`).join('');
+    const crsOpts = list.map(c => `<option value="${c[0]}" ${c[0]===courseSel?'selected':''}>${esc(c[1])}</option>`).join('');
     v.innerHTML = `
     <div class="toolbar">
       <span class="lbl">🗺️ زمین:</span>
-      <select class="sel" id="cs-sel">${S.courses.map(c => `<option value="${c[0]}" ${c[0]===courseSel?'selected':''}>${esc(c[1])}</option>`).join('')}</select>
+      <select class="sel" id="cs-sel">${crsOpts}</select>
       <span class="lbl">جنسیت:</span>
       <div class="em-seg" id="cs-gender">
         <button type="button" class="em-seg-btn${courseTeeGender!=='M'?' on':''}" data-gender="F">زن</button>
         <button type="button" class="em-seg-btn${courseTeeGender==='M'?' on':''}" data-gender="M">مرد</button>
       </div>
       <span class="lbl">🏌️ بازیکن:</span>
-      <select class="sel" id="cs-pl">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===coursePlayerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+      <select class="sel" id="cs-pl">${lbOpts}</select>
       <div style="flex:1"></div>
       <span class="chip gold">${esc(crs[1])} — ${esc(crs[2])}</span>
       <span class="chip blue">${D.fa(holes)} حفره • پار ${D.fa(pars.slice(0,holes).reduce((a,b)=>a+b,0))}</span>
@@ -1958,7 +1968,6 @@
         </div>
       </div>
     </div>`;
-    try {
     const avgAll = rounds ? (() => {
       let s = 0, n = 0;
       S.scorecards.forEach(c => {
@@ -1971,7 +1980,7 @@
       ['⛳','پار کل', D.fa(pars.slice(0,holes).reduce((a,b)=>a+b,0)), 'var(--gold)'], ['🏌️','میدانها', D.fa(holes), 'var(--blue)'],
       ['👥','دورهای برگزار', D.fa(rounds), 'var(--orange)'], ['📉','میانگین vs پار', avgAll===null?'—':(avgAll>0?'+':'')+D.fa(avgAll.toFixed(2)), 'var(--green-l)'],
     ];
-    $('#cs-stats').innerHTML = st.map(([ic,lbl,val,col]) => `
+    const csStats = $('#cs-stats'); if (csStats) csStats.innerHTML = st.map(([ic,lbl,val,col]) => `
       <div class="glass stat" style="min-height:88px">
         <div style="display:flex;align-items:center;gap:8px"><span class="ic" style="font-size:18px">${ic}</span><span class="lbl">${lbl}</span></div>
         <div class="val" style="font-size:21px;color:${col}">${val}</div>
@@ -2049,7 +2058,23 @@
       const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.90494, lng:49.31398 };
       EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], pid: coursePlayerSel });
     })();
-    } catch (err) { console.error('course extras', err); }
+    } catch (err) {
+      console.error('pageCourse', err);
+      try {
+        if (v && !v.querySelector('#earth-map')){
+          v.innerHTML = `<div class="glass earth-pane" style="padding:0">
+            <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین</h3></div>
+            <div class="earth-stage" dir="ltr"><div id="earth-map" class="earth-map" dir="ltr"></div></div>
+          </div>`;
+          if (window.EarthMap){
+            EarthMap.mount(document.getElementById('earth-map'), {
+              center:{ lat:31.90494, lng:49.31398 }, places:[{ name:'مسجدسلیمان', lat:31.90494, lng:49.31398 }],
+              zoom:16, courseId:'mis', tourCourse:1, pid: coursePlayerSel
+            });
+          }
+        }
+      } catch (e2) { console.error('pageCourse fallback', e2); }
+    }
   }
 
   /* ═══════════ صفحه: رکوردها ═══════════ */

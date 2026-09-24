@@ -474,4 +474,4 @@ tr.off-row{opacity:.5}
 .hp-chip span{display:block;font-size:10px;color:var(--muted);margin-top:3px}
 .hp-chip.on{border-color:rgba(212,175,55,.7);background:rgba(212,175,55,.12)}
 .hp-chip.on b{color:var(--gold-l)}
-.hp-par{text-align:center}
+.hp-par{text-align:start}

@@ -470,6 +470,8 @@ canvas.glow-canvas{filter:drop-shadow(0 0 6px rgba(212,175,55,.25))}
   .podium{transform:scale(.82);transform-origin:top center}
   .toolbar{flex-wrap:wrap;gap:8px}
   .toolbar .input,.toolbar .sel{min-width:0!important;width:100%!important}
+  .hp-par-head,.hp-par{grid-template-columns:minmax(3.6rem,1fr) 3.6rem 3.6rem 1.8rem;gap:6px;padding:6px 8px}
+  .hp-par-n{font-size:12px}
   .field-grid{grid-template-columns:1fr 1fr;gap:10px}
   .field-grid .span2{grid-column:span 2}
   .jdate-selects{grid-template-columns:repeat(3,1fr);gap:5px}
@@ -840,42 +842,60 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   font-variant-numeric:tabular-nums;direction:ltr;text-align:center;
 }
 
-/* پار + Index هر میدان — گرید منظم موبایل/دسکتاپ */
+/* پار + Index — اسکورکارت دو ستون (۱–۹ | ۱۰–۱۸) */
 .hp-par-wrap{margin-top:14px}
-.hp-par-grid{
+.hp-par-board{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:10px;
+  grid-template-columns:1fr;
+  gap:14px;
 }
-@media (min-width:720px){.hp-par-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
-@media (min-width:1100px){.hp-par-grid{grid-template-columns:repeat(9,minmax(0,1fr))}}
-.hp-par{
-  position:relative;
-  text-align:center;
-  background:rgba(255,255,255,.035);
+@media (min-width:640px){
+  .hp-par-board{grid-template-columns:1fr 1fr;gap:14px 18px}
+}
+.hp-par-nine{
+  background:rgba(255,255,255,.03);
   border:1px solid var(--line-soft);
-  border-radius:14px;
-  padding:12px 8px 10px;
+  border-radius:16px;
+  overflow:hidden;
 }
-.hp-par-n{font-size:11px;color:var(--muted);font-weight:800;margin-bottom:8px}
-.hp-par-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.hp-par-row label{
-  display:flex;flex-direction:column;gap:3px;
-  font-size:9px;color:var(--dim);font-weight:700;letter-spacing:.2px;
+.hp-par-nine-h{
+  font-size:12px;font-weight:800;color:var(--gold-l);
+  padding:10px 12px 8px;letter-spacing:.2px;
+  border-bottom:1px solid var(--line-soft);
 }
-.hp-par-row label:last-child{color:var(--gold-l)}
-.hp-par-row input{
-  width:100%;text-align:center;direction:ltr;
-  padding:8px 4px;font-weight:800;font-size:14px;
+.hp-par-head,
+.hp-par{
+  display:grid;
+  grid-template-columns:minmax(4.6rem,1.15fr) 4.6rem 4.6rem 2.1rem;
+  gap:8px;
+  align-items:center;
+  padding:7px 12px;
 }
+.hp-par-head{
+  font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.3px;
+  padding-top:8px;padding-bottom:4px;
+}
+.hp-par{
+  text-align:start;
+  border-top:1px solid rgba(255,255,255,.06);
+}
+.hp-par-n{font-size:12.5px;font-weight:800;color:var(--muted);white-space:nowrap}
+.hp-par .pe-par,
+.hp-par .pe-idx{
+  width:100%;min-width:0;max-width:100%;
+  text-align:center;direction:ltr;
+  padding:7px 4px;font-weight:800;font-size:14px;
+  box-sizing:border-box;
+}
+.hp-par .pe-idx{color:var(--gold-l);border-color:rgba(212,175,55,.35)}
 .hp-par .pe-del{
-  position:absolute;top:4px;left:4px;
-  width:22px;height:22px;padding:0;border-radius:8px;
-  font-size:13px;line-height:1;opacity:.65;
+  width:28px;height:28px;padding:0;border-radius:8px;
+  font-size:15px;line-height:1;opacity:.55;justify-self:center;
 }
 .hp-par .pe-del:hover{opacity:1}
-#pe-add{margin-top:12px}
-.hp-par-hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
+.hp-par-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.hp-par-hint{font-size:11px;color:var(--muted);line-height:1.6}
+.hp-par-grid{display:contents}
 </style>
     <style>
 /* ═══════════════ پنل مدیریت جامع + تنظیمات نمایش ═══════════════ */
@@ -1353,7 +1373,7 @@ tr.off-row{opacity:.5}
 .hp-chip span{display:block;font-size:10px;color:var(--muted);margin-top:3px}
 .hp-chip.on{border-color:rgba(212,175,55,.7);background:rgba(212,175,55,.12)}
 .hp-chip.on b{color:var(--gold-l)}
-.hp-par{text-align:center}
+.hp-par{text-align:start}
 </style>
     <style>/* ═══ فروشگاه آواتار v8 — تم تیره + زمردی + طلایی، شیشه‌ای و سه‌بعدی ═══ */
 .ashop{display:grid;grid-template-columns:212px minmax(0,1fr) 306px;min-width:0;gap:14px;direction:rtl;align-items:start}
@@ -10994,7 +11014,7 @@ window.addEventListener('ga:brand-changed', function(){
       m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
     }
     m.innerHTML = `
-    <div class="glass gold-border" style="width:min(640px,94vw);padding:22px;max-height:92vh;overflow:auto">
+      <div class="glass gold-border" style="width:min(920px,96vw);padding:22px;max-height:92vh;overflow:auto">
       <div class="card-head"><span class="ic">✏️</span><h3>ویرایش زمین — ${esc(r.name)}</h3><span class="tag">${r.base?'پایه':'سفارشی'}</span></div>
       <div class="field-grid" style="margin-top:12px">
         <div><label>نام</label><input class="input" id="ec-name" style="width:100%" value="${esc(r.name)}"></div>
@@ -14098,17 +14118,32 @@ window.addEventListener('ga:brand-changed', function(){
   }
   function parEditorHtml(pars, idxs){
     const n = (pars || []).length;
-    const cards = (pars || []).map((p,i) => `<div class="hp-par" data-i="${i}">
-      <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" aria-label="حذف">×</button>
-      <div class="hp-par-n">${esc(holeName(i+1))}</div>
-      <div class="hp-par-row">
-        <label>پار<input class="input pe-par" type="number" min="3" max="6" value="${p}" data-i="${i}" inputmode="numeric"></label>
-        <label>Index<input class="input pe-idx" type="number" min="1" max="${n}" value="${(idxs && idxs[i]) || (i+1)}" data-i="${i}" inputmode="numeric" title="۱ سخت‌ترین — ${n} آسان‌ترین"></label>
-      </div>
-    </div>`).join('');
-    return `<div class="hp-par-grid">${cards}</div>
-      <button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
-      <div class="hp-par-hint">Index: ۱ سخت‌ترین — ${D.fa(n || 18)} آسان‌ترین</div>`;
+    const mid = n > 9 ? 9 : n;
+    function nine(from, to, title){
+      let rows = '';
+      for (let i = from; i < to; i++){
+        const p = pars[i] != null ? pars[i] : 4;
+        const ix = (idxs && idxs[i]) || (i + 1);
+        rows += `<div class="hp-par" data-i="${i}">
+          <span class="hp-par-n">${esc(holeName(i + 1))}</span>
+          <input class="input pe-par" type="number" min="3" max="6" value="${p}" data-i="${i}" inputmode="numeric" aria-label="پار ${i+1}">
+          <input class="input pe-idx" type="number" min="1" max="${n}" value="${ix}" data-i="${i}" inputmode="numeric" aria-label="Index ${i+1}" title="۱ سخت‌ترین — ${n} آسان‌ترین">
+          <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" aria-label="حذف">×</button>
+        </div>`;
+      }
+      return `<section class="hp-par-nine">
+        <div class="hp-par-nine-h">${title}</div>
+        <div class="hp-par-head"><span>میدان</span><span>پار</span><span>Index</span><span></span></div>
+        ${rows}
+      </section>`;
+    }
+    const left = nine(0, mid, n > 9 ? 'میدان ۱ تا ۹' : 'میدان‌ها');
+    const right = n > 9 ? nine(mid, n, 'میدان ۱۰ تا ' + D.fa(n)) : '';
+    return `<div class="hp-par-board">${left}${right}</div>
+      <div class="hp-par-foot">
+        <button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
+        <span class="hp-par-hint">Index: ۱ سخت‌ترین — ${D.fa(n || 18)} آسان‌ترین</span>
+      </div>`;
   }
   function bindParEditor(box, parVals, idxVals, onDraw){
     if (typeof idxVals === 'function'){ onDraw = idxVals; idxVals = null; }
@@ -18036,29 +18071,39 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🗺️ نمودار ${esc(L('nav.course','هوش زمین'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
     }
-    const crs = S.courses.find(c => c[0] === courseSel) || S.courses[0];
+    try {
+    const list = (S && S.courses) || [];
+    const crs = list.find(c => c[0] === courseSel) || list[0];
     if (!crs){
       v.innerHTML = `<div class="glass" style="padding:28px;text-align:center;color:var(--muted)">زمینی ثبت نشده است.</div>`;
       return;
     }
-    const pars = D.parsOf(crs[0]) || [];
-    const holes = crs[3];
-    const stats = A.COURSE_STATS[crs[0]] || {};
-    const pc = A.PLAYER_COURSE[coursePlayerSel] || {};
-    const rounds = S.scorecards.filter(c => (S.tournaments.find(t=>t[0]===c.tour)||{}).course === crs[0]).length;
-    const recs = (A.CARDS[coursePlayerSel]||[]).filter(c => c.course === crs[0]);
-    const pl = A.LB.find(r => r.pid === coursePlayerSel);
+    const A0 = A || {};
+    const pars = (D.parsOf && D.parsOf(crs[0])) || [];
+    const holes = +crs[3] || pars.length || 18;
+    const stats = (A0.COURSE_STATS || {})[crs[0]] || {};
+    const pc = (A0.PLAYER_COURSE || {})[coursePlayerSel] || {};
+    const cardsAll = (S && S.scorecards) || [];
+    const toursAll = (S && S.tournaments) || [];
+    const rounds = cardsAll.filter(c => {
+      const t = toursAll.find(x => x[0] === c.tour);
+      return t && t[3] === crs[0];
+    }).length;
+    const recs = ((A0.CARDS || {})[coursePlayerSel] || []).filter(c => c.course === crs[0]);
+    const pl = (A0.LB || []).find(r => r.pid === coursePlayerSel);
+    const lbOpts = (A0.LB || []).map(r => `<option value="${r.pid}" ${r.pid===coursePlayerSel?'selected':''}>${esc(r.name)}</option>`).join('');
+    const crsOpts = list.map(c => `<option value="${c[0]}" ${c[0]===courseSel?'selected':''}>${esc(c[1])}</option>`).join('');
     v.innerHTML = `
     <div class="toolbar">
       <span class="lbl">🗺️ زمین:</span>
-      <select class="sel" id="cs-sel">${S.courses.map(c => `<option value="${c[0]}" ${c[0]===courseSel?'selected':''}>${esc(c[1])}</option>`).join('')}</select>
+      <select class="sel" id="cs-sel">${crsOpts}</select>
       <span class="lbl">جنسیت:</span>
       <div class="em-seg" id="cs-gender">
         <button type="button" class="em-seg-btn${courseTeeGender!=='M'?' on':''}" data-gender="F">زن</button>
         <button type="button" class="em-seg-btn${courseTeeGender==='M'?' on':''}" data-gender="M">مرد</button>
       </div>
       <span class="lbl">🏌️ بازیکن:</span>
-      <select class="sel" id="cs-pl">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===coursePlayerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+      <select class="sel" id="cs-pl">${lbOpts}</select>
       <div style="flex:1"></div>
       <span class="chip gold">${esc(crs[1])} — ${esc(crs[2])}</span>
       <span class="chip blue">${D.fa(holes)} حفره • پار ${D.fa(pars.slice(0,holes).reduce((a,b)=>a+b,0))}</span>
@@ -18160,7 +18205,6 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         </div>
       </div>
     </div>`;
-    try {
     const avgAll = rounds ? (() => {
       let s = 0, n = 0;
       S.scorecards.forEach(c => {
@@ -18173,7 +18217,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       ['⛳','پار کل', D.fa(pars.slice(0,holes).reduce((a,b)=>a+b,0)), 'var(--gold)'], ['🏌️','میدانها', D.fa(holes), 'var(--blue)'],
       ['👥','دورهای برگزار', D.fa(rounds), 'var(--orange)'], ['📉','میانگین vs پار', avgAll===null?'—':(avgAll>0?'+':'')+D.fa(avgAll.toFixed(2)), 'var(--green-l)'],
     ];
-    $('#cs-stats').innerHTML = st.map(([ic,lbl,val,col]) => `
+    const csStats = $('#cs-stats'); if (csStats) csStats.innerHTML = st.map(([ic,lbl,val,col]) => `
       <div class="glass stat" style="min-height:88px">
         <div style="display:flex;align-items:center;gap:8px"><span class="ic" style="font-size:18px">${ic}</span><span class="lbl">${lbl}</span></div>
         <div class="val" style="font-size:21px;color:${col}">${val}</div>
@@ -18251,7 +18295,23 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.90494, lng:49.31398 };
       EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], pid: coursePlayerSel });
     })();
-    } catch (err) { console.error('course extras', err); }
+    } catch (err) {
+      console.error('pageCourse', err);
+      try {
+        if (v && !v.querySelector('#earth-map')){
+          v.innerHTML = `<div class="glass earth-pane" style="padding:0">
+            <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین</h3></div>
+            <div class="earth-stage" dir="ltr"><div id="earth-map" class="earth-map" dir="ltr"></div></div>
+          </div>`;
+          if (window.EarthMap){
+            EarthMap.mount(document.getElementById('earth-map'), {
+              center:{ lat:31.90494, lng:49.31398 }, places:[{ name:'مسجدسلیمان', lat:31.90494, lng:49.31398 }],
+              zoom:16, courseId:'mis', tourCourse:1, pid: coursePlayerSel
+            });
+          }
+        }
+      } catch (e2) { console.error('pageCourse fallback', e2); }
+    }
   }
 
   /* ═══════════ صفحه: رکوردها ═══════════ */

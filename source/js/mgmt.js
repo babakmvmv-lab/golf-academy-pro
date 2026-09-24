@@ -1966,7 +1966,7 @@
       m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
     }
     m.innerHTML = `
-    <div class="glass gold-border" style="width:min(640px,94vw);padding:22px;max-height:92vh;overflow:auto">
+      <div class="glass gold-border" style="width:min(920px,96vw);padding:22px;max-height:92vh;overflow:auto">
       <div class="card-head"><span class="ic">✏️</span><h3>ویرایش زمین — ${esc(r.name)}</h3><span class="tag">${r.base?'پایه':'سفارشی'}</span></div>
       <div class="field-grid" style="margin-top:12px">
         <div><label>نام</label><input class="input" id="ec-name" style="width:100%" value="${esc(r.name)}"></div>
@@ -5070,17 +5070,32 @@
   }
   function parEditorHtml(pars, idxs){
     const n = (pars || []).length;
-    const cards = (pars || []).map((p,i) => `<div class="hp-par" data-i="${i}">
-      <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" aria-label="حذف">×</button>
-      <div class="hp-par-n">${esc(holeName(i+1))}</div>
-      <div class="hp-par-row">
-        <label>پار<input class="input pe-par" type="number" min="3" max="6" value="${p}" data-i="${i}" inputmode="numeric"></label>
-        <label>Index<input class="input pe-idx" type="number" min="1" max="${n}" value="${(idxs && idxs[i]) || (i+1)}" data-i="${i}" inputmode="numeric" title="۱ سخت‌ترین — ${n} آسان‌ترین"></label>
-      </div>
-    </div>`).join('');
-    return `<div class="hp-par-grid">${cards}</div>
-      <button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
-      <div class="hp-par-hint">Index: ۱ سخت‌ترین — ${D.fa(n || 18)} آسان‌ترین</div>`;
+    const mid = n > 9 ? 9 : n;
+    function nine(from, to, title){
+      let rows = '';
+      for (let i = from; i < to; i++){
+        const p = pars[i] != null ? pars[i] : 4;
+        const ix = (idxs && idxs[i]) || (i + 1);
+        rows += `<div class="hp-par" data-i="${i}">
+          <span class="hp-par-n">${esc(holeName(i + 1))}</span>
+          <input class="input pe-par" type="number" min="3" max="6" value="${p}" data-i="${i}" inputmode="numeric" aria-label="پار ${i+1}">
+          <input class="input pe-idx" type="number" min="1" max="${n}" value="${ix}" data-i="${i}" inputmode="numeric" aria-label="Index ${i+1}" title="۱ سخت‌ترین — ${n} آسان‌ترین">
+          <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" aria-label="حذف">×</button>
+        </div>`;
+      }
+      return `<section class="hp-par-nine">
+        <div class="hp-par-nine-h">${title}</div>
+        <div class="hp-par-head"><span>میدان</span><span>پار</span><span>Index</span><span></span></div>
+        ${rows}
+      </section>`;
+    }
+    const left = nine(0, mid, n > 9 ? 'میدان ۱ تا ۹' : 'میدان‌ها');
+    const right = n > 9 ? nine(mid, n, 'میدان ۱۰ تا ' + D.fa(n)) : '';
+    return `<div class="hp-par-board">${left}${right}</div>
+      <div class="hp-par-foot">
+        <button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
+        <span class="hp-par-hint">Index: ۱ سخت‌ترین — ${D.fa(n || 18)} آسان‌ترین</span>
+      </div>`;
   }
   function bindParEditor(box, parVals, idxVals, onDraw){
     if (typeof idxVals === 'function'){ onDraw = idxVals; idxVals = null; }

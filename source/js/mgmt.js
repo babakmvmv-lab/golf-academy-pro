@@ -3085,7 +3085,6 @@
       return { pid: c.pid, name: nameOf(c.pid), total, diff: total - par, free: String(c.pid).startsWith('free:') };
     }).sort((a, b) => a.diff - b.diff || a.total - b.total)
       .map((r, i, arr) => { r.rank = (i > 0 && arr[i-1].diff === r.diff && arr[i-1].total === r.total) ? arr[i-1].rank : i + 1; r.pts = ptsOfRank(r.rank); return r; });
-    const dateF r.pts = ptsOfRank(r.rank); return r; });
     const dateF = t[5] && D.isoToShamsi ? fa(D.isoToShamsi(String(t[5]).slice(0, 10))) : '—';
     const courseF = D.COURSE_NAME[t[3]] || '—';
     const freeN2 = (((D.loadResults()[t[0]] || {}).free) || []).filter(n => !list2.some(r => String(r.pid) === 'free:' + n)).length;

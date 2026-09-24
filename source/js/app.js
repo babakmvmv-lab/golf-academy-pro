@@ -2232,30 +2232,29 @@
         const left0 = Math.max(0, Math.ceil((nx2.d - D.TODAY) / 86400000));
         const col0 = TCOL[nx2.type] || GOLD;
         txt('تقویم فصل  ' + D.fa(D.seasonYear), W / 2, 418, '600', 22, MUT);
-        /* هیرو رویداد بعدی */
-        const hx = 52, hy = 436, hw = 976, hh = 340;
-        const glow = c.createRadialGradient(W / 2, hy + 150, 20, W / 2, hy + 160, 420);
-        glow.addColorStop(0, col0 + '55'); glow.addColorStop(1, 'rgba(212,175,55,0)');
-        c.fillStyle = glow; c.fillRect(hx - 20, hy - 20, hw + 40, hh + 40);
-        const hg = c.createLinearGradient(hx, hy, hx, hy + hh);
-        hg.addColorStop(0, 'rgba(212,175,55,.32)'); hg.addColorStop(.45, 'rgba(18,24,34,.72)'); hg.addColorStop(1, 'rgba(10,14,20,.88)');
-        rrect(hx, hy, hw, hh, 32);
-        c.fillStyle = hg; c.strokeStyle = 'rgba(243,215,121,.9)'; c.lineWidth = 2.8; c.fill(); c.stroke();
-        txt('رویداد بعدی', W / 2, hy + 42, '700', 22, MUT);
-        txt((TYPE_ICON[nx2.type] || '📌') + '  ' + nx2.name, W / 2, hy + 112, '900', 52, GL, 'center', 900);
-        txt(nx2.type + '  •  ' + D.fa(j2.dd) + ' ' + MONTHS[j2.mm - 1] + ' ' + D.fa(j2.yy), W / 2, hy + 164, '500', 24, FG);
-        const cx = W / 2, cy = hy + 248;
-        c.beginPath(); c.arc(cx, cy, 62, 0, 7);
-        const rg = c.createRadialGradient(cx - 10, cy - 12, 6, cx, cy, 62);
-        rg.addColorStop(0, '#fff4c8'); rg.addColorStop(.35, '#f3d779'); rg.addColorStop(1, '#8c6e1d');
-        c.fillStyle = rg; c.fill();
-        c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.45)'; c.stroke();
-        if (left0 <= 0){
-          txt('امروز', cx, cy + 12, '900', 28, '#2a1a08');
-        } else {
-          txt(D.fa(left0), cx, cy + 6, '900', 36, '#2a1a08');
-          txt('روز', cx, cy + 32, '700', 14, '#5a4310');
-        }
+        /* هیرو مثل نوار صفحه: عکس راست، اسم طلایی، عدد روز چپ */
+        const hx = 52, hy = 436, hw = 976, hh = 250;
+        rrect(hx, hy, hw, hh, 28);
+        c.fillStyle = 'rgba(255,255,255,.035)'; c.strokeStyle = 'rgba(212,175,55,.45)'; c.lineWidth = 2; c.fill(); c.stroke();
+        const imgS = 148, imgX = hx + hw - 36 - imgS, imgY = hy + (hh - imgS) / 2;
+        const tx = imgX - 22;
+        txt('رویداد بعدی', tx, hy + 72, '600', 22, MUT, 'right', 520);
+        txt((TYPE_ICON[nx2.type] || '🏆') + '  ' + nx2.name, tx, hy + 128, '900', 44, GL, 'right', 520);
+        txt(nx2.type + '  •  ' + D.fa(j2.dd) + ' ' + MONTHS[j2.mm - 1], tx, hy + 178, '500', 22, MUT, 'right', 520);
+        const nxNum = hx + 118;
+        txt(D.fa(left0), nxNum, hy + 128, '900', 92, GL);
+        txt('روز تا شروع', nxNum, hy + 178, '500', 20, MUT);
+        const drawBall = im => {
+          const g = c.createRadialGradient(imgX + imgS / 2, imgY + imgS / 2, 10, imgX + imgS / 2, imgY + imgS / 2, imgS);
+          g.addColorStop(0, 'rgba(30,187,138,.45)'); g.addColorStop(1, 'rgba(30,187,138,0)');
+          c.fillStyle = g; c.fillRect(imgX - 18, imgY - 18, imgS + 36, imgS + 36);
+          rrect(imgX, imgY, imgS, imgS, 28);
+          c.save(); c.clip();
+          if (im){ try { c.drawImage(im, imgX, imgY, imgS, imgS); } catch (e) {} }
+          else { c.fillStyle = '#122018'; c.fill(); }
+          c.restore();
+          rrect(imgX, imgY, imgS, imgS, 28); c.strokeStyle = 'rgba(30,187,138,.55)'; c.lineWidth = 2; c.stroke();
+        };
         /* رویداد دوم — نوار باریک */
         if (near[1]){
           const e = near[1], jj = D.jalaliInfo(e.d), col = TCOL[e.type] || GOLD;
@@ -2308,6 +2307,12 @@
             c.fillStyle = TCOL[e.type] || GOLD; c.fill();
           });
         }
+        return new Promise(res => {
+          const im = new Image();
+          im.onload = () => { drawBall(im); res(); };
+          im.onerror = () => { drawBall(null); res(); };
+          im.src = 'assets/ball_3d.webp';
+        });
       });
     });
 

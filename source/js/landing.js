@@ -270,7 +270,6 @@ root.innerHTML =
     '<div id="l3d-bg"></div>' +
     '<div id="l3d-rays"></div>' +
     '<canvas id="l3d-dust"></canvas>' +
-    '<div id="hs-world"></div>' +
     '<div id="l3d-reception"><span class="ring"></span><span class="lb">🛎️ ' + esc(L('landing.reception','رسپشن')) + '</span></div>' +
     '<div id="l3d-dock"></div>' +
   '</div>' +
@@ -282,19 +281,9 @@ var $ = function(s){ return root.querySelector(s); };
 var intro = $('#l3d-intro'), stage = $('#l3d-stage'), bg = $('#l3d-bg');
 function applyLobbyBg(){
   if (!bg) return;
-  var phone = document.documentElement.classList.contains('phone-mode') || (window.innerWidth||1024) <= 820;
-  var hs = window.HOMESKIN && HOMESKIN.get && HOMESKIN.get();
-  if (hs && hs.id === 'lobby' && hs.slots) {
-    var custom = (phone && hs.slots.lobbyMobile) ? hs.slots.lobbyMobile : (hs.slots.lobby || '');
-    if (custom) {
-      bg.style.backgroundImage = 'url(' + custom + ')';
-      bg.style.backgroundSize = 'cover';
-      bg.style.backgroundPosition = 'center center';
-      return;
-    }
-  }
   if (window.GA_BRAND && GA_BRAND.paintLobby) { GA_BRAND.paintLobby(bg); return; }
   var b = Bnd();
+  var phone = document.documentElement.classList.contains('phone-mode') || (window.innerWidth||1024) <= 820;
   var src = (phone && b.lobbyBgMobile) ? b.lobbyBgMobile : (b.lobbyBg || 'assets/lobby_bg_v3.webp');
   bg.style.backgroundImage = 'url(' + src + ')';
   var x = (b.lobbyFocusX != null && b.lobbyFocusX !== '') ? b.lobbyFocusX : 50;
@@ -303,8 +292,7 @@ function applyLobbyBg(){
   bg.style.backgroundPosition = phone ? (x + '% ' + y + '%') : 'center center';
 }
 applyLobbyBg();
-if (window.HOMESKIN && HOMESKIN.mount) HOMESKIN.mount(stage);
-window.addEventListener('ga:homeskin-changed', function(){ applyLobbyBg(); });
+try { localStorage.removeItem('ga_home_skin'); } catch (e) {}
 var panel = $('#l3d-panel'), pbody = $('#l3d-pbody');
 var dock = $('#l3d-dock'), dust = $('#l3d-dust');
 var frames = intro.querySelectorAll('.fr');
@@ -523,16 +511,11 @@ var rotY = 0, rotX = 0, tRotY = 0, tRotX = 0;
 (function parallaxLoop(){
   rotY += (tRotY - rotY) * .06;
   rotX += (tRotX - rotX) * .06;
-  if (window.HOMESKIN && HOMESKIN.id && HOMESKIN.id() !== 'lobby') {
-    stage.style.transform = '';
-  } else {
-    stage.style.transform = 'rotateY(' + rotY + 'deg) rotateX(' + rotX + 'deg)';
-  }
+  stage.style.transform = 'rotateY(' + rotY + 'deg) rotateX(' + rotX + 'deg)';
   requestAnimationFrame(parallaxLoop);
 })();
 document.addEventListener('mousemove', function(e){
   if (STATE.mode !== 'lobby') return;
-  if (window.HOMESKIN && HOMESKIN.id && HOMESKIN.id() !== 'lobby') return;
   var nx = (e.clientX / innerWidth) * 2 - 1;
   var ny = (e.clientY / innerHeight) * 2 - 1;
   tRotY = nx * 4.2;

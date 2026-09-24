@@ -629,7 +629,7 @@
       ['academy','🏛️',L('admin.academy','تنظیمات آکادمی')],
       ['players','👥',L('admin.players','بازیکنان')], ['courses','🗺️',L('admin.courses','زمین‌ها')], ['tournaments','🏆',L('admin.tournaments','مسابقات')],
       ['programs','🎓',L('admin.programs','دوره‌ها')], ['results','⛳',L('admin.results','نتایج')], ['calendar','📅',L('admin.calendar','تقویم')],
-      ['reception','🛎️',L('admin.reception','رسپشن')], ['homeskin','🎬',L('admin.homeskin','صفحه نخست')], ['contact','📞',L('admin.contact','تماس با ما')], ['info','ℹ️',L('admin.info','اطلاعات')], ['users','🔐',L('admin.users','یوزرها')],
+      ['reception','🛎️',L('admin.reception','رسپشن')], ['contact','📞',L('admin.contact','تماس با ما')], ['info','ℹ️',L('admin.info','اطلاعات')], ['users','🔐',L('admin.users','یوزرها')],
       ['coins','🪙',L('admin.coins','درخواست سکه')], ['honor','🏅',L('admin.honor','رنک و آواتار')], ['shop','🛍️',L('admin.shop','فروشگاه آواتار')],
       ['battle','⚔️',L('admin.battle','نبرد میدان‌ها')], ['avatars','🌸',L('admin.avatars','سرزمین آواتارها')], ['labels','✏️',L('admin.labels','ویرایش آیتم‌ها')],
     ];
@@ -669,7 +669,6 @@
     else if (mgmtTab === 'honor') mgmtHonor(body);
     else if (mgmtTab === 'shop') { if (window.SHOP && SHOP.renderAdmin) SHOP.renderAdmin(body); else mgmtShop(body); }
     else if (mgmtTab === 'reception') mgmtReception(body);
-    else if (mgmtTab === 'homeskin') mgmtHomeSkin(body);
     else if (mgmtTab === 'contact') mgmtContact(body);
     else if (mgmtTab === 'info') mgmtInfo(body);
     else if (mgmtTab === 'users') mgmtUsers(body);
@@ -4206,85 +4205,6 @@
 
   /* ── تب تماس با ما (ویرایش اطلاعات تماس صفحهٔ اصلی) ── */
   /* ── 🛎️ تب رسپشن: ویرایش همهٔ بخش‌های پنل رسپشن صفحهٔ ورود ── */
-  function mgmtHomeSkin(body){
-    const HS = window.HOMESKIN;
-    if (!HS) { body.innerHTML = '<div class="glass">ماژول صفحهٔ نخست در دسترس نیست</div>'; return; }
-    const skin = HS.get();
-    const tpls = HS.TEMPLATES;
-    const cur = HS.tplOf(skin.id);
-    const say = (m) => { try { toast(m); } catch (e) {} };
-    body.innerHTML = `
-    <div class="glass gold-border" style="margin-bottom:16px">
-      <div class="card-head"><span class="ic">🎬</span><h3>${esc(L('admin.homeskin','صفحه نخست'))}</h3></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px">
-        ${tpls.map(t => `
-          <button type="button" class="btn ${skin.id===t.id?'gold':''}" data-hs-id="${t.id}" style="display:flex;flex-direction:column;gap:6px;padding:14px;align-items:center">
-            <span style="font-size:28px">${t.ic}</span>
-            <b>${esc(t.name)}</b>
-          </button>`).join('')}
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center">
-        <label style="display:flex;gap:8px;align-items:center">عنوان روی صحنه <input class="input" id="hs-title" value="${esc(skin.title)}" style="width:220px"></label>
-        <label style="display:flex;gap:8px;align-items:center">رنگ تاکید <input type="color" id="hs-accent" value="${esc(skin.accent||'#d4af37')}"></label>
-        <button type="button" class="btn gold" id="hs-save-meta">ذخیره</button>
-      </div>
-    </div>
-    <div class="glass">
-      <div class="card-head"><span class="ic">🖼️</span><h3>عکس‌های ${esc(cur.name)}</h3></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
-        ${cur.slots.map(s => {
-          const img = HS.src(skin, s.k);
-          const custom = !!(skin.slots && skin.slots[s.k]);
-          return `<div class="glass" style="padding:10px">
-            <div style="font-size:12px;margin-bottom:6px">${esc(s.label)}${custom ? ' · سفارشی' : ''}</div>
-            <div data-hs-prev="${s.k}" style="height:110px;border-radius:10px;background:#111 center/cover no-repeat;${img ? 'background-image:url('+img+')' : ''}"></div>
-            <div style="display:flex;gap:6px;margin-top:8px">
-              <button type="button" class="btn sm" data-hs-up="${s.k}">تغییر عکس</button>
-              <button type="button" class="btn sm ghost" data-hs-reset="${s.k}">پیش‌فرض</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-    body.querySelectorAll('[data-hs-id]').forEach(btn => btn.addEventListener('click', () => {
-      const r = HS.save({ id: btn.getAttribute('data-hs-id') });
-      if (!r.ok) { say('ذخیره نشد'); return; }
-      say('قالب ذخیره شد');
-      mgmtHomeSkin(body);
-    }));
-    const meta = body.querySelector('#hs-save-meta');
-    if (meta) meta.addEventListener('click', () => {
-      const r = HS.save({ title: (body.querySelector('#hs-title') || {}).value || '', accent: (body.querySelector('#hs-accent') || {}).value || '#d4af37' });
-      if (!r.ok) { say('ذخیره نشد'); return; }
-      say('عنوان و رنگ ذخیره شد');
-    });
-    body.querySelectorAll('[data-hs-up]').forEach(btn => btn.addEventListener('click', () => {
-      const k = btn.getAttribute('data-hs-up');
-      const inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*';
-      inp.onchange = () => {
-        const f = inp.files && inp.files[0];
-        if (!f) return;
-        HS.readFileToJpeg(f, data => {
-          if (!data) { say('خواندن عکس نشد'); return; }
-          const patch = { slots: {} }; patch.slots[k] = data;
-          const r = HS.save(patch);
-          if (!r.ok) { say('عکس بزرگ است؛ ذخیره نشد'); return; }
-          if (k === 'lobby' && window.GA_BRAND && GA_BRAND.save) GA_BRAND.save({ lobbyBg: data });
-          if (k === 'lobbyMobile' && window.GA_BRAND && GA_BRAND.save) GA_BRAND.save({ lobbyBgMobile: data });
-          say('عکس ذخیره شد');
-          mgmtHomeSkin(body);
-        });
-      };
-      inp.click();
-    }));
-    body.querySelectorAll('[data-hs-reset]').forEach(btn => btn.addEventListener('click', () => {
-      const k = btn.getAttribute('data-hs-reset');
-      HS.save({ clearSlot: k });
-      say('برگشت به پیش‌فرض');
-      mgmtHomeSkin(body);
-    }));
-  }
   function mgmtReception(body){
     const si = getSiteInfo();
     const rc = si.reception || {};

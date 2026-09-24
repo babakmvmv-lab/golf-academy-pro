@@ -25,6 +25,9 @@ SIZES = {
     'open_swing.webp':  (1100, 84),
     'open_sky.webp':    (1100, 84),
     'open_hole.webp':    (1100, 84),
+    'hero_cin_1.webp':  (1400, 80),
+    'hero_cin_2.webp':  (1400, 80),
+    'hero_cin_3.webp':  (1400, 80),
 }
 
 def img_uri(name):

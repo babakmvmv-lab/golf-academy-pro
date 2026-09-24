@@ -62,32 +62,41 @@ var CSS = `
 #l3d-intro .l3d-brand{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:rgba(248,250,252,.55);font-size:12px;letter-spacing:2px;z-index:5}
 /* ═══ لابی (بازطراحی) ═══ */
 #l3d-stage{position:absolute;inset:0;perspective:1300px;transition:transform 1.1s cubic-bezier(.2,.9,.25,1),transform-origin 1.1s cubic-bezier(.2,.9,.25,1)}
-#l3d-bg{position:absolute;left:50%;top:50%;width:116%;height:116%;transform:translate(-50%,-50%);
-  background-image:url(assets/lobby_bg_v3.webp);background-size:cover;background-position:center;
-  will-change:transform;box-shadow:0 0 120px rgba(0,0,0,.5) inset}
-#l3d-rays{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;opacity:.45;mix-blend-mode:screen;
+
+#l3d .liquid-glass{background:rgba(255,255,255,0.01);background-blend-mode:luminosity;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border:none;box-shadow:inset 0 1px 1px rgba(255,255,255,.1);position:relative;overflow:hidden}
+#l3d .liquid-glass::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1.4px;background:linear-gradient(180deg,rgba(255,255,255,.45) 0%,rgba(255,255,255,.15) 20%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 60%,rgba(255,255,255,.15) 80%,rgba(255,255,255,.45) 100%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+#l3d-bg{position:absolute;inset:0;overflow:hidden;background:#000}
+#l3d-bg .l3d-cin{position:absolute;left:0;top:0;width:100%;height:117%;object-fit:cover;object-position:center;transform:translateY(17%);opacity:0;will-change:opacity}
+#l3d-bg::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,transparent 28%,transparent 55%,rgba(0,0,0,.55) 100%)}
+#l3d-topnav{position:absolute;top:0;left:0;right:0;z-index:20;padding:24px}
+#l3d-topnav .nv{border-radius:999px;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;max-width:64rem;margin:0 auto;gap:16px}
+#l3d-topnav .brand{display:flex;align-items:center;gap:8px;color:#fff;font-weight:700;font-size:17px;letter-spacing:.04em}
+#l3d-topnav .brand svg{flex:0 0 auto}
+#l3d-topnav .links{display:none;align-items:center;gap:28px;margin-right:auto;margin-left:28px}
+@media(min-width:768px){#l3d-topnav .links{display:flex}}
+#l3d-topnav .links button{background:none;border:none;color:rgba(255,255,255,.8);font:600 13px inherit;cursor:pointer;padding:0}
+#l3d-topnav .links button:hover{color:#fff}
+#l3d-enter{border-radius:999px;padding:8px 22px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:#fff;background:transparent}
+#l3d-hero{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 24px;transform:translateY(-20%);pointer-events:none}
+#l3d-hero h1{margin:0 0 28px;color:#fff;font-weight:400;font-size:clamp(34px,7vw,72px);letter-spacing:-.02em;line-height:1.15;text-shadow:0 10px 40px rgba(0,0,0,.45)}
+#l3d-hero .cta{pointer-events:auto;max-width:36rem;width:100%;display:flex;flex-direction:column;align-items:center;gap:16px}
+#l3d-hero .go{width:100%;border-radius:999px;padding:8px 8px 8px 22px;display:flex;align-items:center;gap:12px;cursor:pointer;color:#fff;font:600 15px inherit}
+#l3d-hero .go span{flex:1;text-align:right;opacity:.9}
+#l3d-hero .go i{display:flex;width:44px;height:44px;border-radius:999px;background:#fff;color:#111;align-items:center;justify-content:center;flex:0 0 auto}
+#l3d-hero .sub{color:#fff;font-size:13px;line-height:1.8;padding:0 16px;max-width:28rem;opacity:.92}
+#l3d-reception{pointer-events:auto;border-radius:999px;padding:12px 32px;color:#fff;font:600 13px inherit;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+#l3d-reception:hover{background:rgba(255,255,255,.05)}
+#l3d-reception .ring,#l3d-reception .lb{display:none}
+#l3d-social{position:absolute;bottom:96px;left:0;right:0;z-index:10;display:flex;justify-content:center;gap:16px;pointer-events:auto}
+#l3d-social a{width:52px;height:52px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.8)}
+#l3d-social a:hover{color:#fff;background:rgba(255,255,255,.05)}
+#l3d-rays{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;opacity:.22;mix-blend-mode:screen;z-index:2;
   background:
-   radial-gradient(ellipse 40% 28% at 78% 30%,rgba(212,175,55,.26),transparent 65%),
-   radial-gradient(ellipse 50% 36% at 20% 62%,rgba(212,175,55,.13),transparent 70%)}
+   radial-gradient(ellipse 40% 28% at 78% 30%,rgba(212,175,55,.18),transparent 65%),
+   radial-gradient(ellipse 50% 36% at 20% 62%,rgba(212,175,55,.08),transparent 70%)}
 #l3d-dust{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3}
-/* هات‌اسپات خانم رسپشن (داخل خود تصویر است) */
-#l3d-reception{position:absolute;left:34%;top:52%;width:42%;height:52%;transform:translate(-50%,-50%);z-index:6;cursor:pointer}
-#l3d-reception .ring{position:absolute;left:50%;top:50%;width:120px;height:120px;transform:translate(-50%,-50%);pointer-events:none;
-  border:1.5px solid rgba(212,175,55,.8);border-radius:50%;box-shadow:0 0 26px rgba(212,175,55,.5),inset 0 0 18px rgba(212,175,55,.28);
-  animation:l3dring 2.8s ease-in-out infinite}
-#l3d-reception .ring::after{content:'';position:absolute;inset:-9px;border:1px solid rgba(212,175,55,.32);border-radius:50%;animation:l3dring2 2.8s ease-in-out infinite}
-@keyframes l3dring{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.9}50%{transform:translate(-50%,-50%) scale(1.14);opacity:.45}}
-@keyframes l3dring2{0%{transform:scale(1);opacity:.65}50%{transform:scale(1.2);opacity:.18}100%{transform:scale(1);opacity:.65}}
-#l3d-reception .lb{position:absolute;left:50%;top:calc(50% + 92px);transform:translateX(-50%);padding:5px 15px;border-radius:20px;
-  font-size:12px;font-weight:800;color:#0B0F14;white-space:nowrap;pointer-events:none;
-  background:linear-gradient(135deg,#f6e27a,#d4af37 60%,#b58c1c);box-shadow:0 4px 14px rgba(0,0,0,.45),0 0 14px rgba(212,175,55,.5);
-  opacity:0;transition:opacity .25s}
-#l3d-reception:hover .lb{opacity:1}
-#l3d-reception:hover .ring{border-color:#f6e27a}
-/* منوی پایین — فقط ۴ آیکن */
-#l3d-dock{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:9;display:flex;justify-content:center;gap:10px;
-  padding:12px 18px;border-radius:24px;background:rgba(11,15,20,.45);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  border:1px solid rgba(212,175,55,.4);box-shadow:0 12px 38px rgba(0,0,0,.55)}
+#l3d-dock{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:15;display:flex;justify-content:center;gap:10px;
+  padding:10px 16px;border-radius:999px}
 #l3d-dock .di{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:76px;padding:9px 15px;border-radius:16px;cursor:pointer;
   color:#F8FAFC;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);transition:all .22s}
 #l3d-dock .di .ic{font-size:22px;filter:drop-shadow(0 0 9px rgba(212,175,55,.55))}
@@ -142,13 +151,6 @@ var CSS = `
 #l3d-panel .podium .st .rk{font-size:22px}
 #l3d-panel .podium .st .nm2{font-size:12px;font-weight:800;margin-top:4px}
 #l3d-panel .podium .st .pv2{font-size:11px;color:#f6e27a;font-weight:700;margin-top:2px}
-/* دکمه ورود اعضا — همیشه بالا */
-#l3d-enter{position:absolute;top:20px;right:22px;z-index:70;padding:12px 24px;border-radius:40px;cursor:pointer;
-  font-family:inherit;font-size:14px;font-weight:800;color:#0B0F14;
-  background:linear-gradient(135deg,#f6e27a,#d4af37 55%,#b58c1c);border:1px solid rgba(255,255,255,.55);
-  box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 24px rgba(212,175,55,.55);animation:l3dfbt 3.4s ease-in-out infinite;transition:transform .25s,box-shadow .25s}
-#l3d-enter:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 16px 42px rgba(0,0,0,.5),0 0 44px rgba(212,175,55,.85)}
-@keyframes l3dfbt{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 #l3d-sndhint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:80;padding:7px 15px;border-radius:20px;
   font-size:11.5px;font-weight:800;color:#0B0F14;background:linear-gradient(135deg,#f6e27a,#d4af37 60%,#b58c1c);
   box-shadow:0 6px 18px rgba(0,0,0,.5),0 0 18px rgba(212,175,55,.5);opacity:0;transition:opacity .4s;pointer-events:none;white-space:nowrap}
@@ -225,11 +227,6 @@ html.phone-mode #l3d-panel{
 }
 html.phone-mode #l3d-panel.on{opacity:1; pointer-events:auto; transform:translateY(0)}
 html.phone-mode #l3d-pclose{width:44px; height:44px; top:10px; left:10px; font-size:18px}
-html.phone-mode #l3d-enter{
-  top:calc(10px + env(safe-area-inset-top, 0px));
-  min-height:44px; padding:10px 20px; font-size:14px; max-width:80vw;
-}
-html.phone-mode #l3d-enter:hover{transform:translateX(-50%)}
 html.phone-mode #l3d-panel .l3d-nav{
   display:flex; flex-wrap:nowrap; overflow-x:auto; gap:8px; scrollbar-width:none;
 }
@@ -267,29 +264,107 @@ root.innerHTML =
     '<div class="l3d-brand">' + esc((Bnd().letters || 'PUTTCLUB').replace(/\s+/g,'').toUpperCase()) + '</div>' +
   '</div>' +
   '<div id="l3d-stage">' +
-    '<div id="l3d-bg"></div>' +
+    '<div id="l3d-bg">' +
+      '<img class="l3d-cin" alt="">' +
+      '<img class="l3d-cin" alt="">' +
+      '<img class="l3d-cin" alt="">' +
+    '</div>' +
     '<div id="l3d-rays"></div>' +
     '<canvas id="l3d-dust"></canvas>' +
-    '<div id="l3d-reception"><span class="ring"></span><span class="lb">🛎️ ' + esc(L('landing.reception','رسپشن')) + '</span></div>' +
-    '<div id="l3d-dock"></div>' +
+    '<div id="l3d-topnav"><div class="nv liquid-glass">' +
+      '<div class="brand">' +
+        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' +
+        '<span>' + esc(Bnd().letters || 'PUTTCLUB') + '</span>' +
+      '</div>' +
+      '<div class="links">' +
+        '<button type="button" data-sec="cal">' + esc(L('landing.calendar','تقویم آکادمی')) + '</button>' +
+        '<button type="button" data-sec="info">' + esc(L('landing.info','اطلاعات')) + '</button>' +
+        '<button type="button" data-sec="contact">' + esc(L('landing.contact','تماس با ما')) + '</button>' +
+      '</div>' +
+      '<button type="button" id="l3d-enter" class="liquid-glass">' + esc(L('landing.enter','ورود اعضا')) + '</button>' +
+    '</div></div>' +
+    '<div id="l3d-hero">' +
+      '<h1>' + esc(Bnd().nameShortFa || Bnd().nameFa) + '</h1>' +
+      '<div class="cta">' +
+        '<button type="button" class="go liquid-glass" id="l3d-go">' +
+          '<span>' + esc(L('landing.enter','ورود اعضا')) + '</span>' +
+          '<i><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></i>' +
+        '</button>' +
+        '<div class="sub">' + esc(Bnd().nameFa) + ' — ' + esc(Bnd().domain || '') + '</div>' +
+        '<div id="l3d-reception" class="liquid-glass">🛎️ ' + esc(L('landing.reception','رسپشن')) + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div id="l3d-dock" class="liquid-glass"></div>' +
+    '<div id="l3d-social"></div>' +
   '</div>' +
-  '<div id="l3d-panel"><button id="l3d-pclose" title="بستن">✕</button><div id="l3d-pbody"></div></div>' +
-  '<button id="l3d-enter">👤 ' + esc(L('landing.enter','ورود اعضا')) + '</button>';
+  '<div id="l3d-panel"><button id="l3d-pclose" title="بستن">✕</button><div id="l3d-pbody"></div></div>';
 document.body.appendChild(root);
 
 var $ = function(s){ return root.querySelector(s); };
 var intro = $('#l3d-intro'), stage = $('#l3d-stage'), bg = $('#l3d-bg');
+var CIN_DEF = ['assets/hero_cin_1.webp','assets/hero_cin_2.webp','assets/hero_cin_3.webp'];
+var cinState = { i: 0, fadingOut: false, raf: 0, timer: 0, els: [] };
+function cinCancel(){
+  if (cinState.raf) { cancelAnimationFrame(cinState.raf); cinState.raf = 0; }
+  if (cinState.timer) { clearTimeout(cinState.timer); cinState.timer = 0; }
+}
+function cinFade(el, to, ms, done){
+  cinCancel();
+  var from = parseFloat(el.style.opacity || '0');
+  if (isNaN(from)) from = 0;
+  var t0 = performance.now();
+  function step(now){
+    var k = Math.min(1, (now - t0) / ms);
+    el.style.opacity = String(from + (to - from) * k);
+    if (k < 1) cinState.raf = requestAnimationFrame(step);
+    else { cinState.raf = 0; if (done) done(); }
+  }
+  cinState.raf = requestAnimationFrame(step);
+}
+function cinNextHold(){
+  var els = cinState.els;
+  if (!els.length) return;
+  var el = els[cinState.i];
+  cinState.timer = setTimeout(function(){
+    if (cinState.fadingOut) return;
+    cinState.fadingOut = true;
+    cinFade(el, 0, 500, function(){
+      cinState.fadingOut = false;
+      el.style.opacity = '0';
+      cinState.i = (cinState.i + 1) % els.length;
+      var n = els[cinState.i];
+      n.style.opacity = '0';
+      cinFade(n, 1, 500, function(){ cinNextHold(); });
+    });
+  }, 5500);
+}
 function applyLobbyBg(){
   if (!bg) return;
-  if (window.GA_BRAND && GA_BRAND.paintLobby) { GA_BRAND.paintLobby(bg); return; }
   var b = Bnd();
   var phone = document.documentElement.classList.contains('phone-mode') || (window.innerWidth||1024) <= 820;
-  var src = (phone && b.lobbyBgMobile) ? b.lobbyBgMobile : (b.lobbyBg || 'assets/lobby_bg_v3.webp');
-  bg.style.backgroundImage = 'url(' + src + ')';
-  var x = (b.lobbyFocusX != null && b.lobbyFocusX !== '') ? b.lobbyFocusX : 50;
-  var y = (b.lobbyFocusY != null && b.lobbyFocusY !== '') ? b.lobbyFocusY : 50;
-  bg.style.backgroundSize = 'cover';
-  bg.style.backgroundPosition = phone ? (x + '% ' + y + '%') : 'center center';
+  var custom = (phone && b.lobbyBgMobile) ? b.lobbyBgMobile : (b.lobbyBg || '');
+  var urls = custom ? [custom] : CIN_DEF.slice();
+  var imgs = bg.querySelectorAll('.l3d-cin');
+  cinCancel();
+  cinState.fadingOut = false;
+  cinState.i = 0;
+  cinState.els = [];
+  for (var i = 0; i < imgs.length; i++){
+    if (i < urls.length){
+      imgs[i].src = urls[i];
+      imgs[i].style.display = 'block';
+      imgs[i].style.opacity = i === 0 ? '0' : '0';
+      cinState.els.push(imgs[i]);
+    } else {
+      imgs[i].removeAttribute('src');
+      imgs[i].style.display = 'none';
+      imgs[i].style.opacity = '0';
+    }
+  }
+  if (!cinState.els.length) return;
+  cinFade(cinState.els[0], 1, 500, function(){
+    if (cinState.els.length > 1) cinNextHold();
+  });
 }
 applyLobbyBg();
 try { localStorage.removeItem('ga_home_skin'); } catch (e) {}
@@ -511,7 +586,6 @@ var rotY = 0, rotX = 0, tRotY = 0, tRotX = 0;
 (function parallaxLoop(){
   rotY += (tRotY - rotY) * .06;
   rotX += (tRotX - rotX) * .06;
-  stage.style.transform = 'rotateY(' + rotY + 'deg) rotateX(' + rotX + 'deg)';
   requestAnimationFrame(parallaxLoop);
 })();
 document.addEventListener('mousemove', function(e){
@@ -852,14 +926,32 @@ root.addEventListener('click', function(e){
   if (dbl){ closePanel(); }
 });
 $('#l3d-reception').addEventListener('click', function(ev){ ev.stopPropagation(); openPanel('reception'); });
-$('#l3d-enter').addEventListener('click', function(){
+function enterMembers(){
   root.classList.add('fadeout');
   setTimeout(function(){
     root.style.display = 'none';
     var lg = document.getElementById('login');
     if (lg) lg.classList.add('on');
   }, 650);
+}
+var enBtn = $('#l3d-enter');
+if (enBtn) enBtn.addEventListener('click', enterMembers);
+var goBtn = $('#l3d-go');
+if (goBtn) goBtn.addEventListener('click', function(ev){ ev.stopPropagation(); enterMembers(); });
+root.querySelectorAll('#l3d-topnav [data-sec]').forEach(function(bt){
+  bt.addEventListener('click', function(ev){ ev.stopPropagation(); openPanel(bt.getAttribute('data-sec')); });
 });
+(function renderSocial(){
+  var box = $('#l3d-social'); if (!box) return;
+  var b = Bnd();
+  var ig = String(b.instagram || '').replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').split(/[/?#]/)[0];
+  var globe = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+  var insta = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>';
+  var h = '';
+  if (ig) h += '<a class="liquid-glass" href="https://instagram.com/' + esc(ig) + '" target="_blank" rel="noopener" aria-label="Instagram">' + insta + '</a>';
+  if (b.domain) h += '<a class="liquid-glass" href="https://' + esc(b.domain) + '" target="_blank" rel="noopener" aria-label="' + esc(b.domain) + '">' + globe + '</a>';
+  box.innerHTML = h;
+})();
 
 /* ─────────── ورود از طریق لندینگ → app ─────────── */
 try {
@@ -874,8 +966,9 @@ renderDock();
 playIntro();
 
 function refreshLabels(){
-  var lb = $('#l3d-reception .lb'); if (lb) lb.innerHTML = '🛎️ ' + esc(L('landing.reception','رسپشن'));
-  var en = $('#l3d-enter'); if (en) en.innerHTML = '👤 ' + esc(L('landing.enter','ورود اعضا'));
+  var rec = $('#l3d-reception'); if (rec) rec.innerHTML = '🛎️ ' + esc(L('landing.reception','رسپشن'));
+  var en = $('#l3d-enter'); if (en) en.textContent = L('landing.enter','ورود اعضا');
+  var go = $('#l3d-go span'); if (go) go.textContent = L('landing.enter','ورود اعضا');
   renderDock();
   if (STATE.panel){
     var sec = STATE.panel, html = '';

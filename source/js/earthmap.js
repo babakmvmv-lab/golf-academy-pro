@@ -261,13 +261,7 @@
       }
     });
     const hint = document.getElementById('earth-geo-hint');
-    if (hint){
-      const g = geoGender();
-      const missing = nums.filter(function(n){ return !holeTee(H[String(n)]); }).length;
-      if (g === 'M' && missing) hint.textContent = 'تی آقایان برای ' + missing + ' میدان ثبت نشده — فایل KML با -M یا کشیدن تی در ویرایش';
-      else if (editOn) hint.textContent = holeSel==='all' ? 'تی و حفره را بکشید. برای فروی یک میدان را انتخاب کنید.' : 'رأس‌های فروی، تی و حفره قابل کشیدن‌اند.';
-      else hint.textContent = '';
-    }
+    if (hint) hint.textContent = '';
     drawSavedPlan();
     if (group.length && !editOn){
       try { map.fitBounds(L.featureGroup(group).getBounds().pad(holeSel==='all'?0.18:0.35), { maxZoom: holeSel==='all'?17:19 }); } catch(e){}
@@ -318,9 +312,9 @@
   function renderPlanList(){
     const box = document.getElementById('earth-plan-list');
     if (!box) return;
-    if (holeSel === 'all'){ box.innerHTML = '<span class="earth-pins-empty">یک میدان انتخاب کنید تا برنامهٔ شات همان میدان را بکشید.</span>'; return; }
+    if (holeSel === 'all'){ box.innerHTML = ''; return; }
     const arr = holePlan();
-    if (!arr.length){ box.innerHTML = '<span class="earth-pins-empty">کلاب را انتخاب کنید، «کشیدن» را بزنید و روی نقشه از تی به سمت حفره خط بکشید.</span>'; return; }
+    if (!arr.length){ box.innerHTML = ''; return; }
     box.innerHTML = arr.map((sh,i) =>
       `<span class="earth-pin-chip" style="border-color:${esc(sh.color)}"><span style="color:${esc(sh.color)}">●</span> ${esc(sh.club)} — ${fmtDist(totalM(sh.pts||[]))} <span class="earth-pin-x" data-plan-del="${i}">✕</span></span>`
     ).join('');
@@ -801,7 +795,7 @@
       h = wizBack('club','تغییر کلاب')+'<div class="ew-st">رنگ خط «'+esc(wizDraft.club)+'»</div><div class="ew-grid">'+SHOT_COLORS.map(function(c){ return '<button type="button" class="ew-col'+(c===wizDraft.color?' on':'')+'" data-ew-col="'+c+'" style="--c:'+c+'"></button>'; }).join('')+'</div>';
     } else if (wizStep === 'draw'){
       const n = (clubDraw && clubDraw.pts) ? clubDraw.pts.length : 0;
-      h = wizBack('color','تغییر رنگ')+'<div class="ew-st">خط را روی نقشه بکشید</div><p class="ew-hint">کلیک اول شروع است. با حرکت موس متراژ زنده دیده می‌شود. کلیک بعدی نقطه را تثبیت می‌کند. حذف آخرین نقطه همیشه در دسترس است.</p><div class="ew-actions"><button type="button" class="btn sm ghost" id="ew-undo-pt">حذف آخرین نقطه</button><button type="button" class="btn sm ghost" id="ew-clear-pt">پاک کردن خط</button><button type="button" class="btn" id="ew-ok-line"'+(n<2?' disabled':'')+'>تأیید خط ('+n+' نقطه)</button></div>';
+      h = wizBack('color','تغییر رنگ')+'<div class="ew-st">خط را روی نقشه بکشید</div><div class="ew-actions"><button type="button" class="btn sm ghost" id="ew-undo-pt">حذف آخرین نقطه</button><button type="button" class="btn sm ghost" id="ew-clear-pt">پاک کردن خط</button><button type="button" class="btn" id="ew-ok-line"'+(n<2?' disabled':'')+'>تأیید خط ('+n+' نقطه)</button></div>';
     } else if (wizStep === 'note'){
       h = wizBack('draw','اصلاح خط')+'<div class="ew-st">توضیح این ضربه <small>(اجباری)</small></div><textarea class="ew-note" id="ew-note" maxlength="400" placeholder="مثلاً: کمی سمت راست، باد مخالف…">'+esc(wizDraft.note||'')+'</textarea><div class="ew-actions"><button type="button" class="btn" id="ew-save-shot">ثبت ضربه</button></div>';
     }

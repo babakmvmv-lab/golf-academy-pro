@@ -748,7 +748,7 @@
     </div>
     <div class="grid cols-3">
       <div class="glass tilt" style="grid-column:span 2">
-        <div class="card-head"><span class="ic">🏁</span><h3>جدول ${esc(L('nav.race','رقابت فصل'))} ${D.fa(yr)}</h3><div style="font-size:10px;color:var(--muted);margin-top:2px">فقط جمع امتیاز مسابقاتِ ${D.fa(yr)} — با آغاز سال جدید، جدول تازه می‌شود</div><span class="tag">FedEx Cup</span></div>
+        <div class="card-head"><span class="ic">🏁</span><h3>جدول ${esc(L('nav.race','رقابت فصل'))} ${D.fa(yr)}</h3><span class="tag">FedEx Cup</span></div>
         <div style="overflow-x:auto"><table class="tbl" id="race-tbl"><thead><tr>
           <th>#</th><th>بازیکن</th><th>رنک</th><th>امتیاز</th><th>پیشرفت طلایی</th><th>تغییر</th><th>برد</th><th>میانگین</th><th>پرنده</th><th>فرم</th>
         </tr></thead><tbody></tbody></table></div>
@@ -764,7 +764,6 @@
             <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><b>${z.n}</b><b>${D.fa(z.v)}</b></div>
             ${pbar(z.v/z.mx*100, z.c)}
           </div>`).join('')}
-          <div style="font-size:11px;color:var(--muted);margin-top:6px">سه نفر اول به جام بزرگ فصل راه دارند؛ رتبه ۴ تا ۸ در رقابت پلیآف.</div>
         </div>
         <div class="glass">
           <div class="card-head"><span class="ic">⚔️</span><h3>نبرد صدر جدول</h3><span class="tag">Top Race</span></div>
@@ -1054,7 +1053,6 @@
         </div>
         <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:10.5px;color:var(--muted);margin-bottom:8px">
           ${Object.keys(SP_RES_LABEL).map(k => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${SP_RES_COLOR[k]};margin-left:4px;vertical-align:-1px"></i>${SP_RES_LABEL[k]}</span>`).join('')}
-          <span style="color:var(--dim)">• بازه بر هر گروه، جداگانه اعمال می‌شود (جلسات تمام‌شده)</span>
         </div>
         <div id="pa-body" class="pa-body"></div>
         </div>
@@ -1195,7 +1193,7 @@
         <small style="color:var(--dim);min-width:38px;text-align:left">${D.fa(pct)}٪</small>
       </div>`;
     }).join('')
-      : `<div style="padding:22px 12px;text-align:center;color:var(--muted);font-size:12px;line-height:2.1">📭 با این فیلترها تمرینِ <b>تمام‌شده‌ای</b> برای «${esc(plS && plS.selectedIndex >= 0 ? plS.options[plS.selectedIndex].text : '')}» ثبت نشده.<br>از «بازیکن هوشمند → ➕ ثبت رکورد» تمرین کن و جلسه را «⏹ ببند» تا این نمودار پر شود.</div>`;
+      : `<div style="padding:22px 12px;text-align:center;color:var(--muted);font-size:12px;line-height:2.1">تمرینی ثبت نشده است.</div>`;
     if (cv) Charts.donut(cv, totShots
       ? segs.filter(g => g.count > 0).map(g => ({ value: g.count, color: g.color, glow: true }))
       : [{ value: 1, color: 'rgba(60,70,85,.35)' }], { inner: 0.66 });
@@ -1339,7 +1337,7 @@
         }).join('')}</div>
       </section>`;
     }).join('')
-      : `<div style="padding:26px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1;width:100%">📭 برای این بازیکن تمرینِ تمام‌شده‌ای ثبت نشده.<br>از «بازیکن هوشمند → ➕ ثبت رکورد» تمرین کن و جلسه را «⏹ ببند» تا ردیف‌های رنج/پاتینگ/چیپینگ/… این‌جا با نمودار پر شوند.</div>`;
+      : `<div style="padding:26px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1;width:100%">تمرینی ثبت نشده است.</div>`;
   }
   /* 📄 خروجی PDF برنددار یک‌برگه‌ای A4 — با همان موتور کارت‌های گزارش (سربرگ لوگو + نام آکادمی + تاریخ + puttclub.ir) */
   function bindPracticeAnalysisPdf(){
@@ -1466,8 +1464,7 @@
       </div>
       <div class="grid cols-2 sp-grid" id="sp-notes"></div>
     </div>
-    <div class="glass" style="padding:18px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between">
-      <div style="color:var(--muted);font-size:12.5px;line-height:1.9">💡 قابلیت موردنظرتان برای «بازیکن هوشمند» را به مدیر آکادمی اعلام کنید تا در اولویت فعال‌سازی قرار گیرد.</div>
+    <div class="glass" style="padding:18px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end">
       <button type="button" class="btn sm" id="sp-back">مشاهده تحلیل کلاسیک</button>
     </div>`;
     const sel = $('#pl-sel-smart');
@@ -1574,13 +1571,10 @@
     /* جلسهٔ بازِ مطابق فیلتر: دیتاش ذخیره است ولی طبق قانون «فقط تمرین‌های تمام‌شده» هنوز کارت نمی‌گیرد — اطلاع‌رسانی شود */
     const open = Object.keys(ssn).map(k => ssn[k]).find(x => x && x.status === 'open' && (typ === 'all' || x.type === typ));
     const openN = open ? mine.filter(x => x.sid === open.id && (club === 'all' || x.club === club)).length : 0;
-    const openHint = open ? `<div class="glass" style="padding:13px 16px;margin-bottom:12px;border:1px dashed rgba(233,199,102,.45);background:rgba(233,199,102,.05)">
-      ⏳ <b>جلسهٔ باز فعال است</b> (جلسهٔ ${D.fa(open.no)} — ${esc(SP_TYPE_LBL[open.type] || open.type)}): ${D.fa(openN)} ضربهٔ همین بازیکن/کلاب تا این لحظه داخلش ذخیره شده.
-      بعد از «⏹ بستن جلسهٔ تمرینی»، نمودارش به‌صورت خودکار همین‌جا می‌آید.
-    </div>` : '';
+    const openHint = '';
     if (!groups.length){
       body.innerHTML = openHint + `<div style="padding:24px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1">
-        با این فیلترها جلسهٔ تمام‌شده‌ای پیدا نشد.<br>از «ثبت رکورد» جلسه بزنید و «بستن جلسه» کنید — آرشیو اینجا انباشته می‌شود 📚</div>`;
+        جلسه‌ای پیدا نشد.</div>`;
       return;
     }
     /* صفحه‌بندی: هر بار ۱۰ نمودار از جدیدترین */
@@ -1631,13 +1625,12 @@
         <div class="sp-note-acts">
           <button type="button" class="btn sm spk-save" data-act="save" data-feat="${fk}" style="flex:1.4">ثبت یادداشت برای: ${esc(scopeTxt)}</button>
           <button type="button" class="btn sm ghost" data-act="cancel" style="flex:1">انصراف</button>
-        </div>
-        <div class="sp-note-hint">💾 ثبت = ذخیرهٔ ابری خودکار • متن خالی = حذف یادداشت همین قلمرو</div>`;
+        </div>`;
       } else if (shown){
         body = `<div class="sp-note-body">${esc(shown.text)}</div>
         <div class="sp-note-meta">${shown.__gen ? '<span class="sp-note-scope gen">یادداشت عمومی</span> ' : ''}✍️ ${esc(shown.by || 'ادمین')} • ${esc(noteAtFa(shown.at))}</div>`;
       } else {
-        body = `<div class="sp-note-empty">هنوز نظری برای «${esc(scopeTxt)}» ثبت نشده است.${admon ? ' — با دکمهٔ ✎ بنویسید.' : ''}</div>`;
+        body = `<div class="sp-note-empty">هنوز نظری برای «${esc(scopeTxt)}» ثبت نشده است.</div>`;
       }
       return `<div class="glass sp-note">
         <div class="sp-note-head">
@@ -1688,8 +1681,7 @@
       if (ttl) ttl.textContent = `تحلیل لحظه‌ای جلسهٔ باز — ${p.name}`;
       if (tg){ tg.textContent = 'بدون جلسهٔ باز'; tg.classList.remove('gold'); }
       box.innerHTML = `<div style="padding:28px 16px;text-align:center;color:var(--muted);font-size:12.5px;line-height:2.1">
-        در حال حاضر جلسهٔ تمرینیِ بازی وجود ندارد.<br>
-        از دکمهٔ «ثبت رکورد» بالای صفحه جلسه را شروع کنید — تحلیل لحظه‌ای همین‌جا زنده می‌شود ⛳</div>`;
+        جلسه‌ای باز نیست.</div>`;
       return;
     }
     /* بازیکن = آخرین ضربهٔ همین جلسهٔ باز (نه سلکت بالای صفحه) */
@@ -1777,9 +1769,6 @@
       <span class="chip dim">${D.fa(info.dd)} ${info.monthFa} ${D.fa(info.yy)}</span>
       <div style="flex:1"></div>
       <span class="chip ${D.dateFrom(t[5]) >= D.TODAY ? 'blue' : 'green'}">${D.dateFrom(t[5]) >= D.TODAY ? 'آینده' : 'برگزار شده'}</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;border-radius:12px;border:1px solid rgba(212,175,55,.4);background:linear-gradient(90deg,rgba(212,175,55,.1),rgba(30,187,138,.06));font-size:12.5px;color:var(--text,#dfe8f2)">
-      ⛳ <b style="color:#f0d989">قانون گلف:</b> برندهٔ مسابقه کسی است که ۱۸ حفره (مجموع پار ۷۲) را با <b style="color:#7ee8b8">کمترین ضربه</b> به پایان برساند — مثلاً ۶۵ ضربه نسبت به ۷۰ ضربه برنده است. پایین‌ترین مجموع = قهرمان.
     </div>
     <div class="grid cols-4" id="mt-stats" style="margin-bottom:18px"></div>
     <div class="grid cols-3">
@@ -2547,7 +2536,6 @@
           ⚡ اخبار آکادمی: &nbsp; ${next ? esc(next[1]) + ' ' + D.fa(A.COUNTDOWN) + ' روز دیگر •' : ''} &nbsp; کلاس پوتینگ چهارشنبه • &nbsp; اردوی آمادهسازی جام بزرگ ۱۶ مهر • &nbsp; پرندهساز هفته: ${TV[0] ? esc(TV[0].name) : '—'} • &nbsp; ${TV[1] ? esc(TV[1].name) + ' با روند صعودی به صدر نزدیک میشود' : ''} • &nbsp; فصل ${D.fa(tvYr)} — امتیاز = مجموع همهٔ آیتم‌های امتیازی امسال
         </div>
       </div>
-      <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--dim)">📺 این صفحه برای نمایش روی تلویزیون آکادمی طراحی شده است — برای حالت تمامصفحه F11 را بزنید</div>
     </div>`;
     /* 🌤️ دما و بادِ لحظه‌ای اهواز (Open-Meteo، بدون کلید) — اگر آفلاین بود … می‌ماند */
     try {
@@ -3299,7 +3287,7 @@
           <input class="input ac-par" type="number" min="3" max="6" value="${p}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
           <div style="font-size:9px;color:var(--gold-l);margin-top:4px">Index</div>
           <input class="input ac-idx" type="number" min="1" max="${n}" value="${idxVals[i]}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
-        </div>`).join('') + `<div style="width:100%;font-size:11px;color:var(--muted)">Index: ۱ سخت‌ترین — ${D.fa(n)} آسان‌ترین</div>`;
+        </div>`).join('');
       $$('#ac-pars .ac-par').forEach(inp => inp.addEventListener('change', () => {
         parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4));
       }));

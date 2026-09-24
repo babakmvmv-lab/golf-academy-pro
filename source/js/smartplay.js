@@ -135,7 +135,6 @@
         + '<button type="button" class="btn spk-big" id="spk-go">ادامهٔ ثبت ضربه ←</button>'
         + '<button type="button" class="btn ghost" id="spk-end2">⏹ بستن جلسه تمرینی</button>'
         + '</div>'
-        + '<div class="spk-note">تا زمانی که جلسه بسته نشود، هر بار که وارد «ثبت رکورد» شوید همین جلسه ادامه می‌یابد — حتی از دستگاه دیگر.</div>'
         + '</div>';
     } else {
       h += '<div class="glass spk-newses">'

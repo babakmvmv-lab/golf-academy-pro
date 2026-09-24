@@ -263,7 +263,7 @@ root.innerHTML =
     '<div class="fr" style="background-image:url(assets/open_hole.webp)"></div>' +
     '<div class="vin"></div>' +
     '<div id="l3d-logo"><div class="lg-letters" id="l3d-lg"></div><div class="lg-sub" id="l3d-lgsub">' + esc(Bnd().nameFa) + ' — ' + esc(Bnd().domain) + '</div><div class="lg-line" id="l3d-lgline"></div></div>' +
-    '<div id="l3d-flash"></div><div id="l3d-wave"></div><div id="l3d-sndhint">🔊 برای شنیدن صدای افتتاحیه، صفحه را لمس کنید</div>' +
+    '<div id="l3d-flash"></div><div id="l3d-wave"></div>' +
     '<div class="l3d-brand">' + esc((Bnd().letters || 'PUTTCLUB').replace(/\s+/g,'').toUpperCase()) + '</div>' +
   '</div>' +
   '<div id="l3d-stage">' +
@@ -674,7 +674,7 @@ function receptionTab(tab){
       '<div class="row"><span>کد لباس</span><b>پیراهن سفید + لوگوی آکادمی</b></div>' +
       '<div class="row"><span>زمان تمرین</span><b>پنجشنبه‌ها — حضور همهٔ اعضا</b></div>' +
       '<div class="row"><span>رزرو زمین</span><b>از طریق رسپشن</b></div>' +
-      '<div class="golfrule">⛳ قانون گلف: هر مسابقه ۱۸ حفره و پار ۷۲ است؛ برنده کسی است که کمترین ضربه را بزند (مثلاً ۶۵ نسبت به ۷۰ برنده است).</div>';
+      '';
   }
   if (tab === 'contact'){
     var SIc = siteInfo().contact;
@@ -773,7 +773,7 @@ function panelCal(){
     pushIt({ d: d, ic: TYPE_ICON[tp] || '📌', nm: e.name || 'رویداد', kind: tp, extra: '' });
   });
   if (!rows.length){
-    h += '<div class="sub" style="color:rgba(248,250,252,.55)">رویدادی در ماه «' + monthNames[monthSel] + '» ثبت نشده است.<br><span style="font-size:11px;opacity:.85">مسابقات، دوره‌ها، اردوها و تمرین‌ها به‌محض ثبت (از پنل مدیریت) همین‌جا نمایش داده می‌شوند.</span></div>';
+    h += '<div class="sub" style="color:rgba(248,250,252,.55)">رویدادی در ماه «' + monthNames[monthSel] + '» ثبت نشده است.</div>';
   } else {
     rows.sort(function(x,y){ return (x.d - y.d); });
     rows.forEach(function(r){

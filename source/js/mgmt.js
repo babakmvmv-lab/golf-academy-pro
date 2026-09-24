@@ -318,8 +318,7 @@
     wrap.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">💳</span><h3>${esc(L('settings.group.plans','پلن‌ها و اشتراک'))}</h3><span class="tag">سطح دسترسی سایت</span></div>
-      <div class="plan-hint">پلن فقط سطح دسترسی به صفحات سایت است — با نقش ورزشی/رنک قاطی نشود. قیمت بر پایهٔ یک‌ماه است؛ تخفیف هر مدت را دستی بگذارید. سه بخش زیر با کلیک باز می‌شوند.</div>
-    </div>
+          </div>
     <div class="glass sub-acc" style="margin-bottom:16px">
       <button type="button" class="sub-acc-head" aria-expanded="false">
         <span class="ic">💰</span><h3>قیمت پایهٔ یک‌ماه</h3><span class="tag">عدد</span><span class="sub-acc-chev">▾</span>
@@ -337,8 +336,7 @@
         <span class="ic">☑️</span><h3>ماتریس پلن × صفحه</h3><span class="tag">پیش‌فرض: همه روشن</span><span class="sub-acc-chev">▾</span>
       </button>
       <div class="sub-acc-body">
-        <div class="plan-hint">هر تیک یعنی آن پلن آن صفحه را می‌بیند. مدیران bypass دارند.</div>
-        <div style="overflow-x:auto"><table class="plan-matrix" id="sub-matrix"></table></div>
+                <div style="overflow-x:auto"><table class="plan-matrix" id="sub-matrix"></table></div>
       </div>
     </div>`;
     host.appendChild(wrap);
@@ -583,8 +581,7 @@
     v.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:18px">
       <div class="card-head"><span class="ic">💳</span><h3>${esc(L('nav.subs','اشتراک‌ها'))}</h3><span class="tag">پلن و دسترسی سایت</span></div>
-      <div class="plan-hint">پلن فقط سطح دسترسی به صفحات سایت است — جدا از بازیکن و رنک. قیمت و ماتریس را از بخش‌های بازشو تنظیم کنید. مدیران نیاز به اشتراک ندارند.</div>
-    </div>
+          </div>
     <div id="sub-catalog"></div>
     <div id="sub-userlist"></div>`;
     renderSubSettings($('#sub-catalog'));
@@ -1090,8 +1087,7 @@
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">🌸</span><h3>${esc(L('admin.avatars','سرزمین آواتارها'))} — قوانین نمایش و مرتب‌سازی</h3><span class="tag">Avatar Land ⚙️</span></div>
-      <div style="font-size:11.5px;color:var(--muted);line-height:2;margin-top:6px">ترتیب نمایش کارت‌ها و کارت‌های افتخار طبق این اولویت‌ها محاسبه می‌شود (اولویت اول تا چهارم). تغییرات پس از ذخیره فوراً روی صفحهٔ اعمال می‌شود.</div>
-      <div class="form-section" style="margin-top:12px">🔀 ترتیب مرتب‌سازی (اولویت ۱ تا ۴)</div>
+            <div class="form-section" style="margin-top:12px">🔀 ترتیب مرتب‌سازی (اولویت ۱ تا ۴)</div>
       <div class="field-grid">
         ${[0,1,2,3].map(i => `
           <div><label>اولویت ${['اول','دوم','سوم','چهارم'][i]}</label>
@@ -1239,8 +1235,7 @@
 
       <div class="glass gold-border label-sync">
         <div class="card-head"><span class="ic">📱</span><h3>اعمال همین نام‌ها روی گوشی و دستگاه دیگر</h3><span class="tag">همگام‌سازی</span></div>
-        <div class="label-help">بعد از ذخیره، این لینک را روی گوشی باز کنید یا کد را اسکن کنید؛ نام‌ها در مرورگر گوشی ذخیره و بلافاصله روی نسخهٔ موبایل اعمال می‌شوند.</div>
-        <div class="label-sync-grid">
+                <div class="label-sync-grid">
           <div>
             <label>لینک همگام‌سازی موبایل</label>
             <div class="label-link-row"><input class="input" id="lbl-link" value="${esc(link)}" readonly><button class="btn sm" id="lbl-copy">📋 کپی لینک</button></div>
@@ -1993,8 +1988,7 @@
           <span id="earth-geo-hint" style="font-size:12px;color:var(--muted);line-height:1.5"></span>
         </div>
       </div>
-      <div style="margin-top:12px;font-size:11px;color:var(--muted)">پار و Index هر میدان — Index: ۱ سخت‌ترین</div>
-      <div id="ec-pars" class="hp-par-wrap"></div>
+            <div id="ec-pars" class="hp-par-wrap"></div>
       <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
         <button class="btn sm ghost" id="ec-cancel">انصراف</button>
         <button class="btn sm" id="ec-save">💾 ذخیره</button>
@@ -2401,7 +2395,7 @@
         <input class="input" id="rp-free" placeholder="نام شرکت‌کنندهٔ آزاد..." style="flex:1">
         <button type="button" class="btn sm" id="rp-freeadd">➕ ثبت</button>
       </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px">بعد از ثبت با پسوند «- بازیکن آزاد» به لیست شرکت‌کنندگان اضافه می‌شود</div>` : ''}
+      ` : ''}
       <div id="rp-extra"></div>
       <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;flex-wrap:wrap">
         <button class="btn sm ghost" id="rp-cancel">بستن</button>
@@ -3763,7 +3757,7 @@
           </tr>`;
         }).join('')}</tbody>
       </table></div>
-      <div style="font-size:11px;color:var(--muted);margin-top:9px">⛳ قانون گلف: برنده = کمترین ضربه${live ? ` • رتبه‌بندی زنده بر اساس <b>± نسبت به پار میدان‌های بازی‌شده</b> تاکنون است` : ''} • <span style="color:#7ee8b8">سبز: زیر پار</span> • <span style="color:#ff9d9d">قرمز: بالای پار</span>${live && liveN ? ' • ردیف‌های سبز‌کم‌رنگ = پیش‌نویس در حال ثبت' : ''}</div>`
+      `
       : `<div style="padding:30px 14px;text-align:center;color:var(--muted)">📋 ${live ? 'هنوز هیچ ضربه‌ای ثبت نشده — با ثبت اولین میدان هر بازیکن، این جدول زنده پر می‌شود.' : 'هنوز اسکورکارتی برای این مسابقه ثبت نشده است.'}${live ? '' : '<div style="font-size:11.5px;margin-top:8px">از دکمهٔ «📋 اسکورکارت» (ویزارد ثبت) کارت‌های بازیکنان را وارد کنید.</div>'}</div>`}
       <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn sm ghost" id="sc-close">بستن</button></div>
     </div>`;
@@ -4130,8 +4124,6 @@
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">⛳</span><h3>نتایج مسابقات</h3><span class="tag">ثبت شرکت‌کنندگان + نفرات برتر + امتیاز خودکار</span></div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding:9px 12px;border-radius:10px;border:1px solid rgba(212,175,55,.4);background:rgba(212,175,55,.07);font-size:12px">⛳ <b style="color:#f0d989">قانون گلف:</b> هر مسابقه ۱۸ حفره و پار ۷۲ است؛ برنده <b style="color:#7ee8b8">کمترین ضربه</b> را دارد — مثلاً ۶۵ نسبت به ۷۰ ضربه برنده است.</div>
-      <div style="font-size:11.5px;color:var(--muted);margin-top:6px">جریان هر مسابقه: «👥 انتخاب شرکت‌کنندگان» ← «📋 اسکورکارت» (ویزارد ثبت) ← «🏁 ثبت نهایی» ← به «نتایج ثبت‌شده» می‌رود و از این لیست ناپدید می‌شود. برای جریمه/حذف/ویرایش بعدی، رديف همان مسابقه در «نتایج ثبت‌شده» → ✏️ ویرایش.</div>
       <div id="mr-tours" style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px"></div>
     </div>
     <div class="glass">
@@ -4225,9 +4217,7 @@
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">🛎️</span><h3>${esc(L('admin.reception','رسپشن'))} — محتوای صفحهٔ ورود</h3><span class="tag">فوری در سایت اعمال می‌شود</span></div>
-      <div class="sub-note" style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.9">
-        هر بخشی را که بنویسی، جایگزین متن همان بخش در پنل «🛎️ ${esc(L('landing.reception','رسپشن'))}» صفحهٔ ورود می‌شود؛ <b>خالی بگذار = متن فعلی/پیش‌فرض باقی می‌ماند</b>. Enter برای خط تازه. معرفیٔ کلی را هم از همین‌جا می‌توانی عوض کنی (همان فیلد «اطلاعات» است).
-      </div>
+
       <button class="btn sm" id="rcp-save" style="margin-top:12px">💾 ذخیرهٔ همهٔ بخش‌های رسپشن</button>
     </div>
     ${area('rcp-intro','🏛️', 'معرفی (خوش‌آمد)', si.info.intro, 'خالی = متن معرفی فعلی سایت', 'در تب‌های «معرفی» رسپشن و «اطلاعات» نمایش داده می‌شود')}
@@ -4373,7 +4363,6 @@
       <div class="sub-note" style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.9">
         دو سطح دسترسی: <b style="color:var(--gold-l)">مدیر</b> (دسترسی کامل به پلن مدیریت و همهٔ بخش‌ها) و
         <b style="color:var(--green-l)">عضو</b> (فقط بخش ویژهٔ اعضا — بدون هیچ ابزار ویرایشی).<br>
-        اشتراک روی یوزر است نه بازیکن. ورود به پنل فقط با یوزر فعال + اشتراک معتبر. فعال/غیرفعال کردن، تغییر نقش و رمز هر یوزر همین‌جاست.
       </div>
       <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
         <button class="btn sm" id="us-add">➕ یوزر جدید</button>
@@ -4803,10 +4792,6 @@
       <div class="card-head"><span class="ic">🏅</span><h3>Avatar Rank Appearance — ظاهر آواتار بر اساس رنک</h3><span class="tag">Data Driven</span>
         <button class="btn sm ghost" id="hr-reset" style="margin-right:auto">↺ بازگشت به پیش‌فرض</button>
       </div>
-      <div class="sub-note" style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.9">
-        هیچ رنگ، نشان یا افکتی در کد ثابت نیست — همه‌چیز از همین‌جا ذخیره و روی آواتار همهٔ اعضا اعمال می‌شود.
-        (Level 1-3 نقره‌ای • 4-6 طلایی • 7-9 زمردی • 10-12 سلطنتی • 13-15 جاودان)
-      </div>
       <div class="rank-grid" style="margin-top:12px">
         ${rs.map(x => `<div class="rank-chip ${x.lv === honorLv ? 'on' : ''}" data-hlv="${x.lv}">
           <div style="display:flex;justify-content:center">${AV.badgeSVG(x, 26)}</div>
@@ -5138,8 +5123,7 @@
     return `<div class="hp-par-board">${left}${right}</div>
       <div class="hp-par-foot">
         <button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
-        <span class="hp-par-hint">Index: ۱ سخت‌ترین — ${D.fa(n || 18)} آسان‌ترین</span>
-      </div>`;
+              </div>`;
   }
   function bindParEditor(box, parVals, idxVals, onDraw){
     if (typeof idxVals === 'function'){ onDraw = idxVals; idxVals = null; }

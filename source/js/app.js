@@ -1991,7 +1991,7 @@
       const nH = hs.length;
       const heights = idxs.map(ix => nH + 1 - ix);
       const cols = idxs.map(ix => (D.scaleIndex ? D.scaleIndex(ix, nH) : '#E74C3C'));
-      Charts.barsV($('#cs-hard'), hs.map(h=>'ح'+D.fa(h)), heights, {
+      Charts.barsV($('#cs-hard'), hs.map(h=>D.fa(h)), heights, {
         color: cols, showVal: true, valFmt: (_, i) => String(idxs[i]),
         fmt: v => D.fa(Math.round(v)), max: nH * 1.18,
       });

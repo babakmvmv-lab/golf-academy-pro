@@ -2224,23 +2224,79 @@
       const nx = events[nextIdx];
       const days = Math.max(0, Math.ceil((nx.d - D.TODAY)/86400000));
       const j = D.jalaliInfo(nx.d);
-      igStory(stCal, 'استوری-تقویم-فصل.png', ({ W, GOLD, GL, FG, MUT, rrect, txt, c }) => {
-        txt('📅 تقویم فصل', W / 2, 446, '700', 28, MUT);
-        txt('رویداد بعدی', W / 2, 560, '500', 24, MUT);
-        txt((TYPE_ICON[nx.type]||'') + ' ' + nx.name, W / 2, 640, '900', 52, GL, 'center', 960);
-        txt(nx.type + '  •  ' + D.fa(j.dd) + ' ' + MONTHS[j.mm-1] + ' ' + D.fa(j.yy), W / 2, 700, '500', 26, FG);
-        rrect(340, 760, 400, 180, 28);
-        c.fillStyle = 'rgba(212,175,55,.10)'; c.strokeStyle = 'rgba(212,175,55,.55)'; c.lineWidth = 2; c.fill(); c.stroke();
-        txt(D.fa(days), W / 2, 860, '900', 72, GL);
-        txt('روز تا شروع', W / 2, 910, '500', 24, MUT);
-        txt(D.fa(events.length) + ' رویداد در فصل ' + D.fa(D.seasonYear), W / 2, 1060, '600', 28, FG);
-        const upcoming = events.filter(e => e.d >= D.TODAY).slice(0, 6);
-        let y = 1140;
-        upcoming.forEach(e => {
+      igStory(stCal, 'استوری-تقویم-فصل.png', ({ W, H, GOLD, GL, FG, MUT, rrect, txt, c }) => {
+        const TCOL = { 'مسابقه':'#d4af37', 'کلاس':'#c39bd3', 'تمرین':'#1EBB8A', 'اردو':'#f0a15c' };
+        const tcol = TCOL[nx.type] || GOLD;
+        txt('تقویم فصل  ' + D.fa(D.seasonYear), W / 2, 432, '700', 26, MUT);
+        /* هیرو رویداد بعدی */
+        rrect(70, 458, 940, 268, 28);
+        const hg = c.createLinearGradient(70, 458, 70, 726);
+        hg.addColorStop(0, 'rgba(212,175,55,.22)'); hg.addColorStop(1, 'rgba(212,175,55,.04)');
+        c.fillStyle = hg; c.strokeStyle = 'rgba(212,175,55,.7)'; c.lineWidth = 2.5; c.fill(); c.stroke();
+        const live = days <= 0;
+        txt(live ? 'شروع امروز' : 'رویداد بعدی', W / 2, 500, '600', 22, MUT);
+        txt((TYPE_ICON[nx.type] || '📌') + '  ' + nx.name, W / 2, 560, '900', 46, GL, 'center', 880);
+        txt(nx.type + '  •  ' + D.fa(j.dd) + ' ' + MONTHS[j.mm - 1] + ' ' + D.fa(j.yy), W / 2, 610, '500', 24, FG);
+        if (live){
+          const rg = c.createRadialGradient(W / 2, 668, 8, W / 2, 668, 90);
+          rg.addColorStop(0, 'rgba(212,175,55,.45)'); rg.addColorStop(1, 'rgba(212,175,55,0)');
+          c.fillStyle = rg; c.fillRect(W / 2 - 90, 620, 180, 100);
+          txt('امروز', W / 2, 690, '900', 56, GL);
+        } else {
+          txt(D.fa(days), W / 2, 682, '900', 64, GL);
+          txt('روز مانده', W / 2, 718, '600', 22, MUT);
+        }
+        /* گرید ماهِ همین رویداد */
+        const mm = j.mm, dim = daysInJMonth(mm);
+        const first = jalMonthStart(mm);
+        const dow = (first.getUTCDay() + 1) % 7;
+        const todayJ = D.jalaliInfo(D.TODAY);
+        const byDay = {};
+        events.forEach(e => {
+          const n = Math.max(1, daysBetween(e.d, e.end));
+          for (let i = 0; i < n; i++){
+            const di = new Date(e.d.getTime() + i * 86400000);
+            const ji = D.jalaliInfo(di);
+            if (ji.yy === D.seasonYear && ji.mm === mm) (byDay[ji.dd] = byDay[ji.dd] || []).push(e);
+          }
+        });
+        txt(MONTHS[mm - 1] + ' ' + D.fa(D.seasonYear), W / 2, 770, '800', 28, FG);
+        const cell = 78, gx = (W - cell * 7) / 2, gy = 800;
+        WD.forEach((w, i) => txt(w, gx + i * cell + cell / 2, gy + 28, '700', 18, i === 6 ? '#e8b083' : MUT));
+        for (let d = 1; d <= dim; d++){
+          const col = (dow + d - 1) % 7, row = Math.floor((dow + d - 1) / 7);
+          const x = gx + col * cell, y = gy + 42 + row * cell;
+          const isToday = todayJ.yy === D.seasonYear && todayJ.mm === mm && todayJ.dd === d;
+          const hits = byDay[d] || [];
+          if (hits.length || isToday){
+            rrect(x + 6, y + 4, cell - 12, cell - 12, 12);
+            c.fillStyle = isToday ? 'rgba(212,175,55,.28)' : 'rgba(255,255,255,.05)';
+            c.strokeStyle = isToday ? 'rgba(212,175,55,.9)' : (hits.length ? (TCOL[hits[0].type] || GOLD) + '99' : 'transparent');
+            c.lineWidth = isToday ? 2.4 : 1.6; c.fill(); if (hits.length || isToday) c.stroke();
+          }
+          txt(D.fa(d), x + cell / 2, y + 36, isToday ? '900' : '600', 22, isToday ? GL : FG);
+          hits.slice(0, 3).forEach((e, k) => {
+            c.beginPath(); c.arc(x + cell / 2 - (hits.length - 1) * 5 + k * 10, y + 52, 3.4, 0, 7);
+            c.fillStyle = TCOL[e.type] || GOLD; c.fill();
+          });
+        }
+        const rows = Math.ceil((dow + dim) / 7);
+        const listY = gy + 42 + rows * cell + 28;
+        txt(D.fa(events.length) + ' رویداد این فصل', W / 2, listY, '600', 22, MUT);
+        const upcoming = events.filter(e => e.end >= D.TODAY).slice(0, 4);
+        upcoming.forEach((e, i) => {
+          const y = listY + 24 + i * 92;
+          if (y > H - 200) return;
           const jj = D.jalaliInfo(e.d);
-          txt((TYPE_ICON[e.type]||'📌') + '  ' + e.name, W / 2, y, '600', 26, FG, 'center', 900);
-          txt(D.fa(jj.dd) + ' ' + MONTHS[jj.mm-1], W / 2, y + 32, '400', 20, MUT);
-          y += 70;
+          const col = TCOL[e.type] || GOLD;
+          rrect(70, y, 940, 80, 18);
+          c.fillStyle = 'rgba(255,255,255,.04)'; c.strokeStyle = col + '55'; c.lineWidth = 1.8; c.fill(); c.stroke();
+          rrect(70, y, 10, 80, 6); c.fillStyle = col; c.fill();
+          rrect(100, y + 12, 70, 56, 12); c.fillStyle = col + '22'; c.fill();
+          txt(D.fa(jj.dd), 135, y + 40, '900', 24, col);
+          txt(MONTHS[jj.mm - 1], 135, y + 60, '500', 13, MUT);
+          txt((TYPE_ICON[e.type] || '') + '  ' + e.name, 580, y + 38, '800', 26, FG, 'center', 700);
+          txt(e.type, 580, y + 66, '500', 18, col, 'center', 700);
         });
       });
     });

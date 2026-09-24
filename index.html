@@ -18314,78 +18314,71 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       const j = D.jalaliInfo(nx.d);
       igStory(stCal, 'استوری-تقویم-فصل.png', ({ W, H, GOLD, GL, FG, MUT, rrect, txt, c }) => {
         const TCOL = { 'مسابقه':'#d4af37', 'کلاس':'#c39bd3', 'تمرین':'#1EBB8A', 'اردو':'#f0a15c' };
-        const tcol = TCOL[nx.type] || GOLD;
-        txt('تقویم فصل  ' + D.fa(D.seasonYear), W / 2, 432, '700', 26, MUT);
-        /* هیرو رویداد بعدی */
-        rrect(70, 458, 940, 268, 28);
-        const hg = c.createLinearGradient(70, 458, 70, 726);
-        hg.addColorStop(0, 'rgba(212,175,55,.22)'); hg.addColorStop(1, 'rgba(212,175,55,.04)');
-        c.fillStyle = hg; c.strokeStyle = 'rgba(212,175,55,.7)'; c.lineWidth = 2.5; c.fill(); c.stroke();
-        const live = days <= 0;
-        txt(live ? 'شروع امروز' : 'رویداد بعدی', W / 2, 500, '600', 22, MUT);
-        txt((TYPE_ICON[nx.type] || '📌') + '  ' + nx.name, W / 2, 560, '900', 46, GL, 'center', 880);
-        txt(nx.type + '  •  ' + D.fa(j.dd) + ' ' + MONTHS[j.mm - 1] + ' ' + D.fa(j.yy), W / 2, 610, '500', 24, FG);
-        if (live){
-          const rg = c.createRadialGradient(W / 2, 668, 8, W / 2, 668, 90);
-          rg.addColorStop(0, 'rgba(212,175,55,.45)'); rg.addColorStop(1, 'rgba(212,175,55,0)');
-          c.fillStyle = rg; c.fillRect(W / 2 - 90, 620, 180, 100);
-          txt('امروز', W / 2, 690, '900', 56, GL);
-        } else {
-          txt(D.fa(days), W / 2, 682, '900', 64, GL);
-          txt('روز مانده', W / 2, 718, '600', 22, MUT);
-        }
-        /* گرید ماهِ همین رویداد */
-        const mm = j.mm, dim = daysInJMonth(mm);
+        const near = events.filter(e => e.end >= D.TODAY).slice(0, 2);
+        txt('تقویم فصل  ' + D.fa(D.seasonYear), W / 2, 428, '700', 24, MUT);
+        /* دو رویداد نزدیک — کنار هم، تقویم زیرشان */
+        const cardY = 448, cardH = 248, gap = 22, cardW = (940 - gap) / 2;
+        near.forEach((e, i) => {
+          const x = i === 0 ? 70 + cardW + gap : 70;
+          const jj = D.jalaliInfo(e.d);
+          const col = TCOL[e.type] || GOLD;
+          const left = Math.max(0, Math.ceil((e.d - D.TODAY) / 86400000));
+          const g = c.createLinearGradient(x, cardY, x, cardY + cardH);
+          g.addColorStop(0, col + '33'); g.addColorStop(1, 'rgba(10,14,20,.55)');
+          rrect(x, cardY, cardW, cardH, 24);
+          c.fillStyle = g; c.strokeStyle = col + 'aa'; c.lineWidth = i === 0 ? 2.6 : 1.8; c.fill(); c.stroke();
+          rrect(x + 18, cardY + 16, cardW - 36, 36, 12);
+          c.fillStyle = col + '24'; c.fill();
+          txt((TYPE_ICON[e.type] || '') + '  ' + e.type, x + cardW / 2, cardY + 42, '700', 18, col);
+          txt(e.name, x + cardW / 2, cardY + 96, '900', 28, FG, 'center', cardW - 28);
+          txt(D.fa(jj.dd) + '  ' + MONTHS[jj.mm - 1], x + cardW / 2, cardY + 140, '600', 22, MUT);
+          if (left <= 0){
+            txt('امروز', x + cardW / 2, cardY + 204, '900', 40, GL);
+          } else {
+            txt(D.fa(left), x + cardW / 2, cardY + 196, '900', 42, GL);
+            txt('روز مانده', x + cardW / 2, cardY + 226, '500', 16, MUT);
+          }
+        });
+        /* گرید ماهِ نزدیک‌ترین رویداد */
+        const mm = near[0] ? D.jalaliInfo(near[0].d).mm : D.jalaliInfo(D.TODAY).mm;
+        const dim = daysInJMonth(mm);
         const first = jalMonthStart(mm);
         const dow = (first.getUTCDay() + 1) % 7;
         const todayJ = D.jalaliInfo(D.TODAY);
+        const nearIds = new Set(near.map(e => e.id));
         const byDay = {};
         events.forEach(e => {
           const n = Math.max(1, daysBetween(e.d, e.end));
-          for (let i = 0; i < n; i++){
-            const di = new Date(e.d.getTime() + i * 86400000);
+          for (let k = 0; k < n; k++){
+            const di = new Date(e.d.getTime() + k * 86400000);
             const ji = D.jalaliInfo(di);
             if (ji.yy === D.seasonYear && ji.mm === mm) (byDay[ji.dd] = byDay[ji.dd] || []).push(e);
           }
         });
-        txt(MONTHS[mm - 1] + ' ' + D.fa(D.seasonYear), W / 2, 770, '800', 28, FG);
-        const cell = 78, gx = (W - cell * 7) / 2, gy = 800;
-        WD.forEach((w, i) => txt(w, gx + i * cell + cell / 2, gy + 28, '700', 18, i === 6 ? '#e8b083' : MUT));
+        const cell = 92, gx = (W - cell * 7) / 2;
+        const rowsN = Math.ceil((dow + dim) / 7);
+        const panelH = 86 + rowsN * cell + 28;
+        const gy = 728;
+        rrect(48, gy, W - 96, panelH, 28);
+        c.fillStyle = 'rgba(255,255,255,.035)'; c.strokeStyle = 'rgba(212,175,55,.28)'; c.lineWidth = 1.6; c.fill(); c.stroke();
+        txt(MONTHS[mm - 1] + '  ' + D.fa(D.seasonYear), W / 2, gy + 42, '800', 28, GL);
+        WD.forEach((w, i) => txt(w, gx + i * cell + cell / 2, gy + 78, '700', 18, i === 6 ? '#e8b083' : MUT));
         for (let d = 1; d <= dim; d++){
           const col = (dow + d - 1) % 7, row = Math.floor((dow + d - 1) / 7);
-          const x = gx + col * cell, y = gy + 42 + row * cell;
+          const x = gx + col * cell, y = gy + 92 + row * cell;
           const isToday = todayJ.yy === D.seasonYear && todayJ.mm === mm && todayJ.dd === d;
           const hits = byDay[d] || [];
-          if (hits.length || isToday){
-            rrect(x + 6, y + 4, cell - 12, cell - 12, 12);
-            c.fillStyle = isToday ? 'rgba(212,175,55,.28)' : 'rgba(255,255,255,.05)';
-            c.strokeStyle = isToday ? 'rgba(212,175,55,.9)' : (hits.length ? (TCOL[hits[0].type] || GOLD) + '99' : 'transparent');
-            c.lineWidth = isToday ? 2.4 : 1.6; c.fill(); if (hits.length || isToday) c.stroke();
-          }
-          txt(D.fa(d), x + cell / 2, y + 36, isToday ? '900' : '600', 22, isToday ? GL : FG);
+          const featured = hits.some(e => nearIds.has(e.id));
+          rrect(x + 7, y + 4, cell - 14, cell - 12, 14);
+          c.fillStyle = featured ? 'rgba(212,175,55,.22)' : isToday ? 'rgba(212,175,55,.12)' : 'rgba(255,255,255,.03)';
+          c.strokeStyle = featured ? 'rgba(212,175,55,.85)' : isToday ? 'rgba(212,175,55,.45)' : 'rgba(255,255,255,.06)';
+          c.lineWidth = featured ? 2.2 : 1; c.fill(); c.stroke();
+          txt(D.fa(d), x + cell / 2, y + 40, featured || isToday ? '900' : '600', 24, featured ? GL : isToday ? GOLD : FG);
           hits.slice(0, 3).forEach((e, k) => {
-            c.beginPath(); c.arc(x + cell / 2 - (hits.length - 1) * 5 + k * 10, y + 52, 3.4, 0, 7);
+            c.beginPath(); c.arc(x + cell / 2 - (Math.min(hits.length, 3) - 1) * 6 + k * 12, y + 62, featured ? 4.4 : 3.2, 0, 7);
             c.fillStyle = TCOL[e.type] || GOLD; c.fill();
           });
         }
-        const rows = Math.ceil((dow + dim) / 7);
-        const listY = gy + 42 + rows * cell + 28;
-        txt(D.fa(events.length) + ' رویداد این فصل', W / 2, listY, '600', 22, MUT);
-        const upcoming = events.filter(e => e.end >= D.TODAY).slice(0, 4);
-        upcoming.forEach((e, i) => {
-          const y = listY + 24 + i * 92;
-          if (y > H - 200) return;
-          const jj = D.jalaliInfo(e.d);
-          const col = TCOL[e.type] || GOLD;
-          rrect(70, y, 940, 80, 18);
-          c.fillStyle = 'rgba(255,255,255,.04)'; c.strokeStyle = col + '55'; c.lineWidth = 1.8; c.fill(); c.stroke();
-          rrect(70, y, 10, 80, 6); c.fillStyle = col; c.fill();
-          rrect(100, y + 12, 70, 56, 12); c.fillStyle = col + '22'; c.fill();
-          txt(D.fa(jj.dd), 135, y + 40, '900', 24, col);
-          txt(MONTHS[jj.mm - 1], 135, y + 60, '500', 13, MUT);
-          txt((TYPE_ICON[e.type] || '') + '  ' + e.name, 580, y + 38, '800', 26, FG, 'center', 700);
-          txt(e.type, 580, y + 66, '500', 18, col, 'center', 700);
-        });
       });
     });
 

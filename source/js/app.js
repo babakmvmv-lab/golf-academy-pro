@@ -567,6 +567,7 @@
               const cx = x + cw / 2;
               const mc = medalCol[i];
               const ring = r.colorHex || mc[1];
+              const ar = 58, ay = by;
               /* سکو */
               const g = c.createLinearGradient(x, by, x, floor);
               if (r.rank === 1){ g.addColorStop(0, 'rgba(212,175,55,.42)'); g.addColorStop(1, 'rgba(11,15,20,.72)'); }
@@ -576,36 +577,45 @@
               c.strokeStyle = r.rank === 1 ? 'rgba(212,175,55,.75)' : r.rank === 2 ? 'rgba(192,192,192,.5)' : 'rgba(205,127,50,.5)';
               c.lineWidth = r.rank === 1 ? 3 : 2;
               rrect(x, by, cw, bh, 18); c.fill(); c.stroke();
-              txt(r.name, cx, by + 56, '800', 30, FG, 'center', cw - 24);
-              txt(D.faNum(r.pts, 0) + ' امتیاز', cx, by + 104, '800', 26, GL);
-              const pill = D.RANK_TEXT[r.color] || r.color || '';
-              const pc = (D.RANK_DEF.find(d => d[0] === r.color) || [])[3] || GOLD;
-              const pw = 132, ph = 40, px = cx - pw / 2, py = by + 128;
-              c.fillStyle = pc + '22'; c.strokeStyle = pc + '88'; c.lineWidth = 2;
-              rrect(px, py, pw, ph, 12); c.fill(); c.stroke();
-              txt(pill, cx, py + 28, '800', 18, pc);
               /* عکس روی لبهٔ سکو */
-              const ar = 62, ay = by - 8;
-              c.beginPath(); c.arc(cx, ay, ar + 5, 0, 7); c.fillStyle = '#0b0f14'; c.fill();
+              c.beginPath(); c.arc(cx, ay, ar + 6, 0, 7); c.fillStyle = '#0b0f14'; c.fill();
               if (item.im){
                 c.save(); c.beginPath(); c.arc(cx, ay, ar, 0, 7); c.clip();
                 try { c.drawImage(item.im, cx - ar, ay - ar, ar * 2, ar * 2); } catch(e){}
                 c.restore();
               }
               c.beginPath(); c.arc(cx, ay, ar + 3, 0, 7); c.strokeStyle = ring; c.lineWidth = 5; c.stroke();
-              /* مدال شماره‌دار مثل صفحه */
-              const my = ay - ar - 52;
+              /* نام و امتیاز وسط ارتفاع باقی‌ماندهٔ سکو (زیر عکس) */
+              const tTop = ay + ar + 18, tBot = floor - 22, mid = (tTop + tBot) / 2;
+              txt(r.name, cx, mid - 28, '800', 30, FG, 'center', cw - 28);
+              txt(D.faNum(r.pts, 0) + ' امتیاز', cx, mid + 16, '800', 26, GL);
+              const pill = D.RANK_TEXT[r.color] || r.color || '';
+              const pc = (D.RANK_DEF.find(d => d[0] === r.color) || [])[3] || GOLD;
+              const pw = 136, ph = 40, px = cx - pw / 2, py = mid + 36;
+              c.fillStyle = pc + '22'; c.strokeStyle = pc + '88'; c.lineWidth = 2;
+              rrect(px, py, pw, ph, 14); c.fill(); c.stroke();
+              txt(pill, cx, py + 28, '800', 18, pc);
+              /* مدال مدرن: روبان + حلقه + درخشش */
+              const my = ay - ar - 48;
               c.save();
-              c.fillStyle = mc[1];
-              c.beginPath(); c.moveTo(cx - 10, my + 18); c.lineTo(cx - 22, my - 10); c.lineTo(cx - 4, my + 4); c.closePath(); c.fill();
-              c.beginPath(); c.moveTo(cx + 10, my + 18); c.lineTo(cx + 22, my - 10); c.lineTo(cx + 4, my + 4); c.closePath(); c.fill();
-              const mg = c.createRadialGradient(cx - 6, my - 6, 4, cx, my, 28);
-              mg.addColorStop(0, mc[0]); mg.addColorStop(.55, mc[1]); mg.addColorStop(1, mc[2]);
+              c.shadowColor = mc[1]; c.shadowBlur = 18;
+              c.fillStyle = r.rank === 1 ? '#c9a227' : r.rank === 2 ? '#8a949e' : '#a45c28';
+              c.beginPath(); c.moveTo(cx - 8, my + 8); c.lineTo(cx - 28, my - 36); c.lineTo(cx - 2, my - 4); c.closePath(); c.fill();
+              c.beginPath(); c.moveTo(cx + 8, my + 8); c.lineTo(cx + 28, my - 36); c.lineTo(cx + 2, my - 4); c.closePath(); c.fill();
+              c.fillStyle = r.rank === 1 ? '#e8d48a' : r.rank === 2 ? '#dfe6ee' : '#e8b07a';
+              c.beginPath(); c.moveTo(cx - 6, my + 6); c.lineTo(cx - 18, my - 28); c.lineTo(cx, my - 2); c.closePath(); c.fill();
+              c.beginPath(); c.moveTo(cx + 6, my + 6); c.lineTo(cx + 18, my - 28); c.lineTo(cx, my - 2); c.closePath(); c.fill();
+              c.shadowBlur = 22;
+              const mg = c.createRadialGradient(cx - 8, my - 10, 3, cx, my, 34);
+              mg.addColorStop(0, '#fff6d8'); mg.addColorStop(.22, mc[0]); mg.addColorStop(.62, mc[1]); mg.addColorStop(1, mc[2]);
               c.fillStyle = mg;
-              c.beginPath(); c.arc(cx, my, 26, 0, 7); c.fill();
-              c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.35)'; c.stroke();
+              c.beginPath(); c.arc(cx, my, 32, 0, 7); c.fill();
+              c.shadowBlur = 0;
+              c.lineWidth = 4; c.strokeStyle = 'rgba(255,255,255,.55)'; c.stroke();
+              c.beginPath(); c.arc(cx, my, 24, 0, 7); c.strokeStyle = mc[2]; c.lineWidth = 2.2; c.stroke();
+              c.beginPath(); c.arc(cx, my, 24, -0.9, 0.35); c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = 2; c.stroke();
               c.restore();
-              txt(String(r.rank), cx, my + 10, '900', 26, '#2a1a08');
+              txt(String(r.rank), cx, my + 11, '900', 28, r.rank === 2 ? '#243040' : '#2a1408');
             });
           });
         });

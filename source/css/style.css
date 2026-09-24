@@ -808,3 +808,40 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   color:var(--gold-l);font-weight:900;font-size:16px;
   font-variant-numeric:tabular-nums;direction:ltr;text-align:center;
 }
+
+/* پار + Index هر میدان — گرید منظم موبایل/دسکتاپ */
+.hp-par-wrap{margin-top:14px}
+.hp-par-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+@media (min-width:720px){.hp-par-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media (min-width:1100px){.hp-par-grid{grid-template-columns:repeat(9,minmax(0,1fr))}}
+.hp-par{
+  position:relative;
+  text-align:center;
+  background:rgba(255,255,255,.035);
+  border:1px solid var(--line-soft);
+  border-radius:14px;
+  padding:12px 8px 10px;
+}
+.hp-par-n{font-size:11px;color:var(--muted);font-weight:800;margin-bottom:8px}
+.hp-par-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.hp-par-row label{
+  display:flex;flex-direction:column;gap:3px;
+  font-size:9px;color:var(--dim);font-weight:700;letter-spacing:.2px;
+}
+.hp-par-row label:last-child{color:var(--gold-l)}
+.hp-par-row input{
+  width:100%;text-align:center;direction:ltr;
+  padding:8px 4px;font-weight:800;font-size:14px;
+}
+.hp-par .pe-del{
+  position:absolute;top:4px;left:4px;
+  width:22px;height:22px;padding:0;border-radius:8px;
+  font-size:13px;line-height:1;opacity:.65;
+}
+.hp-par .pe-del:hover{opacity:1}
+#pe-add{margin-top:12px}
+.hp-par-hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}

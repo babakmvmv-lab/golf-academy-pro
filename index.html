@@ -839,6 +839,43 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   color:var(--gold-l);font-weight:900;font-size:16px;
   font-variant-numeric:tabular-nums;direction:ltr;text-align:center;
 }
+
+/* پار + Index هر میدان — گرید منظم موبایل/دسکتاپ */
+.hp-par-wrap{margin-top:14px}
+.hp-par-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+@media (min-width:720px){.hp-par-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media (min-width:1100px){.hp-par-grid{grid-template-columns:repeat(9,minmax(0,1fr))}}
+.hp-par{
+  position:relative;
+  text-align:center;
+  background:rgba(255,255,255,.035);
+  border:1px solid var(--line-soft);
+  border-radius:14px;
+  padding:12px 8px 10px;
+}
+.hp-par-n{font-size:11px;color:var(--muted);font-weight:800;margin-bottom:8px}
+.hp-par-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.hp-par-row label{
+  display:flex;flex-direction:column;gap:3px;
+  font-size:9px;color:var(--dim);font-weight:700;letter-spacing:.2px;
+}
+.hp-par-row label:last-child{color:var(--gold-l)}
+.hp-par-row input{
+  width:100%;text-align:center;direction:ltr;
+  padding:8px 4px;font-weight:800;font-size:14px;
+}
+.hp-par .pe-del{
+  position:absolute;top:4px;left:4px;
+  width:22px;height:22px;padding:0;border-radius:8px;
+  font-size:13px;line-height:1;opacity:.65;
+}
+.hp-par .pe-del:hover{opacity:1}
+#pe-add{margin-top:12px}
+.hp-par-hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
 </style>
     <style>
 /* ═══════════════ پنل مدیریت جامع + تنظیمات نمایش ═══════════════ */
@@ -10833,7 +10870,7 @@ window.addEventListener('ga:brand-changed', function(){
         <div id="mc-kml-rep" style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.7">نام تی: <b dir="ltr">T.12 -260Y -Par4 -W</b> خانم‌ها · <b dir="ltr">T.12 -260Y -Par4 -M</b> آقایان · <b dir="ltr">Hole 12</b> · <b dir="ltr">fairway 12</b>. بدون پسوند جنسیت = تی خانم.</div>
         <div id="mc-kml-map" style="display:none;height:280px;margin-top:10px;border-radius:14px;overflow:hidden;border:1px solid var(--line-soft)"></div>
       </div>
-      <div id="mc-pars" style="margin-top:14px;display:flex;gap:7px;flex-wrap:wrap"></div>
+      <div id="mc-pars" class="hp-par-wrap"></div>
       <button class="btn sm" id="mc-add" style="margin-top:14px">+ ثبت زمین</button>
     </div>
     <div class="glass">
@@ -10971,7 +11008,7 @@ window.addEventListener('ga:brand-changed', function(){
       </div>
       <div id="ec-kml-rep" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
       <div style="margin-top:12px;font-size:11px;color:var(--muted)">پار و Index هر میدان — Index: ۱ سخت‌ترین</div>
-      <div style="margin-top:8px;display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end" id="ec-pars"></div>
+      <div id="ec-pars" class="hp-par-wrap"></div>
       <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
         <button class="btn sm ghost" id="ec-cancel">انصراف</button>
         <button class="btn sm" id="ec-save">💾 ذخیره</button>
@@ -14061,15 +14098,17 @@ window.addEventListener('ga:brand-changed', function(){
   }
   function parEditorHtml(pars, idxs){
     const n = (pars || []).length;
-    return (pars || []).map((p,i) => `<div class="hp-par" data-i="${i}" style="text-align:center">
-      <div style="font-size:10px;color:var(--muted)">${esc(holeName(i+1))}</div>
-      <div style="font-size:9px;color:var(--dim);margin:2px 0 1px">پار</div>
-      <input class="input pe-par" type="number" min="3" max="6" value="${p}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
-      <div style="font-size:9px;color:var(--gold-l);margin:5px 0 1px;letter-spacing:.4px">Index</div>
-      <input class="input pe-idx" type="number" min="1" max="${n}" value="${(idxs && idxs[i]) || (i+1)}" data-i="${i}" title="۱ سخت‌ترین — ${n} آسان‌ترین" style="width:58px;text-align:center;direction:ltr">
-      <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" style="padding:2px 7px;font-size:11px;margin-top:4px">✕</button>
-    </div>`).join('') + `<button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
-    <div style="width:100%;font-size:11px;color:var(--muted);margin-top:4px">Index: ۱ سخت‌ترین — ${D.fa(n||18)} آسان‌ترین</div>`;
+    const cards = (pars || []).map((p,i) => `<div class="hp-par" data-i="${i}">
+      <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" aria-label="حذف">×</button>
+      <div class="hp-par-n">${esc(holeName(i+1))}</div>
+      <div class="hp-par-row">
+        <label>پار<input class="input pe-par" type="number" min="3" max="6" value="${p}" data-i="${i}" inputmode="numeric"></label>
+        <label>Index<input class="input pe-idx" type="number" min="1" max="${n}" value="${(idxs && idxs[i]) || (i+1)}" data-i="${i}" inputmode="numeric" title="۱ سخت‌ترین — ${n} آسان‌ترین"></label>
+      </div>
+    </div>`).join('');
+    return `<div class="hp-par-grid">${cards}</div>
+      <button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
+      <div class="hp-par-hint">Index: ۱ سخت‌ترین — ${D.fa(n || 18)} آسان‌ترین</div>`;
   }
   function bindParEditor(box, parVals, idxVals, onDraw){
     if (typeof idxVals === 'function'){ onDraw = idxVals; idxVals = null; }
@@ -17998,7 +18037,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       return;
     }
     const crs = S.courses.find(c => c[0] === courseSel) || S.courses[0];
-    const pars = D.parsOf(crs[0]);
+    if (!crs){
+      v.innerHTML = `<div class="glass" style="padding:28px;text-align:center;color:var(--muted)">زمینی ثبت نشده است.</div>`;
+      return;
+    }
+    const pars = D.parsOf(crs[0]) || [];
     const holes = crs[3];
     const stats = A.COURSE_STATS[crs[0]] || {};
     const pc = A.PLAYER_COURSE[coursePlayerSel] || {};
@@ -18096,7 +18139,10 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       <div class="glass" style="grid-column:span 2">
         <div class="card-head"><span class="ic">🌋</span><h3>سختی حفرهها در این زمین</h3><span class="tag">${esc(crs[1])}</span></div>
         <div class="chart-box tall"><canvas id="cs-hard"></canvas></div>
-        <div style="margin-top:6px;font-size:11.5px;color:var(--muted)">قرمز = میانگین ضربات نسبت به پار در همه مسابقات این زمین • آبی = پار حفره</div>
+        <div class="scale-legend" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted)">
+          ${(D.SCALE || []).map((c,i) => `<span style="display:inline-flex;align-items:center;gap:4px"><i style="width:10px;height:10px;border-radius:3px;background:${c}"></i>${i===0?'آسان':i===5?'سخت':''}</span>`).join('')}
+          <span style="margin-right:auto">Index ۱ سخت‌ترین — ${D.fa(holes)} آسان‌ترین</span>
+        </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:18px">
         <div class="glass">
@@ -18114,6 +18160,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         </div>
       </div>
     </div>`;
+    try {
     const avgAll = rounds ? (() => {
       let s = 0, n = 0;
       S.scorecards.forEach(c => {
@@ -18147,8 +18194,9 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
         color:'#9B59B6', showVal:true, valFmt:v=>(v>0?'+':'')+v.toFixed(1),
       });
     }, 80);
-    $('#cs-sel').addEventListener('change', e => { courseSel = +e.target.value; go('course'); });
-    $('#cs-pl').addEventListener('change', e => { coursePlayerSel = +e.target.value; go('course'); });
+    const csSel = $('#cs-sel'), csPl = $('#cs-pl');
+    if (csSel) csSel.addEventListener('change', e => { courseSel = +e.target.value; go('course'); });
+    if (csPl) csPl.addEventListener('change', e => { coursePlayerSel = +e.target.value; go('course'); });
     document.querySelectorAll('#cs-gender [data-gender]').forEach(b => {
       b.addEventListener('click', () => { courseTeeGender = b.getAttribute('data-gender') || 'F'; go('course'); });
     });
@@ -18203,6 +18251,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.90494, lng:49.31398 };
       EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], pid: coursePlayerSel });
     })();
+    } catch (err) { console.error('course extras', err); }
   }
 
   /* ═══════════ صفحه: رکوردها ═══════════ */

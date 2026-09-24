@@ -1842,7 +1842,7 @@
         <div id="mc-kml-rep" style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.7">نام تی: <b dir="ltr">T.12 -260Y -Par4 -W</b> خانم‌ها · <b dir="ltr">T.12 -260Y -Par4 -M</b> آقایان · <b dir="ltr">Hole 12</b> · <b dir="ltr">fairway 12</b>. بدون پسوند جنسیت = تی خانم.</div>
         <div id="mc-kml-map" style="display:none;height:280px;margin-top:10px;border-radius:14px;overflow:hidden;border:1px solid var(--line-soft)"></div>
       </div>
-      <div id="mc-pars" style="margin-top:14px;display:flex;gap:7px;flex-wrap:wrap"></div>
+      <div id="mc-pars" class="hp-par-wrap"></div>
       <button class="btn sm" id="mc-add" style="margin-top:14px">+ ثبت زمین</button>
     </div>
     <div class="glass">
@@ -1980,7 +1980,7 @@
       </div>
       <div id="ec-kml-rep" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
       <div style="margin-top:12px;font-size:11px;color:var(--muted)">پار و Index هر میدان — Index: ۱ سخت‌ترین</div>
-      <div style="margin-top:8px;display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end" id="ec-pars"></div>
+      <div id="ec-pars" class="hp-par-wrap"></div>
       <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
         <button class="btn sm ghost" id="ec-cancel">انصراف</button>
         <button class="btn sm" id="ec-save">💾 ذخیره</button>
@@ -5070,15 +5070,17 @@
   }
   function parEditorHtml(pars, idxs){
     const n = (pars || []).length;
-    return (pars || []).map((p,i) => `<div class="hp-par" data-i="${i}" style="text-align:center">
-      <div style="font-size:10px;color:var(--muted)">${esc(holeName(i+1))}</div>
-      <div style="font-size:9px;color:var(--dim);margin:2px 0 1px">پار</div>
-      <input class="input pe-par" type="number" min="3" max="6" value="${p}" data-i="${i}" style="width:58px;text-align:center;direction:ltr">
-      <div style="font-size:9px;color:var(--gold-l);margin:5px 0 1px;letter-spacing:.4px">Index</div>
-      <input class="input pe-idx" type="number" min="1" max="${n}" value="${(idxs && idxs[i]) || (i+1)}" data-i="${i}" title="۱ سخت‌ترین — ${n} آسان‌ترین" style="width:58px;text-align:center;direction:ltr">
-      <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" style="padding:2px 7px;font-size:11px;margin-top:4px">✕</button>
-    </div>`).join('') + `<button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
-    <div style="width:100%;font-size:11px;color:var(--muted);margin-top:4px">Index: ۱ سخت‌ترین — ${D.fa(n||18)} آسان‌ترین</div>`;
+    const cards = (pars || []).map((p,i) => `<div class="hp-par" data-i="${i}">
+      <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" aria-label="حذف">×</button>
+      <div class="hp-par-n">${esc(holeName(i+1))}</div>
+      <div class="hp-par-row">
+        <label>پار<input class="input pe-par" type="number" min="3" max="6" value="${p}" data-i="${i}" inputmode="numeric"></label>
+        <label>Index<input class="input pe-idx" type="number" min="1" max="${n}" value="${(idxs && idxs[i]) || (i+1)}" data-i="${i}" inputmode="numeric" title="۱ سخت‌ترین — ${n} آسان‌ترین"></label>
+      </div>
+    </div>`).join('');
+    return `<div class="hp-par-grid">${cards}</div>
+      <button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
+      <div class="hp-par-hint">Index: ۱ سخت‌ترین — ${D.fa(n || 18)} آسان‌ترین</div>`;
   }
   function bindParEditor(box, parVals, idxVals, onDraw){
     if (typeof idxVals === 'function'){ onDraw = idxVals; idxVals = null; }

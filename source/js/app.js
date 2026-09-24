@@ -1835,7 +1835,11 @@
       return;
     }
     const crs = S.courses.find(c => c[0] === courseSel) || S.courses[0];
-    const pars = D.parsOf(crs[0]);
+    if (!crs){
+      v.innerHTML = `<div class="glass" style="padding:28px;text-align:center;color:var(--muted)">زمینی ثبت نشده است.</div>`;
+      return;
+    }
+    const pars = D.parsOf(crs[0]) || [];
     const holes = crs[3];
     const stats = A.COURSE_STATS[crs[0]] || {};
     const pc = A.PLAYER_COURSE[coursePlayerSel] || {};
@@ -1933,7 +1937,10 @@
       <div class="glass" style="grid-column:span 2">
         <div class="card-head"><span class="ic">🌋</span><h3>سختی حفرهها در این زمین</h3><span class="tag">${esc(crs[1])}</span></div>
         <div class="chart-box tall"><canvas id="cs-hard"></canvas></div>
-        <div style="margin-top:6px;font-size:11.5px;color:var(--muted)">قرمز = میانگین ضربات نسبت به پار در همه مسابقات این زمین • آبی = پار حفره</div>
+        <div class="scale-legend" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted)">
+          ${(D.SCALE || []).map((c,i) => `<span style="display:inline-flex;align-items:center;gap:4px"><i style="width:10px;height:10px;border-radius:3px;background:${c}"></i>${i===0?'آسان':i===5?'سخت':''}</span>`).join('')}
+          <span style="margin-right:auto">Index ۱ سخت‌ترین — ${D.fa(holes)} آسان‌ترین</span>
+        </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:18px">
         <div class="glass">
@@ -1951,6 +1958,7 @@
         </div>
       </div>
     </div>`;
+    try {
     const avgAll = rounds ? (() => {
       let s = 0, n = 0;
       S.scorecards.forEach(c => {
@@ -1984,8 +1992,9 @@
         color:'#9B59B6', showVal:true, valFmt:v=>(v>0?'+':'')+v.toFixed(1),
       });
     }, 80);
-    $('#cs-sel').addEventListener('change', e => { courseSel = +e.target.value; go('course'); });
-    $('#cs-pl').addEventListener('change', e => { coursePlayerSel = +e.target.value; go('course'); });
+    const csSel = $('#cs-sel'), csPl = $('#cs-pl');
+    if (csSel) csSel.addEventListener('change', e => { courseSel = +e.target.value; go('course'); });
+    if (csPl) csPl.addEventListener('change', e => { coursePlayerSel = +e.target.value; go('course'); });
     document.querySelectorAll('#cs-gender [data-gender]').forEach(b => {
       b.addEventListener('click', () => { courseTeeGender = b.getAttribute('data-gender') || 'F'; go('course'); });
     });
@@ -2040,6 +2049,7 @@
       const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.90494, lng:49.31398 };
       EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], pid: coursePlayerSel });
     })();
+    } catch (err) { console.error('course extras', err); }
   }
 
   /* ═══════════ صفحه: رکوردها ═══════════ */

@@ -6,3 +6,77 @@ html.puttclub-shop-locked,html.puttclub-shop-locked body{overflow:hidden!importa
 html.puttclub-shop-locked body{position:fixed!important;inset:0 auto auto 0;width:100%!important}
 .puttclub-shop-gate{position:fixed!important;inset:0!important;z-index:200!important;display:flex!important;align-items:center;justify-content:center;overflow:hidden!important;padding:0!important;background:#050d09!important;touch-action:none!important;overscroll-behavior:none!important;-webkit-user-select:none;user-select:none}
 .puttclub-shop-gate>*:first-child,.puttclub-shop-gate>*:nth-child(2){background:#050d09!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+
+/* Public viewport containment — 2026-09-25. */
+/* Contain the public layout without blocking vertical scroll or pinch zoom. */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+#public-site {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+#public-site main {
+  min-width: 0;
+  max-width: 100%;
+}
+@supports (overflow: clip) {
+  html,
+  body,
+  #public-site {
+    overflow-x: clip;
+  }
+}
+/* Keep the native overlay scrollbar on touch screens. The desktop 10px
+   scrollbar consumes visual-viewport width in mobile WebKit. */
+@media (hover: none) and (pointer: coarse) {
+  ::-webkit-scrollbar {
+    width: auto;
+    height: auto;
+  }
+}
+/* start:50% means right:50% in RTL, so a negative X translation was
+   pushing this academy badge outside the viewport. Use physical centering. */
+#public-site #academy [class~="start-1/2"][class~="-translate-x-1/2"] {
+  inset-inline-start: auto;
+  left: 50%;
+  max-width: calc(100% - 2rem);
+  text-align: center;
+}
+/* The hero facts must fit even a 320px phone; keep all three facts and
+   their gold dividers, instead of letting the old nested gaps clip text. */
+@media (max-width: 639px) {
+  #public-site main > .min-h-svh .mt-16.flex {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    max-width: 26rem;
+    gap: 0;
+  }
+  #public-site main > .min-h-svh .mt-16.flex > .flex {
+    position: relative;
+    min-width: 0;
+    justify-content: center;
+    gap: 0;
+    padding-inline: 0.5rem;
+  }
+  #public-site main > .min-h-svh .mt-16.flex > .flex > .w-px {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  #public-site main > .min-h-svh .mt-16.flex .text-center {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  #public-site main > .min-h-svh .mt-16.flex .text-xl {
+    font-size: clamp(1rem, 4.7vw, 1.25rem);
+  }
+}

@@ -14,10 +14,27 @@ html.phone-mode, html.phone-mode body{
 }
 html.phone-mode body.nav-open{overflow:hidden}
 
-/* ورودی‌ها حداقل ۱۶px تا iOS زوم نکند */
+/* ورودی‌ها حداقل ۱۶px تا iOS زوم نکند — سوییچ/چک‌باکس قفل از این قانون مستثناست */
 html.phone-mode input,
 html.phone-mode select,
 html.phone-mode textarea{font-size:16px !important; min-height:var(--tap)}
+html.phone-mode input[type="checkbox"],
+html.phone-mode input[type="radio"],
+html.phone-mode input[type="hidden"],
+html.phone-mode .switch input{
+  min-height:0 !important;
+  font-size:inherit !important;
+}
+html.phone-mode .switch{
+  width:52px;height:32px;flex-shrink:0;
+}
+html.phone-mode .switch input{
+  position:absolute;inset:0;width:100% !important;height:100% !important;
+  margin:0;opacity:0;z-index:2;cursor:pointer;
+}
+html.phone-mode .switch .trk::after{width:24px;height:24px;top:3px;right:3px}
+html.phone-mode .switch input:checked + .trk::after{transform:translateX(-22px)}
+html.phone-mode .set-row{min-height:var(--tap);padding:12px}
 html.phone-mode .btn{
   min-height:var(--tap);
   padding:13px 16px;

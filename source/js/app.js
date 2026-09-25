@@ -325,7 +325,11 @@
       return;
     }
     const settings = MGMT.getSettings();
-    const pages = ['memberzone'].concat(MEMBER_PAGE_ORDER.filter(pg => settings[MEM_PAGE_KEY[pg]]));
+    const pages = ['memberzone'].concat(MEMBER_PAGE_ORDER.filter(pg => {
+      if (!settings[MEM_PAGE_KEY[pg]]) return false;
+      if (window.GA_SUB && rec && rec.user && !GA_SUB.canPage(rec.user, pg)) return false;
+      return true;
+    }));
     nav.innerHTML = pages.map(pg => {
       const p = PAGES[pg];
       const active = pg === page;
@@ -3014,7 +3018,11 @@
   function memHome(body, o){
     const s = MGMT.getSettings();
     const enabled = [];
-    Object.keys(MEM_PAGE_KEY).forEach(pg => { if (s[MEM_PAGE_KEY[pg]]) enabled.push(pg); });
+    Object.keys(MEM_PAGE_KEY).forEach(pg => {
+      if (!s[MEM_PAGE_KEY[pg]]) return;
+      if (window.GA_SUB && currentUser && !GA_SUB.canPage(currentUser, pg)) return;
+      enabled.push(pg);
+    });
     const names = Object.fromEntries(MEMBER_PAGE_ORDER.map(pg => [pg, PAGES[pg].t]));
     const pend = AV.reqsOf(currentUser).filter(r => r.status === 'pending').length;
     body.innerHTML = `

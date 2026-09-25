@@ -1756,10 +1756,27 @@ html.phone-mode, html.phone-mode body{
 }
 html.phone-mode body.nav-open{overflow:hidden}
 
-/* ورودی‌ها حداقل ۱۶px تا iOS زوم نکند */
+/* ورودی‌ها حداقل ۱۶px تا iOS زوم نکند — سوییچ/چک‌باکس قفل از این قانون مستثناست */
 html.phone-mode input,
 html.phone-mode select,
 html.phone-mode textarea{font-size:16px !important; min-height:var(--tap)}
+html.phone-mode input[type="checkbox"],
+html.phone-mode input[type="radio"],
+html.phone-mode input[type="hidden"],
+html.phone-mode .switch input{
+  min-height:0 !important;
+  font-size:inherit !important;
+}
+html.phone-mode .switch{
+  width:52px;height:32px;flex-shrink:0;
+}
+html.phone-mode .switch input{
+  position:absolute;inset:0;width:100% !important;height:100% !important;
+  margin:0;opacity:0;z-index:2;cursor:pointer;
+}
+html.phone-mode .switch .trk::after{width:24px;height:24px;top:3px;right:3px}
+html.phone-mode .switch input:checked + .trk::after{transform:translateX(-22px)}
+html.phone-mode .set-row{min-height:var(--tap);padding:12px}
 html.phone-mode .btn{
   min-height:var(--tap);
   padding:13px 16px;
@@ -16713,7 +16730,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       return;
     }
     const settings = MGMT.getSettings();
-    const pages = ['memberzone'].concat(MEMBER_PAGE_ORDER.filter(pg => settings[MEM_PAGE_KEY[pg]]));
+    const pages = ['memberzone'].concat(MEMBER_PAGE_ORDER.filter(pg => {
+      if (!settings[MEM_PAGE_KEY[pg]]) return false;
+      if (window.GA_SUB && rec && rec.user && !GA_SUB.canPage(rec.user, pg)) return false;
+      return true;
+    }));
     nav.innerHTML = pages.map(pg => {
       const p = PAGES[pg];
       const active = pg === page;
@@ -19402,7 +19423,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
   function memHome(body, o){
     const s = MGMT.getSettings();
     const enabled = [];
-    Object.keys(MEM_PAGE_KEY).forEach(pg => { if (s[MEM_PAGE_KEY[pg]]) enabled.push(pg); });
+    Object.keys(MEM_PAGE_KEY).forEach(pg => {
+      if (!s[MEM_PAGE_KEY[pg]]) return;
+      if (window.GA_SUB && currentUser && !GA_SUB.canPage(currentUser, pg)) return;
+      enabled.push(pg);
+    });
     const names = Object.fromEntries(MEMBER_PAGE_ORDER.map(pg => [pg, PAGES[pg].t]));
     const pend = AV.reqsOf(currentUser).filter(r => r.status === 'pending').length;
     body.innerHTML = `

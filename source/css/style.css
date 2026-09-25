@@ -77,6 +77,13 @@ body{
 #login .login-card,#login .login-card label,#login .login-card .btn,#login .hint,#login .field label{
   font-family:var(--font);
 }
+#login .login-back{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  margin-top:18px;font-family:var(--font);font-size:13px;font-weight:600;
+  color:rgba(248,250,252,.72);text-decoration:none;letter-spacing:.2px;
+}
+#login .login-back:hover{color:#d4af6a}
+#login .login-back svg{flex:0 0 auto}
 .field{position:relative;margin-bottom:16px;text-align:right}
 .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:700}
 .field input{

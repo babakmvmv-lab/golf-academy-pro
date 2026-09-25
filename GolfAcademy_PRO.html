@@ -108,6 +108,13 @@ body{
 #login .login-card,#login .login-card label,#login .login-card .btn,#login .hint,#login .field label{
   font-family:var(--font);
 }
+#login .login-back{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  margin-top:18px;font-family:var(--font);font-size:13px;font-weight:600;
+  color:rgba(248,250,252,.72);text-decoration:none;letter-spacing:.2px;
+}
+#login .login-back:hover{color:#d4af6a}
+#login .login-back svg{flex:0 0 auto}
 .field{position:relative;margin-bottom:16px;text-align:right}
 .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:700}
 .field input{
@@ -2889,6 +2896,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
       </div>
       <button type="submit" class="btn">ورود به داشبورد 🏌️</button>
     </form>
+    <a class="login-back" href="/">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+      بازگشت به سایت
+    </a>
   </div>
 </div>
 

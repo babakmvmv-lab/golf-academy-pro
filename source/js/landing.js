@@ -12,6 +12,15 @@
 (function(){
 'use strict';
 
+/* ورود اعضا = صفحهٔ لاگین سینمایی پنل (#login). لابی/دختر رسپشن نشان داده نمی‌شود. */
+try {
+  var sess = null;
+  try { sess = localStorage.getItem('ga_session'); } catch (eSess) {}
+  var loginEl = document.getElementById('login');
+  if (!sess && loginEl) loginEl.classList.add('on');
+} catch (eSkip) {}
+return;
+
 var esc = function(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
 var L = function(id, fallback){ return window.UI_LABELS ? UI_LABELS.t(id, fallback) : fallback; };
 var D = window.Data || {};

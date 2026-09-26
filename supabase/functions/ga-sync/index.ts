@@ -9,6 +9,9 @@ const url = Deno.env.get("SUPABASE_URL") || "";
 const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const db = createClient(url, key);
 
+// Same UTF-8 request-body budget as source/js/cloud.js. No schema/RLS changes.
+const MAX_BODY_BYTES = 2 * 1024 * 1024;
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -22,9 +25,17 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     if (req.method !== "POST") return json({ ok: false, err: "POST only" }, 405);
-    const body = await req.json();
-    const bodySize = JSON.stringify(body).length;
-    if (bodySize > 800_000) return json({ ok: false, err: "payload too large" }, 413);
+    const declaredBytes = Number(req.headers.get("content-length") || 0);
+    if (declaredBytes > MAX_BODY_BYTES) return tooLarge(declaredBytes);
+    const raw = await req.text();
+    const receivedBytes = new TextEncoder().encode(raw).byteLength;
+    if (receivedBytes > MAX_BODY_BYTES) return tooLarge(receivedBytes);
+    let body;
+    try { body = JSON.parse(raw); }
+    catch { return json({ ok: false, err: "invalid JSON" }, 400); }
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return json({ ok: false, err: "invalid request body" }, 400);
+    }
 
     /* ── اکشن ۱: آینهٔ کلید/مقدار (رفتار فعلی اپ، اما از مسیر امن) ── */
     if (body.action === "kv") {
@@ -77,4 +88,14 @@ Deno.serve(async (req) => {
 
 function json(o: unknown, status = 200) {
   return new Response(JSON.stringify(o), { status, headers: { ...CORS, "Content-Type": "application/json" } });
+}
+
+function tooLarge(receivedBytes: number) {
+  return json({
+    ok: false,
+    err: "payload too large",
+    code: "PAYLOAD_TOO_LARGE",
+    maxBytes: MAX_BODY_BYTES,
+    receivedBytes,
+  }, 413);
 }

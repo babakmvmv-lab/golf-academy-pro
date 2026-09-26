@@ -15,7 +15,7 @@ let passed = 0;
 
 function server() {
   return {
-    rows: new Map(), calls: [], overrides: new Map(), beforeWrite: null, readFailure: null,
+    rows: new Map(), calls: [], overrides: new Map(), beforeWrite: null, readFailure: null, legacyLimit: false,
     async fetch(url, init) {
       const u = new URL(url);
       assert.equal(u.origin, 'https://fake.supabase.co', 'No real network allowed in tests');
@@ -33,7 +33,8 @@ function server() {
       assert.equal(init.method, 'POST');
       assert.equal(body.action, 'kv');
       if (this.beforeWrite) await this.beforeWrite(body, init);
-      if (JSON.stringify(body).length > 800000) return json({ ok: false, err: 'payload too large' }, 413);
+      if (this.legacyLimit && JSON.stringify(body).length > 800000) return json({ ok: false, err: 'payload too large' }, 413);
+      if (Buffer.byteLength(JSON.stringify(body)) > 2 * 1024 * 1024) return json({ ok: false, err: 'payload too large', maxBytes: 2 * 1024 * 1024 }, 413);
       const override = this.overrides.get(body.rows[0].k);
       if (override) return override(body, init);
       if (body.rows.some(row => row.v === null)) return json({ ok: false, err: 'null value in column v violates not-null constraint' }, 502);
@@ -127,17 +128,17 @@ await test('Read test succeeds WITHOUT hiding the existing write error', async (
 
 await test('Two large but valid keys are sent independently below server payload limit', async () => {
   const api = server(), d = await device(api);
-  set(d, 'ga_large_a', { text: 'x'.repeat(440000) });
-  set(d, 'ga_large_b', { text: 'x'.repeat(440000) });
+  set(d, 'ga_large_a', { text: 'x'.repeat(1200000) });
+  set(d, 'ga_large_b', { text: 'x'.repeat(1200000) });
   assert.equal(await d.GA.push('manual'), true);
   assert.equal(d.GA.dirty().length, 0);
   assert.equal(api.writes().length, 2);
-  assert.ok(api.writes().every(c => c.body.rows.length === 1 && c.bytes < 740000));
+  assert.ok(api.writes().every(c => c.body.rows.length === 1 && c.bytes <= 2 * 1024 * 1024));
 });
 
 await test('An individually oversized key is preserved; smaller siblings still sync', async () => {
   const api = server(), d = await device(api);
-  set(d, 'ga_oversized', { text: 'x'.repeat(810000) });
+  set(d, 'ga_oversized', { text: 'x'.repeat(2 * 1024 * 1024 + 1024) });
   set(d, 'ga_small', { value: 7 });
   assert.equal(await d.GA.push('manual'), false);
   assert.equal(d.GA.dirty().join(','), 'ga_oversized');
@@ -312,13 +313,48 @@ await test('Old malformed queue metadata is repaired without editing the actual 
   assert.ok(Number.isFinite(Date.parse(api.rows.get('ga_probe').updated_at)));
 });
 
-await test('Normal upload uses the server character limit, not an incorrect UTF-8 byte limit for Persian', async () => {
+await test('Persian data under the agreed 2 MiB UTF-8 budget is accepted', async () => {
   const api = server(), d = await device(api);
   set(d, 'ga_persian', { text: 'گ'.repeat(420000) });
   assert.equal(await d.GA.push('manual'), true);
   assert.equal(d.GA.dirty().length, 0);
   assert.ok(api.writes()[0].bytes > 790000);
-  assert.ok(JSON.stringify(api.writes()[0].body).length < 790000);
+  assert.ok(api.writes()[0].bytes < 2 * 1024 * 1024);
+});
+
+await test('The reported 823 KiB academy snapshot is saved intact by the upgraded service', async () => {
+  const api = server(), d = await device(api);
+  const original = { fixture: 'x'.repeat(823 * 1024) };
+  set(d, 'ga_academy', original);
+  assert.equal(await d.GA.push('manual'), true);
+  assert.equal(api.rows.get('ga_academy').v.fixture, original.fixture);
+  assert.equal(d.GA.dirty().length, 0);
+  assert.equal(api.writes().length, 1);
+});
+
+await test('If only the client is upgraded, an old server 413 keeps the academy queued and requests server deployment', async () => {
+  const api = server(), d = await device(api);
+  api.legacyLimit = true;
+  const original = { fixture: 'x'.repeat(823 * 1024) };
+  set(d, 'ga_academy', original);
+  assert.equal(await d.GA.push('manual'), false);
+  assert.ok(d.GA.dirty().includes('ga_academy'));
+  assert.match(d.GA.status().errors[0].message, /سرور.*413/);
+  assert.match(d.GA.status().errors[0].message, /Supabase/);
+  assert.equal(JSON.parse(d.values.get('ga_academy')).fixture, original.fixture);
+  api.legacyLimit = false; // server deployment, without resetting the user's browser
+  assert.equal(await d.GA.push('manual'), true);
+  assert.equal(api.rows.get('ga_academy').v.fixture, original.fixture);
+  assert.equal(d.GA.dirty().length, 0);
+});
+
+await test('The size limit counts UTF-8 bytes, including multibyte Persian content', async () => {
+  const api = server(), d = await device(api);
+  set(d, 'ga_multibyte', { text: 'گ'.repeat(1100000) });
+  assert.equal(await d.GA.push('manual'), false);
+  assert.equal(api.writes().length, 0);
+  assert.ok(d.GA.dirty().includes('ga_multibyte'));
+  assert.match(d.GA.status().errors[0].message, /2048 KB/);
 });
 
 console.log(`PASS — ${passed} cloud queue regression scenarios; zero live database requests.`);

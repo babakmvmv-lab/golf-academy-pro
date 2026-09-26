@@ -3108,7 +3108,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   var state = { phase: 'off', msg: '', last: null, err: null, errors: [], pulled: 0, pushed: 0, read: null };
   var pushFlight = null, pullFlight = null;
-  var MAX_EDGE_CHARS = 790000; // ga-sync طول JSON را با سقف 800000 می‌سنجد (نه بایت UTF-8)
+  var MAX_EDGE_BYTES = 2 * 1024 * 1024; // همسان با سقف UTF-8 تابع ga-sync؛ نیازمند انتشار نسخهٔ جدید تابع
   var KEEPALIVE_BYTES = 48 * 1024; // مرورگر برای کل درخواست‌های keepalive سقف حدود 64KB دارد
   var REQUEST_TIMEOUT = 25000;
 
@@ -3131,7 +3131,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
     if (key) detail = detail.split(key).join('[کلید]');
     if (e && e.code === 'TIMEOUT') return 'مهلت پاسخ سرور تمام شد؛ داده در صف محفوظ است.';
     if (e && e.network) return 'ارتباط با سرویس ارسال قطع شد؛ داده در صف محفوظ است. ' + detail;
-    if (e && e.status === 413) return 'حجم این بخش از سقف ارسال بیشتر است؛ در صف محفوظ مانده. ' + detail;
+    if (e && e.status === 413) {
+      if (e.localLimit) return 'حجم درخواست از سقف ' + Math.floor(e.maxBytes / 1024) + ' KB پنل بیشتر است؛ داده در صف محفوظ است. ' + detail;
+      if (e.maxBytes) return 'سرور درخواست را با سقف ' + Math.floor(e.maxBytes / 1024) + ' KB رد کرد (HTTP 413)؛ داده در صف محفوظ است. ' + detail;
+      return 'سرور ga-sync درخواست را به‌دلیل محدودیت حجم رد کرد (HTTP 413)؛ سقف تابع روی Supabase باید به‌روز شود. داده در صف محفوظ است.';
+    }
     return (e && e.status ? 'HTTP ' + e.status + ' — ' : '') + detail;
   }
   var applying = false; // هنگام اعمالِ pull، نگهبانِ setItem غیرفعال است (جلوگیری از پینگ‌پنگ)
@@ -3159,6 +3163,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
           var e = new Error((json && (json.err || json.message || json.error || json.hint)) || ('HTTP ' + r.status));
           e.status = r.status;
           e.code = json && json.code;
+          if (json && typeof json.maxBytes === 'number') e.maxBytes = json.maxBytes;
           throw e;
         }
         if (json === null && text) throw new Error('پاسخ سرور JSON معتبر نیست؛ ارسال تأیید نشد.');
@@ -3494,9 +3499,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
         }
         var payload = JSON.stringify({ action: 'kv', rows: [row] });
         bytes = byteLength(payload);
-        if (keepalive ? bytes > KEEPALIVE_BYTES : payload.length > MAX_EDGE_CHARS) {
+        if (bytes > (keepalive ? KEEPALIVE_BYTES : MAX_EDGE_BYTES)) {
           var tooBig = new Error(k + ' (' + Math.ceil(bytes / 1024) + ' KB)');
           tooBig.status = 413;
+          tooBig.localLimit = true;
+          tooBig.maxBytes = keepalive ? KEEPALIVE_BYTES : MAX_EDGE_BYTES;
           throw tooBig;
         }
         return edgeSync([row], { keepalive: keepalive }).then(function () {

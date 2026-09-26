@@ -1393,6 +1393,26 @@ tr.off-row{opacity:.5}
 .hp-chip.on{border-color:rgba(212,175,55,.7);background:rgba(212,175,55,.12)}
 .hp-chip.on b{color:var(--gold-l)}
 .hp-par{text-align:start}
+
+/* ── پیش‌نیازهای رنک: چهار شرط هم‌زمان، مستقل از فصل ── */
+.honor-editor > .glass,.honor-member-list{min-width:0}
+.honor-requirements{min-width:0;margin:16px 0 0;padding:12px 14px 15px;border:1px solid rgba(212,175,55,.38);border-radius:13px;background:rgba(212,175,55,.045)}
+.honor-requirements legend{padding:0 7px;font-size:13px;font-weight:850;color:var(--gold-l)}
+.honor-requirements p,.honor-req-note{font-size:11.5px;line-height:2;color:var(--muted);margin:0 0 10px}
+.honor-req-note{margin-top:10px}
+.honor-requirements b{color:var(--gold-l)}
+.honor-req-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+.honor-req-fields > div{min-width:0}
+.honor-req-fields .input{width:100%;min-width:0;direction:ltr}
+.honor-req-fields [aria-invalid="true"]{border-color:#e85d4c}
+.honor-req-error{margin-top:9px;font-size:11px;color:#ffb0a4;line-height:1.8}
+.honor-table-scroll{max-width:100%;overflow:auto}
+.honor-table-scroll th{white-space:nowrap}
+@media(max-width:560px){
+  .honor-req-fields{grid-template-columns:minmax(0,1fr)}
+  .honor-requirements{padding:10px 11px 12px}
+  .honor-req-fields .input{font-size:16px}
+}
 </style>
     <style>/* ═══ فروشگاه آواتار v8 — تم تیره + زمردی + طلایی، شیشه‌ای و سه‌بعدی ═══ */
 .ashop{display:grid;grid-template-columns:212px minmax(0,1fr) 306px;min-width:0;gap:14px;direction:rtl;align-items:start}
@@ -4650,6 +4670,73 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   }
   const FORM_META = { 'اول': {c:'w', t:'ق'}, 'دوم': {c:'p2', t:'۲'}, 'سوم': {c:'p3', t:'۳'}, 'شرکت‌کننده': {c:'p4', t:'ش'} };
 
+  /* ── سابقهٔ کل برای رنک آواتار (مستقل از جدول و بازهٔ فصل) ──
+     کل امتیاز ثبت‌شده از اولین روز؛ بدون فیلتر سال/فصل یا فعال‌بودن فعلی بازیکن.
+     قهرمانی فقط نفر اولِ نتیجهٔ ثبت‌شدهٔ مسابقه، جدا برای سطح ۱/۲/۳ است؛
+     رتبهٔ دوم/سوم، تمرین، سکه و کارتِ بدون نتیجهٔ رسمی، قهرمانی نیستند.
+     هر بار از سوابق بازسازی می‌شود: نه شمارندهٔ انباشتی و نه امتیاز دوباره در reload. */
+  function careerStats(state, sources){
+    state = state || {}; sources = sources || {};
+    const stats = {};
+    const pidOf = v => (typeof v === 'number' || typeof v === 'string') && Number.isSafeInteger(+v) && +v > 0 ? +v : null;
+    (state.players || []).forEach(p => {
+      const pid = p && pidOf(p[0]);
+      if (pid) stats[pid] = { pts:0, wins1:0, wins2:0, wins3:0 };
+    });
+    const results = sources.results || loadResults();
+    const programs = sources.programs || loadPrograms();
+    const rules = sources.rules || loadTourRules();
+    const add = (pid, value) => {
+      pid = pidOf(pid);
+      if (pid && stats[pid] && Number.isFinite(+value)) stats[pid].pts += +value;
+    };
+    const tours = new Map();
+    (state.tournaments || []).forEach(t => { if (t) tours.set(+t[0], t); });
+    // یک کارت برای هر بازیکن/مسابقه؛ نتیجهٔ ثبت‌شده همیشه بر کارت اولویت دارد.
+    const cards = new Map();
+    (state.scorecards || []).forEach(c => {
+      if (!c || !stats[pidOf(c.pid)] || !tours.has(+c.tour) || !Number.isFinite(+c.total)) return;
+      const tid = +c.tour;
+      if (!cards.has(tid)) cards.set(tid, new Map());
+      cards.get(tid).set(pidOf(c.pid), { pid:pidOf(c.pid), total:+c.total });
+    });
+    tours.forEach((t, tid) => {
+      const res = results[tid];
+      const pr = prizesOf(t, rules);
+      if (res && typeof res === 'object'){
+        if (res.active === false) return;
+        const top = res.top || {};
+        const participants = new Set((Array.isArray(res.participants) ? res.participants : []).map(pidOf).filter(pid => pid && stats[pid]));
+        participants.forEach(pid => {
+          const place = pidOf(top[1]) === pid ? 0 : pidOf(top[2]) === pid ? 1 : pidOf(top[3]) === pid ? 2 : 3;
+          add(pid, pr[place]);
+        });
+        const winner = pidOf(top[1]), tier = +t[2];
+        if (participants.has(winner) && [1,2,3].includes(tier)) stats[winner]['wins' + tier]++;
+      } else if (!Object.prototype.hasOwnProperty.call(results, tid)){
+        // امتیاز کارت‌های ثبت‌شده طبق قواعد موجود؛ قهرمانی تا ثبت نتیجه اضافه نمی‌شود.
+        const group = Array.from((cards.get(tid) || new Map()).values()).sort((a,b) => a.total - b.total);
+        group.forEach((c, i) => add(c.pid, pr[Math.min(i, 3)]));
+      }
+    });
+    (state.activities || []).forEach(a => { if (a && a.active !== false) add(a.pid, a.points); });
+    (Array.isArray(programs) ? programs : []).forEach(pr => {
+      if (!pr || pr.active === false) return;
+      const top = pr.top || {};
+      new Set((Array.isArray(pr.participants) ? pr.participants : []).map(pidOf)).forEach(pid => {
+        const field = pidOf(top[1]) === pid ? 'p1' : pidOf(top[2]) === pid ? 'p2' : pidOf(top[3]) === pid ? 'p3' : 'entry';
+        add(pid, pr[field]);
+      });
+    });
+    let bonus = sources.battleBonus;
+    if (!bonus){
+      try { bonus = window.Battle && Battle.computeSeasonBonus ? Battle.computeSeasonBonus() : {}; }
+      catch(e){ bonus = {}; }
+    }
+    Object.keys(bonus || {}).forEach(pid => add(pid, bonus[pid]));
+    return stats;
+  }
+
   /* ── محاسبه کامل ── */
   function compute(state){
     const { tournaments, players } = state;
@@ -4769,11 +4856,12 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     });
     // نبرد میدانها — امتیاز فصلِ نتایج تیمی (روی رنک/امتیاز فصل اثر میگذارد)
     // اگر هیچ جدالی با نتیجه ثبت نشده باشد، bonus خالی است و چیزی تغییر نمیکند.
+    let battleBonus = {};
     try {
       const bM = window.Battle;
-      const btBonus = (bM && bM.computeSeasonBonus) ? bM.computeSeasonBonus() : {};
-      Object.keys(btBonus).forEach(pid => {
-        if (PTS[pid] !== undefined) PTS[pid] += btBonus[pid];
+      battleBonus = (bM && bM.computeSeasonBonus) ? bM.computeSeasonBonus() : {};
+      Object.keys(battleBonus).forEach(pid => {
+        if (PTS[pid] !== undefined) PTS[pid] += battleBonus[pid];
       });
     } catch(e){}
 
@@ -4941,8 +5029,9 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     const PRACTICE_DAYS = new Set(activities.filter(a=>a.type==='تمرین').map(a=>dayFmt(a.date))).size;
     const COURSE_DAYS = new Set(activities.filter(a=>a.type==='آموزش').map(a=>dayFmt(a.date))).size;
 
+    const CAREER = careerStats(state, { results, programs, rules, battleBonus });
     return {
-      PTS, CARDS, ST, LB, SKILLS, PHASE_PTS, PHASE_CHAMP, MONTH_PTS, MONTHLY_TOT,
+      CAREER, PTS, CARDS, ST, LB, SKILLS, PHASE_PTS, PHASE_CHAMP, MONTH_PTS, MONTHLY_TOT,
       MONTHS_SEASON, champM, champName, BEST_ROUNDS, HOLE_DIFF, COURSE_STATS,
       PLAYER_COURSE, PAR_TYPE, TOT_PTS, MATCHES_HELD, GOLD_COUNT, AVG_HCP, NEXT_T,
       COUNTDOWN, RANK_COUNT, TOTAL_BIRD: TOTAL_BIRDIES, PRACTICE_DAYS, COURSE_DAYS,
@@ -5083,7 +5172,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
     parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
-    compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
+    compute, careerStats, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason,
   };
@@ -7585,59 +7674,120 @@ window.addEventListener('ga:brand-changed', function(){
     { lv:14, en:'Legend of Fairway',fa:'اسطورهٔ فروی',         pts:300, badge:'🔥' },
     { lv:15, en:'Immortal Champion',fa:'قهرمان جاودان',       pts:350, badge:'💎' },
   ];
+  /* چهار شرط مستقل؛ امتیاز و قهرمانی‌ها از کل سابقهٔ بازیکن، نه فقط فصل جاری. */
+  const PREREQUISITES = [
+    { key:'pts',   label:'امتیاز کل (از روز اول)' },
+    { key:'wins1', label:'قهرمانی سطح ۱' },
+    { key:'wins2', label:'قهرمانی سطح ۲' },
+    { key:'wins3', label:'قهرمانی سطح ۳' },
+  ];
+  function defaultRequirements(lv){
+    return { wins1:0, wins2:lv >= 7 ? 3 : lv === 6 ? 1 : 0,
+      wins3:lv >= 7 ? 10 : lv === 6 ? 3 : lv === 5 ? 1 : 0 };
+  }
+  function validRequirement(value, key){
+    if (value === null || value === undefined || typeof value === 'boolean' ||
+        (typeof value !== 'number' && typeof value !== 'string') || String(value).trim() === '') return false;
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 0 && (key === 'pts' || Number.isSafeInteger(n));
+  }
+  function progressStats(value){
+    const o = value && typeof value === 'object' ? value : { pts:value };
+    const n = k => Number.isFinite(Number(o[k])) ? Number(o[k]) : 0;
+    return { pts:n('pts'), wins1:Math.max(0, Math.floor(n('wins1'))),
+      wins2:Math.max(0, Math.floor(n('wins2'))), wins3:Math.max(0, Math.floor(n('wins3'))) };
+  }
   function divOf(lv){ return DIVISIONS.find(d => lv >= d.lv[0] && lv <= d.lv[1]) || DIVISIONS[0]; }
   function baseRank(lv){
     const b = RANK_BASE.find(r => r.lv === lv) || RANK_BASE[0];
     const d = divOf(lv);
     const sk = DIV_SKIN[d.id];
-    return Object.assign({ div:d.id, divEn:d.en, divFa:d.fa, badgeSize:32, badgeX:58, badgeY:47 }, sk, b);
+    return Object.assign({ div:d.id, divEn:d.en, divFa:d.fa, badgeSize:32, badgeX:58, badgeY:47 }, sk, b, defaultRequirements(b.lv));
   }
   const SKIN_KEY = 'ga_rank_skin';
   function skinStore(){ return LSget(SKIN_KEY, {}); }
-  /* لیست کامل ۱۵ رنک با اعمال ویرایش‌های مدیر */
+  /* پیش‌نیازهای جدید فقط fallback هستند: امتیاز/ظاهر قبلی مدیر هرگز بازنویسی نمی‌شود. */
   function ranks(){
     const ov = skinStore();
     return RANK_BASE.map(r => {
       const b = baseRank(r.lv);
       const o = ov[String(r.lv)] || {};
-      const m = Object.assign({}, b, o);
+      const m = Object.assign({}, b, o, { lv:r.lv });
+      PREREQUISITES.forEach(f => { m[f.key] = validRequirement(m[f.key], f.key) ? Number(m[f.key]) : b[f.key]; });
       const d = divOf(m.lv); m.divEn = d.en; m.divFa = d.fa;
       return m;
     });
   }
-  function rankOf(lv){ lv = Math.max(1, Math.min(15, +lv || 1)); return ranks()[lv-1]; }
+  function unranked(){
+    return Object.assign({}, baseRank(1), { lv:0, en:'Unranked', fa:'بدون رنک',
+      divEn:'Unranked', divFa:'بدون رنک', badge:'·', particle:'none' });
+  }
+  function rankOf(lv){
+    if (+lv === 0) return unranked();
+    lv = Math.max(1, Math.min(15, Math.floor(+lv) || 1)); return ranks()[lv-1];
+  }
   function saveRank(lv, obj){
+    if (!Number.isInteger(+lv) || +lv < 1 || +lv > 15 || !obj) return false;
+    const patch = Object.assign({}, obj);
+    for (const f of PREREQUISITES){
+      if (!Object.prototype.hasOwnProperty.call(patch, f.key)) continue;
+      if (!validRequirement(patch[f.key], f.key)) return false;
+      patch[f.key] = Number(patch[f.key]);
+    }
     const st = skinStore();
-    st[String(lv)] = Object.assign({}, st[String(lv)] || {}, obj);
-    LSset(SKIN_KEY, st);
+    st[String(lv)] = Object.assign({}, st[String(lv)] || {}, patch);
+    return LSset(SKIN_KEY, st);
   }
   function resetRanks(){ try { localStorage.removeItem(SKIN_KEY); } catch(e){} }
-  function levelOfPts(pts){
-    const rs = ranks(); let lv = 1;
-    rs.forEach(r => { if ((+pts || 0) >= (+r.pts || 0)) lv = r.lv; });
+  function rankProgress(rank, value){
+    const stats = progressStats(value);
+    return PREREQUISITES.map(f => {
+      const need = validRequirement(rank && rank[f.key], f.key) ? Number(rank[f.key]) : Infinity;
+      const have = stats[f.key];
+      return { key:f.key, label:f.label, need, have, met:have >= need,
+        remaining:Math.max(0, need - have), ratio:need === 0 ? 1 : Math.max(0, Math.min(1, have / need)) };
+    });
+  }
+  function requirementsMet(rank, stats){ return rankProgress(rank, stats).every(f => f.met); }
+  function levelOfStats(stats, rs){
+    let lv = 0;
+    (rs || ranks()).forEach(r => { if (requirementsMet(r, stats)) lv = r.lv; });
     return lv;
   }
-  /* رنک دستی مدیر برای هر کاربر: ga_honor = { user:{ lv:number|null } } */
+  /* سازگاری فراخوانی قدیمی: امتیاز تنها، قهرمانی فرضی ایجاد نمی‌کند. */
+  function levelOfPts(pts, wins){ return levelOfStats(Object.assign({}, wins || {}, { pts:pts })); }
+  /* رنک دستی مدیر نگهداری می‌شود، ولی بدون تکمیل هر چهار شرط قابل اعطا نیست. */
   const HONOR_KEY = 'ga_honor';
   function honorStore(){ return LSget(HONOR_KEY, {}); }
   function setHonorOverride(user, lv){
     user = norm(user);
+    if (!user) return false;
     const st = honorStore();
-    if (lv === null || lv === '' || lv === undefined) delete st[user]; else st[user] = { lv: Math.max(1, Math.min(15, +lv)) };
-    LSset(HONOR_KEY, st);
+    if (lv === null || lv === '' || lv === undefined) delete st[user];
+    else {
+      if (!Number.isInteger(+lv) || +lv < 1 || +lv > 15) return false;
+      st[user] = { lv:+lv };
+    }
+    return LSset(HONOR_KEY, st);
   }
-  /* honorOf(user, pts) → {lv, rank, pts, next, prog, manual} */
-  function honorOf(user, pts){
+  /* honorOf(user, careerStats) — محاسبهٔ واحد برای کارت، چیپ و مدیریت. */
+  function honorOf(user, value){
     user = norm(user);
-    const st = honorStore();
-    const manual = st[user] && st[user].lv ? +st[user].lv : 0;
-    const lv = manual || levelOfPts(pts || 0);
-    const rs = ranks();
-    const rank = rs[lv-1];
+    const stats = progressStats(value);
+    const rs = ranks(), st = honorStore();
+    const requested = st[user] && Number(st[user].lv);
+    const desired = Number.isInteger(requested) && requested >= 1 && requested <= 15 ? requested : 0;
+    const manual = !!desired && requirementsMet(rs[desired-1], stats);
+    const lv = manual ? desired : levelOfStats(stats, rs);
+    const rank = lv ? rs[lv-1] : unranked();
     const next = lv < 15 ? rs[lv] : null;
-    const cur = +rank.pts || 0;
-    const prog = next ? Math.max(0, Math.min(100, ((+pts||0) - cur) / Math.max(1, (+next.pts - cur)) * 100)) : 100;
-    return { lv, rank, pts: +pts || 0, next, prog, manual: !!manual };
+    const checks = next ? rankProgress(next, stats) : [];
+    const complete = checks.filter(f => f.met).length;
+    const ratio = checks.length ? checks.reduce((n, f) => n + f.ratio, 0) / checks.length * 100 : 100;
+    // حتی با امتیاز فراوان، نبود یک قهرمانی نباید نوار «۱۰۰٪» نشان دهد.
+    const prog = checks.length && complete < checks.length ? Math.min(99, ratio) : 100;
+    return { lv, rank, pts:stats.pts, stats, next, checks, complete, prog, manual,
+      manualRequested:desired, manualBlocked:!!desired && !manual };
   }
 
   /* ═════════ ۲) نشان سه‌بعدی فلزی ═════════ */
@@ -8635,7 +8785,8 @@ window.addEventListener('ga:brand-changed', function(){
   /* ═════════ API ═════════ */
   window.AV = {
     DIVISIONS, PARTICLES, UPFX, RANK_BASE, DIV_SKIN,
-    ranks, rankOf, saveRank, resetRanks, levelOfPts, honorOf, setHonorOverride, honorStore,
+    ranks, rankOf, saveRank, resetRanks, levelOfPts, levelOfStats, honorOf, setHonorOverride, honorStore,
+    PREREQUISITES, defaultRequirements, validRequirement, progressStats, rankProgress, requirementsMet,
     badgeSVG, renderAvatarSVG, itemPreviewSVG, rankCard, playRankUp, checkRankUp, particlesHTML, shade,
     BRANDS, CATS, shop, shopAll, shopItem, setShopItem, addShopItem, removeShopItem, resetShop, shopStore,
     itemMeta, cats, catsAll, addCat, setCat, removeCat, brands, setBrand, removeBrand,
@@ -14161,7 +14312,7 @@ window.addEventListener('ga:brand-changed', function(){
       </div>
     </div>
 
-    <div class="grid cols-3" style="margin-bottom:16px">
+    <div class="grid cols-3 honor-editor" style="margin-bottom:16px">
       <div class="glass" style="text-align:center">
         <div class="card-head"><span class="ic">👁️</span><h3>پیش‌نمایش زنده</h3><span class="tag">Level ${D.fa(r.lv)}</span></div>
         <div id="hr-prevwrap" style="margin-top:12px;display:flex;justify-content:center">
@@ -14174,9 +14325,17 @@ window.addEventListener('ga:brand-changed', function(){
         <div class="field-grid" style="margin-top:10px">
           <div><label>عنوان انگلیسی</label><input class="input" data-hf="en" value="${esc(r.en)}" style="width:100%;direction:ltr"></div>
           <div><label>عنوان فارسی</label><input class="input" data-hf="fa" value="${esc(r.fa)}" style="width:100%"></div>
-          <div><label>حداقل امتیاز فصل</label><input class="input" type="number" data-hf="pts" value="${+r.pts}" style="width:100%;direction:ltr"></div>
           <div><label>نشان (ایموجی/حرف)</label><input class="input" data-hf="badge" value="${/^(data:|https?:)/.test(r.badge) ? '' : esc(r.badge)}" placeholder="مثلاً 👑" style="width:100%"></div>
         </div>
+        <fieldset class="honor-requirements" id="hr-prereqs" aria-describedby="hr-req-help">
+          <legend>🔒 پیش‌نیازها</legend>
+          <p id="hr-req-help">برای دریافت این رنک، <b>هر چهار شرط باید هم‌زمان برقرار باشند.</b> امتیاز و قهرمانی‌ها از روز اول و در همهٔ فصل‌ها محاسبه می‌شوند؛ صفر یعنی آن مورد حداقلی ندارد.</p>
+          <div class="field-grid honor-req-fields">
+            ${AV.PREREQUISITES.map(f => `<div><label for="hr-${f.key}">حداقل ${f.label}</label>
+              <input class="input" id="hr-${f.key}" type="number" min="0" step="${f.key === 'pts' ? 'any' : '1'}" inputmode="${f.key === 'pts' ? 'decimal' : 'numeric'}" data-hf="${f.key}" value="${r[f.key]}" required></div>`).join('')}
+          </div>
+          <div id="hr-req-error" class="honor-req-error" role="alert" hidden></div>
+        </fieldset>
         <div class="form-section" style="margin-top:14px">🎨 رنگ پس‌زمینه، گرادینت و نور</div>
         <div class="field-grid" style="margin-top:8px">
           <div><label>گرادینت ۱ (تیره)</label><input class="input" type="color" data-hf="bg1" value="${esc(r.bg1)}" style="width:100%;height:38px;padding:3px"></div>
@@ -14211,22 +14370,27 @@ window.addEventListener('ga:brand-changed', function(){
       </div>
     </div>
 
-    <div class="glass">
-      <div class="card-head"><span class="ic">👥</span><h3>رنک اعضا</h3><span class="tag">خودکار از امتیاز فصل یا دستی</span></div>
-      <div style="overflow-x:auto"><table class="tbl"><thead><tr>
-        <th>عضو</th><th>امتیاز فصل</th><th>رنک فعلی</th><th>حالت</th><th>تعیین دستی</th>
+    <div class="glass honor-member-list">
+      <div class="card-head"><span class="ic">👥</span><h3>رنک اعضا</h3><span class="tag">چهار شرط از کل سابقه</span></div>
+      <p class="honor-req-note">قهرمانی یعنی نفر اول مسابقه در همان سطح؛ رتبهٔ دوم یا سوم، قهرمانی سطح ۲ یا ۳ نیست. تعیین دستی هم نیازمند تکمیل هر چهار پیش‌نیاز همان رنک است.</p>
+      <div class="honor-table-scroll"><table class="tbl"><thead><tr>
+        <th>عضو</th><th>امتیاز کل</th><th>قهرمانی سطح ۱</th><th>قهرمانی سطح ۲</th><th>قهرمانی سطح ۳</th><th>رنک فعلی</th><th>حالت</th><th>تعیین دستی</th>
       </tr></thead><tbody>
         ${mem.map(u => {
-          const pts = ptsOfPid(u.pid);
-          const hn = AV.honorOf(u.user, pts);
-          return `<tr>
+          const stats = careerOfPid(u.pid);
+          const hn = AV.honorOf(u.user, stats);
+          return `<tr data-hmember="${esc(u.user)}">
             <td>${esc(u.name || u.user)} <span style="color:var(--muted);font-size:11px;direction:ltr">(${esc(u.user)})</span></td>
-            <td>${D.fa(Math.round(pts))}</td>
-            <td><span style="color:${hn.rank.title};font-weight:800">${esc(hn.rank.en)}</span> <span style="font-size:11px;color:var(--muted)">${esc(hn.rank.fa)}</span></td>
-            <td>${hn.manual ? '<span class="chip gold">دستی</span>' : '<span class="chip dim">خودکار</span>'}</td>
-            <td><select class="sel" data-hset="${esc(u.user)}" style="min-width:130px">
-              <option value="">خودکار (امتیاز)</option>
-              ${AV.ranks().map(x => `<option value="${x.lv}" ${(ov[String(u.user||'').toLowerCase()] && +ov[String(u.user||'').toLowerCase()].lv === x.lv) ? 'selected' : ''}>Lv ${x.lv} — ${x.en}</option>`).join('')}
+            ${AV.PREREQUISITES.map(f => `<td data-hstat="${f.key}">${D.faNum(stats[f.key], f.key === 'pts' && !Number.isInteger(stats.pts) ? 2 : 0)}</td>`).join('')}
+            <td data-hlevel="${hn.lv}"><span style="color:${hn.rank.title};font-weight:800">${esc(hn.rank.en)}</span> <span style="font-size:11px;color:var(--muted)">${esc(hn.rank.fa)}</span></td>
+            <td>${hn.manual ? '<span class="chip gold">دستی؛ واجد شرایط</span>' : hn.manualBlocked ? '<span class="chip dim">خودکار؛ پیش‌نیاز رنک دستی ناقص</span>' : '<span class="chip dim">خودکار</span>'}</td>
+            <td><select class="sel" data-hset="${esc(u.user)}" aria-label="رنک ${esc(u.name || u.user)}" style="min-width:150px">
+              <option value="">خودکار (هر چهار شرط)</option>
+              ${rs.map(x => {
+                const met = AV.requirementsMet(x, stats);
+                const selected = ov[String(u.user||'').toLowerCase()] && +ov[String(u.user||'').toLowerCase()].lv === x.lv;
+                return `<option value="${x.lv}" ${selected ? 'selected' : ''} ${met ? '' : 'disabled'}>Lv ${x.lv} — ${esc(x.en)}${met ? '' : ' — پیش‌نیاز ناقص'}</option>`;
+              }).join('')}
             </select></td>
           </tr>`;
         }).join('')}
@@ -14234,18 +14398,33 @@ window.addEventListener('ga:brand-changed', function(){
     </div>`;
 
     $$('[data-hlv]', body).forEach(el => el.addEventListener('click', () => { honorLv = +el.dataset.hlv; renderMgmtTab(); }));
-    function collect(){
+    function collect(showErrors){
       const o = {};
+      let invalid = null;
       $$('[data-hf]', body).forEach(el => {
         const k = el.dataset.hf;
+        if (AV.PREREQUISITES.some(f => f.key === k)){
+          const valid = AV.validRequirement(el.value, k);
+          const msg = k === 'pts' ? 'امتیاز باید عددی غیرمنفی باشد.' : 'تعداد قهرمانی باید عدد صحیح و غیرمنفی باشد.';
+          el.setCustomValidity(valid ? '' : msg);
+          el.setAttribute('aria-invalid', valid ? 'false' : 'true');
+          if (!valid && !invalid) invalid = el;
+        }
         o[k] = (el.type === 'number' || el.type === 'range') ? +el.value : el.value;
       });
+      const err = $('#hr-req-error', body);
+      if (err){ err.hidden = !invalid; err.textContent = invalid ? invalid.validationMessage + ' این تغییر هنوز ذخیره نشده است.' : ''; }
+      if (invalid){ if (showErrors) invalid.reportValidity(); return null; }
       if (!o.badge){ const cur = AV.rankOf(honorLv); o.badge = /^(data:|https?:)/.test(cur.badge) ? cur.badge : (AV.RANK_BASE[honorLv-1].badge); }
       return o;
     }
-    function refreshPreview(){
-      const o = collect();
-      AV.saveRank(honorLv, o);
+    function refreshPreview(showErrors){
+      const o = collect(showErrors);
+      if (!o) return false;
+      if (!AV.saveRank(honorLv, o)){
+        if (showErrors) APP.toast('ذخیرهٔ رنک انجام نشد؛ فضای حافظهٔ مرورگر را بررسی کنید.', 'red');
+        return false;
+      }
       const rr = AV.rankOf(honorLv);
       const wrap = $('#hr-prevwrap', body);
       if (wrap) wrap.innerHTML = AV.rankCard({ user:'preview', name:'Babak', sel: AV.DEFAULT_SEL('m'), gender:'m',
@@ -14254,10 +14433,11 @@ window.addEventListener('ga:brand-changed', function(){
       if (bs) bs.textContent = D.fa(rr.badgeSize);
       if (bx) bx.textContent = D.fa(rr.badgeX);
       if (by) by.textContent = D.fa(rr.badgeY);
+      return true;
     }
     $$('[data-hf]', body).forEach(el => {
-      el.addEventListener('input', refreshPreview);
-      el.addEventListener('change', refreshPreview);
+      el.addEventListener('input', () => refreshPreview(false));
+      el.addEventListener('change', () => refreshPreview(false));
     });
     const img = $('#hr-img', body);
     if (img) img.addEventListener('change', () => {
@@ -14269,33 +14449,39 @@ window.addEventListener('ga:brand-changed', function(){
       rd.readAsDataURL(f);
     });
     const sv = $('#hr-save', body);
-    if (sv) sv.addEventListener('click', () => { refreshPreview(); APP.toast('ظاهر رنک «' + AV.rankOf(honorLv).en + '» ذخیره شد ✓', 'green'); renderMgmtTab(); });
+    if (sv) sv.addEventListener('click', () => { if (!refreshPreview(true)) return; APP.toast('پیش‌نیازها و ظاهر رنک «' + AV.rankOf(honorLv).en + '» ذخیره شد ✓', 'green'); renderMgmtTab(); });
     const cle = $('#hr-clear', body);
     if (cle) cle.addEventListener('click', () => {
+      if (!confirm('پیش‌نیازها (شامل امتیاز) و ظاهر این رنک به پیش‌فرض برگردد؟')) return;
       const st = JSON.parse(localStorage.getItem('ga_rank_skin') || '{}');
       delete st[String(honorLv)];
       localStorage.setItem('ga_rank_skin', JSON.stringify(st));
-      APP.toast('این رنک به حالت پیش‌فرض برگشت', 'orange');
+      APP.toast('پیش‌نیازها و ظاهر این رنک به حالت پیش‌فرض برگشت', 'orange');
       renderMgmtTab();
     });
     const rst = $('#hr-reset', body);
     if (rst) rst.addEventListener('click', () => {
-      if (!confirm('ظاهر همهٔ ۱۵ رنک به پیش‌فرض برگردد؟')) return;
+      if (!confirm('پیش‌نیازها (شامل امتیازها) و ظاهر همهٔ ۱۵ رنک به پیش‌فرض برگردد؟')) return;
       AV.resetRanks(); APP.toast('همهٔ رنک‌ها بازنشانی شدند', 'orange'); renderMgmtTab();
     });
     const tu = $('#hr-testup', body);
     if (tu) tu.addEventListener('click', () => AV.playRankUp($('#hr-prev', body), Math.max(1, honorLv - 1), honorLv));
     $$('[data-hset]', body).forEach(sel => sel.addEventListener('change', () => {
-      AV.setHonorOverride(sel.dataset.hset, sel.value === '' ? null : +sel.value);
+      const member = mem.find(u => u.user === sel.dataset.hset);
+      const stats = careerOfPid(member && member.pid);
+      if (sel.value !== '' && !AV.requirementsMet(AV.rankOf(+sel.value), stats)){
+        APP.toast('هر چهار پیش‌نیاز این رنک باید تکمیل باشد.', 'orange'); renderMgmtTab(); return;
+      }
+      if (!AV.setHonorOverride(sel.dataset.hset, sel.value === '' ? null : +sel.value)){
+        APP.toast('ذخیرهٔ رنک انجام نشد.', 'red'); return;
+      }
       APP.toast('رنک عضو به‌روز شد ✓', 'green');
       renderMgmtTab();
     }));
   }
-  function ptsOfPid(pid){
+  function careerOfPid(pid){
     const { A } = gstate();
-    if (!pid || !A || !A.LB) return 0;
-    const row = A.LB.find(r => r.pid === pid);
-    return row ? row.pts : 0;
+    return AV.progressStats(pid && A && A.CAREER ? A.CAREER[+pid] : null);
   }
 
   /* ═══════════════ تب: فروشگاه آواتار (افزودن/ویرایش/حذف آیتم) ═══════════════ */
@@ -16689,11 +16875,14 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     return `<span class="rank-pill" style="background:${def[3]}22;color:${def[3]};border:1px solid ${def[3]}55">${D.RANK_TEXT[rk] || def[1]}</span>`;
   }
   /* Honor Rank — چیپ رنک برای کل سایت */
+  function careerOfPid(pid){
+    return AV.progressStats(pid && A && A.CAREER ? A.CAREER[+pid] : null);
+  }
   function honorOfPid(pid){
     let u = null;
-    try { u = loadUsers().find(x => x.pid === pid); } catch(e){}
-    const pts = (A && A.LB) ? ((A.LB.find(r => r.pid === pid) || {}).pts || 0) : 0;
-    return AV.honorOf(u ? u.user : ('pid' + pid), pts);
+    try { u = loadUsers().find(x => +x.pid === +pid); } catch(e){}
+    // بازیکن الزاماً یوزر ندارد؛ هویت بازیکن از pid می‌آید، نه نام کاربری.
+    return AV.honorOf(u ? u.user : '', careerOfPid(pid));
   }
   function honorChip(pid, mini){
     const hn = honorOfPid(pid); const r = hn.rank;
@@ -19263,7 +19452,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       const gender = genderOfUser(u.user);
       const av = AV.avatarOf(u.user, gender);
       const c = AV.coinOf(u.user);
-      const hn = AV.honorOf(u.user, ptsOfUser(u.user));
+      const hn = honorOfUser(u.user);
       const log = c.log || [];
       const income = log.filter(l => (+l.amount||0) > 0 && (String(l.source||'').indexOf('req:') === 0 || String(l.source||'') === 'admin')).reduce((a,l)=>a+(+l.amount||0),0);
       const spent = log.filter(l => (+l.amount||0) < 0).reduce((a,l)=>a+Math.abs(+l.amount||0),0);
@@ -19508,12 +19697,10 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     return { s:'can', rej: rej || null };
   }
   function canClaim(user, ruleId){ return ruleState(user, ruleId).s === 'can'; }
-  /* امتیاز فصل عضو (مبنای Honor Rank) */
-  function ptsOfUser(user){
+  /* پیشرفت کل بازیکنِ متصل به یوزر؛ جدول فصل مبنای رنک آواتار نیست. */
+  function careerOfUser(user){
     const rec = userRec(user) || {};
-    if (!rec.pid || !A || !A.LB) return 0;
-    const row = A.LB.find(r => r.pid === rec.pid);
-    return row ? row.pts : 0;
+    return careerOfPid(rec.pid);
   }
   function genderOfUser(user){
     const rec = userRec(user) || {};
@@ -19523,7 +19710,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     } catch(e){}
     return 'm';
   }
-  function honorOfUser(user){ return AV.honorOf(user, ptsOfUser(user)); }
+  function honorOfUser(user){ return AV.honorOf(user, careerOfUser(user)); }
   function updateCoinBadge(){
     const el = $('#mz-coin-n');
     if (el) el.textContent = D.fa(coinOf(currentUser).total);
@@ -19583,13 +19770,20 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     return AV.rankCard({ user, name, sel: av.sel, gender: av.gender, honor: honorOfUser(user), size: size || 'md', id: id || '' });
   }
   function honorProgHTML(hn){
-    if (!hn.next) return `<div style="font-size:11.5px;color:var(--muted);margin-top:8px">به بالاترین رنک آکادمی رسیده‌اید 👑</div>`;
+    if (!hn.next) return `<div style="font-size:11.5px;color:var(--muted);margin-top:8px">هر چهار پیش‌نیاز بالاترین رنک آکادمی را تکمیل کرده‌اید 👑</div>`;
+    const checks = hn.checks;
     return `
-      <div style="margin-top:10px;font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between">
-        <span>تا رنک بعدی: <b style="color:${hn.next.title}">${esc(hn.next.en)}</b></span>
-        <span>${D.fa(Math.round(hn.pts))} / ${D.fa(hn.next.pts)} امتیاز</span>
-      </div>
-      <div class="pbar gold" style="margin-top:6px"><i style="width:${Math.round(hn.prog)}%"></i></div>`;
+      <div class="honor-progress" style="margin-top:12px;text-align:right">
+        <div style="font-size:11.5px;color:var(--muted);line-height:1.9">پیش‌نیازهای رنک بعدی: <b style="color:${hn.next.title}">${esc(hn.next.en)}</b></div>
+        <div style="font-size:11px;color:var(--gold-l);margin-top:4px">${D.fa(hn.complete)} از ۴ شرط تکمیل شده — هر چهار مورد لازم است</div>
+        <div class="pbar gold" role="progressbar" aria-label="تکمیل پیش‌نیازهای رنک بعدی" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(hn.prog)}" style="margin-top:7px"><i style="width:${Math.round(hn.prog)}%"></i></div>
+        <div style="margin-top:8px">
+          ${checks.map(f => `<div data-hcheck="${f.key}" data-met="${f.met}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;font-size:11px;line-height:1.8;color:${f.met ? 'var(--green-l)' : 'var(--muted)'}">
+            <span>${f.met ? '✓' : '○'} ${f.label}</span>
+            <span style="white-space:nowrap;font-variant-numeric:tabular-nums">${D.faNum(f.have, f.key === 'pts' && !Number.isInteger(f.have) ? 2 : 0)} / ${D.fa(f.need)}</span>
+          </div>`).join('')}
+        </div>
+      </div>`;
   }
 
   function memHome(body, o){
@@ -19737,10 +19931,11 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
           <div style="display:flex;justify-content:center">${AV.badgeSVG(r, 30)}</div>
           <div style="color:${r.title};margin-top:5px">${esc(r.en)}</div>
           <div style="font-size:10px;color:var(--muted)">${esc(r.fa)}</div>
-          <div style="font-size:10px;color:var(--gold-l);margin-top:3px">Lv ${D.fa(r.lv)} • ${D.fa(r.pts)}+ امتیاز</div>
+          <div style="font-size:10px;color:var(--gold-l);margin-top:3px">Lv ${D.fa(r.lv)} • ${D.fa(r.pts)}+ امتیاز کل</div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.9;margin-top:4px">حداقل قهرمانی:<br>سطح ۱: ${D.fa(r.wins1)} • سطح ۲: ${D.fa(r.wins2)} • سطح ۳: ${D.fa(r.wins3)}</div>
         </div>`).join('')}
       </div>
-      <div class="golfrule" style="margin-top:12px;line-height:2">🎖️ رنک شما با امتیاز فصل بالا می‌رود؛ با هر ارتقاء، رنگ کارت، هالهٔ نور، نشان روی سینه و عنوان آواتار شما تغییر می‌کند.</div>
+      <div class="golfrule" style="margin-top:12px;line-height:2">🎖️ رنک شما بر اساس <b>امتیاز کل از روز اول + تعداد قهرمانی سطح ۱، ۲ و ۳</b> تعیین می‌شود. هر چهار حداقل باید <b>هم‌زمان</b> تأمین باشند؛ امتیازِ بیشتر به‌تنهایی جای قهرمانی را نمی‌گیرد. قهرمانی، نفر اولِ مسابقه در آن سطح است؛ نه مقام دوم یا سوم. این سابقه با تغییر فصل صفر نمی‌شود.</div>
     </div>`;
   }
 

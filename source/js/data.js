@@ -470,6 +470,73 @@
   }
   const FORM_META = { 'اول': {c:'w', t:'ق'}, 'دوم': {c:'p2', t:'۲'}, 'سوم': {c:'p3', t:'۳'}, 'شرکت‌کننده': {c:'p4', t:'ش'} };
 
+  /* ── سابقهٔ کل برای رنک آواتار (مستقل از جدول و بازهٔ فصل) ──
+     کل امتیاز ثبت‌شده از اولین روز؛ بدون فیلتر سال/فصل یا فعال‌بودن فعلی بازیکن.
+     قهرمانی فقط نفر اولِ نتیجهٔ ثبت‌شدهٔ مسابقه، جدا برای سطح ۱/۲/۳ است؛
+     رتبهٔ دوم/سوم، تمرین، سکه و کارتِ بدون نتیجهٔ رسمی، قهرمانی نیستند.
+     هر بار از سوابق بازسازی می‌شود: نه شمارندهٔ انباشتی و نه امتیاز دوباره در reload. */
+  function careerStats(state, sources){
+    state = state || {}; sources = sources || {};
+    const stats = {};
+    const pidOf = v => (typeof v === 'number' || typeof v === 'string') && Number.isSafeInteger(+v) && +v > 0 ? +v : null;
+    (state.players || []).forEach(p => {
+      const pid = p && pidOf(p[0]);
+      if (pid) stats[pid] = { pts:0, wins1:0, wins2:0, wins3:0 };
+    });
+    const results = sources.results || loadResults();
+    const programs = sources.programs || loadPrograms();
+    const rules = sources.rules || loadTourRules();
+    const add = (pid, value) => {
+      pid = pidOf(pid);
+      if (pid && stats[pid] && Number.isFinite(+value)) stats[pid].pts += +value;
+    };
+    const tours = new Map();
+    (state.tournaments || []).forEach(t => { if (t) tours.set(+t[0], t); });
+    // یک کارت برای هر بازیکن/مسابقه؛ نتیجهٔ ثبت‌شده همیشه بر کارت اولویت دارد.
+    const cards = new Map();
+    (state.scorecards || []).forEach(c => {
+      if (!c || !stats[pidOf(c.pid)] || !tours.has(+c.tour) || !Number.isFinite(+c.total)) return;
+      const tid = +c.tour;
+      if (!cards.has(tid)) cards.set(tid, new Map());
+      cards.get(tid).set(pidOf(c.pid), { pid:pidOf(c.pid), total:+c.total });
+    });
+    tours.forEach((t, tid) => {
+      const res = results[tid];
+      const pr = prizesOf(t, rules);
+      if (res && typeof res === 'object'){
+        if (res.active === false) return;
+        const top = res.top || {};
+        const participants = new Set((Array.isArray(res.participants) ? res.participants : []).map(pidOf).filter(pid => pid && stats[pid]));
+        participants.forEach(pid => {
+          const place = pidOf(top[1]) === pid ? 0 : pidOf(top[2]) === pid ? 1 : pidOf(top[3]) === pid ? 2 : 3;
+          add(pid, pr[place]);
+        });
+        const winner = pidOf(top[1]), tier = +t[2];
+        if (participants.has(winner) && [1,2,3].includes(tier)) stats[winner]['wins' + tier]++;
+      } else if (!Object.prototype.hasOwnProperty.call(results, tid)){
+        // امتیاز کارت‌های ثبت‌شده طبق قواعد موجود؛ قهرمانی تا ثبت نتیجه اضافه نمی‌شود.
+        const group = Array.from((cards.get(tid) || new Map()).values()).sort((a,b) => a.total - b.total);
+        group.forEach((c, i) => add(c.pid, pr[Math.min(i, 3)]));
+      }
+    });
+    (state.activities || []).forEach(a => { if (a && a.active !== false) add(a.pid, a.points); });
+    (Array.isArray(programs) ? programs : []).forEach(pr => {
+      if (!pr || pr.active === false) return;
+      const top = pr.top || {};
+      new Set((Array.isArray(pr.participants) ? pr.participants : []).map(pidOf)).forEach(pid => {
+        const field = pidOf(top[1]) === pid ? 'p1' : pidOf(top[2]) === pid ? 'p2' : pidOf(top[3]) === pid ? 'p3' : 'entry';
+        add(pid, pr[field]);
+      });
+    });
+    let bonus = sources.battleBonus;
+    if (!bonus){
+      try { bonus = window.Battle && Battle.computeSeasonBonus ? Battle.computeSeasonBonus() : {}; }
+      catch(e){ bonus = {}; }
+    }
+    Object.keys(bonus || {}).forEach(pid => add(pid, bonus[pid]));
+    return stats;
+  }
+
   /* ── محاسبه کامل ── */
   function compute(state){
     const { tournaments, players } = state;
@@ -589,11 +656,12 @@
     });
     // نبرد میدانها — امتیاز فصلِ نتایج تیمی (روی رنک/امتیاز فصل اثر میگذارد)
     // اگر هیچ جدالی با نتیجه ثبت نشده باشد، bonus خالی است و چیزی تغییر نمیکند.
+    let battleBonus = {};
     try {
       const bM = window.Battle;
-      const btBonus = (bM && bM.computeSeasonBonus) ? bM.computeSeasonBonus() : {};
-      Object.keys(btBonus).forEach(pid => {
-        if (PTS[pid] !== undefined) PTS[pid] += btBonus[pid];
+      battleBonus = (bM && bM.computeSeasonBonus) ? bM.computeSeasonBonus() : {};
+      Object.keys(battleBonus).forEach(pid => {
+        if (PTS[pid] !== undefined) PTS[pid] += battleBonus[pid];
       });
     } catch(e){}
 
@@ -761,8 +829,9 @@
     const PRACTICE_DAYS = new Set(activities.filter(a=>a.type==='تمرین').map(a=>dayFmt(a.date))).size;
     const COURSE_DAYS = new Set(activities.filter(a=>a.type==='آموزش').map(a=>dayFmt(a.date))).size;
 
+    const CAREER = careerStats(state, { results, programs, rules, battleBonus });
     return {
-      PTS, CARDS, ST, LB, SKILLS, PHASE_PTS, PHASE_CHAMP, MONTH_PTS, MONTHLY_TOT,
+      CAREER, PTS, CARDS, ST, LB, SKILLS, PHASE_PTS, PHASE_CHAMP, MONTH_PTS, MONTHLY_TOT,
       MONTHS_SEASON, champM, champName, BEST_ROUNDS, HOLE_DIFF, COURSE_STATS,
       PLAYER_COURSE, PAR_TYPE, TOT_PTS, MATCHES_HELD, GOLD_COUNT, AVG_HCP, NEXT_T,
       COUNTDOWN, RANK_COUNT, TOTAL_BIRD: TOTAL_BIRDIES, PRACTICE_DAYS, COURSE_DAYS,
@@ -903,7 +972,7 @@
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
     parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
-    compute, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
+    compute, careerStats, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason,
   };

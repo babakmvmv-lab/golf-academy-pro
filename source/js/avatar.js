@@ -57,59 +57,120 @@
     { lv:14, en:'Legend of Fairway',fa:'اسطورهٔ فروی',         pts:300, badge:'🔥' },
     { lv:15, en:'Immortal Champion',fa:'قهرمان جاودان',       pts:350, badge:'💎' },
   ];
+  /* چهار شرط مستقل؛ امتیاز و قهرمانی‌ها از کل سابقهٔ بازیکن، نه فقط فصل جاری. */
+  const PREREQUISITES = [
+    { key:'pts',   label:'امتیاز کل (از روز اول)' },
+    { key:'wins1', label:'قهرمانی سطح ۱' },
+    { key:'wins2', label:'قهرمانی سطح ۲' },
+    { key:'wins3', label:'قهرمانی سطح ۳' },
+  ];
+  function defaultRequirements(lv){
+    return { wins1:0, wins2:lv >= 7 ? 3 : lv === 6 ? 1 : 0,
+      wins3:lv >= 7 ? 10 : lv === 6 ? 3 : lv === 5 ? 1 : 0 };
+  }
+  function validRequirement(value, key){
+    if (value === null || value === undefined || typeof value === 'boolean' ||
+        (typeof value !== 'number' && typeof value !== 'string') || String(value).trim() === '') return false;
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 0 && (key === 'pts' || Number.isSafeInteger(n));
+  }
+  function progressStats(value){
+    const o = value && typeof value === 'object' ? value : { pts:value };
+    const n = k => Number.isFinite(Number(o[k])) ? Number(o[k]) : 0;
+    return { pts:n('pts'), wins1:Math.max(0, Math.floor(n('wins1'))),
+      wins2:Math.max(0, Math.floor(n('wins2'))), wins3:Math.max(0, Math.floor(n('wins3'))) };
+  }
   function divOf(lv){ return DIVISIONS.find(d => lv >= d.lv[0] && lv <= d.lv[1]) || DIVISIONS[0]; }
   function baseRank(lv){
     const b = RANK_BASE.find(r => r.lv === lv) || RANK_BASE[0];
     const d = divOf(lv);
     const sk = DIV_SKIN[d.id];
-    return Object.assign({ div:d.id, divEn:d.en, divFa:d.fa, badgeSize:32, badgeX:58, badgeY:47 }, sk, b);
+    return Object.assign({ div:d.id, divEn:d.en, divFa:d.fa, badgeSize:32, badgeX:58, badgeY:47 }, sk, b, defaultRequirements(b.lv));
   }
   const SKIN_KEY = 'ga_rank_skin';
   function skinStore(){ return LSget(SKIN_KEY, {}); }
-  /* لیست کامل ۱۵ رنک با اعمال ویرایش‌های مدیر */
+  /* پیش‌نیازهای جدید فقط fallback هستند: امتیاز/ظاهر قبلی مدیر هرگز بازنویسی نمی‌شود. */
   function ranks(){
     const ov = skinStore();
     return RANK_BASE.map(r => {
       const b = baseRank(r.lv);
       const o = ov[String(r.lv)] || {};
-      const m = Object.assign({}, b, o);
+      const m = Object.assign({}, b, o, { lv:r.lv });
+      PREREQUISITES.forEach(f => { m[f.key] = validRequirement(m[f.key], f.key) ? Number(m[f.key]) : b[f.key]; });
       const d = divOf(m.lv); m.divEn = d.en; m.divFa = d.fa;
       return m;
     });
   }
-  function rankOf(lv){ lv = Math.max(1, Math.min(15, +lv || 1)); return ranks()[lv-1]; }
+  function unranked(){
+    return Object.assign({}, baseRank(1), { lv:0, en:'Unranked', fa:'بدون رنک',
+      divEn:'Unranked', divFa:'بدون رنک', badge:'·', particle:'none' });
+  }
+  function rankOf(lv){
+    if (+lv === 0) return unranked();
+    lv = Math.max(1, Math.min(15, Math.floor(+lv) || 1)); return ranks()[lv-1];
+  }
   function saveRank(lv, obj){
+    if (!Number.isInteger(+lv) || +lv < 1 || +lv > 15 || !obj) return false;
+    const patch = Object.assign({}, obj);
+    for (const f of PREREQUISITES){
+      if (!Object.prototype.hasOwnProperty.call(patch, f.key)) continue;
+      if (!validRequirement(patch[f.key], f.key)) return false;
+      patch[f.key] = Number(patch[f.key]);
+    }
     const st = skinStore();
-    st[String(lv)] = Object.assign({}, st[String(lv)] || {}, obj);
-    LSset(SKIN_KEY, st);
+    st[String(lv)] = Object.assign({}, st[String(lv)] || {}, patch);
+    return LSset(SKIN_KEY, st);
   }
   function resetRanks(){ try { localStorage.removeItem(SKIN_KEY); } catch(e){} }
-  function levelOfPts(pts){
-    const rs = ranks(); let lv = 1;
-    rs.forEach(r => { if ((+pts || 0) >= (+r.pts || 0)) lv = r.lv; });
+  function rankProgress(rank, value){
+    const stats = progressStats(value);
+    return PREREQUISITES.map(f => {
+      const need = validRequirement(rank && rank[f.key], f.key) ? Number(rank[f.key]) : Infinity;
+      const have = stats[f.key];
+      return { key:f.key, label:f.label, need, have, met:have >= need,
+        remaining:Math.max(0, need - have), ratio:need === 0 ? 1 : Math.max(0, Math.min(1, have / need)) };
+    });
+  }
+  function requirementsMet(rank, stats){ return rankProgress(rank, stats).every(f => f.met); }
+  function levelOfStats(stats, rs){
+    let lv = 0;
+    (rs || ranks()).forEach(r => { if (requirementsMet(r, stats)) lv = r.lv; });
     return lv;
   }
-  /* رنک دستی مدیر برای هر کاربر: ga_honor = { user:{ lv:number|null } } */
+  /* سازگاری فراخوانی قدیمی: امتیاز تنها، قهرمانی فرضی ایجاد نمی‌کند. */
+  function levelOfPts(pts, wins){ return levelOfStats(Object.assign({}, wins || {}, { pts:pts })); }
+  /* رنک دستی مدیر نگهداری می‌شود، ولی بدون تکمیل هر چهار شرط قابل اعطا نیست. */
   const HONOR_KEY = 'ga_honor';
   function honorStore(){ return LSget(HONOR_KEY, {}); }
   function setHonorOverride(user, lv){
     user = norm(user);
+    if (!user) return false;
     const st = honorStore();
-    if (lv === null || lv === '' || lv === undefined) delete st[user]; else st[user] = { lv: Math.max(1, Math.min(15, +lv)) };
-    LSset(HONOR_KEY, st);
+    if (lv === null || lv === '' || lv === undefined) delete st[user];
+    else {
+      if (!Number.isInteger(+lv) || +lv < 1 || +lv > 15) return false;
+      st[user] = { lv:+lv };
+    }
+    return LSset(HONOR_KEY, st);
   }
-  /* honorOf(user, pts) → {lv, rank, pts, next, prog, manual} */
-  function honorOf(user, pts){
+  /* honorOf(user, careerStats) — محاسبهٔ واحد برای کارت، چیپ و مدیریت. */
+  function honorOf(user, value){
     user = norm(user);
-    const st = honorStore();
-    const manual = st[user] && st[user].lv ? +st[user].lv : 0;
-    const lv = manual || levelOfPts(pts || 0);
-    const rs = ranks();
-    const rank = rs[lv-1];
+    const stats = progressStats(value);
+    const rs = ranks(), st = honorStore();
+    const requested = st[user] && Number(st[user].lv);
+    const desired = Number.isInteger(requested) && requested >= 1 && requested <= 15 ? requested : 0;
+    const manual = !!desired && requirementsMet(rs[desired-1], stats);
+    const lv = manual ? desired : levelOfStats(stats, rs);
+    const rank = lv ? rs[lv-1] : unranked();
     const next = lv < 15 ? rs[lv] : null;
-    const cur = +rank.pts || 0;
-    const prog = next ? Math.max(0, Math.min(100, ((+pts||0) - cur) / Math.max(1, (+next.pts - cur)) * 100)) : 100;
-    return { lv, rank, pts: +pts || 0, next, prog, manual: !!manual };
+    const checks = next ? rankProgress(next, stats) : [];
+    const complete = checks.filter(f => f.met).length;
+    const ratio = checks.length ? checks.reduce((n, f) => n + f.ratio, 0) / checks.length * 100 : 100;
+    // حتی با امتیاز فراوان، نبود یک قهرمانی نباید نوار «۱۰۰٪» نشان دهد.
+    const prog = checks.length && complete < checks.length ? Math.min(99, ratio) : 100;
+    return { lv, rank, pts:stats.pts, stats, next, checks, complete, prog, manual,
+      manualRequested:desired, manualBlocked:!!desired && !manual };
   }
 
   /* ═════════ ۲) نشان سه‌بعدی فلزی ═════════ */
@@ -1107,7 +1168,8 @@
   /* ═════════ API ═════════ */
   window.AV = {
     DIVISIONS, PARTICLES, UPFX, RANK_BASE, DIV_SKIN,
-    ranks, rankOf, saveRank, resetRanks, levelOfPts, honorOf, setHonorOverride, honorStore,
+    ranks, rankOf, saveRank, resetRanks, levelOfPts, levelOfStats, honorOf, setHonorOverride, honorStore,
+    PREREQUISITES, defaultRequirements, validRequirement, progressStats, rankProgress, requirementsMet,
     badgeSVG, renderAvatarSVG, itemPreviewSVG, rankCard, playRankUp, checkRankUp, particlesHTML, shade,
     BRANDS, CATS, shop, shopAll, shopItem, setShopItem, addShopItem, removeShopItem, resetShop, shopStore,
     itemMeta, cats, catsAll, addCat, setCat, removeCat, brands, setBrand, removeBrand,

@@ -475,3 +475,23 @@ tr.off-row{opacity:.5}
 .hp-chip.on{border-color:rgba(212,175,55,.7);background:rgba(212,175,55,.12)}
 .hp-chip.on b{color:var(--gold-l)}
 .hp-par{text-align:start}
+
+/* ── پیش‌نیازهای رنک: چهار شرط هم‌زمان، مستقل از فصل ── */
+.honor-editor > .glass,.honor-member-list{min-width:0}
+.honor-requirements{min-width:0;margin:16px 0 0;padding:12px 14px 15px;border:1px solid rgba(212,175,55,.38);border-radius:13px;background:rgba(212,175,55,.045)}
+.honor-requirements legend{padding:0 7px;font-size:13px;font-weight:850;color:var(--gold-l)}
+.honor-requirements p,.honor-req-note{font-size:11.5px;line-height:2;color:var(--muted);margin:0 0 10px}
+.honor-req-note{margin-top:10px}
+.honor-requirements b{color:var(--gold-l)}
+.honor-req-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+.honor-req-fields > div{min-width:0}
+.honor-req-fields .input{width:100%;min-width:0;direction:ltr}
+.honor-req-fields [aria-invalid="true"]{border-color:#e85d4c}
+.honor-req-error{margin-top:9px;font-size:11px;color:#ffb0a4;line-height:1.8}
+.honor-table-scroll{max-width:100%;overflow:auto}
+.honor-table-scroll th{white-space:nowrap}
+@media(max-width:560px){
+  .honor-req-fields{grid-template-columns:minmax(0,1fr)}
+  .honor-requirements{padding:10px 11px 12px}
+  .honor-req-fields .input{font-size:16px}
+}

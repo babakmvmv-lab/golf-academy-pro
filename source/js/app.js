@@ -112,11 +112,14 @@
     return `<span class="rank-pill" style="background:${def[3]}22;color:${def[3]};border:1px solid ${def[3]}55">${D.RANK_TEXT[rk] || def[1]}</span>`;
   }
   /* Honor Rank — چیپ رنک برای کل سایت */
+  function careerOfPid(pid){
+    return AV.progressStats(pid && A && A.CAREER ? A.CAREER[+pid] : null);
+  }
   function honorOfPid(pid){
     let u = null;
-    try { u = loadUsers().find(x => x.pid === pid); } catch(e){}
-    const pts = (A && A.LB) ? ((A.LB.find(r => r.pid === pid) || {}).pts || 0) : 0;
-    return AV.honorOf(u ? u.user : ('pid' + pid), pts);
+    try { u = loadUsers().find(x => +x.pid === +pid); } catch(e){}
+    // بازیکن الزاماً یوزر ندارد؛ هویت بازیکن از pid می‌آید، نه نام کاربری.
+    return AV.honorOf(u ? u.user : '', careerOfPid(pid));
   }
   function honorChip(pid, mini){
     const hn = honorOfPid(pid); const r = hn.rank;
@@ -2686,7 +2689,7 @@
       const gender = genderOfUser(u.user);
       const av = AV.avatarOf(u.user, gender);
       const c = AV.coinOf(u.user);
-      const hn = AV.honorOf(u.user, ptsOfUser(u.user));
+      const hn = honorOfUser(u.user);
       const log = c.log || [];
       const income = log.filter(l => (+l.amount||0) > 0 && (String(l.source||'').indexOf('req:') === 0 || String(l.source||'') === 'admin')).reduce((a,l)=>a+(+l.amount||0),0);
       const spent = log.filter(l => (+l.amount||0) < 0).reduce((a,l)=>a+Math.abs(+l.amount||0),0);
@@ -2931,12 +2934,10 @@
     return { s:'can', rej: rej || null };
   }
   function canClaim(user, ruleId){ return ruleState(user, ruleId).s === 'can'; }
-  /* امتیاز فصل عضو (مبنای Honor Rank) */
-  function ptsOfUser(user){
+  /* پیشرفت کل بازیکنِ متصل به یوزر؛ جدول فصل مبنای رنک آواتار نیست. */
+  function careerOfUser(user){
     const rec = userRec(user) || {};
-    if (!rec.pid || !A || !A.LB) return 0;
-    const row = A.LB.find(r => r.pid === rec.pid);
-    return row ? row.pts : 0;
+    return careerOfPid(rec.pid);
   }
   function genderOfUser(user){
     const rec = userRec(user) || {};
@@ -2946,7 +2947,7 @@
     } catch(e){}
     return 'm';
   }
-  function honorOfUser(user){ return AV.honorOf(user, ptsOfUser(user)); }
+  function honorOfUser(user){ return AV.honorOf(user, careerOfUser(user)); }
   function updateCoinBadge(){
     const el = $('#mz-coin-n');
     if (el) el.textContent = D.fa(coinOf(currentUser).total);
@@ -3006,13 +3007,20 @@
     return AV.rankCard({ user, name, sel: av.sel, gender: av.gender, honor: honorOfUser(user), size: size || 'md', id: id || '' });
   }
   function honorProgHTML(hn){
-    if (!hn.next) return `<div style="font-size:11.5px;color:var(--muted);margin-top:8px">به بالاترین رنک آکادمی رسیده‌اید 👑</div>`;
+    if (!hn.next) return `<div style="font-size:11.5px;color:var(--muted);margin-top:8px">هر چهار پیش‌نیاز بالاترین رنک آکادمی را تکمیل کرده‌اید 👑</div>`;
+    const checks = hn.checks;
     return `
-      <div style="margin-top:10px;font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between">
-        <span>تا رنک بعدی: <b style="color:${hn.next.title}">${esc(hn.next.en)}</b></span>
-        <span>${D.fa(Math.round(hn.pts))} / ${D.fa(hn.next.pts)} امتیاز</span>
-      </div>
-      <div class="pbar gold" style="margin-top:6px"><i style="width:${Math.round(hn.prog)}%"></i></div>`;
+      <div class="honor-progress" style="margin-top:12px;text-align:right">
+        <div style="font-size:11.5px;color:var(--muted);line-height:1.9">پیش‌نیازهای رنک بعدی: <b style="color:${hn.next.title}">${esc(hn.next.en)}</b></div>
+        <div style="font-size:11px;color:var(--gold-l);margin-top:4px">${D.fa(hn.complete)} از ۴ شرط تکمیل شده — هر چهار مورد لازم است</div>
+        <div class="pbar gold" role="progressbar" aria-label="تکمیل پیش‌نیازهای رنک بعدی" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(hn.prog)}" style="margin-top:7px"><i style="width:${Math.round(hn.prog)}%"></i></div>
+        <div style="margin-top:8px">
+          ${checks.map(f => `<div data-hcheck="${f.key}" data-met="${f.met}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;font-size:11px;line-height:1.8;color:${f.met ? 'var(--green-l)' : 'var(--muted)'}">
+            <span>${f.met ? '✓' : '○'} ${f.label}</span>
+            <span style="white-space:nowrap;font-variant-numeric:tabular-nums">${D.faNum(f.have, f.key === 'pts' && !Number.isInteger(f.have) ? 2 : 0)} / ${D.fa(f.need)}</span>
+          </div>`).join('')}
+        </div>
+      </div>`;
   }
 
   function memHome(body, o){
@@ -3160,10 +3168,11 @@
           <div style="display:flex;justify-content:center">${AV.badgeSVG(r, 30)}</div>
           <div style="color:${r.title};margin-top:5px">${esc(r.en)}</div>
           <div style="font-size:10px;color:var(--muted)">${esc(r.fa)}</div>
-          <div style="font-size:10px;color:var(--gold-l);margin-top:3px">Lv ${D.fa(r.lv)} • ${D.fa(r.pts)}+ امتیاز</div>
+          <div style="font-size:10px;color:var(--gold-l);margin-top:3px">Lv ${D.fa(r.lv)} • ${D.fa(r.pts)}+ امتیاز کل</div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.9;margin-top:4px">حداقل قهرمانی:<br>سطح ۱: ${D.fa(r.wins1)} • سطح ۲: ${D.fa(r.wins2)} • سطح ۳: ${D.fa(r.wins3)}</div>
         </div>`).join('')}
       </div>
-      <div class="golfrule" style="margin-top:12px;line-height:2">🎖️ رنک شما با امتیاز فصل بالا می‌رود؛ با هر ارتقاء، رنگ کارت، هالهٔ نور، نشان روی سینه و عنوان آواتار شما تغییر می‌کند.</div>
+      <div class="golfrule" style="margin-top:12px;line-height:2">🎖️ رنک شما بر اساس <b>امتیاز کل از روز اول + تعداد قهرمانی سطح ۱، ۲ و ۳</b> تعیین می‌شود. هر چهار حداقل باید <b>هم‌زمان</b> تأمین باشند؛ امتیازِ بیشتر به‌تنهایی جای قهرمانی را نمی‌گیرد. قهرمانی، نفر اولِ مسابقه در آن سطح است؛ نه مقام دوم یا سوم. این سابقه با تغییر فصل صفر نمی‌شود.</div>
     </div>`;
   }
 

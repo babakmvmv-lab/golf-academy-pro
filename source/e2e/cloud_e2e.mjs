@@ -29,6 +29,13 @@ function makeServer({ apiKey = SERVER_KEY } = {}) {
       if (String(init.headers?.apikey || '') !== apiKey)
         return { status: 401, text: JSON.stringify({ message: 'Invalid API key', hint: 'Double check your API key.' }) };
       const u = new URL(url);
+      if (u.pathname.endsWith('/functions/v1/ga-sync')) {
+        const body = JSON.parse(init.body);
+        if (body.action !== 'kv') return { status: 400, text: JSON.stringify({ ok: false, err: 'unknown action' }) };
+        // Mock the existing KV contract; this suite does not write to a live database.
+        body.rows.forEach(r => rows.set(r.k, r));
+        return { status: 200, text: JSON.stringify({ ok: true, put: body.rows.length, del: 0 }) };
+      }
       if (!u.pathname.endsWith('/rest/v1/ga_store')) return { status: 404, text: '{}' };
       if (init.method === 'GET') {
         let list = [...rows.values()];

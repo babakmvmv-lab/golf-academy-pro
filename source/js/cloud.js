@@ -74,7 +74,34 @@
     return !!(c.on && /^https:\/\/.+/.test(c.url) && c.key && c.key.length > 20);
   }
 
-  var state = { phase: 'off', msg: '', last: null, err: null, pulled: 0, pushed: 0 };
+  var state = { phase: 'off', msg: '', last: null, err: null, errors: [], pulled: 0, pushed: 0, read: null };
+  var pushFlight = null, pullFlight = null;
+  var MAX_EDGE_CHARS = 790000; // ga-sync طول JSON را با سقف 800000 می‌سنجد (نه بایت UTF-8)
+  var KEEPALIVE_BYTES = 48 * 1024; // مرورگر برای کل درخواست‌های keepalive سقف حدود 64KB دارد
+  var REQUEST_TIMEOUT = 25000;
+
+  function pendingKeys() {
+    return Object.keys(jread(DIRTY_KEY, {})).filter(function (k) {
+      return k.indexOf(PFX) === 0 && k !== PFX && !SKIP[k];
+    });
+  }
+  function byteLength(text) {
+    if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(text).length;
+    return encodeURIComponent(text).replace(/%[A-F\d]{2}/gi, 'x').length;
+  }
+  function queueInfo() {
+    var L = ls();
+    return pendingKeys().map(function (k) { return { key: k, bytes: byteLength(L.getItem(k) || 'null') }; });
+  }
+  function errorText(e) {
+    var detail = String(e && e.message || 'خطای نامشخص');
+    var key = cfg().key;
+    if (key) detail = detail.split(key).join('[کلید]');
+    if (e && e.code === 'TIMEOUT') return 'مهلت پاسخ سرور تمام شد؛ داده در صف محفوظ است.';
+    if (e && e.network) return 'ارتباط با سرویس ارسال قطع شد؛ داده در صف محفوظ است. ' + detail;
+    if (e && e.status === 413) return 'حجم این بخش از سقف ارسال بیشتر است؛ در صف محفوظ مانده. ' + detail;
+    return (e && e.status ? 'HTTP ' + e.status + ' — ' : '') + detail;
+  }
   var applying = false; // هنگام اعمالِ pull، نگهبانِ setItem غیرفعال است (جلوگیری از پینگ‌پنگ)
 
   function setPhase(p, m) {
@@ -84,35 +111,56 @@
     if (inBrowser) render();
   }
 
-  /* ── دسترسی REST به Supabase (PostgREST) ────────────────────────── */
+  /* پاسخ HTTP ناموفق یا بدون تأیید صریح هرگز به‌معنی ذخیره‌شدن نیست. */
+  function requestJSON(url, init) {
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timeout = null, timedOut = false;
+    if (controller) {
+      init.signal = controller.signal;
+      timeout = setTimeout(function () { timedOut = true; controller.abort(); }, REQUEST_TIMEOUT);
+    }
+    var run = Promise.resolve().then(function () { return fetch(url, init); }).then(function (r) {
+      return r.text().then(function (text) {
+        var json = null;
+        try { json = text ? JSON.parse(text) : null; } catch (_) {}
+        if (!r.ok) {
+          var e = new Error((json && (json.err || json.message || json.error || json.hint)) || ('HTTP ' + r.status));
+          e.status = r.status;
+          e.code = json && json.code;
+          throw e;
+        }
+        if (json === null && text) throw new Error('پاسخ سرور JSON معتبر نیست؛ ارسال تأیید نشد.');
+        return json;
+      });
+    });
+    return run.then(function (data) {
+      clearTimeout(timeout);
+      return data;
+    }, function (e) {
+      clearTimeout(timeout);
+      if (timedOut) { e = new Error('Request timeout'); e.code = 'TIMEOUT'; }
+      if (!e.status && (e.name === 'TypeError' || e.name === 'AbortError' || timedOut)) e.network = true;
+      throw e;
+    });
+  }
+
   function rest(path, init) {
-    var c = cfg();
-    var h = { 'apikey': c.key, 'Content-Type': 'application/json' }; // apikey تنها و کافی است (کلیدهای جدید publishable)
+    var c = cfg(), h = { apikey: c.key, 'Content-Type': 'application/json' };
     init = init || {};
     Object.keys(init.headers || {}).forEach(function (k) { h[k] = init.headers[k]; });
-    return fetch(c.url + '/rest/v1/' + path, {
-      method: init.method || 'GET',
-      headers: h,
-      body: init.body || null,
-      mode: 'cors',
-      keepalive: !!init.keepalive
-    }).then(function (r) {
-      return r.text().then(function (t) {
-        var j = null;
-        try { j = t ? JSON.parse(t) : null; } catch (e) {}
-        if (!r.ok) {
-          var err = new Error((j && (j.message || j.error || j.hint)) || ('HTTP ' + r.status));
-          err.status = r.status;
-          err.body = j || t;
-          throw err;
-        }
-        return j;
-      });
+    return requestJSON(c.url.replace(/\/+$/, '') + '/rest/v1/' + path, {
+      method: init.method || 'GET', headers: h, body: init.body || null, mode: 'cors'
     });
   }
 
   /* ── encode/decode: مقادیر localStorage رشته‌اند؛ ستون value از نوع jsonb ── */
-  function encode(v) { try { return JSON.parse(v); } catch (e) { return { __raw: v }; } }
+  function encode(v) {
+    try {
+      var value = JSON.parse(v);
+      // JSON null در PostgREST به SQL NULL تبدیل می‌شود؛ ستون v تهی‌پذیر نیست.
+      return value === null ? { __raw: String(v) } : value;
+    } catch (e) { return { __raw: v }; }
+  }
   function decode(v) {
     if (v && typeof v === 'object' && typeof v.__raw === 'string' && Object.keys(v).length === 1) return v.__raw;
     return JSON.stringify(v);
@@ -131,14 +179,16 @@
 
   /* ── علامت‌گذاری تغییرات (نگهبان setItem/removeItem + جاروب دوره‌ای) ── */
   function markDirty(k) {
-    if (applying) return;
-    if (!k || k.indexOf(PFX) !== 0 || SKIP[k] || !hasCred()) return;
-    var d = jread(DIRTY_KEY, {});
-    if (!d[k]) {
-      d[k] = localStamp();
-      jwrite(DIRTY_KEY, d);
-      schedule(3000);
-    }
+    if (applying || !k || k.indexOf(PFX) !== 0 || SKIP[k] || !hasCred()) return;
+    var d = jread(DIRTY_KEY, {}), stamp = localStamp();
+    // حتی دو ویرایش در یک میلی‌ثانیه باید نسخهٔ جدا داشته باشند.
+    var previous = Date.parse(d[k]);
+    if (Number.isFinite(previous) && Date.parse(stamp) <= previous) stamp = new Date(previous + 1).toISOString();
+    d[k] = stamp;
+    jwrite(DIRTY_KEY, d);
+    if (!pushFlight) setPhase('pending', pendingKeys().length + ' بخش در صف ارسال');
+    else render();
+    schedule(3000);
   }
 
   function installGuard() {
@@ -148,11 +198,19 @@
       var origSet = proto.setItem, origDel = proto.removeItem;
       Object.defineProperty(proto, 'setItem', {
         configurable: true, writable: true,
-        value: function (k, v) { origSet.call(this, k, v); try { markDirty(String(k)); } catch (e) {} }
+        value: function (k, v) {
+          var before = this.getItem(k);
+          origSet.call(this, k, v);
+          try { if (this === window.localStorage && before !== String(v)) markDirty(String(k)); } catch (e) {}
+        }
       });
       Object.defineProperty(proto, 'removeItem', {
         configurable: true, writable: true,
-        value: function (k) { origDel.call(this, k); try { markDirty(String(k)); } catch (e) {} }
+        value: function (k) {
+          var before = this.getItem(k);
+          origDel.call(this, k);
+          try { if (this === window.localStorage && before !== null) markDirty(String(k)); } catch (e) {}
+        }
       });
     } catch (e) { /* اگر قابل بازنویسی نبود، جاروب دوره‌ای جبران می‌کند */ }
   }
@@ -161,9 +219,11 @@
   function sweep() {
     if (!hasCred() || applying) return;
     var L = ls();
-    syncableKeys().forEach(function (k) {
+    var keys = syncableKeys();
+    Object.keys(sweepCache).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); });
+    keys.forEach(function (k) {
       var v = L.getItem(k);
-      if (sweepCache[k] !== undefined && sweepCache[k] !== v) markDirty(k);
+      if (sweepCache[k] !== v) markDirty(k);
       sweepCache[k] = v;
     });
   }
@@ -249,7 +309,8 @@
   }
 
   /* کلیدهای ساختاری (جلسات/ضربه‌های تمرین): مرج union + سنگ‌قبر حذف */
-  function mergeSpKey(k, localRaw, remoteRaw) {
+  function mergeSpKey(k, localRaw, remoteRaw, tomb) {
+    tomb = tomb || readSpTomb();
     try {
       if (k === 'ga_sp_tomb') {
         var rt = remoteRaw ? JSON.parse(typeof remoteRaw === 'string' ? remoteRaw : JSON.stringify(remoteRaw)) : {};
@@ -257,29 +318,32 @@
         return JSON.stringify(mixTombObj(rt, lt));
       }
       if (!localRaw) {
-        if (k === 'ga_sp_sessions') return JSON.stringify(applyTombSessions(JSON.parse(remoteRaw || '{}')));
-        if (k === 'ga_sp_shots') return JSON.stringify(applyTombShots(JSON.parse(remoteRaw || '[]')));
+        if (k === 'ga_sp_sessions') return JSON.stringify(applyTombSessions(JSON.parse(remoteRaw || '{}'), tomb));
+        if (k === 'ga_sp_shots') return JSON.stringify(applyTombShots(JSON.parse(remoteRaw || '[]'), tomb));
         return remoteRaw;
       }
       if (k === 'ga_sp_sessions') {
         var a = JSON.parse(remoteRaw) || {}, b = JSON.parse(localRaw) || {};
         Object.keys(b).forEach(function (id) { a[id] = b[id]; });
-        return JSON.stringify(applyTombSessions(a));
+        return JSON.stringify(applyTombSessions(a, tomb));
       }
       var arr = JSON.parse(remoteRaw) || [], loc = JSON.parse(localRaw) || [];
       var seen = {}, keyFn = spShotKey;
       arr.forEach(function (x) { seen[keyFn(x)] = 1; });
       (Array.isArray(loc) ? loc : []).forEach(function (x) { if (x && !seen[keyFn(x)]) arr.push(x); });
       arr.sort(function (x, y) { return (x.t || 0) - (y.t || 0); });
-      return JSON.stringify(applyTombShots(arr));
+      return JSON.stringify(applyTombShots(arr, tomb));
     } catch (e) { return remoteRaw; }
   }
   /* ── pull: اعمال دادهٔ جدیدترِ سرور روی این دستگاه ──────────────── */
   function pull() {
+    if (pullFlight) return pullFlight;
+    if (pushFlight) return pushFlight.then(function () { return pull(); });
     if (!hasCred()) { setPhase('off', 'کانفیگ ابری کامل نیست — از پنل ☁️ تنظیم کنید'); return Promise.resolve(false); }
     setPhase('pulling');
-    return rest('ga_store?select=k,v,updated_at&order=updated_at.desc&limit=500')
+    pullFlight = rest('ga_store?select=k,v,updated_at&order=updated_at.desc&limit=500')
       .then(function (rows) {
+        if (!Array.isArray(rows)) throw new Error('پاسخ دریافت داده معتبر نیست.');
         applying = true; // نگهبانِ محلی حین اعمال خاموش است
         try {
           var d = jread(DIRTY_KEY, {}), ts = jread(TS_KEY, {}), L = ls(), applied = 0;
@@ -287,7 +351,7 @@
             if (!r || !r.k || SKIP[r.k]) return;
             var remoteNewer = !ts[r.k] || r.updated_at > ts[r.k];
             var localDirty = d[r.k];
-            if (localDirty && localDirty >= r.updated_at) return; // محلی تازه‌تر است؛ push برنده می‌شود
+            if (localDirty) return; // خواندن، تأیید ارسال نیست؛ تغییرِ تأییدنشدهٔ گوشی را جایگزین نکن
             // ردیفِ نشان‌دارِ حذف (tombstone): کلید محلی هم پاک می‌شود
             if (r.v && typeof r.v === 'object' && r.v.__del) {
               if (remoteNewer) {
@@ -312,7 +376,11 @@
           jwrite(TS_KEY, ts);
           state.pulled += applied;
           primeSweep();
-          setPhase('idle', applied ? (applied + ' کلید از ابر اعمال شد') : 'داده محلی تازه است');
+          state.read = { ok: true, at: localStamp(), message: 'خواندن از دیتابیس برقرار است.' };
+          var pending = pendingKeys().length;
+          setPhase(pending ? (state.errors.length ? 'error' : 'pending') : 'idle', pending
+            ? ('دریافت انجام شد؛ ' + pending + ' بخش هنوز در صف ارسال است.')
+            : (applied ? (applied + ' کلید از ابر اعمال شد') : 'داده محلی تازه است'));
           if (applied){
             toast(applied + ' کلید از ابر به‌روز شد', 'ok');
             /* رویداد برای صفحه‌ها: دیتا عوض شد — نمودارها/آرشیو خودشان را تازه کنند */
@@ -322,113 +390,168 @@
         return true;
       })
       .catch(function (e) {
-        setPhase('error', 'خطا در کشیدن: ' + e.message);
-        state.err = String(e.body || e.message);
+        state.err = errorText(e);
+        state.read = { ok: false, at: localStamp(), message: state.err };
+        setPhase('error', 'خطا در دریافت: ' + state.err);
         return false;
-      });
+      }).then(function (ok) { pullFlight = null; render(); return ok; });
+    return pullFlight;
   }
 
-  /* ── push: ارسال صف کثیف (upsert با key به‌عنوان PK) ─────────────── */
-  function push(reason) {
+  /* هر درخواست فقط یک کلید؛ تأیید و حذف صف هم به‌ازای همان نسخهٔ کلید است.
+     خطای یک کلید مانع ثبت کلیدهای سالم نیست. مسیر REST نوشتن fallback نیست:
+     خطای اصلی ga-sync نباید با خطای مجوز جدول پوشانده یا موفق تلقی شود. */
+  var SP_MERGE = { ga_sp_sessions: 1, ga_sp_shots: 1, ga_sp_tomb: 1 };
+  function push(reason, options) {
+    if (pushFlight) return pushFlight;
+    if (pullFlight) return pullFlight.then(function () { return push(reason, options); });
     if (!hasCred()) return Promise.resolve(false);
-    var d = jread(DIRTY_KEY, {}), L = ls();
-    var keys = Object.keys(d).filter(function (k) { return !SKIP[k]; });
-    if (!keys.length) { if (reason === 'manual') setPhase('idle', 'چیزی برای ارسال نیست'); return Promise.resolve(false); }
-    setPhase('pushing', keys.length + ' کلید در صف');
-    var now = localStamp();
-    var rows = keys.map(function (k) {
-      var v = L.getItem(k);
-      return { k: k, v: v === null ? { __del: 1 } : encode(v), updated_at: d[k] || now };
-    });
-    // توجه: ردیف حذف به‌صورت tombstone ({__del:1}) روی سرور می‌ماند تا
-    // بقیهٔ دستگاه‌ها در pull بعدی آن را ببینند و کلید محلی را پاک کنند.
+    options = options || {};
+    var keepalive = !!options.keepalive, keys = pendingKeys(), L = ls();
+    if (keepalive) {
+      // ادغام تمرین‌ها نیازمند GET است؛ هنگام خروج، بدون ادغام آن‌ها را بازنویسی نکن.
+      keys = keys.filter(function (k) {
+        return !SP_MERGE[k] && byteLength(L.getItem(k) || 'null') < KEEPALIVE_BYTES - 1024;
+      }).slice(0, 1);
+    }
+    if (!keys.length) {
+      if (reason === 'manual' && !pendingKeys().length) setPhase('idle', 'چیزی در صف ارسال نیست.');
+      return Promise.resolve(false);
+    }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setPhase('error', 'اینترنت قطع است؛ ' + pendingKeys().length + ' بخش در صف محفوظ است.');
+      return Promise.resolve(false);
+    }
+    clearTimeout(timer);
+    keys.sort(function (a, b) { return a === 'ga_sp_tomb' ? -1 : b === 'ga_sp_tomb' ? 1 : 0; });
+    var sent = 0, errors = state.errors.filter(function (e) { return keys.indexOf(e.key) < 0 && pendingKeys().indexOf(e.key) >= 0; }), stopped = false, remoteFlight = null;
+    state.err = null;
+    state.errors = errors.slice();
+    setPhase('pushing', keys.length + ' بخش در صف؛ در حال ارسال…');
 
-    /* کلیدهای ساختاری تمرین (جلسات/ضربه‌ها): قبل از push، مقدار فعلی سرور گرفته و union مرج
-       می‌شود تا pushِ دستگاهِ دارای دیتای قدیمی، ضربه‌های دستگاه دیگر را بازنویسی نکند */
-    var SP_MERGE = { ga_sp_sessions: 1, ga_sp_shots: 1, ga_sp_tomb: 1 };
-    var spRows = rows.filter(function (r) { return SP_MERGE[r.k] && !(r.v && r.v.__del); });
-    var preMerge = spRows.length
-      ? rest('ga_store?select=k,v&k=in.(' + spRows.map(function (r) { return r.k; }).join(',') + ')').then(function (rems) {
-          (rems || []).slice().sort(function (a, b) {
-            return a.k === 'ga_sp_tomb' ? -1 : b.k === 'ga_sp_tomb' ? 1 : 0;
-          }).forEach(function (rr) {
-            var row = null;
-            spRows.forEach(function (x) { if (x.k === rr.k) row = x; });
-            if (!row || !rr.v) return;
-            try {
-              var merged;
-              if (rr.k === 'ga_sp_sessions') {
-                merged = (rr.v && typeof rr.v === 'object' && !Array.isArray(rr.v)) ? rr.v : {};
-                Object.keys(row.v || {}).forEach(function (id) { merged[id] = row.v[id]; }); /* محلی تازه‌تر ← برنده‌ی تک‌سشن */
-              } else {
-                var arr = Array.isArray(rr.v) ? rr.v.slice() : [];
-                var seen = {}, kf = function (x) { return [x.sid, x.t, x.pid, x.club, x.res].join('|'); };
-                arr.forEach(function (x) { seen[kf(x)] = 1; });
-                (Array.isArray(row.v) ? row.v : []).forEach(function (x) { if (x && !seen[kf(x)]) arr.push(x); });
-                arr.sort(function (a, b) { return (a.t || 0) - (b.t || 0); });
-                merged = arr;
-              }
-              row.v = merged;
-              try { L.setItem(rr.k, JSON.stringify(merged)); } catch (e) {}
-            } catch (e) {}
-          });
-        }).catch(function () { /* آفلاین — همان رفتار قبلی push بدون مرج */ })
-      : Promise.resolve();
+    function remotePractice() {
+      if (!remoteFlight) {
+        var wanted = keys.filter(function (k) { return SP_MERGE[k]; });
+        if (wanted.indexOf('ga_sp_tomb') < 0) wanted.unshift('ga_sp_tomb');
+        remoteFlight = rest('ga_store?select=k,v&k=in.(' + wanted.join(',') + ')').then(function (rows) {
+          if (!Array.isArray(rows)) throw new Error('پاسخ ادغام تمرین‌ها معتبر نیست؛ ارسال متوقف شد.');
+          var out = {};
+          rows.forEach(function (row) { if (row && SP_MERGE[row.k]) out[row.k] = row.v; });
+          return out;
+        });
+      }
+      return remoteFlight;
+    }
 
-    /* مسیر امن: اول Edge Function «ga-sync» (نوشتن با کلید مخفی سرور)؛
-       اگر هنوز دیپلوی نشده بود/خطا داد ← مسیر قدیمی REST (تا قبل از فاز صفر کار می‌کند) */
-    return preMerge.then(function () { return edgeSync(rows); }).then(function (r) {
-      if (r && r.ok === false) throw new Error('ga-sync: ' + (r.err || '?'));
-    }).catch(function () {
-      return rest('ga_store', {
-        method: 'POST',
-        headers: { 'Prefer': 'return=representation,resolution=merge-duplicates' },
-        body: JSON.stringify(rows)
+    function sendKey(k) {
+      if (stopped) return Promise.resolve();
+      var stamp, raw, row, bytes = 0;
+      return (SP_MERGE[k] ? remotePractice() : Promise.resolve(null)).then(function (remote) {
+        var dirty = jread(DIRTY_KEY, {});
+        if (!dirty[k]) return;
+        stamp = dirty[k];
+        if (!Number.isFinite(Date.parse(stamp))) {
+          stamp = localStamp(); dirty[k] = stamp; jwrite(DIRTY_KEY, dirty);
+        }
+        raw = L.getItem(k);
+        row = { k: k, v: raw === null ? { __del: 1 } : encode(raw), updated_at: stamp };
+        if (remote && raw !== null) {
+          var tomb = mixTombObj(remote.ga_sp_tomb, readSpTomb());
+          if (k === 'ga_sp_tomb') row.v = tomb;
+          else row.v = encode(mergeSpKey(k, raw, decode(remote[k] || (k === 'ga_sp_shots' ? [] : {})), tomb));
+        }
+        var payload = JSON.stringify({ action: 'kv', rows: [row] });
+        bytes = byteLength(payload);
+        if (keepalive ? bytes > KEEPALIVE_BYTES : payload.length > MAX_EDGE_CHARS) {
+          var tooBig = new Error(k + ' (' + Math.ceil(bytes / 1024) + ' KB)');
+          tooBig.status = 413;
+          throw tooBig;
+        }
+        return edgeSync([row], { keepalive: keepalive }).then(function () {
+          var d2 = jread(DIRTY_KEY, {}), ts = jread(TS_KEY, {});
+          ts[k] = stamp;
+          jwrite(TS_KEY, ts);
+          // ویرایشِ حین درخواست هرگز با پاسخ نسخهٔ قدیمی از صف حذف نمی‌شود.
+          if (d2[k] === stamp && L.getItem(k) === raw) {
+            if (SP_MERGE[k] && raw !== null) {
+              applying = true;
+              try { L.setItem(k, decode(row.v)); } finally { applying = false; }
+            }
+            delete d2[k];
+            jwrite(DIRTY_KEY, d2);
+            sweepCache[k] = L.getItem(k);
+          }
+          sent++;
+          state.pushed++;
+          setPhase('pushing', sent + ' بخش تأیید شد؛ ' + pendingKeys().length + ' بخش در صف');
+        });
+      }).catch(function (e) {
+        var detail = { key: k, status: e.status || 0, code: e.code || '', bytes: bytes, message: errorText(e) };
+        errors.push(detail);
+        state.errors = errors.slice();
+        state.err = detail.message;
+        // در قطع شبکه/محدودیت سراسری، درخواست‌های تکراری روی LTE نفرست.
+        if (e.network || e.status === 401 || e.status === 403 || e.status === 429 || e.status === 503 || e.status === 504) stopped = true;
+        render();
       });
-    }).then(function () {
-      var d2 = jread(DIRTY_KEY, {});
-      keys.forEach(function (k) { delete d2[k]; });
-      jwrite(DIRTY_KEY, d2);
-      primeSweep();
-      state.pushed += keys.length;
-      setPhase('idle', keys.length + ' کلید ارسال شد');
-      return true;
+    }
+
+    var work = Promise.resolve();
+    keys.forEach(function (k) { work = work.then(function () { return sendKey(k); }); });
+    pushFlight = work.then(function () {
+      var n = pendingKeys().length;
+      state.errors = errors;
+      if (errors.length) {
+        setPhase('error', (sent ? sent + ' بخش ارسال شد؛ ' : '') + n + ' بخش در صف محفوظ است. ' + errors[0].key + ': ' + errors[0].message);
+      } else {
+        state.err = null;
+        setPhase(n ? 'pending' : 'idle', n
+          ? (sent + ' بخش تأیید شد؛ ' + n + ' تغییر تازه در صف است.')
+          : (sent + ' بخش ارسال و ذخیره‌شدن آن تأیید شد.'));
+      }
+      return !errors.length;
     }).catch(function (e) {
-      setPhase('error', 'خطا در ارسال: ' + e.message);
-      state.err = String(e.body || e.message);
+      state.err = errorText(e);
+      setPhase('error', state.err + ' صف ارسال حذف نشده است.');
       return false;
+    }).then(function (ok) {
+      pushFlight = null;
+      render();
+      if (pendingKeys().length) {
+        failStreak = ok ? 0 : failStreak + 1;
+        schedule(ok ? 1200 : Math.min(120000, 5000 * Math.pow(2, Math.min(failStreak, 5))));
+      } else failStreak = 0;
+      return ok;
     });
+    render();
+    return pushFlight;
   }
 
-  /* ── زمان‌بندی debounce + backoff در خطا ────────────────────────── */
+  /* یک چرخهٔ ارسال در هر تب؛ تلاش مجدد با backoff و حفظ صف در خطا. */
   var timer = null, failStreak = 0;
   function schedule(ms) {
     if (!hasCred()) return;
     clearTimeout(timer);
-    timer = setTimeout(function () {
-      push('auto').then(function () {
-        if (state.phase === 'error') {
-          failStreak++;
-          schedule(Math.min(120000, 5000 * Math.pow(2, Math.min(failStreak, 5))));
-        } else {
-          failStreak = 0;
-        }
-      });
-    }, ms || 3000);
+    timer = setTimeout(function () { timer = null; push('auto'); }, typeof ms === 'number' ? ms : 3000);
   }
 
   /* ── تست اتصال (پنل + عیب‌یابی) ─────────────────────────────────── */
   function test() {
     if (!cfg().key) return Promise.resolve({ ok: false, why: 'کلید تنظیم نشده' });
-    return rest('ga_store?select=k&limit=1')
-      .then(function () { return { ok: true, why: 'اتصال برقرار — ga_store پاسخ می‌دهد' }; })
-      .catch(function (e) {
-        var why = e.message;
-        var body = String(e.body || '');
-        if (e.status === 401 || /Invalid API key/i.test(body)) why = 'کلید نامعتبر است (401) — anon/publishable key صحیح را از داشبورد کپی کنید';
-        else if (/Could not find the table|PGRST205/i.test(body)) why = 'جدول ga_store یافت نشد — supabase/schema.sql را در SQL Editor اجرا کنید';
-        return { ok: false, why: why };
-      });
+    return rest('ga_store?select=k&limit=1').then(function (rows) {
+      if (!Array.isArray(rows)) throw new Error('پاسخ خواندن از دیتابیس معتبر نیست.');
+      var why = 'خواندن از دیتابیس برقرار است؛ این تست تأیید ارسال تغییرات نیست.';
+      state.read = { ok: true, at: localStamp(), message: why };
+      render();
+      return { ok: true, why: why, pending: pendingKeys().length };
+    }).catch(function (e) {
+      var why = errorText(e);
+      if (e.status === 401) why = 'کلید نامعتبر است (401) — کلید عمومی اتصال را بررسی کنید.';
+      else if (e.code === 'PGRST205') why = 'جدول ga_store پیدا نشد؛ تنظیم پروژه باید بررسی شود.';
+      state.read = { ok: false, at: localStamp(), message: why };
+      render();
+      return { ok: false, why: why, pending: pendingKeys().length };
+    });
   }
 
   /* ── UI: چیپ گوشه + پنل کانفیگ ─────────────────────────────────── */
@@ -449,18 +572,41 @@
   }
   function phaseColor() {
     switch (state.phase) {
-      case 'idle': return '#2ecc71';
+      case 'idle': return pendingKeys().length ? '#d4a737' : '#2ecc71';
+      case 'pending': return '#d4a737';
       case 'pulling': case 'pushing': return '#3da9fc';
       case 'error': return '#e74c3c';
       default: return '#7f8c8d';
     }
   }
   function render() {
-    if (!chip) return;
-    var n = Object.keys(jread(DIRTY_KEY, {})).length;
-    chip.textContent = '☁️ ' + (n ? n + ' ✉' : (state.phase === 'idle' ? 'synced' : state.phase));
-    chip.style.background = phaseColor();
-    chip.title = (state.msg || state.phase) + (state.last ? ' | ' + state.last : '');
+    var n = pendingKeys().length;
+    if (chip) {
+      chip.textContent = '☁️ ' + (n ? n + ' در صف' : (state.phase === 'idle' ? 'همگام' : state.phase === 'error' ? 'خطا' : 'ابر'));
+      chip.style.background = phaseColor();
+      chip.title = (state.msg || state.phase) + (state.last ? ' | ' + state.last : '');
+      chip.setAttribute('aria-label', 'همگام‌سازی ابری؛ ' + (state.msg || state.phase));
+    }
+    if (!panel || !inBrowser) return;
+    var status = document.getElementById('gc-status'), read = document.getElementById('gc-read-status');
+    var details = document.getElementById('gc-errors'), summary = document.getElementById('gc-queue');
+    if (status) { status.textContent = state.msg || state.phase; status.style.color = phaseColor(); }
+    if (read) {
+      read.textContent = state.read ? ((state.read.ok ? '✓ ' : '⛔ ') + state.read.message) : 'تست اتصال فقط خواندن از دیتابیس را بررسی می‌کند.';
+      read.style.color = state.read && !state.read.ok ? '#ffafa5' : '#afc4ba';
+    }
+    if (details) {
+      details.textContent = state.errors.map(function (e) { return e.key + ': ' + e.message; }).join('\n');
+      details.style.display = state.errors.length ? '' : 'none';
+    }
+    if (summary && panel.style.display !== 'none') {
+      var info = queueInfo(), bytes = info.reduce(function (sum, item) { return sum + item.bytes; }, 0);
+      summary.textContent = n ? n + ' بخش در انتظار ارسال · حدود ' + Math.ceil(bytes / 1024) + ' KB' : 'صف ارسال خالی است.';
+    }
+    ['gc-push', 'gc-pull', 'gc-save', 'gc-reset'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.disabled = !!(pushFlight || pullFlight);
+    });
   }
   function escAttr(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
   function authed() { try { return !!ls().getItem('ga_session'); } catch (e) { return false; } }
@@ -476,48 +622,69 @@
     setTimeout(ui, 3000); // ورود/خروج که از مسیر معمول app.js انجام می‌شود را دنبال می‌کند
   }
   function uiBuild() {
-    chip = document.createElement('div');
+    chip = document.createElement('button');
     chip.id = 'ga-cloud-chip';
+    chip.type = 'button';
     chip.setAttribute('dir', 'rtl');
-    chip.style.cssText = 'position:fixed;bottom:12px;left:14px;z-index:99997;padding:6px 10px;border-radius:99px;font:11px Tahoma,sans-serif;color:#fff;background:#7f8c8d;cursor:pointer;user-select:none;box-shadow:0 4px 14px rgba(0,0,0,.35)';
+    chip.setAttribute('aria-expanded', 'false');
+    chip.setAttribute('aria-controls', 'ga-cloud-panel');
+    chip.style.cssText = 'position:fixed;bottom:12px;left:14px;z-index:99997;padding:6px 10px;border:0;border-radius:99px;font-family:inherit;font-size:12px;line-height:1.6;color:#fff;background:#7f8c8d;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)';
     chip.onclick = togglePanel;
     document.body.appendChild(chip);
-    render();
 
     panel = document.createElement('div');
     panel.id = 'ga-cloud-panel';
     panel.setAttribute('dir', 'rtl');
-    panel.style.cssText = 'position:fixed;bottom:48px;left:14px;z-index:99999;width:300px;padding:14px;border-radius:14px;background:#0d1b2a;color:#e6edf3;font:12px/1.9 Tahoma,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.55);display:none';
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-label', 'همگام‌سازی ابری');
+    panel.style.cssText = 'position:fixed;bottom:54px;left:14px;z-index:99999;width:360px;max-width:calc(100vw - 28px);max-height:calc(100vh - 110px);max-height:calc(100dvh - 110px);box-sizing:border-box;overflow:auto;overscroll-behavior:contain;padding:16px;border:1px solid #b5994a55;border-radius:16px;background:#0d1b2a;color:#e6edf3;font-family:inherit;font-size:12px;line-height:1.9;box-shadow:0 10px 40px rgba(0,0,0,.55);display:none';
     var c = cfg();
+    var field = 'width:100%;box-sizing:border-box;font-size:16px;direction:ltr;text-align:left';
+    var button = 'flex:1;min-height:42px;border:1px solid #b5994a55;border-radius:10px;padding:7px;cursor:pointer';
     panel.innerHTML =
-      '<div style="font-weight:bold;margin-bottom:8px">☁️ همگام‌سازی ابری</div>' +
-      '<label>Supabase URL</label><input id="gc-url" style="width:100%;box-sizing:border-box" value="' + escAttr(c.url) + '">' +
-      '<label>کلید anon/publishable</label><input id="gc-key" type="password" style="width:100%;box-sizing:border-box" value="' + escAttr(c.key) + '" placeholder="sb_publishable_… یا eyJ…">' +
-      '<label style="display:flex;gap:6px;align-items:center;margin:6px 0"><input id="gc-on" type="checkbox"' + (c.on ? ' checked' : '') + '> همگام‌سازی فعال باشد</label>' +
-      '<div id="gc-status" style="min-height:20px;color:#9fb3c8">' + escAttr(state.msg || state.phase) + '</div>' +
-      '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">' +
-      '<button id="gc-test" style="flex:1">تست اتصال</button>' +
-      '<button id="gc-pull" style="flex:1">کشیدن ⇩</button>' +
-      '<button id="gc-push" style="flex:1">فرستادن ⇧</button></div>' +
-      '<div style="display:flex;gap:6px;margin-top:6px">' +
-      '<button id="gc-save" style="flex:2;background:#1f6f43;color:#fff;border:0;padding:7px;border-radius:8px;cursor:pointer">ذخیره و اعمال</button>' +
-      '<button id="gc-reset" style="flex:1;background:#444;color:#fff;border:0;padding:7px;border-radius:8px;cursor:pointer">حذف کانفیگ</button></div>';
+      '<div style="display:flex;justify-content:space-between;align-items:center;font-weight:bold;margin-bottom:8px"><span>☁️ همگام‌سازی ابری</span><button id="gc-close" aria-label="بستن همگام‌سازی" style="background:none;border:0;color:inherit;min-width:36px;min-height:36px">✕</button></div>' +
+      '<div id="gc-queue" style="color:#dfc374;margin-bottom:8px"></div>' +
+      '<div id="gc-status" role="status" aria-live="polite" style="overflow-wrap:anywhere;min-height:24px"></div>' +
+      '<div id="gc-errors" style="display:none;white-space:pre-wrap;overflow-wrap:anywhere;background:#762c2c33;border-radius:8px;padding:8px;margin-top:8px;color:#ffbcb4"></div>' +
+      '<div id="gc-read-status" style="margin-top:10px;font-size:11px"></div>' +
+      '<div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">' +
+      '<button id="gc-test" style="' + button + '">تست اتصال</button>' +
+      '<button id="gc-pull" style="' + button + '">دریافت ⇩</button>' +
+      '<button id="gc-push" style="' + button + 'background:#1f6f43;color:#fff">ارسال مجدد ⇧</button></div>' +
+      '<p style="font-size:11px;color:#afc4ba;margin:10px 0">تا تأیید ذخیره‌شدن، تغییرات در همین مرورگر محفوظ می‌مانند. هنگام خطا، داده‌های مرورگر را پاک نکنید.</p>' +
+      '<details style="border-top:1px solid #ffffff22;padding-top:8px"><summary style="cursor:pointer">تنظیمات اتصال</summary>' +
+      '<label for="gc-url">Supabase URL</label><input id="gc-url" dir="ltr" style="' + field + '" value="' + escAttr(c.url) + '">' +
+      '<label for="gc-key">کلید عمومی anon/publishable</label><input id="gc-key" dir="ltr" type="password" autocomplete="off" style="' + field + '" value="' + escAttr(c.key) + '">' +
+      '<label style="display:flex;gap:6px;align-items:center;margin:8px 0"><input id="gc-on" type="checkbox"' + (c.on ? ' checked' : '') + '> همگام‌سازی فعال باشد</label>' +
+      '<div style="display:flex;gap:6px;margin-top:8px"><button id="gc-save" style="' + button + '">ذخیره و اعمال</button><button id="gc-reset" style="' + button + '">حذف کانفیگ</button></div></details>';
     document.body.appendChild(panel);
     var $ = function (id) { return document.getElementById(id); };
+    $('gc-close').onclick = togglePanel;
     $('gc-test').onclick = function () {
-      $('gc-status').textContent = 'در حال تست…';
-      test().then(function (r) { $('gc-status').textContent = (r.ok ? '✅ ' : '⛔ ') + r.why; });
+      $('gc-test').disabled = true;
+      $('gc-read-status').textContent = 'در حال بررسی خواندن از دیتابیس…';
+      test().then(function () { $('gc-test').disabled = false; });
     };
-    $('gc-pull').onclick = function () { pull().then(function () { $('gc-status').textContent = state.msg; }); };
-    $('gc-push').onclick = function () { push('manual').then(function () { $('gc-status').textContent = state.msg; }); };
+    $('gc-pull').onclick = function () { pull(); };
+    $('gc-push').onclick = function () { push('manual'); };
     $('gc-save').onclick = function () {
-      jwrite(CFG_KEY, { url: $('gc-url').value.trim(), key: $('gc-key').value.trim(), on: $('gc-on').checked });
+      jwrite(CFG_KEY, { url: $('gc-url').value.trim().replace(/\/+$/, ''), key: $('gc-key').value.trim(), on: $('gc-on').checked });
       $('gc-status').textContent = 'ذخیره شد — راه‌اندازی مجدد…';
       setTimeout(function () { location.reload(); }, 500);
     };
-    $('gc-reset').onclick = function () { ls().removeItem(CFG_KEY); setTimeout(function () { location.reload(); }, 300); };
+    $('gc-reset').onclick = function () {
+      if (typeof window.confirm === 'function' && !window.confirm('فقط تنظیمات اتصال به پیش‌فرض برگردد؟ داده‌ها و صف ارسال پاک نمی‌شوند.')) return;
+      ls().removeItem(CFG_KEY);
+      setTimeout(function () { location.reload(); }, 300);
+    };
+    render();
   }
-  function togglePanel() { if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; }
+  function togglePanel() {
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    chip.setAttribute('aria-expanded', panel.style.display !== 'none' ? 'true' : 'false');
+    render();
+  }
 
   /* ── راه‌اندازی ──────────────────────────────────────────────────── */
   function init() {
@@ -527,37 +694,26 @@
     if (!hasCred()) { setPhase('off', 'خاموش — کلید/URL تنظیم نشده (پنل ☁️)'); return; }
     primeSweep();
     pull().then(function () {
-      if (Object.keys(jread(DIRTY_KEY, {})).length) schedule(800);
+      if (pendingKeys().length) schedule(800);
     });
     setInterval(sweep, 20000);
     if (window.addEventListener) {
-      window.addEventListener('online', function () { push('online'); });
-      document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') push('flush'); });
+      window.addEventListener('online', function () { failStreak = 0; schedule(100); });
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') flushOnce();
+        else if (pendingKeys().length) schedule(100);
+      });
+      window.addEventListener('pageshow', function () { if (pendingKeys().length) schedule(100); });
+      window.addEventListener('pagehide', flushOnce);
       window.addEventListener('beforeunload', flushOnce);
     }
   }
 
-  /* تلاش نهایی هنگام بستن تب: fetch با keepalive (بدون بلوکه‌کردن بستن صفحه) */
+  /* خروج موبایل: فقط یک درخواست کوچک و قابل تأیید. بستهٔ بزرگ keepalive
+     در مرورگر رد می‌شود؛ صف باقی می‌ماند تا برگشتن صفحه و ارسال عادی. */
   function flushOnce() {
-    try {
-      if (!hasCred()) return;
-      var d = jread(DIRTY_KEY, {});
-      var keys = Object.keys(d).filter(function (k) { return !SKIP[k]; });
-      if (!keys.length) return;
-      var L = ls(), now = localStamp();
-      var rows = keys.map(function (k) {
-        var v = L.getItem(k);
-        return { k: k, v: v === null ? { __del: 1 } : encode(v), updated_at: d[k] || now };
-      });
-      var c = cfg();
-      fetch(c.url + '/functions/v1/ga-sync', {
-        method: 'POST',
-        headers: { 'apikey': c.key, 'Authorization': 'Bearer ' + c.key, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'kv', rows: rows }),
-        keepalive: true,
-        mode: 'cors'
-      }).catch(function () {});
-    } catch (e) {}
+    if (!hasCred() || pushFlight || pullFlight) return;
+    push('flush', { keepalive: true });
   }
 
   if (inBrowser) {
@@ -565,14 +721,27 @@
     else init();
   }
 
-  /* دروازهٔ امن نوشتن — Edge Function «ga-sync» */
-  function edgeSync(rows) {
+  /* نوشتن فقط از ga-sync؛ HTTP 2xx + ok:true + تعداد دقیق ردیف‌ها لازم است. */
+  function edgeRequest(payload, options) {
     var c = cfg();
-    return fetch(c.url + '/functions/v1/ga-sync', {
+    return requestJSON(c.url.replace(/\/+$/, '') + '/functions/v1/ga-sync', {
       method: 'POST',
-      headers: { 'apikey': c.key, 'Authorization': 'Bearer ' + c.key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'kv', rows: rows })
-    }).then(function (r) { return r.json(); });
+      headers: { apikey: c.key, Authorization: 'Bearer ' + c.key, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload), mode: 'cors', keepalive: !!(options && options.keepalive)
+    }).then(function (r) {
+      if (!r || r.ok !== true) throw new Error('ga-sync: ' + (r && (r.err || r.message) || 'تأیید ذخیره دریافت نشد'));
+      return r;
+    });
+  }
+  function edgeSync(rows, options) {
+    return edgeRequest({ action: 'kv', rows: rows }, options).then(function (r) {
+      if (typeof r.put !== 'number' || typeof r.del !== 'number' || r.put + r.del !== rows.length) {
+        var error = new Error('تعداد رکوردهای تأییدشده با درخواست یکسان نیست؛ صف حفظ شد.');
+        error.code = 'BAD_ACK';
+        throw error;
+      }
+      return r;
+    });
   }
 
   /* dual-write: جلسهٔ بسته‌شده + ضربه‌هایش → جدول‌های واقعی sp_sessions/sp_shots (فاز ۱) */
@@ -580,26 +749,22 @@
     shots: function (sn, arr) {
       try {
         if (!hasCred() || !sn || !sn.id) return;
-        var c = cfg();
-        fetch(c.url + '/functions/v1/ga-sync', {
-          method: 'POST',
-          headers: { 'apikey': c.key, 'Authorization': 'Bearer ' + c.key, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'shots', session: sn, shots: arr || [] })
-        }).catch(function () {});
+        return edgeRequest({ action: 'shots', session: sn, shots: arr || [] }).then(function () { return true; }, function () { return false; });
       } catch (e) {}
     }
   };
 
   /* API عمومی برای دیباگ و تست‌های e2e */
   window.GA_CLOUD = {
-    status: function () { return JSON.parse(JSON.stringify(state)); },
+    status: function () { var out = JSON.parse(JSON.stringify(state)); out.pending = pendingKeys().length; return out; },
     pull: pull,
     push: push,
     test: test,
     tombShots: tombShots,
     tombSession: tombSession,
     stripSp: stripSpStorage,
-    dirty: function () { return Object.keys(jread(DIRTY_KEY, {})); },
+    dirty: pendingKeys,
+    queueInfo: queueInfo,
     cfg: cfg,
     setCfg: function (url, key, on) { jwrite(CFG_KEY, { url: url, key: key, on: on !== false }); },
     clearCfg: function () { ls().removeItem(CFG_KEY); }

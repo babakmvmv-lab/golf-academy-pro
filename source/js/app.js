@@ -3007,16 +3007,16 @@
     return AV.rankCard({ user, name, sel: av.sel, gender: av.gender, honor: honorOfUser(user), size: size || 'md', id: id || '' });
   }
   function honorProgHTML(hn){
-    if (!hn.next) return `<div style="font-size:11.5px;color:var(--muted);margin-top:8px">هر چهار پیش‌نیاز بالاترین رنک آکادمی را تکمیل کرده‌اید 👑</div>`;
-    const checks = hn.checks;
+    if (!hn.next) return `<div style="font-size:11.5px;color:var(--muted);margin-top:8px">تمام پیش‌نیازهای بالاترین رنک آکادمی را تکمیل کرده‌اید 👑</div>`;
+    const checks = hn.checks.filter(f => f.need > 0);
     return `
       <div class="honor-progress" style="margin-top:12px;text-align:right">
         <div style="font-size:11.5px;color:var(--muted);line-height:1.9">پیش‌نیازهای رنک بعدی: <b style="color:${hn.next.title}">${esc(hn.next.en)}</b></div>
-        <div style="font-size:11px;color:var(--gold-l);margin-top:4px">${D.fa(hn.complete)} از ۴ شرط تکمیل شده — هر چهار مورد لازم است</div>
+        <div style="font-size:11px;color:var(--gold-l);margin-top:4px">${D.fa(hn.complete)} از ${D.fa(hn.requiredCount)} پیش‌نیاز تکمیل شده — با احتساب معادل مجاز</div>
         <div class="pbar gold" role="progressbar" aria-label="تکمیل پیش‌نیازهای رنک بعدی" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(hn.prog)}" style="margin-top:7px"><i style="width:${Math.round(hn.prog)}%"></i></div>
         <div style="margin-top:8px">
           ${checks.map(f => `<div data-hcheck="${f.key}" data-met="${f.met}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;font-size:11px;line-height:1.8;color:${f.met ? 'var(--green-l)' : 'var(--muted)'}">
-            <span>${f.met ? '✓' : '○'} ${f.label}</span>
+            <span>${f.met ? '✓' : '○'} ${f.label}${f.key !== 'pts' && f.have !== f.raw ? ' <small>(با معادل)</small>' : ''}</span>
             <span style="white-space:nowrap;font-variant-numeric:tabular-nums">${D.faNum(f.have, f.key === 'pts' && !Number.isInteger(f.have) ? 2 : 0)} / ${D.fa(f.need)}</span>
           </div>`).join('')}
         </div>
@@ -3036,7 +3036,7 @@
     body.innerHTML = `
     <div class="grid cols-3">
       <div class="glass" style="text-align:center">
-        <div class="card-head"><span class="ic">🏅</span><h3>کارت رنک من</h3><span class="tag">Honor Rank</span></div>
+        <div class="card-head"><span class="ic">🏅</span><h3>کارت رنک من</h3><span class="tag">Honor Rank</span>${RANK_GUIDE.iconButton('توضیحات رنک‌ها و پیش‌نیاز لول بعدی')}</div>
         <div style="margin-top:10px;display:flex;justify-content:center">${honorCardHTML(currentUser, o.name, 'md', 'mz-card')}</div>
         ${honorProgHTML(o.hn)}
       </div>
@@ -3153,7 +3153,6 @@
       { id:'w3', ic:'🥉', title:'قهرمان مسابقهٔ سطح ۳ (خودکار)', amount:10 }]).forEach(r => {
       rows += `<div class="row"><span class="pnm"><span style="font-size:20px">${r.ic}</span><span>${esc(r.title)}</span></span><span style="font-weight:900;color:#f6e27a">+${D.fa(r.amount)} 🪙</span></div>`;
     });
-    const rs = AV.ranks();
     body.innerHTML = `
     <div class="glass" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">📜</span><h3>اطلاعات دریافت سکه — جدول کامل</h3><span class="tag">GolfCoin 🪙</span></div>
@@ -3161,18 +3160,9 @@
       <div class="golfrule" style="margin-top:14px;line-height:2">🪙 <b>سکه چیست؟</b> سکه‌های آکادمی را از فعالیت‌های ورزشی و اجتماعی به دست می‌آورید و در <b>فروشگاه اوتار</b> خرج می‌کنید. هر خرید برای همیشه در کمد شما می‌ماند. خودت طراحی کن، ایده بگیر و استایل مخصوص خودت را بساز!</div>
       <div class="golfrule" style="margin-top:10px;line-height:2">⏳ همهٔ درخواست‌های سکه، پس از بررسی و <b>تأیید مدیریت</b> اعمال می‌شوند.</div>
     </div>
-    <div class="glass">
-      <div class="card-head"><span class="ic">🏅</span><h3>نردبان Honor Rank — ۱۵ سطح، ۵ دیویژن</h3><span class="tag">رنک شما: ${esc(o.hn.rank.en)}</span></div>
-      <div class="rank-grid" style="margin-top:12px">
-        ${rs.map(r => `<div class="rank-chip ${r.lv === o.hn.lv ? 'on' : ''}" style="border-color:${r.lv === o.hn.lv ? r.border : 'rgba(255,255,255,.12)'}">
-          <div style="display:flex;justify-content:center">${AV.badgeSVG(r, 30)}</div>
-          <div style="color:${r.title};margin-top:5px">${esc(r.en)}</div>
-          <div style="font-size:10px;color:var(--muted)">${esc(r.fa)}</div>
-          <div style="font-size:10px;color:var(--gold-l);margin-top:3px">Lv ${D.fa(r.lv)} • ${D.fa(r.pts)}+ امتیاز کل</div>
-          <div style="font-size:10px;color:var(--muted);line-height:1.9;margin-top:4px">حداقل قهرمانی:<br>سطح ۱: ${D.fa(r.wins1)} • سطح ۲: ${D.fa(r.wins2)} • سطح ۳: ${D.fa(r.wins3)}</div>
-        </div>`).join('')}
-      </div>
-      <div class="golfrule" style="margin-top:12px;line-height:2">🎖️ رنک شما بر اساس <b>امتیاز کل از روز اول + تعداد قهرمانی سطح ۱، ۲ و ۳</b> تعیین می‌شود. هر چهار حداقل باید <b>هم‌زمان</b> تأمین باشند؛ امتیازِ بیشتر به‌تنهایی جای قهرمانی را نمی‌گیرد. قهرمانی، نفر اولِ مسابقه در آن سطح است؛ نه مقام دوم یا سوم. این سابقه با تغییر فصل صفر نمی‌شود.</div>
+    <div class="rg-launch">
+      ${RANK_GUIDE.iconButton('نمایش راهنمای رنک‌ها و مسیر شخصی ارتقاء')}
+      <div><h3>توضیحات رنک‌ها و مسیر ارتقاء</h3><p>فهرست کامل ۱۵ رنک، نشان‌ها، امتیازها و افتخارات موردنیاز را ببینید. بالای راهنما مشخص است برای لول بعدی چه کمبودهایی دارید و چه مسیرهای معادلی می‌توانید انتخاب کنید.</p></div>
     </div>`;
   }
 
@@ -3731,13 +3721,21 @@
       const cs = getComputedStyle(m); return cs.display !== 'none' && cs.visibility !== 'hidden';
     });
     if (open){
-      open.style.display = 'none';
+      if (open.id === 'modal-rank-guide' && window.RANK_GUIDE) RANK_GUIDE.close();
+      else open.style.display = 'none';
       try { history.pushState({ p: currentPage }, '', '#' + currentPage); } catch (e2){}
       return;
     }
     let pg = (e.state && e.state.p) || (location.hash || '').slice(1) || 'cmd';
     if (!PAGES[pg]) pg = 'cmd';
     go(pg, true);
+  });
+
+  document.addEventListener('click',e => {
+    const trigger=e.target.closest && e.target.closest('[data-rank-guide]');
+    if(!trigger || !window.RANK_GUIDE) return;
+    e.preventDefault();
+    RANK_GUIDE.open(() => ({user:currentUser,name:(userRec(currentUser) || {}).name || currentUser,stats:careerOfUser(currentUser)}),trigger);
   });
 
   window.APP = {

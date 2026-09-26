@@ -59,6 +59,10 @@ def main():
         mcss = open(os.path.join(ROOT, 'css', 'mgmt.css'), encoding='utf-8').read()
         html = re.sub(r'<link rel="stylesheet" href="css/mgmt.css">',
                       '<style>' + mcss + '</style>', html)
+    if os.path.exists(os.path.join(ROOT, 'css', 'rank-guide.css')):
+        rcss = open(os.path.join(ROOT, 'css', 'rank-guide.css'), encoding='utf-8').read()
+        html = re.sub(r'<link rel="stylesheet" href="css/rank-guide.css">',
+                      lambda m: '<style>' + rcss + '</style>', html)
     if os.path.exists(os.path.join(ROOT, 'css', 'avatarland.css')):
         alcss = open(os.path.join(ROOT, 'css', 'avatarland.css'), encoding='utf-8').read()
         html = re.sub(r'<link rel="stylesheet" href="css/avatarland.css">',
@@ -73,7 +77,7 @@ def main():
                       '<style>' + lcss + '</style>', html)
 
     # 3) inline JS in load order
-    for jsname in ['device', 'cloud', 'labels', 'holidays', 'data', 'brand', 'sub', 'charts', 'qrcode.min', 'battle', 'landing', 'jdate', 'avatar', 'shop', 'mgmt', 'smartplay', 'leaflet', 'mis-golf', 'coursegeo', 'earthmap', 'app']:
+    for jsname in ['device', 'cloud', 'labels', 'holidays', 'data', 'brand', 'sub', 'charts', 'qrcode.min', 'battle', 'landing', 'jdate', 'avatar', 'rank-guide', 'shop', 'mgmt', 'smartplay', 'leaflet', 'mis-golf', 'coursegeo', 'earthmap', 'app']:
         js = open(os.path.join(ROOT, 'js', jsname + '.js'), encoding='utf-8').read()
         html = re.sub(rf'<script src="js/{jsname}\.js"></script>',
                       lambda m: '<script>' + js + '</script>', html)

@@ -57,15 +57,40 @@
     { lv:14, en:'Legend of Fairway',fa:'اسطورهٔ فروی',         pts:300, badge:'🔥' },
     { lv:15, en:'Immortal Champion',fa:'قهرمان جاودان',       pts:350, badge:'💎' },
   ];
-  /* چهار شرط مستقل؛ امتیاز و قهرمانی‌ها از کل سابقهٔ بازیکن، نه فقط فصل جاری. */
+  /* امتیاز کل + پنج مقام کشوری + قهرمانی سطح ۲ و ۳؛ همه با هم لازم‌اند. */
   const PREREQUISITES = [
-    { key:'pts',   label:'امتیاز کل (از روز اول)' },
-    { key:'wins1', label:'قهرمانی سطح ۱' },
-    { key:'wins2', label:'قهرمانی سطح ۲' },
-    { key:'wins3', label:'قهرمانی سطح ۳' },
+    { key:'pts', label:'امتیاز کل (از روز اول)', short:'امتیاز کل', group:'points' },
+    { key:'wins1', label:'قهرمانی سطح ۱ (کشوری)', short:'قهرمان', group:'national', place:1 },
+    { key:'national2', label:'نایب‌قهرمانی سطح ۱', short:'نایب‌قهرمان', group:'national', place:2 },
+    { key:'national3', label:'مقام سوم سطح ۱', short:'سوم', group:'national', place:3 },
+    { key:'national4', label:'مقام چهارم سطح ۱', short:'چهارم', group:'national', place:4 },
+    { key:'national5', label:'مقام پنجم سطح ۱', short:'پنجم', group:'national', place:5 },
+    { key:'wins2', label:'قهرمانی سطح ۲', short:'سطح ۲', group:'lower' },
+    { key:'wins3', label:'قهرمانی سطح ۳', short:'سطح ۳', group:'lower' },
   ];
+  const NATIONAL_FIELDS = PREREQUISITES.filter(f => f.group === 'national');
+  const RANK_RULES_KEY = 'ga_rank_rules';
+  const DEFAULT_RANK_RULES = { version:1, nationalTo2:{ 1:10,2:0,3:0,4:0,5:0 }, tier2To3:3, betterNational:true, note:'' };
+  function rankRules(value){
+    const o = value || LSget(RANK_RULES_KEY, {});
+    const rates = {};
+    const validRate = n => validRequirement(n, 'wins1') && +n <= 10000;
+    NATIONAL_FIELDS.forEach(f => {
+      const v = o.nationalTo2 && o.nationalTo2[f.place];
+      rates[f.place] = validRate(v) ? +v : DEFAULT_RANK_RULES.nationalTo2[f.place];
+    });
+    return { version:1, nationalTo2:rates, tier2To3:validRate(o.tier2To3) ? +o.tier2To3 : 3,
+      betterNational:o.betterNational !== false, note:typeof o.note === 'string' ? o.note.slice(0,600) : '' };
+  }
+  function saveRankRules(value){
+    if (!value || typeof value.betterNational !== 'boolean') return false;
+    if (!validRequirement(value.tier2To3,'wins1') || +value.tier2To3 > 10000) return false;
+    if (NATIONAL_FIELDS.some(f => !value.nationalTo2 || !validRequirement(value.nationalTo2[f.place],'wins1') || +value.nationalTo2[f.place] > 10000)) return false;
+    return LSset(RANK_RULES_KEY, rankRules(value));
+  }
   function defaultRequirements(lv){
-    return { wins1:0, wins2:lv >= 7 ? 3 : lv === 6 ? 1 : 0,
+    return { wins1:0, national2:0,national3:0,national4:0,national5:0,
+      wins2:lv >= 7 ? 3 : lv === 6 ? 1 : 0,
       wins3:lv >= 7 ? 10 : lv === 6 ? 3 : lv === 5 ? 1 : 0 };
   }
   function validRequirement(value, key){
@@ -75,10 +100,12 @@
     return Number.isFinite(n) && n >= 0 && (key === 'pts' || Number.isSafeInteger(n));
   }
   function progressStats(value){
-    const o = value && typeof value === 'object' ? value : { pts:value };
-    const n = k => Number.isFinite(Number(o[k])) ? Number(o[k]) : 0;
-    return { pts:n('pts'), wins1:Math.max(0, Math.floor(n('wins1'))),
-      wins2:Math.max(0, Math.floor(n('wins2'))), wins3:Math.max(0, Math.floor(n('wins3'))) };
+    const o = value && typeof value === 'object' ? value : { pts:value }, out = {};
+    PREREQUISITES.forEach(f => {
+      const n = Number.isFinite(Number(o[f.key])) ? Number(o[f.key]) : 0;
+      out[f.key] = f.key === 'pts' ? n : Math.max(0, Math.floor(n));
+    });
+    return out;
   }
   function divOf(lv){ return DIVISIONS.find(d => lv >= d.lv[0] && lv <= d.lv[1]) || DIVISIONS[0]; }
   function baseRank(lv){
@@ -122,24 +149,85 @@
     return LSset(SKIN_KEY, st);
   }
   function resetRanks(){ try { localStorage.removeItem(SKIN_KEY); } catch(e){} }
-  function rankProgress(rank, value){
-    const stats = progressStats(value);
-    return PREREQUISITES.map(f => {
-      const need = validRequirement(rank && rank[f.key], f.key) ? Number(rank[f.key]) : Infinity;
-      const have = stats[f.key];
-      return { key:f.key, label:f.label, need, have, met:have >= need,
-        remaining:Math.max(0, need - have), ratio:need === 0 ? 1 : Math.max(0, Math.min(1, have / need)) };
+  /* تخصیص موقت برای یک رنک؛ هیچ مدال/نتیجه/سکه‌ای کم یا زیاد نمی‌شود.
+     اول نیازهای کشوری، سپس سطح۲، و در پایان سطح۳؛ فقط مازادِ تخصیص‌نیافته پایین می‌رود. */
+  function rankEvaluation(rank, value, settings){
+    const stats = progressStats(value), rules = settings ? rankRules(settings) : rankRules();
+    const needs = {};
+    PREREQUISITES.forEach(f => {
+      const v = rank && rank[f.key];
+      needs[f.key] = v === undefined && f.place > 1 ? 0 : validRequirement(v,f.key) ? +v : Infinity;
     });
+    const checks = [], stock = Object.assign({},stats), allocations = [];
+    const check = (f, have, raw, used) => {
+      const need = needs[f.key];
+      const row = { key:f.key, label:f.label, need, have, raw, met:have >= need,
+        remaining:Math.max(0,need-have), ratio:need === 0 ? 1 : Math.max(0,Math.min(1,have/need)), used:used || [] };
+      checks.push(row); return row;
+    };
+    check(PREREQUISITES[0],stats.pts,stats.pts);
+    NATIONAL_FIELDS.forEach(f => {
+      const eligible = NATIONAL_FIELDS.filter(x => rules.betterNational ? x.place <= f.place : x.place === f.place);
+      const have = eligible.reduce((n,x) => n + stock[x.key],0);
+      let left = needs[f.key]; const used = [];
+      // رزرو نیازهای سخت‌تر اول؛ کم‌هزینه‌ترین مقام قابل‌قبول را مصرف کن تا اعتبار قابل تبدیل بیهوده هدر نرود.
+      eligible.sort((a,b) => rules.nationalTo2[a.place]-rules.nationalTo2[b.place] || b.place-a.place).forEach(x => {
+        const n = Math.min(stock[x.key],left);
+        if (n > 0){ stock[x.key] -= n; left -= n; used.push({ from:x.key,count:n }); allocations.push({ from:x.key,to:f.key,count:n }); }
+      });
+      check(f,have,stats[f.key],used);
+    });
+    const nationalCredit = NATIONAL_FIELDS.reduce((n,f) => n + stock[f.key]*rules.nationalTo2[f.place],0);
+    const pool2 = stats.wins2 + nationalCredit;
+    check(PREREQUISITES.find(f => f.key === 'wins2'),pool2,stats.wins2);
+    const spare2 = Math.max(0,pool2-needs.wins2);
+    const credit3 = spare2*rules.tier2To3;
+    check(PREREQUISITES.find(f => f.key === 'wins3'),stats.wins3+credit3,stats.wins3);
+    return { checks,met:checks.every(f => f.met),rules,allocations,nationalRemaining:stock,
+      nationalCredit,tier2Pool:pool2,tier2Reserved:Math.min(pool2,needs.wins2),tier2Remaining:spare2,tier3Credit:credit3 };
   }
-  function requirementsMet(rank, stats){ return rankProgress(rank, stats).every(f => f.met); }
-  function levelOfStats(stats, rs){
-    let lv = 0;
-    (rs || ranks()).forEach(r => { if (requirementsMet(r, stats)) lv = r.lv; });
+  function rankProgress(rank, value, rules){ return rankEvaluation(rank,value,rules).checks; }
+  function requirementsMet(rank, stats, rules){ return rankEvaluation(rank,stats,rules).met; }
+  function levelOfStats(stats, rs, rules){
+    let lv = 0; rules = rules || rankRules();
+    (rs || ranks()).forEach(r => { if (requirementsMet(r,stats,rules)) lv = r.lv; });
     return lv;
+  }
+  /* مسیرهای پیشنهادی باید کل نیاز را تأمین کنند؛ دو کمبود را با همان یک برد وعده نمی‌دهیم. */
+  function upgradePlans(rank, value, settings){
+    if (!rank) return [];
+    const rules = settings || rankRules(), original = progressStats(value);
+    const ready = Object.assign({}, original, { pts:Math.max(original.pts,+rank.pts || 0) });
+    if (requirementsMet(rank,ready,rules)) return [];
+    const plans = [], seen = new Set(), achievements = PREREQUISITES.filter(f => f.key !== 'pts');
+    const addPlan = additions => {
+      const signature = achievements.map(f => additions[f.key] || 0).join(',');
+      if (seen.has(signature) || !Object.values(additions).some(n => n > 0)) return;
+      const trial = Object.assign({},ready);
+      Object.keys(additions).forEach(k => trial[k] += additions[k]);
+      if (!requirementsMet(rank,trial,rules)) return;
+      seen.add(signature); plans.push(additions);
+    };
+    const direct = {}, work = Object.assign({},ready);
+    achievements.forEach(f => {
+      const miss = rankProgress(rank,work,rules).find(x => x.key === f.key).remaining;
+      if (Number.isFinite(miss) && miss > 0){ direct[f.key] = miss; work[f.key] += miss; }
+    });
+    addPlan(direct);
+    const cap = Math.min(Number.MAX_SAFE_INTEGER,achievements.reduce((n,f) => n + (+rank[f.key] || 0),0));
+    ['wins3','wins2','wins1','national2','national3','national4','national5'].forEach(key => {
+      if (!(cap > 0) || !Number.isSafeInteger(cap)) return;
+      const passes = n => requirementsMet(rank,Object.assign({},ready,{ [key]:ready[key]+n }),rules);
+      if (!passes(cap)) return;
+      let lo = 1, hi = cap;
+      while (lo < hi){ const m = lo + Math.floor((hi-lo)/2); if (passes(m)) hi = m; else lo = m+1; }
+      addPlan({ [key]:lo });
+    });
+    return plans.slice(0,4);
   }
   /* سازگاری فراخوانی قدیمی: امتیاز تنها، قهرمانی فرضی ایجاد نمی‌کند. */
   function levelOfPts(pts, wins){ return levelOfStats(Object.assign({}, wins || {}, { pts:pts })); }
-  /* رنک دستی مدیر نگهداری می‌شود، ولی بدون تکمیل هر چهار شرط قابل اعطا نیست. */
+  /* رنک دستی مدیر نگهداری می‌شود، ولی بدون تکمیل همهٔ پیش‌نیازها قابل اعطا نیست. */
   const HONOR_KEY = 'ga_honor';
   function honorStore(){ return LSget(HONOR_KEY, {}); }
   function setHonorOverride(user, lv){
@@ -157,19 +245,21 @@
   function honorOf(user, value){
     user = norm(user);
     const stats = progressStats(value);
-    const rs = ranks(), st = honorStore();
+    const rs = ranks(), st = honorStore(), rules = rankRules();
     const requested = st[user] && Number(st[user].lv);
     const desired = Number.isInteger(requested) && requested >= 1 && requested <= 15 ? requested : 0;
-    const manual = !!desired && requirementsMet(rs[desired-1], stats);
-    const lv = manual ? desired : levelOfStats(stats, rs);
+    const manual = !!desired && requirementsMet(rs[desired-1], stats, rules);
+    const lv = manual ? desired : levelOfStats(stats, rs, rules);
     const rank = lv ? rs[lv-1] : unranked();
     const next = lv < 15 ? rs[lv] : null;
-    const checks = next ? rankProgress(next, stats) : [];
-    const complete = checks.filter(f => f.met).length;
-    const ratio = checks.length ? checks.reduce((n, f) => n + f.ratio, 0) / checks.length * 100 : 100;
+    const evaluation = next ? rankEvaluation(next,stats,rules) : null;
+    const checks = evaluation ? evaluation.checks : [];
+    const required = checks.filter(f => f.need > 0);
+    const complete = required.filter(f => f.met).length;
+    const ratio = required.length ? required.reduce((n,f) => n+f.ratio,0) / required.length*100 : 100;
     // حتی با امتیاز فراوان، نبود یک قهرمانی نباید نوار «۱۰۰٪» نشان دهد.
-    const prog = checks.length && complete < checks.length ? Math.min(99, ratio) : 100;
-    return { lv, rank, pts:stats.pts, stats, next, checks, complete, prog, manual,
+    const prog = required.length && complete < required.length ? Math.min(99, ratio) : 100;
+    return { lv, rank, pts:stats.pts, stats, next, checks, complete, requiredCount:required.length, evaluation, prog, manual,
       manualRequested:desired, manualBlocked:!!desired && !manual };
   }
 
@@ -1169,7 +1259,8 @@
   window.AV = {
     DIVISIONS, PARTICLES, UPFX, RANK_BASE, DIV_SKIN,
     ranks, rankOf, saveRank, resetRanks, levelOfPts, levelOfStats, honorOf, setHonorOverride, honorStore,
-    PREREQUISITES, defaultRequirements, validRequirement, progressStats, rankProgress, requirementsMet,
+    PREREQUISITES, NATIONAL_FIELDS, defaultRequirements, validRequirement, progressStats, rankProgress, requirementsMet,
+    DEFAULT_RANK_RULES, rankRules, saveRankRules, rankEvaluation, upgradePlans,
     badgeSVG, renderAvatarSVG, itemPreviewSVG, rankCard, playRankUp, checkRankUp, particlesHTML, shade,
     BRANDS, CATS, shop, shopAll, shopItem, setShopItem, addShopItem, removeShopItem, resetShop, shopStore,
     itemMeta, cats, catsAll, addCat, setCat, removeCat, brands, setBrand, removeBrand,

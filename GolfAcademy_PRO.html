@@ -2901,6 +2901,46 @@ svg.leaflet-image-layer.leaflet-interactive path {
 		}
 	}
 </style>
+<style>
+/* Rank guide — shared member catalogue / landscape A4 report. */
+.rg-icon{width:42px;height:42px;display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(212,175,55,.4);border-radius:12px;background:rgba(212,175,55,.09);color:var(--gold-l,#f3d779);cursor:pointer;flex:0 0 auto}
+.rg-icon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.rg-icon:hover,.rg-icon:focus-visible{background:rgba(212,175,55,.19);outline:2px solid rgba(212,175,55,.5);outline-offset:3px}
+.rg-launch{display:flex;align-items:center;gap:16px;padding:18px;border:1px solid rgba(212,175,55,.28);border-radius:16px;background:linear-gradient(120deg,rgba(14,59,46,.38),rgba(212,175,55,.055))}
+.rg-launch h3{font-size:15px;color:var(--gold-l);margin:0 0 6px}.rg-launch p{font-size:12px;color:var(--muted);line-height:1.95;margin:0}.rg-launch .rg-icon{width:50px;height:50px}
+.rg-overlay{position:fixed;inset:0;z-index:9600;display:flex;align-items:center;justify-content:center;background:rgba(3,8,10,.88);backdrop-filter:blur(7px);padding:16px;direction:rtl}
+.rg-dialog{width:min(1160px,100%);max-height:94vh;max-height:94dvh;min-width:0;display:flex;flex-direction:column;color:#e7eee9;background:#0b1318;border:1px solid #796232;border-radius:20px;box-shadow:0 24px 90px #0009;font-family:'Vazirmatn',Tahoma,sans-serif;overflow:hidden}
+.rg-toolbar{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid #d4af3738;flex-wrap:wrap;background:linear-gradient(120deg,#132b26,#101b20)}
+.rg-toolbar h2{margin:0;font-size:20px;color:#f2d784}.rg-eyebrow{font:600 10px/1.8 'Vazirmatn',sans-serif;letter-spacing:2.2px;color:#b9a66d;direction:ltr;text-align:right}.rg-actions{margin-right:auto;display:flex;gap:8px;align-items:center}.rg-close{width:40px;height:40px;border-radius:11px;border:1px solid #ffffff26;background:#ffffff08;color:#dbe5df;font:24px/1 sans-serif;cursor:pointer}
+.rg-scroll{min-height:0;overflow:auto;overscroll-behavior:contain;padding:22px}.rg-scroll>h3{font-size:14px;margin:22px 0 12px;color:#f1d77f}.rg-subtitle{font-size:11px;line-height:1.9;color:#a0b0aa;margin:0 0 14px}
+.rg-ladder{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-family:'Vazirmatn',Tahoma,sans-serif;color:#e6ede8;font-size:12px;direction:rtl}
+.rg-ladder caption{text-align:right;color:#9cb0a5;font-size:10px;padding:0 0 9px}.rg-ladder th{padding:9px 5px;background:#192723;color:#e3ce94;border-top:1px solid #d4af3738;border-bottom:1px solid #d4af3738;font-size:10px;font-weight:650;line-height:1.8;text-align:center}.rg-ladder th.rg-national-head{color:#f3d779;background:#263027}
+.rg-ladder td{padding:9px 5px;text-align:center;border-bottom:1px solid #d6e6da14;background:#111c20;font-variant-numeric:tabular-nums;vertical-align:middle;overflow-wrap:anywhere}.rg-ladder tbody tr:nth-child(even) td{background:#142126}.rg-ladder tbody tr.rg-current td{background:#263020;border-bottom-color:#d4af3766}.rg-ladder tbody tr.rg-next td{background:#16352b}
+.rg-ladder .rg-marker{width:69px}.rg-ladder .rg-name{width:200px;text-align:right;padding-right:12px}.rg-ladder .rg-points{width:90px;color:#f3d779;font-weight:800}.rg-ladder .rg-tier{width:74px}.rg-mark{display:flex;flex-direction:column;align-items:center;gap:2px}.rg-mark small{font:700 9px/1.5 'Vazirmatn',sans-serif;color:#b7c6bb;direction:ltr;letter-spacing:.6px}.rg-en{font-family:'Playfair Display',Georgia,serif;font-size:16px;font-weight:650;line-height:1.4;direction:ltr;display:block;text-align:left;color:#f3ead1}.rg-fa{display:block;font-size:11px;margin-top:3px;color:#c6d5cd;line-height:1.8}.rg-state{font-size:9px;color:#e8cf83;display:block;margin-top:2px}.rg-value{font-weight:750}.rg-zero{color:#758981;font-weight:400}
+.rg-rules{margin-top:20px;padding:16px 18px;border:1px solid #d4af373d;border-radius:14px;background:#12241d}.rg-rules h4{margin:0 0 8px;font-size:13px;color:#efd487}.rg-rules ul{padding:0 16px 0 0;margin:0;color:#b8c9bf;font-size:11px;line-height:2.05}.rg-rules .rg-rate-line{font-size:12px;font-weight:800;color:#e5d9b6;margin:0 0 7px;line-height:1.9}.rg-rules .rg-admin-note{font-size:11px;color:#c0cfc6;border-top:1px solid #d4af372b;margin:9px 0 0;padding-top:9px;white-space:pre-wrap}
+.rg-next-box{position:relative;padding:20px;border:1px solid #b493485e;border-radius:16px;background:linear-gradient(120deg,#193c2d,#142129);margin-bottom:20px}.rg-next-head{display:flex;align-items:center;gap:14px}.rg-next-head>div{flex:1;min-width:0}.rg-next-head h3{font-size:19px;margin:2px 0;color:#f4dfa0}.rg-next-head .rg-en{text-align:right;font-size:24px}.rg-next-meta{font-size:11px;color:#b6cabe;line-height:1.9}.rg-next-percent{font:600 26px Georgia,serif;color:#e9d295;direction:ltr}.rg-goals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:15px 0 0}.rg-goal{padding:10px 12px;background:#08160e55;border:1px solid #e9cd791f;border-radius:11px;min-width:0}.rg-goal b{font-size:11px;display:block;color:#d4ded7;line-height:1.8}.rg-goal strong{font-size:16px;color:#f3d779;font-variant-numeric:tabular-nums;display:block;margin:4px 0}.rg-goal small{font-size:10px;line-height:1.8;color:#a9bdb0;display:block}.rg-goal.done strong{color:#80d5ae}.rg-paths{margin-top:14px;border-top:1px solid #d4af3733;padding-top:12px;font-size:11px;line-height:2;color:#cddad1}.rg-paths b{color:#f4dfa0}.rg-paths p{margin:4px 0}.rg-paths .rg-or{color:#8ca697;margin-left:5px}.rg-note{font-size:10.5px;line-height:1.95;color:#91a89b;margin-top:10px}
+.rg-rule-editor{padding:18px;border:1px solid rgba(212,175,55,.35);background:linear-gradient(120deg,rgba(14,59,46,.25),transparent);border-radius:16px;margin:0 0 18px}.rg-rule-editor h3{font-size:15px;color:var(--gold-l);margin:0 0 8px}.rg-rule-editor p{font-size:11.5px;color:var(--muted);line-height:2}.rg-rule-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}.rg-rule-fields label{font-size:11px;line-height:1.85;color:var(--muted);display:block;margin-bottom:5px}.rg-rule-fields .input{width:100%;min-width:0;direction:ltr}.rg-rule-check{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:2;margin:14px 0;color:var(--white)}.rg-rule-check input{margin-top:6px}.rg-rule-note{width:100%;min-height:70px;resize:vertical}.rg-national-label{grid-column:1/-1;color:var(--gold-l);font-weight:800;font-size:12px;border-top:1px solid #d4af3738;padding-top:10px;margin-top:4px}
+/* PDF sizing is independent of the device viewport. Content is paginated, never clipped/scaled into illegibility. */
+.rg-print-host{position:fixed;left:-20000px;top:0;pointer-events:none;z-index:-1}
+.rg-paper{position:relative;width:1123px;height:794px;background:#0b151a;color:#e8eee9;font-family:'Vazirmatn',Tahoma,sans-serif;direction:rtl;box-sizing:border-box;overflow:hidden}.rg-paper *{box-sizing:border-box}.rg-paper:before{content:'';height:5px;position:absolute;top:0;left:0;right:0;background:linear-gradient(90deg,#6d5724,#d4af37,#f3dda1,#d4af37,#6d5724)}
+.rg-paper-header{position:absolute;left:32px;right:32px;top:24px;display:flex;align-items:center;gap:13px;border-bottom:1px solid #d4af374d;padding-bottom:14px}.rg-paper-logo{width:54px;height:54px;object-fit:contain;border:1px solid #d4af3799;border-radius:50%;padding:3px}.rg-paper-brand{flex:1;min-width:0}.rg-paper-brand b{display:block;font-size:19px;color:#f3d987;line-height:1.5}.rg-paper-brand span{display:block;font-size:10px;letter-spacing:1.8px;direction:ltr;text-align:right;color:#b7ba9f;margin-top:3px}.rg-paper-date{text-align:left;font-size:10px;color:#c3cfc6;line-height:2}.rg-paper-title{position:absolute;right:32px;left:32px;top:106px;display:flex;align-items:center;justify-content:space-between}.rg-paper-title h2{font-size:19px;margin:0;color:#ede2c2}.rg-paper-title span{font-size:10px;color:#9bb0a3;letter-spacing:1.6px}
+.rg-paper-main{position:absolute;top:148px;left:32px;right:32px;bottom:55px}.rg-paper .rg-ladder td{padding:6px 5px}.rg-paper .rg-ladder th{padding:6px 4px}.rg-paper .rg-ladder .rg-en{font-size:16px}.rg-paper .rg-ladder .rg-fa{font-size:10.5px}.rg-paper .rg-ladder .rg-marker{width:66px}.rg-paper .rg-ladder .rg-name{width:216px}.rg-paper .rg-ladder caption{font-size:9px;padding-bottom:6px}.rg-paper .rg-rules{margin-top:14px;padding:12px 15px}.rg-paper .rg-rules h4{font-size:12px}.rg-paper .rg-rules ul{font-size:10.5px;line-height:1.9}.rg-paper .rg-rules .rg-rate-line{font-size:11.5px}.rg-paper .rg-rules .rg-admin-note{font-size:10.5px;line-height:1.8}
+.rg-paper-footer{position:absolute;left:32px;right:32px;bottom:15px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #d4af3755;padding-top:10px;color:#91a599;font-size:9px}.rg-paper-footer b{color:#d6c88d;font-weight:500;letter-spacing:1px}
+@media(max-width:760px){.rg-overlay{padding:8px}.rg-dialog{max-height:97dvh;border-radius:15px}.rg-toolbar{padding:13px;gap:9px}.rg-toolbar h2{font-size:16px}.rg-actions .btn{font-size:11px}.rg-scroll{padding:13px}.rg-next-box{padding:14px}.rg-next-head .rg-en{font-size:21px}.rg-next-head h3{font-size:16px}.rg-next-percent{font-size:22px}.rg-goals{grid-template-columns:repeat(2,minmax(0,1fr))}.rg-rule-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .rg-dialog .rg-ladder,.rg-dialog .rg-ladder tbody{display:block}.rg-dialog .rg-ladder thead{display:none}.rg-dialog .rg-ladder caption{display:block}.rg-dialog .rg-ladder tr{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));border:1px solid #d4af3726;border-radius:13px;overflow:hidden;margin-bottom:12px;background:#111c20;padding:10px;gap:7px}.rg-dialog .rg-ladder td{min-width:0;width:auto!important;background:transparent!important;border:0;padding:5px 2px;grid-column:span 2;font-size:11px}.rg-dialog .rg-ladder .rg-name{grid-column:span 8;text-align:right;padding-right:7px;align-self:center}.rg-dialog .rg-ladder .rg-en{text-align:left;font-size:18px}.rg-dialog .rg-ladder .rg-points{grid-column:span 10;text-align:right;border-top:1px solid #ffffff10;border-bottom:1px solid #ffffff10;padding:7px 5px}.rg-dialog .rg-ladder .rg-tier{grid-column:span 5;background:#ffffff04!important;border-radius:8px}.rg-dialog .rg-ladder td[data-label]:before{content:attr(data-label);display:block;font-size:9px;color:#9bad9f;font-weight:400;line-height:1.8;min-height:30px}.rg-dialog .rg-ladder .rg-points:before{display:inline;margin-left:8px;min-height:0;font-size:11px}.rg-dialog .rg-ladder .rg-current{border-color:#c6a24b;background:#273121}.rg-dialog .rg-ladder .rg-next{border-color:#278862;background:#123527}.rg-rules{padding:13px}.rg-launch{gap:11px;padding:14px}}
+@media(max-width:390px){.rg-toolbar h2{font-size:14px}.rg-eyebrow{font-size:8px}.rg-actions{gap:5px}.rg-actions .btn{padding:7px}.rg-close{width:33px;height:33px}.rg-next-head{gap:9px}.rg-next-head>svg{width:38px}.rg-next-percent{font-size:19px}.rg-goals{grid-template-columns:1fr}.rg-rule-fields{grid-template-columns:1fr}.rg-dialog .rg-ladder td[data-label]:before{font-size:8.5px}.rg-dialog .rg-ladder .rg-en{font-size:16px}}
+
+/* Compact report rhythm leaves room for the policy below the final ranks. */
+.rg-paper-main{top:144px;bottom:44px}
+.rg-paper .rg-ladder td{padding:4px 5px}
+.rg-paper .rg-mark svg{width:28px;height:28px}
+.rg-paper .rg-mark{gap:1px}
+.rg-paper .rg-mark small{font-size:8px;line-height:1.5}
+.rg-rules ul{list-style:none;padding:0}
+.rg-rules li{position:relative;padding-right:12px}
+.rg-rules li:before{content:'•';position:absolute;right:0;top:0;color:#cbb56e}
+
+</style>
 </head>
 <body>
 <div class="bg-mesh"></div>
@@ -4670,10 +4710,50 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   }
   const FORM_META = { 'اول': {c:'w', t:'ق'}, 'دوم': {c:'p2', t:'۲'}, 'سوم': {c:'p3', t:'۳'}, 'شرکت‌کننده': {c:'p4', t:'ش'} };
 
+  /* مقام‌های رسمی کشوری؛ چهارم/پنجمِ قدیمی فقط از کارت‌های واقعاً ثبت‌شده و کامل
+     بازسازی می‌شوند، نه کارت‌های تولیدی و نه ترتیب لیست شرکت‌کنندگان. مساوی/ابهام ← بدون حدس. */
+  function nationalPlaces(t, res, recordedCards){
+    const out = {}, assigned = new Set();
+    if (!t || +t[2] !== 1 || !res || res.active === false) return out;
+    const idOf = v => typeof v === 'string' && v.startsWith('free:') ? v :
+      (typeof v === 'number' || typeof v === 'string') && Number.isSafeInteger(+v) && +v > 0 ? String(+v) : '';
+    const allowed = new Set((res.participants || []).map(idOf).filter(Boolean));
+    (res.free || []).forEach(n => allowed.add('free:'+n));
+    const top = res.top || {};
+    for (let place=1;place<=5;place++){
+      const id = idOf(top[place]);
+      if (id && allowed.has(id) && !assigned.has(id)){ out[id]=place; assigned.add(id); }
+    }
+    if (top[4] !== undefined && top[5] !== undefined) return out;
+    if (!Array.isArray(recordedCards)){
+      try { recordedCards = JSON.parse(localStorage.getItem('ga_scorecards') || '[]'); } catch(e){ recordedCards=[]; }
+    }
+    if (!Array.isArray(recordedCards) || allowed.size < 4) return out;
+    const hs = tourHoleIds(t), cards = new Map();
+    recordedCards.filter(c => c && +c.tour === +t[0]).forEach(c => {
+      const id = idOf(c.pid);
+      if (!allowed.has(id) || !hs.length || !hs.every(h => Number.isFinite(+(c.strokes || {})[h]) && +(c.strokes || {})[h] > 0)) return;
+      cards.set(id,{ id,total:hs.reduce((n,h) => n + +c.strokes[h],0) });
+    });
+    if (cards.size !== allowed.size) return out;
+    const order = Array.from(cards.values()).sort((a,b) => a.total-b.total);
+    // نتیجهٔ رسمی اول تا سوم باید با اسکورکارت‌ها سازگار باشد؛ وگرنه نتیجهٔ دستی مرجع است.
+    for (let p=1;p<=3;p++) if (!top[p] || !order[p-1] || idOf(top[p]) !== order[p-1].id) return out;
+    for (const p of [4,5]) if (top[p] && (!order[p-1] || idOf(top[p]) !== order[p-1].id)) return out;
+    for (const p of [4,5]){
+      if (Object.prototype.hasOwnProperty.call(top,p)) continue;
+      const c = order[p-1];
+      if (!c || assigned.has(c.id)) continue;
+      if ((order[p-2] && order[p-2].total === c.total) || (order[p] && order[p].total === c.total)) continue;
+      out[c.id]=p; assigned.add(c.id);
+    }
+    return out;
+  }
+
   /* ── سابقهٔ کل برای رنک آواتار (مستقل از جدول و بازهٔ فصل) ──
      کل امتیاز ثبت‌شده از اولین روز؛ بدون فیلتر سال/فصل یا فعال‌بودن فعلی بازیکن.
-     قهرمانی فقط نفر اولِ نتیجهٔ ثبت‌شدهٔ مسابقه، جدا برای سطح ۱/۲/۳ است؛
-     رتبهٔ دوم/سوم، تمرین، سکه و کارتِ بدون نتیجهٔ رسمی، قهرمانی نیستند.
+     قهرمانی سطح۲/۳ فقط نفر اول است؛ پنج مقام سطح۱ جداگانه ذخیره می‌شوند.
+     تبدیل ارزش این افتخارات در موتور رنک است، نه تغییر تعداد واقعی مدال‌ها.
      هر بار از سوابق بازسازی می‌شود: نه شمارندهٔ انباشتی و نه امتیاز دوباره در reload. */
   function careerStats(state, sources){
     state = state || {}; sources = sources || {};
@@ -4681,11 +4761,13 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     const pidOf = v => (typeof v === 'number' || typeof v === 'string') && Number.isSafeInteger(+v) && +v > 0 ? +v : null;
     (state.players || []).forEach(p => {
       const pid = p && pidOf(p[0]);
-      if (pid) stats[pid] = { pts:0, wins1:0, wins2:0, wins3:0 };
+      if (pid) stats[pid] = { pts:0, wins1:0, national2:0,national3:0,national4:0,national5:0, wins2:0, wins3:0 };
     });
     const results = sources.results || loadResults();
     const programs = sources.programs || loadPrograms();
     const rules = sources.rules || loadTourRules();
+    let recordedCards = sources.recordedCards;
+    if (!recordedCards){ try { recordedCards=JSON.parse(localStorage.getItem('ga_scorecards') || '[]'); } catch(e){ recordedCards=[]; } }
     const add = (pid, value) => {
       pid = pidOf(pid);
       if (pid && stats[pid] && Number.isFinite(+value)) stats[pid].pts += +value;
@@ -4712,7 +4794,13 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
           add(pid, pr[place]);
         });
         const winner = pidOf(top[1]), tier = +t[2];
-        if (participants.has(winner) && [1,2,3].includes(tier)) stats[winner]['wins' + tier]++;
+        if (tier === 1){
+          const places = nationalPlaces(t,res,recordedCards);
+          Object.keys(places).forEach(id => {
+            const pid=pidOf(id), place=places[id];
+            if (participants.has(pid)) stats[pid][place === 1 ? 'wins1' : 'national'+place]++;
+          });
+        } else if (participants.has(winner) && [2,3].includes(tier)) stats[winner]['wins' + tier]++;
       } else if (!Object.prototype.hasOwnProperty.call(results, tid)){
         // امتیاز کارت‌های ثبت‌شده طبق قواعد موجود؛ قهرمانی تا ثبت نتیجه اضافه نمی‌شود.
         const group = Array.from((cards.get(tid) || new Map()).values()).sort((a,b) => a.total - b.total);
@@ -5172,7 +5260,7 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
     parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
-    compute, careerStats, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
+    compute, careerStats, nationalPlaces, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason,
   };
@@ -7674,15 +7762,40 @@ window.addEventListener('ga:brand-changed', function(){
     { lv:14, en:'Legend of Fairway',fa:'اسطورهٔ فروی',         pts:300, badge:'🔥' },
     { lv:15, en:'Immortal Champion',fa:'قهرمان جاودان',       pts:350, badge:'💎' },
   ];
-  /* چهار شرط مستقل؛ امتیاز و قهرمانی‌ها از کل سابقهٔ بازیکن، نه فقط فصل جاری. */
+  /* امتیاز کل + پنج مقام کشوری + قهرمانی سطح ۲ و ۳؛ همه با هم لازم‌اند. */
   const PREREQUISITES = [
-    { key:'pts',   label:'امتیاز کل (از روز اول)' },
-    { key:'wins1', label:'قهرمانی سطح ۱' },
-    { key:'wins2', label:'قهرمانی سطح ۲' },
-    { key:'wins3', label:'قهرمانی سطح ۳' },
+    { key:'pts', label:'امتیاز کل (از روز اول)', short:'امتیاز کل', group:'points' },
+    { key:'wins1', label:'قهرمانی سطح ۱ (کشوری)', short:'قهرمان', group:'national', place:1 },
+    { key:'national2', label:'نایب‌قهرمانی سطح ۱', short:'نایب‌قهرمان', group:'national', place:2 },
+    { key:'national3', label:'مقام سوم سطح ۱', short:'سوم', group:'national', place:3 },
+    { key:'national4', label:'مقام چهارم سطح ۱', short:'چهارم', group:'national', place:4 },
+    { key:'national5', label:'مقام پنجم سطح ۱', short:'پنجم', group:'national', place:5 },
+    { key:'wins2', label:'قهرمانی سطح ۲', short:'سطح ۲', group:'lower' },
+    { key:'wins3', label:'قهرمانی سطح ۳', short:'سطح ۳', group:'lower' },
   ];
+  const NATIONAL_FIELDS = PREREQUISITES.filter(f => f.group === 'national');
+  const RANK_RULES_KEY = 'ga_rank_rules';
+  const DEFAULT_RANK_RULES = { version:1, nationalTo2:{ 1:10,2:0,3:0,4:0,5:0 }, tier2To3:3, betterNational:true, note:'' };
+  function rankRules(value){
+    const o = value || LSget(RANK_RULES_KEY, {});
+    const rates = {};
+    const validRate = n => validRequirement(n, 'wins1') && +n <= 10000;
+    NATIONAL_FIELDS.forEach(f => {
+      const v = o.nationalTo2 && o.nationalTo2[f.place];
+      rates[f.place] = validRate(v) ? +v : DEFAULT_RANK_RULES.nationalTo2[f.place];
+    });
+    return { version:1, nationalTo2:rates, tier2To3:validRate(o.tier2To3) ? +o.tier2To3 : 3,
+      betterNational:o.betterNational !== false, note:typeof o.note === 'string' ? o.note.slice(0,600) : '' };
+  }
+  function saveRankRules(value){
+    if (!value || typeof value.betterNational !== 'boolean') return false;
+    if (!validRequirement(value.tier2To3,'wins1') || +value.tier2To3 > 10000) return false;
+    if (NATIONAL_FIELDS.some(f => !value.nationalTo2 || !validRequirement(value.nationalTo2[f.place],'wins1') || +value.nationalTo2[f.place] > 10000)) return false;
+    return LSset(RANK_RULES_KEY, rankRules(value));
+  }
   function defaultRequirements(lv){
-    return { wins1:0, wins2:lv >= 7 ? 3 : lv === 6 ? 1 : 0,
+    return { wins1:0, national2:0,national3:0,national4:0,national5:0,
+      wins2:lv >= 7 ? 3 : lv === 6 ? 1 : 0,
       wins3:lv >= 7 ? 10 : lv === 6 ? 3 : lv === 5 ? 1 : 0 };
   }
   function validRequirement(value, key){
@@ -7692,10 +7805,12 @@ window.addEventListener('ga:brand-changed', function(){
     return Number.isFinite(n) && n >= 0 && (key === 'pts' || Number.isSafeInteger(n));
   }
   function progressStats(value){
-    const o = value && typeof value === 'object' ? value : { pts:value };
-    const n = k => Number.isFinite(Number(o[k])) ? Number(o[k]) : 0;
-    return { pts:n('pts'), wins1:Math.max(0, Math.floor(n('wins1'))),
-      wins2:Math.max(0, Math.floor(n('wins2'))), wins3:Math.max(0, Math.floor(n('wins3'))) };
+    const o = value && typeof value === 'object' ? value : { pts:value }, out = {};
+    PREREQUISITES.forEach(f => {
+      const n = Number.isFinite(Number(o[f.key])) ? Number(o[f.key]) : 0;
+      out[f.key] = f.key === 'pts' ? n : Math.max(0, Math.floor(n));
+    });
+    return out;
   }
   function divOf(lv){ return DIVISIONS.find(d => lv >= d.lv[0] && lv <= d.lv[1]) || DIVISIONS[0]; }
   function baseRank(lv){
@@ -7739,24 +7854,85 @@ window.addEventListener('ga:brand-changed', function(){
     return LSset(SKIN_KEY, st);
   }
   function resetRanks(){ try { localStorage.removeItem(SKIN_KEY); } catch(e){} }
-  function rankProgress(rank, value){
-    const stats = progressStats(value);
-    return PREREQUISITES.map(f => {
-      const need = validRequirement(rank && rank[f.key], f.key) ? Number(rank[f.key]) : Infinity;
-      const have = stats[f.key];
-      return { key:f.key, label:f.label, need, have, met:have >= need,
-        remaining:Math.max(0, need - have), ratio:need === 0 ? 1 : Math.max(0, Math.min(1, have / need)) };
+  /* تخصیص موقت برای یک رنک؛ هیچ مدال/نتیجه/سکه‌ای کم یا زیاد نمی‌شود.
+     اول نیازهای کشوری، سپس سطح۲، و در پایان سطح۳؛ فقط مازادِ تخصیص‌نیافته پایین می‌رود. */
+  function rankEvaluation(rank, value, settings){
+    const stats = progressStats(value), rules = settings ? rankRules(settings) : rankRules();
+    const needs = {};
+    PREREQUISITES.forEach(f => {
+      const v = rank && rank[f.key];
+      needs[f.key] = v === undefined && f.place > 1 ? 0 : validRequirement(v,f.key) ? +v : Infinity;
     });
+    const checks = [], stock = Object.assign({},stats), allocations = [];
+    const check = (f, have, raw, used) => {
+      const need = needs[f.key];
+      const row = { key:f.key, label:f.label, need, have, raw, met:have >= need,
+        remaining:Math.max(0,need-have), ratio:need === 0 ? 1 : Math.max(0,Math.min(1,have/need)), used:used || [] };
+      checks.push(row); return row;
+    };
+    check(PREREQUISITES[0],stats.pts,stats.pts);
+    NATIONAL_FIELDS.forEach(f => {
+      const eligible = NATIONAL_FIELDS.filter(x => rules.betterNational ? x.place <= f.place : x.place === f.place);
+      const have = eligible.reduce((n,x) => n + stock[x.key],0);
+      let left = needs[f.key]; const used = [];
+      // رزرو نیازهای سخت‌تر اول؛ کم‌هزینه‌ترین مقام قابل‌قبول را مصرف کن تا اعتبار قابل تبدیل بیهوده هدر نرود.
+      eligible.sort((a,b) => rules.nationalTo2[a.place]-rules.nationalTo2[b.place] || b.place-a.place).forEach(x => {
+        const n = Math.min(stock[x.key],left);
+        if (n > 0){ stock[x.key] -= n; left -= n; used.push({ from:x.key,count:n }); allocations.push({ from:x.key,to:f.key,count:n }); }
+      });
+      check(f,have,stats[f.key],used);
+    });
+    const nationalCredit = NATIONAL_FIELDS.reduce((n,f) => n + stock[f.key]*rules.nationalTo2[f.place],0);
+    const pool2 = stats.wins2 + nationalCredit;
+    check(PREREQUISITES.find(f => f.key === 'wins2'),pool2,stats.wins2);
+    const spare2 = Math.max(0,pool2-needs.wins2);
+    const credit3 = spare2*rules.tier2To3;
+    check(PREREQUISITES.find(f => f.key === 'wins3'),stats.wins3+credit3,stats.wins3);
+    return { checks,met:checks.every(f => f.met),rules,allocations,nationalRemaining:stock,
+      nationalCredit,tier2Pool:pool2,tier2Reserved:Math.min(pool2,needs.wins2),tier2Remaining:spare2,tier3Credit:credit3 };
   }
-  function requirementsMet(rank, stats){ return rankProgress(rank, stats).every(f => f.met); }
-  function levelOfStats(stats, rs){
-    let lv = 0;
-    (rs || ranks()).forEach(r => { if (requirementsMet(r, stats)) lv = r.lv; });
+  function rankProgress(rank, value, rules){ return rankEvaluation(rank,value,rules).checks; }
+  function requirementsMet(rank, stats, rules){ return rankEvaluation(rank,stats,rules).met; }
+  function levelOfStats(stats, rs, rules){
+    let lv = 0; rules = rules || rankRules();
+    (rs || ranks()).forEach(r => { if (requirementsMet(r,stats,rules)) lv = r.lv; });
     return lv;
+  }
+  /* مسیرهای پیشنهادی باید کل نیاز را تأمین کنند؛ دو کمبود را با همان یک برد وعده نمی‌دهیم. */
+  function upgradePlans(rank, value, settings){
+    if (!rank) return [];
+    const rules = settings || rankRules(), original = progressStats(value);
+    const ready = Object.assign({}, original, { pts:Math.max(original.pts,+rank.pts || 0) });
+    if (requirementsMet(rank,ready,rules)) return [];
+    const plans = [], seen = new Set(), achievements = PREREQUISITES.filter(f => f.key !== 'pts');
+    const addPlan = additions => {
+      const signature = achievements.map(f => additions[f.key] || 0).join(',');
+      if (seen.has(signature) || !Object.values(additions).some(n => n > 0)) return;
+      const trial = Object.assign({},ready);
+      Object.keys(additions).forEach(k => trial[k] += additions[k]);
+      if (!requirementsMet(rank,trial,rules)) return;
+      seen.add(signature); plans.push(additions);
+    };
+    const direct = {}, work = Object.assign({},ready);
+    achievements.forEach(f => {
+      const miss = rankProgress(rank,work,rules).find(x => x.key === f.key).remaining;
+      if (Number.isFinite(miss) && miss > 0){ direct[f.key] = miss; work[f.key] += miss; }
+    });
+    addPlan(direct);
+    const cap = Math.min(Number.MAX_SAFE_INTEGER,achievements.reduce((n,f) => n + (+rank[f.key] || 0),0));
+    ['wins3','wins2','wins1','national2','national3','national4','national5'].forEach(key => {
+      if (!(cap > 0) || !Number.isSafeInteger(cap)) return;
+      const passes = n => requirementsMet(rank,Object.assign({},ready,{ [key]:ready[key]+n }),rules);
+      if (!passes(cap)) return;
+      let lo = 1, hi = cap;
+      while (lo < hi){ const m = lo + Math.floor((hi-lo)/2); if (passes(m)) hi = m; else lo = m+1; }
+      addPlan({ [key]:lo });
+    });
+    return plans.slice(0,4);
   }
   /* سازگاری فراخوانی قدیمی: امتیاز تنها، قهرمانی فرضی ایجاد نمی‌کند. */
   function levelOfPts(pts, wins){ return levelOfStats(Object.assign({}, wins || {}, { pts:pts })); }
-  /* رنک دستی مدیر نگهداری می‌شود، ولی بدون تکمیل هر چهار شرط قابل اعطا نیست. */
+  /* رنک دستی مدیر نگهداری می‌شود، ولی بدون تکمیل همهٔ پیش‌نیازها قابل اعطا نیست. */
   const HONOR_KEY = 'ga_honor';
   function honorStore(){ return LSget(HONOR_KEY, {}); }
   function setHonorOverride(user, lv){
@@ -7774,19 +7950,21 @@ window.addEventListener('ga:brand-changed', function(){
   function honorOf(user, value){
     user = norm(user);
     const stats = progressStats(value);
-    const rs = ranks(), st = honorStore();
+    const rs = ranks(), st = honorStore(), rules = rankRules();
     const requested = st[user] && Number(st[user].lv);
     const desired = Number.isInteger(requested) && requested >= 1 && requested <= 15 ? requested : 0;
-    const manual = !!desired && requirementsMet(rs[desired-1], stats);
-    const lv = manual ? desired : levelOfStats(stats, rs);
+    const manual = !!desired && requirementsMet(rs[desired-1], stats, rules);
+    const lv = manual ? desired : levelOfStats(stats, rs, rules);
     const rank = lv ? rs[lv-1] : unranked();
     const next = lv < 15 ? rs[lv] : null;
-    const checks = next ? rankProgress(next, stats) : [];
-    const complete = checks.filter(f => f.met).length;
-    const ratio = checks.length ? checks.reduce((n, f) => n + f.ratio, 0) / checks.length * 100 : 100;
+    const evaluation = next ? rankEvaluation(next,stats,rules) : null;
+    const checks = evaluation ? evaluation.checks : [];
+    const required = checks.filter(f => f.need > 0);
+    const complete = required.filter(f => f.met).length;
+    const ratio = required.length ? required.reduce((n,f) => n+f.ratio,0) / required.length*100 : 100;
     // حتی با امتیاز فراوان، نبود یک قهرمانی نباید نوار «۱۰۰٪» نشان دهد.
-    const prog = checks.length && complete < checks.length ? Math.min(99, ratio) : 100;
-    return { lv, rank, pts:stats.pts, stats, next, checks, complete, prog, manual,
+    const prog = required.length && complete < required.length ? Math.min(99, ratio) : 100;
+    return { lv, rank, pts:stats.pts, stats, next, checks, complete, requiredCount:required.length, evaluation, prog, manual,
       manualRequested:desired, manualBlocked:!!desired && !manual };
   }
 
@@ -8786,7 +8964,8 @@ window.addEventListener('ga:brand-changed', function(){
   window.AV = {
     DIVISIONS, PARTICLES, UPFX, RANK_BASE, DIV_SKIN,
     ranks, rankOf, saveRank, resetRanks, levelOfPts, levelOfStats, honorOf, setHonorOverride, honorStore,
-    PREREQUISITES, defaultRequirements, validRequirement, progressStats, rankProgress, requirementsMet,
+    PREREQUISITES, NATIONAL_FIELDS, defaultRequirements, validRequirement, progressStats, rankProgress, requirementsMet,
+    DEFAULT_RANK_RULES, rankRules, saveRankRules, rankEvaluation, upgradePlans,
     badgeSVG, renderAvatarSVG, itemPreviewSVG, rankCard, playRankUp, checkRankUp, particlesHTML, shade,
     BRANDS, CATS, shop, shopAll, shopItem, setShopItem, addShopItem, removeShopItem, resetShop, shopStore,
     itemMeta, cats, catsAll, addCat, setCat, removeCat, brands, setBrand, removeBrand,
@@ -8797,6 +8976,184 @@ window.addEventListener('ga:brand-changed', function(){
     reqs, reqsOf, pendingReqs, addReq, decideReq, deleteReq, clearDecided,
   };
 })();
+</script>
+<script>
+/* Shared rank catalogue, personal next-step guide, and branded A4 PDF.
+ * No live player data is exported to any service. PDF libraries are hosted with the academy.
+ */
+(function(){
+  'use strict';
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g,c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fa = n => window.Data ? Data.fa(n) : String(n);
+  const num = n => window.Data ? Data.faNum(n,Number.isInteger(n) ? 0 : 2) : String(n);
+  const ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V4h16v16l-4-2-4 2-4-2-4 2Z"/><path d="m8 13 3-3 2 2 4-5M14 7h3v3"/></svg>';
+  const PDF_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg>';
+  const ownScript = document.currentScript && document.currentScript.src;
+  const vendorBase = ownScript ? new URL('../assets/vendor/',ownScript).href : new URL(/\/source\/$/.test(new URL('.',document.baseURI).pathname) ? 'assets/vendor/' : 'source/assets/vendor/',document.baseURI).href;
+  let overlay = null, contextProvider = null, lastFocus = null, oldOverflow = '', loading = null, pdfBusy = false;
+
+  function iconButton(label){ return '<button type="button" class="rg-icon" data-rank-guide aria-haspopup="dialog" aria-label="'+esc(label || 'راهنمای رنک‌ها و مسیر ارتقاء')+'" title="'+esc(label || 'راهنمای رنک‌ها و مسیر ارتقاء')+'">'+ICON+'</button>'; }
+  function rulesHTML(settings){
+    const r = AV.rankRules(settings), national = AV.NATIONAL_FIELDS;
+    const rates = national.filter(f => r.nationalTo2[f.place] > 0).map(f => 'هر '+(f.place===1 ? 'قهرمانی کشوری' : f.label.replace('سطح ۱','کشوری'))+' = '+fa(r.nationalTo2[f.place])+' قهرمانی سطح ۲');
+    if (r.tier2To3 > 0) rates.push('هر قهرمانی سطح ۲ = '+fa(r.tier2To3)+' قهرمانی سطح ۳');
+    if (r.tier2To3 === 0) rates.push('معادل‌سازی سطح ۲ به ۳ غیرفعال است');
+    const noRate = national.filter(f => !r.nationalTo2[f.place]).map(f => f.short);
+    return '<section class="rg-rules"><h4>ضوابط احراز رنک و معادل‌سازی افتخارات</h4>'
+      + '<p class="rg-rate-line">'+(rates.length ? rates.map(esc).join(' · ') : 'معادل‌سازی بین سطوح غیرفعال است.')+'</p>'
+      + '<ul><li>امتیاز کل و تمام پیش‌نیازهای تعیین‌شده باید هم‌زمان تأمین شوند. سوابق از اولین روز ثبت فعالیت محاسبه می‌شوند؛ صفر یا خط تیره یعنی آن شرط حداقلی ندارد.</li>'
+      + '<li>ابتدا مقام‌های موردنیاز سطح ۱ و سپس قهرمانی‌های موردنیاز سطح ۲ اختصاص می‌یابند. فقط مازادِ اختصاص‌نیافته با ضرایب بالا برای سطح پایین‌تر قابل استفاده است؛ ارزش یک نتیجه دوبار محاسبه نمی‌شود.</li>'
+      + '<li>تبدیل تنها از سطح بالاتر به پایین‌تر مجاز است؛ هیچ تعداد برد سطح ۲ یا ۳، مقام کشوری ایجاد نمی‌کند. این محاسبه فقط برای احراز رنک است و تعداد واقعی مدال‌ها یا امتیاز را تغییر نمی‌دهد.</li>'
+      + '<li>سطح ۱ مسابقات کشوری است. '+(r.betterNational ? 'مقام بهتر می‌تواند شرط مقام پایین‌تر را پوشش دهد؛ مثلاً پنجم یا بهتر. هر مقامِ اختصاص‌یافته دیگر در شرط دیگری استفاده نمی‌شود.' : 'هر یک از پنج مقام کشوری شرط مستقل و دقیق خود را دارد؛ مقام بهتر جای مقام پایین‌تر قرار نمی‌گیرد.')
+      + (noRate.length ? ' مقام‌های '+noRate.map(esc).join('، ')+' فعلاً ضریب تبدیل به سطح ۲ ندارند.' : '')+'</li></ul>'
+      + (r.note ? '<p class="rg-admin-note">'+esc(r.note)+'</p>' : '')+'</section>';
+  }
+  function tableHead(){
+    return '<thead><tr><th class="rg-marker" rowspan="2">نشان / رنک</th><th class="rg-name" rowspan="2">عنوان رنک</th><th class="rg-points" rowspan="2">حداقل<br>امتیاز کل</th><th colspan="5" class="rg-national-head">سطح ۱ · مسابقات کشوری</th><th class="rg-tier" rowspan="2">قهرمانی<br>سطح ۲</th><th class="rg-tier" rowspan="2">قهرمانی<br>سطح ۳</th></tr><tr>'+AV.NATIONAL_FIELDS.map(f => '<th>'+esc(f.short)+'</th>').join('')+'</tr></thead>';
+  }
+  function rowHTML(r, current, next){
+    const cell = (key,label,cls) => '<td class="'+(cls || '')+'" data-label="'+esc(label)+'"><span class="rg-value '+(r[key]===0 ? 'rg-zero' : '')+'">'+(r[key]===0 && key!=='pts' ? '—' : num(r[key]))+'</span></td>';
+    return '<tr data-guide-lv="'+r.lv+'" class="'+(r.lv===current ? 'rg-current' : r.lv===next ? 'rg-next' : '')+'">'
+      + '<td class="rg-marker"><div class="rg-mark">'+AV.badgeSVG(r,34)+'<small>LEVEL '+String(r.lv).padStart(2,'0')+'</small></div></td>'
+      + '<td class="rg-name"><bdi class="rg-en" dir="ltr">'+esc(r.en)+'</bdi><span class="rg-fa">'+esc(r.fa)+'</span>'+(r.lv===current ? '<small class="rg-state">رنک فعلی شما</small>' : r.lv===next ? '<small class="rg-state">گام بعدی شما</small>' : '')+'</td>'
+      + cell('pts','حداقل امتیاز کل','rg-points')
+      + AV.NATIONAL_FIELDS.map(f => cell(f.key,f.short+' کشوری','rg-national')).join('')
+      + cell('wins2','قهرمانی سطح ۲','rg-tier')+cell('wins3','قهرمانی سطح ۳','rg-tier')+'</tr>';
+  }
+  function tableHTML(rs, current, next){ return '<table class="rg-ladder"><caption>حداقلِ موردنیاز برای هر رنک · امتیاز کل و افتخارات همهٔ فصل‌ها · — یعنی بدون حداقل</caption>'+tableHead()+'<tbody>'+rs.map(r => rowHTML(r,current,next)).join('')+'</tbody></table>'; }
+  function planText(p){ return AV.PREREQUISITES.filter(f => p[f.key]>0).map(f => num(p[f.key])+' '+f.label.replace(' (کشوری)','').replace('سطح ۱','کشوری')).join(' و '); }
+  function nextHTML(ctx){
+    if (!ctx) return '';
+    const hn = AV.honorOf(ctx.user || '',ctx.stats), next=hn.next;
+    if (!next) return '<section class="rg-next-box" data-next-level="max"><div class="rg-next-head">'+AV.badgeSVG(hn.rank,52)+'<div><div class="rg-eyebrow">YOUR NEXT CHAPTER</div><h3>بالاترین رنک را به دست آورده‌اید</h3><p class="rg-next-meta">'+esc(ctx.name || '')+'، تمام پیش‌نیازهای '+esc(hn.rank.en)+' تکمیل است.</p></div></div></section>';
+    const checks=hn.checks.filter(f => f.need>0), plans=AV.upgradePlans(next,ctx.stats), missingPoints=Math.max(0,next.pts-hn.pts);
+    return '<section class="rg-next-box" data-next-level="'+next.lv+'"><div class="rg-next-head">'+AV.badgeSVG(next,52)+'<div><div class="rg-eyebrow">YOUR NEXT CHAPTER · LEVEL '+String(next.lv).padStart(2,'0')+'</div><bdi class="rg-en" dir="ltr">'+esc(next.en)+'</bdi><h3>'+esc(next.fa)+'</h3><div class="rg-next-meta">'+esc(ctx.name || '')+' · رنک فعلی: '+esc(hn.rank.en)+' · '+fa(hn.complete)+' از '+fa(hn.requiredCount)+' پیش‌نیاز تکمیل شده · امتیاز کل: '+num(hn.pts)+'</div></div><span class="rg-next-percent">'+Math.round(hn.prog)+'%</span></div>'
+      + '<div class="rg-goals">'+checks.map(f => '<div class="rg-goal '+(f.met ? 'done' : '')+'" data-guide-check="'+f.key+'" data-met="'+f.met+'"><b>'+esc(f.label)+'</b><strong>'+(f.met ? '✓ تکمیل' : num(f.remaining)+' دیگر نیاز است')+'</strong><small>'+num(Math.min(f.have,f.need))+' از '+num(f.need)+' تأمین شده'+(f.key!=='pts' && f.have!==f.raw ? ' · با احتساب معادل مجاز' : '')+'</small></div>').join('')+'</div>'
+      + (plans.length ? '<div class="rg-paths"><b>مسیرهای قابل‌انتخاب برای تکمیل افتخارات رنک بعدی</b>'+plans.map((p,i) => '<p data-upgrade-plan="'+esc(JSON.stringify(p))+'"><span class="rg-or">'+(i ? 'یا' : 'مسیر اول:')+'</span>'+esc(planText(p))+'</p>').join('')+(missingPoints>0 ? '<p><b>در همهٔ مسیرها، '+num(missingPoints)+' امتیاز کلِ دیگر نیز لازم است.</b></p>' : '')+'</div>' : '')
+      + '<div class="rg-note">'+(hn.evaluation.met && hn.manual ? 'پیش‌نیازهای رنک بعدی تکمیل است؛ رنک فعلی شما دستی تعیین شده و تغییر آن با مدیریت است.' : plans.length ? 'اعداد بالا پس از رزرو نیازهای سطح بالاتر محاسبه شده‌اند. هر مسیر یک پیشنهاد کامل است؛ گزینه‌های «یا» را با هم جمع نکنید.' : missingPoints>0 ? 'افتخارات لازم را دارید؛ برای ارتقاء فقط '+num(missingPoints)+' امتیاز کلِ دیگر نیاز است.' : 'پیش‌نیازهای این گام تکمیل است.')+'</div></section>';
+  }
+  function refresh(){
+    if (!overlay || overlay.hidden) return;
+    let ctx = null;
+    try { ctx = typeof contextProvider === 'function' ? contextProvider() : contextProvider; } catch(e){}
+    const hn=ctx ? AV.honorOf(ctx.user || '',ctx.stats) : null;
+    overlay.querySelector('.rg-scroll').innerHTML=nextHTML(ctx)+'<h3>نردبان رنک‌ها · ۱۵ سطح</h3><p class="rg-subtitle">حداقل‌ها بر اساس تنظیمات فعلی مدیریت است. معادل‌سازی افتخارات مطابق ضوابط پایین فهرست اعمال می‌شود.</p>'+tableHTML(AV.ranks(),hn && hn.lv,hn && hn.next && hn.next.lv)+rulesHTML();
+  }
+  function close(){
+    if (!overlay || overlay.hidden) return;
+    overlay.hidden=true; overlay.style.display='none'; document.body.style.overflow=oldOverflow;
+    if (lastFocus && lastFocus.isConnected) lastFocus.focus();
+  }
+  function open(provider,trigger){
+    contextProvider=provider || null;
+    if (!overlay){
+      overlay=document.createElement('div'); overlay.id='modal-rank-guide'; overlay.className='rg-overlay'; overlay.hidden=true;
+      overlay.innerHTML='<section class="rg-dialog" role="dialog" aria-modal="true" aria-labelledby="rg-title" tabindex="-1"><header class="rg-toolbar"><div><div class="rg-eyebrow">HONOR RANK · THE ASCENT</div><h2 id="rg-title">راهنمای رنک‌ها و مسیر ارتقاء</h2></div><div class="rg-actions"><button type="button" class="btn sm" id="rg-download">'+PDF_ICON+' دریافت PDF</button><button type="button" class="rg-close" aria-label="بستن راهنمای رنک">×</button></div></header><div class="rg-scroll"></div></section>';
+      document.body.appendChild(overlay);
+      overlay.querySelector('.rg-close').onclick=close;
+      overlay.querySelector('#rg-download').onclick=function(){ exportPDF(this).catch(() => {}); };
+      overlay.addEventListener('click',e => { if (e.target===overlay) close(); });
+      overlay.addEventListener('keydown',e => {
+        if(e.key==='Escape'){e.preventDefault();close();return;}
+        if(e.key!=='Tab') return;
+        // SVG <image href> badges are not links or keyboard focus targets.
+        const targets=Array.from(overlay.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]')).filter(el => el.getClientRects().length && getComputedStyle(el).visibility!=='hidden');
+        e.preventDefault();e.stopPropagation();if(!targets.length) return;
+        const i=targets.indexOf(document.activeElement);
+        const next=i<0 ? (e.shiftKey ? targets.length-1 : 0) : (i+(e.shiftKey ? -1 : 1)+targets.length)%targets.length;
+        targets[next].focus({preventScroll:true});
+      });
+    }
+    if(overlay.hidden) oldOverflow=document.body.style.overflow;
+    lastFocus=trigger || document.activeElement;overlay.hidden=false;overlay.style.display='flex';document.body.style.overflow='hidden';refresh();
+    overlay.querySelector('.rg-scroll').scrollTop=0;overlay.querySelector('.rg-close').focus();
+  }
+  function scriptOnce(file,test){
+    if(test()) return Promise.resolve();
+    return new Promise((resolve,reject) => {
+      const s=document.createElement('script');s.src=vendorBase+file;s.async=true;
+      const timer=setTimeout(() => {s.remove();reject(new Error('بارگذاری ابزار PDF طول کشید؛ دوباره تلاش کنید.'));},15000);
+      s.onload=() => {clearTimeout(timer);test() ? resolve() : reject(new Error('ابزار PDF بارگذاری نشد.'));};
+      s.onerror=() => {clearTimeout(timer);s.remove();reject(new Error('ابزار PDF در دسترس نیست؛ اتصال به خود سایت را بررسی کنید.'));};
+      document.head.appendChild(s);
+    });
+  }
+  function libraries(){
+    if(!loading) loading=scriptOnce('html2canvas-1.4.1.min.js',() => !!window.html2canvas).then(() => scriptOnce('jspdf-2.5.1.umd.min.js',() => !!(window.jspdf && jspdf.jsPDF))).catch(e => {loading=null;throw e;});
+    return loading;
+  }
+  function loadImage(url){
+    return new Promise((resolve,reject) => {
+      const im=new Image();im.crossOrigin='anonymous';
+      const timer=setTimeout(() => reject(new Error('بارگذاری لوگو یا نشان رنک طول کشید.')),10000);
+      im.onload=() => {clearTimeout(timer);resolve(im);};im.onerror=() => {clearTimeout(timer);reject(new Error('لوگو یا نشان بارگذاری نشد؛ فایل تصویر را بررسی کنید.'));};im.src=url;
+    });
+  }
+  async function imageData(url){
+    if (!url || /^data:image\//.test(url)) return url;
+    const im=await loadImage(url),c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;
+    c.getContext('2d').drawImage(im,0,0);return c.toDataURL('image/png');
+  }
+  async function buildPages(model){
+    const host=document.createElement('div');host.className='rg-print-host';host.setAttribute('aria-hidden','true');document.body.appendChild(host);
+    const pages=[],date=Data.fa(Data.isoToShamsi(Data.todayISO())),brand=model.brand;
+    const makePage=() => {
+      const page=document.createElement('section');page.className='rg-paper';
+      page.innerHTML='<header class="rg-paper-header"><img class="rg-paper-logo" src="'+esc(model.logo)+'" alt="لوگوی آکادمی"><div class="rg-paper-brand"><b>'+esc(brand.nameFa)+'</b><span>'+esc(brand.nameEn)+'</span></div><div class="rg-paper-date">راهنمای رسمی رنک‌ها<br>'+date+'<br><bdi dir="ltr">'+esc(model.domain)+'</bdi></div></header><div class="rg-paper-title"><h2>مسیر افتخار؛ از نخستین گام تا قهرمان جاودان</h2><span>HONOR RANK · THE ASCENT</span></div><div class="rg-paper-main"></div><footer class="rg-paper-footer"><span>'+esc(brand.nameShortFa)+' · حداقل‌های رنک و ضوابط ارتقاء</span><b>HONOR · PROGRESS · EXCELLENCE</b><span class="rg-page-no"></span></footer>';
+      host.appendChild(page);pages.push(page);return page;
+    };
+    try{
+      let page=makePage(),body=page.querySelector('.rg-paper-main'),table=null,count=0;
+      const overflow=() => body.scrollHeight > body.clientHeight+1;
+      const startTable=() => {const wrap=document.createElement('div');wrap.innerHTML=tableHTML([]);table=wrap.firstElementChild;body.appendChild(table);count=0;};
+      startTable();
+      if(document.fonts && document.fonts.ready) await document.fonts.ready;
+      for(const r of model.ranks){
+        if(count===9){page=makePage();body=page.querySelector('.rg-paper-main');startTable();}
+        const staging=document.createElement('tbody');staging.innerHTML=rowHTML(r);const row=staging.firstElementChild;
+        table.tBodies[0].appendChild(row);count++;
+        if(overflow()){
+          row.remove();if(count===1) throw new Error('عنوان یکی از رنک‌ها برای یک صفحه بیش از حد بلند است.');
+          page=makePage();body=page.querySelector('.rg-paper-main');startTable();table.tBodies[0].appendChild(row);count=1;
+          if(overflow()) throw new Error('عنوان یکی از رنک‌ها برای صفحه PDF بیش از حد بلند است.');
+        }
+      }
+      const wrap=document.createElement('div');wrap.innerHTML=rulesHTML(model.rules);const rules=wrap.firstElementChild;body.appendChild(rules);
+      if(overflow()){rules.remove();page=makePage();body=page.querySelector('.rg-paper-main');body.appendChild(rules);}
+      if(overflow()) throw new Error('توضیح تکمیلی منطق برای یک صفحه بیش از حد بلند است؛ متن را کوتاه‌تر کنید.');
+      pages.forEach((p,i) => p.querySelector('.rg-page-no').textContent='صفحهٔ '+fa(i+1)+' از '+fa(pages.length));
+      await Promise.all(Array.from(host.querySelectorAll('img')).map(im => im.complete && im.naturalWidth ? Promise.resolve() : loadImage(im.src)));
+      return {host,pages};
+    }catch(e){host.remove();throw e;}
+  }
+  async function exportPDF(btn){
+    if(pdfBusy) return null;
+    pdfBusy=true;let holder=null;const old=btn && btn.innerHTML;
+    if(btn){btn.disabled=true;btn.textContent='در حال آماده‌سازی PDF…';}
+    try{
+      const model={ranks:AV.ranks().map(r => Object.assign({},r)),rules:AV.rankRules(),brand:GA_BRAND.get(),logo:GA_BRAND.logoUrl(),domain:GA_BRAND.host()};
+      await libraries();model.logo=await imageData(model.logo);
+      await Promise.all(model.ranks.map(async r => {if (/^https?:/.test(r.badge)) r.badge=await imageData(r.badge); else if (/^data:/.test(r.badge)) await loadImage(r.badge);}));
+      holder=await buildPages(model);
+      const pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4',compress:true});
+      pdf.setProperties({title:'Honor Rank — '+model.brand.nameEn,subject:'Rank prerequisites and advancement rules',creator:model.brand.nameEn});
+      for(let i=0;i<holder.pages.length;i++){
+        if(btn) btn.textContent='ساخت صفحهٔ '+fa(i+1)+' از '+fa(holder.pages.length)+'…';
+        const canvas=await window.html2canvas(holder.pages[i],{backgroundColor:'#0b151a',scale:2,useCORS:true,allowTaint:false,logging:false,windowWidth:1280,windowHeight:900,scrollX:0,scrollY:0});
+        if(i) pdf.addPage('a4','landscape');
+        pdf.addImage(canvas.toDataURL('image/jpeg',.95),'JPEG',0,0,297,210);
+      }
+      const filename='راهنمای-رنک‌ها-'+Data.todayISO()+'.pdf';
+      pdf.save(filename);
+      if(window.APP) APP.toast('PDF همهٔ رنک‌ها و ضوابط ارتقاء آماده شد ✓','green');
+      return {pages:holder.pages.length,filename};
+    }catch(e){if(window.APP) APP.toast(e.message || 'ساخت PDF انجام نشد؛ دوباره تلاش کنید.','red');throw e;}
+    finally{if(holder) holder.host.remove();pdfBusy=false;if(btn){btn.disabled=false;btn.innerHTML=old;if(overlay && !overlay.hidden && overlay.contains(btn)) btn.focus({preventScroll:true});}}
+  }
+  window.addEventListener('ga-cloud-applied',() => {if(overlay && !overlay.hidden) setTimeout(refresh,850);});
+  window.RANK_GUIDE={iconButton,rulesHTML,tableHTML,nextHTML,open,close,refresh,exportPDF,buildPages};
+})();
+
 </script>
     <script>/* ═══════════════════════════════════════════════════════════════════
    پات کلاب • Putt Club Golf Academy — فروشگاه آواتار (v8)
@@ -12358,9 +12715,13 @@ window.addEventListener('ga:brand-changed', function(){
     }).sort((a, b) => a.diff - b.diff || a.total - b.total);
     r[t[0]].participants = list.map(x => x.pid).filter(p => typeof p === 'number'); /* آزادها در free[] */
     r[t[0]].top = {};
-    if (list[0]) r[t[0]].top['1'] = list[0].pid;
-    if (list[1]) r[t[0]].top['2'] = list[1].pid;
-    if (list[2]) r[t[0]].top['3'] = list[2].pid;
+    list.slice(0,3).forEach((x,i) => { r[t[0]].top[String(i+1)] = x.pid; });
+    if (+t[2] === 1) [4,5].forEach(place => {
+      const x=list[place-1]; if(!x) return;
+      const same=y => y && y.diff === x.diff && y.total === x.total;
+      // مقام چهارم/پنجمِ مساوی بدون تعیین نتیجهٔ رسمی حدس زده نمی‌شود.
+      r[t[0]].top[place] = same(list[place-2]) || same(list[place]) ? null : x.pid;
+    });
     D.saveResults(r);
   }
   /* پایان خودکار مسابقه: وقتی همهٔ کارت‌های شروع‌شده «ثبت نهایی کارت» خوردند، مسابقه به «نتایج ثبت‌شده» می‌رود و از «نتایج مسابقات» ناپدید می‌شود */
@@ -13629,6 +13990,39 @@ window.addEventListener('ga:brand-changed', function(){
     });
   }
 
+  function editNationalPlaces(t,after){
+    const res=D.loadResults()[t[0]];
+    if(!res) return;
+    const peers=(res.participants || []).map(pid => ({id:String(+pid),name:D.nameOf(+pid)}));
+    (res.free || []).forEach(n => peers.push({id:'free:'+n,name:n+' — آزاد'}));
+    const places=D.nationalPlaces(t,res),top={};
+    Object.keys(places).forEach(id => top[places[id]]=id);
+    const modal=document.createElement('div');modal.id='modal-national-places';modal.className='modal open';modal.style.zIndex='9600';
+    modal.innerHTML=`<section class="glass gold-border" role="dialog" aria-modal="true" aria-labelledby="np-title" style="width:min(620px,96vw);padding:22px;max-height:90dvh;overflow:auto">
+      <h3 id="np-title">مقام‌های رسمی کشوری — ${esc(t[1])}</h3>
+      <p style="font-size:12px;line-height:2;color:var(--muted)">مقام اول تا پنجم هرکدام یک افتخار مستقل برای مسیر رنک هستند. مقام‌های ثبت‌نشده را خالی بگذارید؛ حدس زده نمی‌شوند. این ویرایش نتیجهٔ رسمی را تغییر می‌دهد؛ امتیازها همچنان طبق جوایز فعلی مسابقه‌اند.</p>
+      <div class="field-grid" style="margin-top:14px">${AV.NATIONAL_FIELDS.map(f => `<div><label for="np-${f.place}">${esc(f.label)}</label><select class="sel" id="np-${f.place}" style="width:100%"><option value="">ثبت نشده</option>${peers.map(p => `<option value="${esc(p.id)}" ${top[f.place]===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>`).join('')}</div>
+      <p id="np-error" role="alert" class="honor-req-error" hidden></p>
+      <div style="display:flex;gap:10px;margin-top:16px"><button type="button" class="btn sm" id="np-save">ذخیرهٔ مقام‌ها</button><button type="button" class="btn sm ghost" id="np-close">بستن</button></div>
+    </section>`;
+    document.body.appendChild(modal);
+    const close=() => modal.remove();$('#np-close',modal).onclick=close;
+    modal.addEventListener('click',e => {if(e.target===modal) close();});modal.addEventListener('keydown',e => {if(e.key==='Escape') close();});
+    $('#np-save',modal).onclick=() => {
+      const next={},used=new Set();let duplicate=false;
+      AV.NATIONAL_FIELDS.forEach(f => {
+        const v=$('#np-'+f.place,modal).value;if(!v) return;
+        if(used.has(v)) duplicate=true;used.add(v);next[f.place]=v.startsWith('free:') ? v : +v;
+      });
+      if(duplicate){const err=$('#np-error',modal);err.hidden=false;err.textContent='یک بازیکن نمی‌تواند هم‌زمان دو مقام داشته باشد.';return;}
+      // Empty slots are explicit so a cleared official place is not inferred again from old cards.
+      for(let p=1;p<=5;p++) if(next[p]===undefined) next[p]=null;
+      const all=D.loadResults();if(!all[t[0]]) return;all[t[0]].top=next;D.saveResults(all);APP.reloadData();
+      APP.toast('مقام‌های کشوری و سابقهٔ رنک به‌روز شدند ✓','green');close();if(after) after();
+    };
+    $('#np-1',modal).focus();
+  }
+
   function mgmtResults(body){
     const S = gstate().S;
     const results = D.loadResults();
@@ -13700,9 +14094,14 @@ window.addEventListener('ga:brand-changed', function(){
           <span class="chip gold">🏁 پایان ${fmtT(res.endedAt)}</span>
           <span style="flex:1"></span>
           <button class="btn sm ghost" data-mrrep="${tid}" title="گزارش مسابقه + جریمه/حذف بازیکن">✏️ ویرایش</button>
+          ${+t[2] === 1 ? `<button class="btn sm ghost" data-mrnational="${tid}">🏅 مقام‌های ۱ تا ۵ کشوری</button>` : ''}
           <button class="btn sm" data-mrstory="${tid}" title="عکس استوری اینستاگرام (۱۰۸۰×۱۹۲۰) — دانلود/اشتراک" style="background:linear-gradient(135deg,#d62976,#fa7e1e);color:#fff;font-weight:800;font-size:10px;padding:4px 9px">📱 استوری</button>
         </div>`;
       }).join('') : '<div style="color:var(--muted);font-size:12.5px;padding:8px">هنوز نتیجه‌ای ثبت نشده است — از کادر بالا شروع کنید.</div>';
+      $$('#mr-list [data-mrnational]').forEach(b => b.addEventListener('click', () => {
+        const t=S.tournaments.find(x => +x[0] === +b.dataset.mrnational);
+        if(t) editNationalPlaces(t,renderSavedResults);
+      }));
       $$('#mr-list [data-mrrep]').forEach(b => b.addEventListener('click', () => {
         const t = S.tournaments.find(x => x[0] === +b.dataset.mrrep);
         if (t) tourReport(t, () => { renderSavedResults(); });
@@ -14301,7 +14700,10 @@ window.addEventListener('ga:brand-changed', function(){
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">🏅</span><h3>Avatar Rank Appearance — ظاهر آواتار بر اساس رنک</h3><span class="tag">Data Driven</span>
-        <button class="btn sm ghost" id="hr-reset" style="margin-right:auto">↺ بازگشت به پیش‌فرض</button>
+        <button class="btn sm" id="hr-pdf" style="margin-right:auto">📄 PDF همهٔ رنک‌ها</button>
+        <button class="btn sm ghost" id="hr-guide">راهنمای رنک‌ها</button>
+        <button class="btn sm ghost" id="hr-rules-open">⚙️ منطق ارتقاء</button>
+        <button class="btn sm ghost" id="hr-reset">↺ بازگشت به پیش‌فرض</button>
       </div>
       <div class="rank-grid" style="margin-top:12px">
         ${rs.map(x => `<div class="rank-chip ${x.lv === honorLv ? 'on' : ''}" data-hlv="${x.lv}">
@@ -14329,9 +14731,9 @@ window.addEventListener('ga:brand-changed', function(){
         </div>
         <fieldset class="honor-requirements" id="hr-prereqs" aria-describedby="hr-req-help">
           <legend>🔒 پیش‌نیازها</legend>
-          <p id="hr-req-help">برای دریافت این رنک، <b>هر چهار شرط باید هم‌زمان برقرار باشند.</b> امتیاز و قهرمانی‌ها از روز اول و در همهٔ فصل‌ها محاسبه می‌شوند؛ صفر یعنی آن مورد حداقلی ندارد.</p>
+          <p id="hr-req-help">برای دریافت این رنک، <b>همهٔ پیش‌نیازها باید هم‌زمان و پس از معادل‌سازی مجاز برقرار باشند.</b> امتیاز و قهرمانی‌ها از روز اول و در همهٔ فصل‌ها محاسبه می‌شوند؛ صفر یعنی آن مورد حداقلی ندارد.</p>
           <div class="field-grid honor-req-fields">
-            ${AV.PREREQUISITES.map(f => `<div><label for="hr-${f.key}">حداقل ${f.label}</label>
+            ${AV.PREREQUISITES.map(f => `${f.key === 'wins1' ? '<div class="rg-national-label">سطح ۱ · افتخارات کشوری (مقام اول تا پنجم)</div>' : f.key === 'wins2' ? '<div class="rg-national-label">قهرمانی سطوح ۲ و ۳</div>' : ''}<div${f.key === 'pts' ? ' style="grid-column:1/-1"' : ''}><label for="hr-${f.key}">حداقل ${f.label}</label>
               <input class="input" id="hr-${f.key}" type="number" min="0" step="${f.key === 'pts' ? 'any' : '1'}" inputmode="${f.key === 'pts' ? 'decimal' : 'numeric'}" data-hf="${f.key}" value="${r[f.key]}" required></div>`).join('')}
           </div>
           <div id="hr-req-error" class="honor-req-error" role="alert" hidden></div>
@@ -14370,11 +14772,12 @@ window.addEventListener('ga:brand-changed', function(){
       </div>
     </div>
 
+    ${rankRulesEditorHTML()}
     <div class="glass honor-member-list">
-      <div class="card-head"><span class="ic">👥</span><h3>رنک اعضا</h3><span class="tag">چهار شرط از کل سابقه</span></div>
-      <p class="honor-req-note">قهرمانی یعنی نفر اول مسابقه در همان سطح؛ رتبهٔ دوم یا سوم، قهرمانی سطح ۲ یا ۳ نیست. تعیین دستی هم نیازمند تکمیل هر چهار پیش‌نیاز همان رنک است.</p>
+      <div class="card-head"><span class="ic">👥</span><h3>رنک اعضا</h3><span class="tag">افتخارات واقعی از کل سابقه</span></div>
+      <p class="honor-req-note">پنج مقام کشوری جداگانه ثبت می‌شوند. اعداد جدول، افتخارات واقعی‌اند؛ معادل‌سازی فقط هنگام احراز رنک اعمال می‌شود. تعیین دستی نیز نیازمند تکمیل همهٔ پیش‌نیازهاست.</p>
       <div class="honor-table-scroll"><table class="tbl"><thead><tr>
-        <th>عضو</th><th>امتیاز کل</th><th>قهرمانی سطح ۱</th><th>قهرمانی سطح ۲</th><th>قهرمانی سطح ۳</th><th>رنک فعلی</th><th>حالت</th><th>تعیین دستی</th>
+        <th>عضو</th>${AV.PREREQUISITES.map(f => '<th>'+esc(f.label)+'</th>').join('')}<th>رنک فعلی</th><th>حالت</th><th>تعیین دستی</th>
       </tr></thead><tbody>
         ${mem.map(u => {
           const stats = careerOfPid(u.pid);
@@ -14385,7 +14788,7 @@ window.addEventListener('ga:brand-changed', function(){
             <td data-hlevel="${hn.lv}"><span style="color:${hn.rank.title};font-weight:800">${esc(hn.rank.en)}</span> <span style="font-size:11px;color:var(--muted)">${esc(hn.rank.fa)}</span></td>
             <td>${hn.manual ? '<span class="chip gold">دستی؛ واجد شرایط</span>' : hn.manualBlocked ? '<span class="chip dim">خودکار؛ پیش‌نیاز رنک دستی ناقص</span>' : '<span class="chip dim">خودکار</span>'}</td>
             <td><select class="sel" data-hset="${esc(u.user)}" aria-label="رنک ${esc(u.name || u.user)}" style="min-width:150px">
-              <option value="">خودکار (هر چهار شرط)</option>
+              <option value="">خودکار (همهٔ پیش‌نیازها)</option>
               ${rs.map(x => {
                 const met = AV.requirementsMet(x, stats);
                 const selected = ov[String(u.user||'').toLowerCase()] && +ov[String(u.user||'').toLowerCase()].lv === x.lv;
@@ -14397,6 +14800,10 @@ window.addEventListener('ga:brand-changed', function(){
       </tbody></table></div>
     </div>`;
 
+    $('#hr-pdf',body).onclick = function(){ RANK_GUIDE.exportPDF(this).catch(() => {}); };
+    $('#hr-guide',body).onclick = function(){ RANK_GUIDE.open(null,this); };
+    $('#hr-rules-open',body).onclick = () => { const box=$('#hr-rule-editor',body); box.open=true; box.scrollIntoView({behavior:'smooth',block:'start'}); };
+    bindRankRulesEditor(body);
     $$('[data-hlv]', body).forEach(el => el.addEventListener('click', () => { honorLv = +el.dataset.hlv; renderMgmtTab(); }));
     function collect(showErrors){
       const o = {};
@@ -14405,7 +14812,7 @@ window.addEventListener('ga:brand-changed', function(){
         const k = el.dataset.hf;
         if (AV.PREREQUISITES.some(f => f.key === k)){
           const valid = AV.validRequirement(el.value, k);
-          const msg = k === 'pts' ? 'امتیاز باید عددی غیرمنفی باشد.' : 'تعداد قهرمانی باید عدد صحیح و غیرمنفی باشد.';
+          const msg = k === 'pts' ? 'امتیاز باید عددی غیرمنفی باشد.' : 'تعداد افتخار باید عدد صحیح و غیرمنفی باشد.';
           el.setCustomValidity(valid ? '' : msg);
           el.setAttribute('aria-invalid', valid ? 'false' : 'true');
           if (!valid && !invalid) invalid = el;
@@ -14470,7 +14877,7 @@ window.addEventListener('ga:brand-changed', function(){
       const member = mem.find(u => u.user === sel.dataset.hset);
       const stats = careerOfPid(member && member.pid);
       if (sel.value !== '' && !AV.requirementsMet(AV.rankOf(+sel.value), stats)){
-        APP.toast('هر چهار پیش‌نیاز این رنک باید تکمیل باشد.', 'orange'); renderMgmtTab(); return;
+        APP.toast('همهٔ پیش‌نیازهای این رنک باید تکمیل باشد.', 'orange'); renderMgmtTab(); return;
       }
       if (!AV.setHonorOverride(sel.dataset.hset, sel.value === '' ? null : +sel.value)){
         APP.toast('ذخیرهٔ رنک انجام نشد.', 'red'); return;
@@ -14478,6 +14885,44 @@ window.addEventListener('ga:brand-changed', function(){
       APP.toast('رنک عضو به‌روز شد ✓', 'green');
       renderMgmtTab();
     }));
+  }
+  function rankRulesEditorHTML(){
+    const r=AV.rankRules();
+    return `<details class="rg-rule-editor" id="hr-rule-editor">
+      <summary style="cursor:pointer;font-weight:850;color:var(--gold-l);font-size:15px">⚙️ منطق ارتقاء و معادل‌سازی — قابل ویرایش</summary>
+      <p>این ضرایب برای همهٔ رنک‌ها مشترک‌اند و با «حداقل پیش‌نیازهای هر رنک» فرق دارند. صفر یعنی آن تبدیل غیرفعال است. ابتدا نیازهای خودِ سطح تأمین می‌شود؛ فقط مازاد می‌تواند به سطح پایین‌تر برود.</p>
+      <div class="rg-rule-fields">
+        ${AV.NATIONAL_FIELDS.map(f => `<div><label for="rr-n${f.place}">هر ${f.label.replace(' (کشوری)','').replace('سطح ۱','کشوری')} ← چند قهرمانی سطح ۲؟</label><input id="rr-n${f.place}" class="input" type="number" min="0" max="10000" step="1" inputmode="numeric" data-rr="${f.place}" value="${r.nationalTo2[f.place]}"></div>`).join('')}
+        <div><label for="rr-tier2">هر قهرمانی سطح ۲ ← چند قهرمانی سطح ۳؟</label><input id="rr-tier2" class="input" type="number" min="0" max="10000" step="1" inputmode="numeric" value="${r.tier2To3}"></div>
+      </div>
+      <label class="rg-rule-check"><input id="rr-better" type="checkbox" ${r.betterNational ? 'checked' : ''}><span>مقام بهترِ کشوری بتواند شرط مقام پایین‌تر را پوشش دهد (مثلاً «پنجم یا بهتر»). یک مقام برای دو پیش‌نیاز رزرو نمی‌شود.</span></label>
+      <label for="rr-note" style="font-size:11px;color:var(--muted)">توضیح تکمیلی اختیاری — همراه ضوابط در پاپ‌آپ و PDF نمایش داده می‌شود</label>
+      <textarea id="rr-note" class="input rg-rule-note" maxlength="600">${esc(r.note)}</textarea>
+      <p id="rr-error" class="honor-req-error" role="alert" hidden></p>
+      <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:12px"><button type="button" class="btn sm" id="rr-save">💾 ذخیرهٔ منطق</button><button type="button" class="btn sm ghost" id="rr-reset">پیش‌فرض منطق</button></div>
+      ${RANK_GUIDE.rulesHTML(r)}
+    </details>`;
+  }
+  function bindRankRulesEditor(body){
+    const reopen=() => {renderMgmtTab();const box=$('#hr-rule-editor');if(box){box.open=true;box.scrollIntoView({block:'nearest'});}};
+    $('#rr-save',body).onclick=() => {
+      const value={ nationalTo2:{},tier2To3:+$('#rr-tier2',body).value,betterNational:$('#rr-better',body).checked,note:$('#rr-note',body).value.trim() };
+      let invalid=null;
+      $$('[data-rr],#rr-tier2',body).forEach(el => {
+        const valid=AV.validRequirement(el.value,'wins1') && +el.value<=10000;
+        el.setCustomValidity(valid ? '' : 'ضریب باید عدد صحیح از صفر تا ۱۰۰۰۰ باشد.');el.setAttribute('aria-invalid',String(!valid));
+        if(!valid && !invalid) invalid=el;
+        if(el.dataset.rr) value.nationalTo2[el.dataset.rr]=+el.value;
+      });
+      const err=$('#rr-error',body);err.hidden=!invalid;err.textContent=invalid ? 'مقدار نامعتبر ذخیره نشده است؛ ضرایب صحیح و غیرمنفی وارد کنید.' : '';
+      if(invalid){invalid.reportValidity();return;}
+      if(!AV.saveRankRules(value)){APP.toast('ذخیرهٔ منطق انجام نشد.','red');return;}
+      APP.toast('منطق ارتقاء ذخیره شد؛ رنک‌ها با قواعد جدید محاسبه می‌شوند ✓','green');reopen();
+    };
+    $('#rr-reset',body).onclick=() => {
+      if(!confirm('فقط ضرایب و توضیح منطق به پیش‌فرض برگردند؟ امتیازها و پیش‌نیازهای رنک‌ها تغییر نمی‌کنند.')) return;
+      if(AV.saveRankRules(AV.DEFAULT_RANK_RULES)) reopen();
+    };
   }
   function careerOfPid(pid){
     const { A } = gstate();
@@ -19770,16 +20215,16 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     return AV.rankCard({ user, name, sel: av.sel, gender: av.gender, honor: honorOfUser(user), size: size || 'md', id: id || '' });
   }
   function honorProgHTML(hn){
-    if (!hn.next) return `<div style="font-size:11.5px;color:var(--muted);margin-top:8px">هر چهار پیش‌نیاز بالاترین رنک آکادمی را تکمیل کرده‌اید 👑</div>`;
-    const checks = hn.checks;
+    if (!hn.next) return `<div style="font-size:11.5px;color:var(--muted);margin-top:8px">تمام پیش‌نیازهای بالاترین رنک آکادمی را تکمیل کرده‌اید 👑</div>`;
+    const checks = hn.checks.filter(f => f.need > 0);
     return `
       <div class="honor-progress" style="margin-top:12px;text-align:right">
         <div style="font-size:11.5px;color:var(--muted);line-height:1.9">پیش‌نیازهای رنک بعدی: <b style="color:${hn.next.title}">${esc(hn.next.en)}</b></div>
-        <div style="font-size:11px;color:var(--gold-l);margin-top:4px">${D.fa(hn.complete)} از ۴ شرط تکمیل شده — هر چهار مورد لازم است</div>
+        <div style="font-size:11px;color:var(--gold-l);margin-top:4px">${D.fa(hn.complete)} از ${D.fa(hn.requiredCount)} پیش‌نیاز تکمیل شده — با احتساب معادل مجاز</div>
         <div class="pbar gold" role="progressbar" aria-label="تکمیل پیش‌نیازهای رنک بعدی" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(hn.prog)}" style="margin-top:7px"><i style="width:${Math.round(hn.prog)}%"></i></div>
         <div style="margin-top:8px">
           ${checks.map(f => `<div data-hcheck="${f.key}" data-met="${f.met}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;font-size:11px;line-height:1.8;color:${f.met ? 'var(--green-l)' : 'var(--muted)'}">
-            <span>${f.met ? '✓' : '○'} ${f.label}</span>
+            <span>${f.met ? '✓' : '○'} ${f.label}${f.key !== 'pts' && f.have !== f.raw ? ' <small>(با معادل)</small>' : ''}</span>
             <span style="white-space:nowrap;font-variant-numeric:tabular-nums">${D.faNum(f.have, f.key === 'pts' && !Number.isInteger(f.have) ? 2 : 0)} / ${D.fa(f.need)}</span>
           </div>`).join('')}
         </div>
@@ -19799,7 +20244,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     body.innerHTML = `
     <div class="grid cols-3">
       <div class="glass" style="text-align:center">
-        <div class="card-head"><span class="ic">🏅</span><h3>کارت رنک من</h3><span class="tag">Honor Rank</span></div>
+        <div class="card-head"><span class="ic">🏅</span><h3>کارت رنک من</h3><span class="tag">Honor Rank</span>${RANK_GUIDE.iconButton('توضیحات رنک‌ها و پیش‌نیاز لول بعدی')}</div>
         <div style="margin-top:10px;display:flex;justify-content:center">${honorCardHTML(currentUser, o.name, 'md', 'mz-card')}</div>
         ${honorProgHTML(o.hn)}
       </div>
@@ -19916,7 +20361,6 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       { id:'w3', ic:'🥉', title:'قهرمان مسابقهٔ سطح ۳ (خودکار)', amount:10 }]).forEach(r => {
       rows += `<div class="row"><span class="pnm"><span style="font-size:20px">${r.ic}</span><span>${esc(r.title)}</span></span><span style="font-weight:900;color:#f6e27a">+${D.fa(r.amount)} 🪙</span></div>`;
     });
-    const rs = AV.ranks();
     body.innerHTML = `
     <div class="glass" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">📜</span><h3>اطلاعات دریافت سکه — جدول کامل</h3><span class="tag">GolfCoin 🪙</span></div>
@@ -19924,18 +20368,9 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       <div class="golfrule" style="margin-top:14px;line-height:2">🪙 <b>سکه چیست؟</b> سکه‌های آکادمی را از فعالیت‌های ورزشی و اجتماعی به دست می‌آورید و در <b>فروشگاه اوتار</b> خرج می‌کنید. هر خرید برای همیشه در کمد شما می‌ماند. خودت طراحی کن، ایده بگیر و استایل مخصوص خودت را بساز!</div>
       <div class="golfrule" style="margin-top:10px;line-height:2">⏳ همهٔ درخواست‌های سکه، پس از بررسی و <b>تأیید مدیریت</b> اعمال می‌شوند.</div>
     </div>
-    <div class="glass">
-      <div class="card-head"><span class="ic">🏅</span><h3>نردبان Honor Rank — ۱۵ سطح، ۵ دیویژن</h3><span class="tag">رنک شما: ${esc(o.hn.rank.en)}</span></div>
-      <div class="rank-grid" style="margin-top:12px">
-        ${rs.map(r => `<div class="rank-chip ${r.lv === o.hn.lv ? 'on' : ''}" style="border-color:${r.lv === o.hn.lv ? r.border : 'rgba(255,255,255,.12)'}">
-          <div style="display:flex;justify-content:center">${AV.badgeSVG(r, 30)}</div>
-          <div style="color:${r.title};margin-top:5px">${esc(r.en)}</div>
-          <div style="font-size:10px;color:var(--muted)">${esc(r.fa)}</div>
-          <div style="font-size:10px;color:var(--gold-l);margin-top:3px">Lv ${D.fa(r.lv)} • ${D.fa(r.pts)}+ امتیاز کل</div>
-          <div style="font-size:10px;color:var(--muted);line-height:1.9;margin-top:4px">حداقل قهرمانی:<br>سطح ۱: ${D.fa(r.wins1)} • سطح ۲: ${D.fa(r.wins2)} • سطح ۳: ${D.fa(r.wins3)}</div>
-        </div>`).join('')}
-      </div>
-      <div class="golfrule" style="margin-top:12px;line-height:2">🎖️ رنک شما بر اساس <b>امتیاز کل از روز اول + تعداد قهرمانی سطح ۱، ۲ و ۳</b> تعیین می‌شود. هر چهار حداقل باید <b>هم‌زمان</b> تأمین باشند؛ امتیازِ بیشتر به‌تنهایی جای قهرمانی را نمی‌گیرد. قهرمانی، نفر اولِ مسابقه در آن سطح است؛ نه مقام دوم یا سوم. این سابقه با تغییر فصل صفر نمی‌شود.</div>
+    <div class="rg-launch">
+      ${RANK_GUIDE.iconButton('نمایش راهنمای رنک‌ها و مسیر شخصی ارتقاء')}
+      <div><h3>توضیحات رنک‌ها و مسیر ارتقاء</h3><p>فهرست کامل ۱۵ رنک، نشان‌ها، امتیازها و افتخارات موردنیاز را ببینید. بالای راهنما مشخص است برای لول بعدی چه کمبودهایی دارید و چه مسیرهای معادلی می‌توانید انتخاب کنید.</p></div>
     </div>`;
   }
 
@@ -20494,13 +20929,21 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       const cs = getComputedStyle(m); return cs.display !== 'none' && cs.visibility !== 'hidden';
     });
     if (open){
-      open.style.display = 'none';
+      if (open.id === 'modal-rank-guide' && window.RANK_GUIDE) RANK_GUIDE.close();
+      else open.style.display = 'none';
       try { history.pushState({ p: currentPage }, '', '#' + currentPage); } catch (e2){}
       return;
     }
     let pg = (e.state && e.state.p) || (location.hash || '').slice(1) || 'cmd';
     if (!PAGES[pg]) pg = 'cmd';
     go(pg, true);
+  });
+
+  document.addEventListener('click',e => {
+    const trigger=e.target.closest && e.target.closest('[data-rank-guide]');
+    if(!trigger || !window.RANK_GUIDE) return;
+    e.preventDefault();
+    RANK_GUIDE.open(() => ({user:currentUser,name:(userRec(currentUser) || {}).name || currentUser,stats:careerOfUser(currentUser)}),trigger);
   });
 
   window.APP = {

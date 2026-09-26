@@ -31,8 +31,8 @@ function boot(seed = {}) {
 const { AV } = boot();
 const all = (pts = 100000) => ({ pts, wins1:100, wins2:100, wins3:100 });
 
-test('Exactly four editable requirements; no fifth rule or OR shortcut', () => {
-  assert.deepEqual(plain(AV.PREREQUISITES.map(f => f.key)), ['pts','wins1','wins2','wins3']);
+test('Points, five national places and two lower tiers are editable', () => {
+  assert.deepEqual(plain(AV.PREREQUISITES.map(f => f.key)), ['pts','wins1','national2','national3','national4','national5','wins2','wins3']);
 });
 test('Levels 1–4 require no championships', () => {
   for (let lv=1; lv<=4; lv++) {
@@ -51,7 +51,7 @@ test('Level 6 requires Tier-2 = 1 AND Tier-3 = 3', () => {
   const pts = AV.rankOf(6).pts;
   assert.deepEqual([AV.rankOf(6).wins1,AV.rankOf(6).wins2,AV.rankOf(6).wins3], [0,1,3]);
   assert.equal(AV.honorOf('u', { pts, wins2:0, wins3:99 }).lv, 5);
-  assert.equal(AV.honorOf('u', { pts, wins2:99, wins3:2 }).lv, 5);
+  assert.equal(AV.honorOf('u', { pts, wins2:1, wins3:2 }).lv, 5);
   assert.equal(AV.honorOf('u', { pts, wins2:1, wins3:3 }).lv, 6);
 });
 test('Level 7 and initial levels 8–15 use Tier-1 = 0, Tier-2 = 3, Tier-3 = 10', () => {
@@ -64,7 +64,7 @@ test('Level 7 and initial levels 8–15 use Tier-1 = 0, Tier-2 = 3, Tier-3 = 10'
 test('Points alone cannot unlock level 5, including legacy numeric callers', () => {
   assert.equal(AV.levelOfPts(999999999), 4);
   assert.equal(AV.honorOf('u', 999999999).lv, 4);
-  assert.equal(AV.honorOf('u', { pts:999999999, wins1:999, wins2:999 }).lv, 4);
+  assert.equal(AV.honorOf('u', { pts:999999999, wins1:0, wins2:0 }).lv, 4);
 });
 test('Each of the four missing conditions independently prevents the target rank', () => {
   const x = boot().AV;
@@ -138,7 +138,7 @@ test('Even existing manual awards cannot bypass the four requirements; stored ch
 });
 test('Incomplete championships cannot display a misleading 100% progress bar', () => {
   const h = AV.honorOf('u', { pts:100000 });
-  assert.equal(h.next.lv, 5); assert.equal(h.complete, 3); assert.ok(h.prog < 100);
+  assert.equal(h.next.lv, 5); assert.equal(h.complete, 1); assert.ok(h.prog < 100);
   assert.deepEqual(plain(h.checks.filter(f => !f.met).map(f => f.key)), ['wins3']);
   const x = boot().AV; x.saveRank(5, { wins3:1000000 });
   const nearly = x.honorOf('u', { pts:45, wins3:999999 });
@@ -187,7 +187,7 @@ function history() {
 
 test('Lifetime points include all registered years, programs, activities and enabled battle points', () => {
   const b = history(), s = b.D.careerStats(b.state);
-  assert.deepEqual(plain(s[101]), { pts:96,wins1:1,wins2:1,wins3:2 });
+  assert.deepEqual(plain(s[101]), { pts:96,wins1:1,national2:0,national3:0,national4:0,national5:0,wins2:1,wins3:2 });
   assert.equal(s[102].pts, 79.5); assert.equal(s[9000].pts, 4);
 });
 test('Tier-1/2/3 championships are independent first-place counts, not podium places', () => {
@@ -197,7 +197,7 @@ test('Tier-1/2/3 championships are independent first-place counts, not podium pl
 });
 test('Current player inactivity does not erase past achievements', () => {
   const b = history(), s = b.D.careerStats(b.state);
-  assert.deepEqual(plain(s[103]), { pts:52,wins1:1,wins2:0,wins3:0 });
+  assert.deepEqual(plain(s[103]), { pts:52,wins1:1,national2:0,national3:1,national4:0,national5:0,wins2:0,wins3:0 });
 });
 test('Results and scorecards do not double-count a championship or its points', () => {
   const b = history();
@@ -210,7 +210,7 @@ test('Cards without an official result give no championship', () => {
   const state = { players:[[1,'A','مرد',0,'2020-01-01',1]], tournaments:[[201,'Unfinalized',3,1,18,'2020-01-01']],
     scorecards:[{ tour:201,pid:1,total:50 }], activities:[] };
   const s = b.D.careerStats(state);
-  assert.deepEqual(plain(s[1]), { pts:10,wins1:0,wins2:0,wins3:0 });
+  assert.deepEqual(plain(s[1]), { pts:10,wins1:0,national2:0,national3:0,national4:0,national5:0,wins2:0,wins3:0 });
 });
 test('Editing, removing or disabling results rebuilds counts; no permanent extra award', () => {
   const b = history();

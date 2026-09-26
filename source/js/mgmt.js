@@ -2847,9 +2847,13 @@
     }).sort((a, b) => a.diff - b.diff || a.total - b.total);
     r[t[0]].participants = list.map(x => x.pid).filter(p => typeof p === 'number'); /* آزادها در free[] */
     r[t[0]].top = {};
-    if (list[0]) r[t[0]].top['1'] = list[0].pid;
-    if (list[1]) r[t[0]].top['2'] = list[1].pid;
-    if (list[2]) r[t[0]].top['3'] = list[2].pid;
+    list.slice(0,3).forEach((x,i) => { r[t[0]].top[String(i+1)] = x.pid; });
+    if (+t[2] === 1) [4,5].forEach(place => {
+      const x=list[place-1]; if(!x) return;
+      const same=y => y && y.diff === x.diff && y.total === x.total;
+      // مقام چهارم/پنجمِ مساوی بدون تعیین نتیجهٔ رسمی حدس زده نمی‌شود.
+      r[t[0]].top[place] = same(list[place-2]) || same(list[place]) ? null : x.pid;
+    });
     D.saveResults(r);
   }
   /* پایان خودکار مسابقه: وقتی همهٔ کارت‌های شروع‌شده «ثبت نهایی کارت» خوردند، مسابقه به «نتایج ثبت‌شده» می‌رود و از «نتایج مسابقات» ناپدید می‌شود */
@@ -4118,6 +4122,39 @@
     });
   }
 
+  function editNationalPlaces(t,after){
+    const res=D.loadResults()[t[0]];
+    if(!res) return;
+    const peers=(res.participants || []).map(pid => ({id:String(+pid),name:D.nameOf(+pid)}));
+    (res.free || []).forEach(n => peers.push({id:'free:'+n,name:n+' — آزاد'}));
+    const places=D.nationalPlaces(t,res),top={};
+    Object.keys(places).forEach(id => top[places[id]]=id);
+    const modal=document.createElement('div');modal.id='modal-national-places';modal.className='modal open';modal.style.zIndex='9600';
+    modal.innerHTML=`<section class="glass gold-border" role="dialog" aria-modal="true" aria-labelledby="np-title" style="width:min(620px,96vw);padding:22px;max-height:90dvh;overflow:auto">
+      <h3 id="np-title">مقام‌های رسمی کشوری — ${esc(t[1])}</h3>
+      <p style="font-size:12px;line-height:2;color:var(--muted)">مقام اول تا پنجم هرکدام یک افتخار مستقل برای مسیر رنک هستند. مقام‌های ثبت‌نشده را خالی بگذارید؛ حدس زده نمی‌شوند. این ویرایش نتیجهٔ رسمی را تغییر می‌دهد؛ امتیازها همچنان طبق جوایز فعلی مسابقه‌اند.</p>
+      <div class="field-grid" style="margin-top:14px">${AV.NATIONAL_FIELDS.map(f => `<div><label for="np-${f.place}">${esc(f.label)}</label><select class="sel" id="np-${f.place}" style="width:100%"><option value="">ثبت نشده</option>${peers.map(p => `<option value="${esc(p.id)}" ${top[f.place]===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>`).join('')}</div>
+      <p id="np-error" role="alert" class="honor-req-error" hidden></p>
+      <div style="display:flex;gap:10px;margin-top:16px"><button type="button" class="btn sm" id="np-save">ذخیرهٔ مقام‌ها</button><button type="button" class="btn sm ghost" id="np-close">بستن</button></div>
+    </section>`;
+    document.body.appendChild(modal);
+    const close=() => modal.remove();$('#np-close',modal).onclick=close;
+    modal.addEventListener('click',e => {if(e.target===modal) close();});modal.addEventListener('keydown',e => {if(e.key==='Escape') close();});
+    $('#np-save',modal).onclick=() => {
+      const next={},used=new Set();let duplicate=false;
+      AV.NATIONAL_FIELDS.forEach(f => {
+        const v=$('#np-'+f.place,modal).value;if(!v) return;
+        if(used.has(v)) duplicate=true;used.add(v);next[f.place]=v.startsWith('free:') ? v : +v;
+      });
+      if(duplicate){const err=$('#np-error',modal);err.hidden=false;err.textContent='یک بازیکن نمی‌تواند هم‌زمان دو مقام داشته باشد.';return;}
+      // Empty slots are explicit so a cleared official place is not inferred again from old cards.
+      for(let p=1;p<=5;p++) if(next[p]===undefined) next[p]=null;
+      const all=D.loadResults();if(!all[t[0]]) return;all[t[0]].top=next;D.saveResults(all);APP.reloadData();
+      APP.toast('مقام‌های کشوری و سابقهٔ رنک به‌روز شدند ✓','green');close();if(after) after();
+    };
+    $('#np-1',modal).focus();
+  }
+
   function mgmtResults(body){
     const S = gstate().S;
     const results = D.loadResults();
@@ -4189,9 +4226,14 @@
           <span class="chip gold">🏁 پایان ${fmtT(res.endedAt)}</span>
           <span style="flex:1"></span>
           <button class="btn sm ghost" data-mrrep="${tid}" title="گزارش مسابقه + جریمه/حذف بازیکن">✏️ ویرایش</button>
+          ${+t[2] === 1 ? `<button class="btn sm ghost" data-mrnational="${tid}">🏅 مقام‌های ۱ تا ۵ کشوری</button>` : ''}
           <button class="btn sm" data-mrstory="${tid}" title="عکس استوری اینستاگرام (۱۰۸۰×۱۹۲۰) — دانلود/اشتراک" style="background:linear-gradient(135deg,#d62976,#fa7e1e);color:#fff;font-weight:800;font-size:10px;padding:4px 9px">📱 استوری</button>
         </div>`;
       }).join('') : '<div style="color:var(--muted);font-size:12.5px;padding:8px">هنوز نتیجه‌ای ثبت نشده است — از کادر بالا شروع کنید.</div>';
+      $$('#mr-list [data-mrnational]').forEach(b => b.addEventListener('click', () => {
+        const t=S.tournaments.find(x => +x[0] === +b.dataset.mrnational);
+        if(t) editNationalPlaces(t,renderSavedResults);
+      }));
       $$('#mr-list [data-mrrep]').forEach(b => b.addEventListener('click', () => {
         const t = S.tournaments.find(x => x[0] === +b.dataset.mrrep);
         if (t) tourReport(t, () => { renderSavedResults(); });
@@ -4790,7 +4832,10 @@
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">🏅</span><h3>Avatar Rank Appearance — ظاهر آواتار بر اساس رنک</h3><span class="tag">Data Driven</span>
-        <button class="btn sm ghost" id="hr-reset" style="margin-right:auto">↺ بازگشت به پیش‌فرض</button>
+        <button class="btn sm" id="hr-pdf" style="margin-right:auto">📄 PDF همهٔ رنک‌ها</button>
+        <button class="btn sm ghost" id="hr-guide">راهنمای رنک‌ها</button>
+        <button class="btn sm ghost" id="hr-rules-open">⚙️ منطق ارتقاء</button>
+        <button class="btn sm ghost" id="hr-reset">↺ بازگشت به پیش‌فرض</button>
       </div>
       <div class="rank-grid" style="margin-top:12px">
         ${rs.map(x => `<div class="rank-chip ${x.lv === honorLv ? 'on' : ''}" data-hlv="${x.lv}">
@@ -4818,9 +4863,9 @@
         </div>
         <fieldset class="honor-requirements" id="hr-prereqs" aria-describedby="hr-req-help">
           <legend>🔒 پیش‌نیازها</legend>
-          <p id="hr-req-help">برای دریافت این رنک، <b>هر چهار شرط باید هم‌زمان برقرار باشند.</b> امتیاز و قهرمانی‌ها از روز اول و در همهٔ فصل‌ها محاسبه می‌شوند؛ صفر یعنی آن مورد حداقلی ندارد.</p>
+          <p id="hr-req-help">برای دریافت این رنک، <b>همهٔ پیش‌نیازها باید هم‌زمان و پس از معادل‌سازی مجاز برقرار باشند.</b> امتیاز و قهرمانی‌ها از روز اول و در همهٔ فصل‌ها محاسبه می‌شوند؛ صفر یعنی آن مورد حداقلی ندارد.</p>
           <div class="field-grid honor-req-fields">
-            ${AV.PREREQUISITES.map(f => `<div><label for="hr-${f.key}">حداقل ${f.label}</label>
+            ${AV.PREREQUISITES.map(f => `${f.key === 'wins1' ? '<div class="rg-national-label">سطح ۱ · افتخارات کشوری (مقام اول تا پنجم)</div>' : f.key === 'wins2' ? '<div class="rg-national-label">قهرمانی سطوح ۲ و ۳</div>' : ''}<div${f.key === 'pts' ? ' style="grid-column:1/-1"' : ''}><label for="hr-${f.key}">حداقل ${f.label}</label>
               <input class="input" id="hr-${f.key}" type="number" min="0" step="${f.key === 'pts' ? 'any' : '1'}" inputmode="${f.key === 'pts' ? 'decimal' : 'numeric'}" data-hf="${f.key}" value="${r[f.key]}" required></div>`).join('')}
           </div>
           <div id="hr-req-error" class="honor-req-error" role="alert" hidden></div>
@@ -4859,11 +4904,12 @@
       </div>
     </div>
 
+    ${rankRulesEditorHTML()}
     <div class="glass honor-member-list">
-      <div class="card-head"><span class="ic">👥</span><h3>رنک اعضا</h3><span class="tag">چهار شرط از کل سابقه</span></div>
-      <p class="honor-req-note">قهرمانی یعنی نفر اول مسابقه در همان سطح؛ رتبهٔ دوم یا سوم، قهرمانی سطح ۲ یا ۳ نیست. تعیین دستی هم نیازمند تکمیل هر چهار پیش‌نیاز همان رنک است.</p>
+      <div class="card-head"><span class="ic">👥</span><h3>رنک اعضا</h3><span class="tag">افتخارات واقعی از کل سابقه</span></div>
+      <p class="honor-req-note">پنج مقام کشوری جداگانه ثبت می‌شوند. اعداد جدول، افتخارات واقعی‌اند؛ معادل‌سازی فقط هنگام احراز رنک اعمال می‌شود. تعیین دستی نیز نیازمند تکمیل همهٔ پیش‌نیازهاست.</p>
       <div class="honor-table-scroll"><table class="tbl"><thead><tr>
-        <th>عضو</th><th>امتیاز کل</th><th>قهرمانی سطح ۱</th><th>قهرمانی سطح ۲</th><th>قهرمانی سطح ۳</th><th>رنک فعلی</th><th>حالت</th><th>تعیین دستی</th>
+        <th>عضو</th>${AV.PREREQUISITES.map(f => '<th>'+esc(f.label)+'</th>').join('')}<th>رنک فعلی</th><th>حالت</th><th>تعیین دستی</th>
       </tr></thead><tbody>
         ${mem.map(u => {
           const stats = careerOfPid(u.pid);
@@ -4874,7 +4920,7 @@
             <td data-hlevel="${hn.lv}"><span style="color:${hn.rank.title};font-weight:800">${esc(hn.rank.en)}</span> <span style="font-size:11px;color:var(--muted)">${esc(hn.rank.fa)}</span></td>
             <td>${hn.manual ? '<span class="chip gold">دستی؛ واجد شرایط</span>' : hn.manualBlocked ? '<span class="chip dim">خودکار؛ پیش‌نیاز رنک دستی ناقص</span>' : '<span class="chip dim">خودکار</span>'}</td>
             <td><select class="sel" data-hset="${esc(u.user)}" aria-label="رنک ${esc(u.name || u.user)}" style="min-width:150px">
-              <option value="">خودکار (هر چهار شرط)</option>
+              <option value="">خودکار (همهٔ پیش‌نیازها)</option>
               ${rs.map(x => {
                 const met = AV.requirementsMet(x, stats);
                 const selected = ov[String(u.user||'').toLowerCase()] && +ov[String(u.user||'').toLowerCase()].lv === x.lv;
@@ -4886,6 +4932,10 @@
       </tbody></table></div>
     </div>`;
 
+    $('#hr-pdf',body).onclick = function(){ RANK_GUIDE.exportPDF(this).catch(() => {}); };
+    $('#hr-guide',body).onclick = function(){ RANK_GUIDE.open(null,this); };
+    $('#hr-rules-open',body).onclick = () => { const box=$('#hr-rule-editor',body); box.open=true; box.scrollIntoView({behavior:'smooth',block:'start'}); };
+    bindRankRulesEditor(body);
     $$('[data-hlv]', body).forEach(el => el.addEventListener('click', () => { honorLv = +el.dataset.hlv; renderMgmtTab(); }));
     function collect(showErrors){
       const o = {};
@@ -4894,7 +4944,7 @@
         const k = el.dataset.hf;
         if (AV.PREREQUISITES.some(f => f.key === k)){
           const valid = AV.validRequirement(el.value, k);
-          const msg = k === 'pts' ? 'امتیاز باید عددی غیرمنفی باشد.' : 'تعداد قهرمانی باید عدد صحیح و غیرمنفی باشد.';
+          const msg = k === 'pts' ? 'امتیاز باید عددی غیرمنفی باشد.' : 'تعداد افتخار باید عدد صحیح و غیرمنفی باشد.';
           el.setCustomValidity(valid ? '' : msg);
           el.setAttribute('aria-invalid', valid ? 'false' : 'true');
           if (!valid && !invalid) invalid = el;
@@ -4959,7 +5009,7 @@
       const member = mem.find(u => u.user === sel.dataset.hset);
       const stats = careerOfPid(member && member.pid);
       if (sel.value !== '' && !AV.requirementsMet(AV.rankOf(+sel.value), stats)){
-        APP.toast('هر چهار پیش‌نیاز این رنک باید تکمیل باشد.', 'orange'); renderMgmtTab(); return;
+        APP.toast('همهٔ پیش‌نیازهای این رنک باید تکمیل باشد.', 'orange'); renderMgmtTab(); return;
       }
       if (!AV.setHonorOverride(sel.dataset.hset, sel.value === '' ? null : +sel.value)){
         APP.toast('ذخیرهٔ رنک انجام نشد.', 'red'); return;
@@ -4967,6 +5017,44 @@
       APP.toast('رنک عضو به‌روز شد ✓', 'green');
       renderMgmtTab();
     }));
+  }
+  function rankRulesEditorHTML(){
+    const r=AV.rankRules();
+    return `<details class="rg-rule-editor" id="hr-rule-editor">
+      <summary style="cursor:pointer;font-weight:850;color:var(--gold-l);font-size:15px">⚙️ منطق ارتقاء و معادل‌سازی — قابل ویرایش</summary>
+      <p>این ضرایب برای همهٔ رنک‌ها مشترک‌اند و با «حداقل پیش‌نیازهای هر رنک» فرق دارند. صفر یعنی آن تبدیل غیرفعال است. ابتدا نیازهای خودِ سطح تأمین می‌شود؛ فقط مازاد می‌تواند به سطح پایین‌تر برود.</p>
+      <div class="rg-rule-fields">
+        ${AV.NATIONAL_FIELDS.map(f => `<div><label for="rr-n${f.place}">هر ${f.label.replace(' (کشوری)','').replace('سطح ۱','کشوری')} ← چند قهرمانی سطح ۲؟</label><input id="rr-n${f.place}" class="input" type="number" min="0" max="10000" step="1" inputmode="numeric" data-rr="${f.place}" value="${r.nationalTo2[f.place]}"></div>`).join('')}
+        <div><label for="rr-tier2">هر قهرمانی سطح ۲ ← چند قهرمانی سطح ۳؟</label><input id="rr-tier2" class="input" type="number" min="0" max="10000" step="1" inputmode="numeric" value="${r.tier2To3}"></div>
+      </div>
+      <label class="rg-rule-check"><input id="rr-better" type="checkbox" ${r.betterNational ? 'checked' : ''}><span>مقام بهترِ کشوری بتواند شرط مقام پایین‌تر را پوشش دهد (مثلاً «پنجم یا بهتر»). یک مقام برای دو پیش‌نیاز رزرو نمی‌شود.</span></label>
+      <label for="rr-note" style="font-size:11px;color:var(--muted)">توضیح تکمیلی اختیاری — همراه ضوابط در پاپ‌آپ و PDF نمایش داده می‌شود</label>
+      <textarea id="rr-note" class="input rg-rule-note" maxlength="600">${esc(r.note)}</textarea>
+      <p id="rr-error" class="honor-req-error" role="alert" hidden></p>
+      <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:12px"><button type="button" class="btn sm" id="rr-save">💾 ذخیرهٔ منطق</button><button type="button" class="btn sm ghost" id="rr-reset">پیش‌فرض منطق</button></div>
+      ${RANK_GUIDE.rulesHTML(r)}
+    </details>`;
+  }
+  function bindRankRulesEditor(body){
+    const reopen=() => {renderMgmtTab();const box=$('#hr-rule-editor');if(box){box.open=true;box.scrollIntoView({block:'nearest'});}};
+    $('#rr-save',body).onclick=() => {
+      const value={ nationalTo2:{},tier2To3:+$('#rr-tier2',body).value,betterNational:$('#rr-better',body).checked,note:$('#rr-note',body).value.trim() };
+      let invalid=null;
+      $$('[data-rr],#rr-tier2',body).forEach(el => {
+        const valid=AV.validRequirement(el.value,'wins1') && +el.value<=10000;
+        el.setCustomValidity(valid ? '' : 'ضریب باید عدد صحیح از صفر تا ۱۰۰۰۰ باشد.');el.setAttribute('aria-invalid',String(!valid));
+        if(!valid && !invalid) invalid=el;
+        if(el.dataset.rr) value.nationalTo2[el.dataset.rr]=+el.value;
+      });
+      const err=$('#rr-error',body);err.hidden=!invalid;err.textContent=invalid ? 'مقدار نامعتبر ذخیره نشده است؛ ضرایب صحیح و غیرمنفی وارد کنید.' : '';
+      if(invalid){invalid.reportValidity();return;}
+      if(!AV.saveRankRules(value)){APP.toast('ذخیرهٔ منطق انجام نشد.','red');return;}
+      APP.toast('منطق ارتقاء ذخیره شد؛ رنک‌ها با قواعد جدید محاسبه می‌شوند ✓','green');reopen();
+    };
+    $('#rr-reset',body).onclick=() => {
+      if(!confirm('فقط ضرایب و توضیح منطق به پیش‌فرض برگردند؟ امتیازها و پیش‌نیازهای رنک‌ها تغییر نمی‌کنند.')) return;
+      if(AV.saveRankRules(AV.DEFAULT_RANK_RULES)) reopen();
+    };
   }
   function careerOfPid(pid){
     const { A } = gstate();

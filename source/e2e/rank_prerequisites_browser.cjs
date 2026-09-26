@@ -67,7 +67,7 @@ const expectedReq = lv => lv < 5 ? [0,0,0] : lv === 5 ? [0,0,1] : lv === 6 ? [0,
         await page.locator('#hr-prereqs').waitFor();
       }
       async function reqValues() {
-        return page.locator('#hr-prereqs [data-hf]').evaluateAll(els => Object.fromEntries(els.map(el => [el.dataset.hf,Number(el.value)])));
+        return page.locator('#hr-prereqs [data-hf]').evaluateAll(els => Object.fromEntries(els.filter(el => ['pts','wins1','wins2','wins3'].includes(el.dataset.hf)).map(el => [el.dataset.hf,Number(el.value)])));
       }
       async function showRank(lv) {
         await page.locator(`[data-hlv="${lv}"]`).click();
@@ -80,8 +80,8 @@ const expectedReq = lv => lv < 5 ? [0,0,0] : lv === 5 ? [0,0,1] : lv === 6 ? [0,
       await page.waitForSelector('#app.on');
       await management();
       assert.equal(await page.locator('[data-hlv]').count(),15);
-      assert.equal(await page.locator('#hr-prereqs input').count(),4);
-      assert.match(await page.locator('#hr-prereqs').innerText(),/هر چهار شرط باید هم‌زمان/);
+      assert.equal(await page.locator('#hr-prereqs input').count(),8);
+      assert.match(await page.locator('#hr-prereqs').innerText(),/همهٔ پیش‌نیازها باید هم‌زمان/);
       assert.doesNotMatch(await page.locator('#mgmt-body').innerText(),/حداقل امتیاز فصل|خودکار از امتیاز فصل/);
       for (let lv=1;lv<=15;lv++) {
         await showRank(lv);
@@ -147,14 +147,16 @@ const expectedReq = lv => lv < 5 ? [0,0,0] : lv === 5 ? [0,0,1] : lv === 6 ? [0,
       await page.reload({ waitUntil:'domcontentloaded' });
       await page.waitForSelector('#mz-card');
       assert.equal(await page.locator('#mz-card').getAttribute('data-lv'),'5');
-      assert.equal(await page.locator('[data-hcheck]').count(),4);
+      assert.equal(await page.locator('[data-hcheck]').count(),3);
       assert.equal(await page.locator('[data-hcheck="wins3"]').getAttribute('data-met'),'false');
       assert.ok(Number(await page.locator('.honor-progress [role="progressbar"]').getAttribute('aria-valuenow'))<100);
       await page.evaluate(() => { APP.state().A.LB.forEach(r => { r.pts=0; }); APP.go('memberzone'); });
       assert.equal(await page.locator('#mz-card').getAttribute('data-lv'),'5','Season table cannot reset lifetime rank');
       await page.locator('[data-mtab="guide"]').click();
-      assert.match(await page.locator('#mz-body').innerText(),/امتیاز کل از روز اول/);
-      assert.match(await page.locator('#mz-body').innerText(),/سطح ۱: ۰ • سطح ۲: ۳ • سطح ۳: ۱۰/);
+      await page.locator('#mz-body [data-rank-guide]').click();
+      assert.equal(await page.locator('#modal-rank-guide [data-guide-lv]').count(),15);
+      assert.match(await page.locator('#modal-rank-guide').innerText(),/سطح ۱ مسابقات کشوری است/);
+      await page.locator('#modal-rank-guide .rg-close').click();
       // Other profile locations use the same career-based rule.
       await page.evaluate(() => { APP.reloadData(); APP.go('player'); });
       await page.locator('#pl-sel-smart, #pl-sel').selectOption('1');

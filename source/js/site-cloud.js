@@ -259,7 +259,9 @@
     if(name==='marquee'){
       if(!safeObject(value)||typeof value.enabled!=='boolean'||!Array.isArray(value.items)||value.items.length>40)throw error('ساختار نوار متحرک معتبر نیست؛ حداکثر ۴۰ آیتم مجاز است.',422);
       const seen=new Set();
-      return {enabled:value.enabled,items:value.items.map(x=>{
+      const sp=value.speed;
+      const speed=(typeof sp==='number'&&Number.isFinite(sp))?Math.min(220,Math.max(20,Math.round(sp))):70;
+      return {enabled:value.enabled,speed,items:value.items.map(x=>{
         if(!safeObject(x)||typeof x.id!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(x.id)||seen.has(x.id)||typeof x.text!=='string'||!x.text.trim()||x.text.trim().length>180||typeof x.visible!=='boolean')throw error('متن هر آیتم باید بین ۱ تا ۱۸۰ نویسه باشد؛ ردیف خالی یا تکرار شناسه مجاز نیست.',422);
         seen.add(x.id);return {id:x.id,text:x.text.trim(),visible:x.visible};
       })};

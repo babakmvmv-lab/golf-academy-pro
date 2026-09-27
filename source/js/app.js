@@ -108,6 +108,26 @@
   const avatar = pid => (window.Data && Data.photoOf) ? Data.photoOf(pid) : (pid % 2 ? 'assets/avatar_m.webp' : 'assets/avatar_f.webp');
   /* انتشار عمومی در سایت: مسیرهای نسبی باید مطلق شوند تا روی صفحهٔ سایت کار کنند */
   const siteAsset = u => /^(https?:|data:)/.test(u || '') ? u : '/' + String(u || '').replace(/^\/+/, '');
+  /* آواتار کوچک برای انتشار در سایت: عکس‌های سنگین پایه۶۴ به وب‌پی ۹۶ پیکسلی تبدیل می‌شوند تا بار انتشار سبک بماند. */
+  const siteAvatar = pid => Promise.resolve().then(() => {
+    let a = siteAsset(avatar(pid));
+    if (!a || !/^data:/.test(a) || a.length < 20000) return a;
+    return new Promise(res => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const c = document.createElement('canvas'); c.width = 96; c.height = 96;
+          const ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high';
+          const m = Math.min(img.width || 96, img.height || 96);
+          ctx.drawImage(img, ((img.width || 96) - m) / 2, ((img.height || 96) - m) / 2, m, m, 0, 0, 96, 96);
+          const out = c.toDataURL('image/webp', 0.8);
+          res(out && out.length < a.length ? out : '');
+        } catch (e) { res(''); }
+      };
+      img.onerror = () => res('');
+      img.src = a;
+    });
+  });
   async function publishToSite(rows){
     if (!window.GA_SYNC || !GA_SYNC.public) { APP.toast('لایهٔ ابر بارگذاری نشده است.', 'orange'); return false; }
     try { await GA_SYNC.public(rows); return true; }
@@ -556,12 +576,12 @@
           matchesHeld: A.MATCHES_HELD,
           playersActive: A.LB.length,
           updatedAt: new Date().toISOString(),
-          top: top3.map((r, k) => ({
+          top: await Promise.all(top3.map(async (r, k) => ({
             rank: k + 1, name: r.name, pts: r.pts,
             rankText: D.RANK_TEXT[r.color] || '',
             rankColor: (D.RANK_DEF.find(x => x[0] === r.color) || [])[3] || '#8A93A6',
-            avatar: siteAsset(avatar(r.pid))
-          }))
+            avatar: await siteAvatar(r.pid)
+          })))
         };
         pubP.disabled = true;
         const ok = await publishToSite([{ k: 'web_setting_season_podium', v: value }]);
@@ -2299,8 +2319,8 @@
       const rows = events.filter(e => e.d && !isNaN(e.d)).map(e => {
         const j = D.jalaliInfo(e.d);
         return {
-          date: `${j.jy}/${String(j.mm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`,
-          jd: j.jd, jm: j.mm,
+          date: `${j.yy}/${String(j.mm).padStart(2,'0')}/${String(j.dd).padStart(2,'0')}`,
+          jd: j.dd, jm: j.mm,
           icon: e.icon || TYPE_ICON[e.type] || '📌',
           name: e.name || 'رویداد', kind: e.kind || e.type || '',
           extra: String(e.extra || '').replace(/<[^>]*>/g, '').slice(0, 80),

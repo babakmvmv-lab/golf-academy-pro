@@ -16,6 +16,13 @@ class MockPublicCloud{
     if(u.pathname.endsWith('/user'))return reply(200,{id:'synthetic-web-admin',app_metadata:{web_admin:true}});
     return reply(200,{ok:true});
    }
+   if(u.pathname==='/__qa_cloud/functions/v1/web-erp'){
+    const body=req.postDataJSON();
+    const user={id:'synthetic-web-admin',name:'مدیر آزمایشی',manager:true,department:'manager',permissions:{},today:'2026-09-27'};
+    if(body.action==='bootstrap')return reply(200,{ok:true,data:{user,settings:{warehouse_name:'انبار اصلی',default_tax:0,tax_enabled:false,purchase_tax_recoverable:false,closed_through:null},products:[],parties:[],accounts:[]}});
+    if(body.action==='dashboard')return reply(200,{ok:true,data:{sales_today:0,purchases_today:0,low_stock:0,needs_opening:0,pending:0}});
+    return reply(403,{ok:false,error:'Public-site regression test does not perform private shop operations'});
+   }
    if(u.pathname.startsWith('/__qa_cloud/rest/v1/web_store')){
     this.reads++;if(this.failRead)return reply(this.failRead,{err:'mock read failure'});
     const offset=Number(u.searchParams.get('offset')||0),limit=Number(u.searchParams.get('limit')||1000);

@@ -57,6 +57,12 @@ Deno.serve(async req=>{
   if(body?.action!=='kv'||!Array.isArray(body.rows)||body.rows.length!==1)return json({ok:false,err:'Exactly one public record per acknowledged request'},400);
   const row=body.rows[0];
   if(!row||!valid(row.k,row.v)||!Object.prototype.hasOwnProperty.call(row,'base')||(row.base!==null&&(typeof row.base!=='string'||!Number.isFinite(Date.parse(row.base)))))return json({ok:false,err:'Invalid public website record or revision',code:'INVALID_WEB_RECORD'},400);
+  const managed=/^web_product_([0-9]+)$/.exec(row.k);
+  if(managed){
+   const lock=await db.rpc('web_shop_managed_product',{p_product_id:Number(managed[1])});
+   if(lock.error)return json({ok:false,err:'Inventory authority check unavailable',code:'ERP_CHECK_FAILED'},503);
+   if(lock.data===true)return json({ok:false,err:'این کالا تحت کنترل انبار است؛ آن را از پنل عملیاتی فروشگاه تغییر دهید.',code:'ERP_MANAGED_PRODUCT'},409);
+  }
   const serverTime=Math.max(Date.now(),row.base===null?0:Date.parse(row.base)+1);
   const value={k:row.k,v:row.v,updated_at:new Date(serverTime).toISOString()};
   // Compare-and-set on the database, not merely a client-side read-before-write.

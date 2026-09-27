@@ -60,10 +60,10 @@
   const headers=()=>({apikey:C.key,'Content-Type':'application/json'});
   function authSession(){const s=json(AUTH,null);return s && s.access_token && s.refresh_token ? s : null;}
   function saveAuth(data){
-    if(!data?.access_token || !data?.refresh_token || data.user?.app_metadata?.web_admin!==true)throw error('این حساب مجوز مدیریت ابری سایت و فروشگاه را ندارد.',403,'WEB_ADMIN_REQUIRED');
-    const s={access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(Date.now()/1000)+Number(data.expires_in||3600),user:{id:data.user.id,email:data.user.email,app_metadata:{web_admin:true},name:data.user.user_metadata?.name||'مدیر سایت و فروشگاه'}};
+    if(!data?.access_token || !data?.refresh_token || (data.user?.app_metadata?.web_admin!==true && data.user?.app_metadata?.web_shop_staff!==true))throw error('این حساب مجوز مدیریت ابری سایت و فروشگاه را ندارد.',403,'WEB_ADMIN_REQUIRED');
+    const s={access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(Date.now()/1000)+Number(data.expires_in||3600),user:{id:data.user.id,email:data.user.email,app_metadata:{web_admin:data.user.app_metadata?.web_admin===true,web_shop_staff:data.user.app_metadata?.web_shop_staff===true},name:data.user.user_metadata?.name||'مدیر سایت و فروشگاه'}};
     if(!put(AUTH,s))throw error('حافظهٔ مرورگر برای نگهداری نشست ورود در دسترس نیست.',507,'LOCAL_STORAGE');
-    put('puttclub_admin',{id:s.user.id,email:s.user.email,name:s.user.name,cloud:true});
+    put('puttclub_admin',{id:s.user.id,email:s.user.email,name:s.user.name,cloud:true,store_only:s.user.app_metadata?.web_admin!==true});
     if(lastError && ['WEB_AUTH_REQUIRED','WEB_ADMIN_REQUIRED'].includes(lastError.code)){lastError=null;put(ERR,null);}
     renderStatus();return s;
   }
@@ -77,7 +77,7 @@
     const email=String(login||'').trim().toLowerCase()==='admin' ? C.adminEmail : String(login||'').trim().toLowerCase();
     try{
       const data=await request(C.url+'/auth/v1/token?grant_type=password',{method:'POST',headers:headers(),body:JSON.stringify({email,password})});
-      const s=saveAuth(data);schedule();return {ok:true,user:{id:s.user.id,email:s.user.email,name:s.user.name,cloud:true}};
+      const s=saveAuth(data);schedule();return {ok:true,user:{id:s.user.id,email:s.user.email,name:s.user.name,cloud:true,store_only:s.user.app_metadata?.web_admin!==true}};
     }catch(e){if(e.code==='WEB_ADMIN_REQUIRED')throw e;throw error('ورود ابری انجام نشد؛ ایمیل و رمز مدیر سایت را بررسی کنید.',e.status||401,'WEB_AUTH_REQUIRED');}
   }
   function signOut(){
@@ -474,7 +474,7 @@
   }
   function renderStatus(){
     if(typeof document==='undefined' || !document.body)return;
-    if(!isAdmin()){if(statusNode)statusNode.hidden=true;return;}
+    if(!isAdmin() || authSession()?.user?.app_metadata?.web_shop_staff===true && authSession()?.user?.app_metadata?.web_admin!==true){if(statusNode)statusNode.hidden=true;return;}
     if(!statusNode){
       const style=document.createElement('style');style.textContent='#pc-site-cloud{position:fixed;bottom:12px;left:12px;z-index:9999;width:min(430px,calc(100vw - 24px));border:1px solid #c9a24b77;border-radius:15px;background:#0a1712f5;color:#eee5cf;padding:11px 14px;box-shadow:0 8px 34px #0006;direction:rtl;font:12px/1.9 Vazirmatn,Tahoma,sans-serif;backdrop-filter:blur(12px)}#pc-site-cloud[hidden]{display:none}#pc-site-cloud summary{cursor:pointer;font-weight:800}#pc-site-cloud p{margin:6px 0;color:#b4c6b8}#pc-site-cloud button{border:1px solid #c9a24b66;background:#c9a24b12;color:#f2d895;border-radius:8px;padding:4px 9px;cursor:pointer;font:inherit}#pc-site-cloud .pc-actions{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}#pc-site-cloud .pc-error{color:#ffd1a4}#pc-site-cloud small{display:block;color:#93aa9c;line-height:1.8}';document.head.appendChild(style);
       statusNode=document.createElement('aside');statusNode.id='pc-site-cloud';statusNode.setAttribute('aria-label','وضعیت انتشار ابری سایت');document.body.appendChild(statusNode);
@@ -500,7 +500,17 @@
   window.addEventListener('focus',()=>{if(booted)pull(true);});
   setInterval(()=>{if(booted && !pushFlight && (typeof document==='undefined'||document.visibilityState!=='hidden'))pull(true);},45000);
   setInterval(renderStatus,1500);
-  window.PC_SITE_CLOUD={signInAdmin,signOut,changePassword,authSession,authDialog,request:apiFetch,pull,flush,subscribe,settings,table,liveState,useTable,useProduct,useProductReviewMeta,useCard,brandShort,productHref,gateRevision,gateSessionValid,importLegacy,
+  let shopCodeFlight=null;
+  function loadShopOps(){
+    if(window.SHOP_OPS)return Promise.resolve();
+    if(!shopCodeFlight)shopCodeFlight=new Promise((resolve,reject)=>{
+      const script=document.createElement('script');script.src='/'+C.shopOpsAsset;
+      const tm=setTimeout(()=>{script.remove();shopCodeFlight=null;reject(Error('بارگذاری پنل فروشگاه طول کشید؛ دوباره تلاش کنید.'));},20000);
+      script.onload=()=>{clearTimeout(tm);window.SHOP_OPS?resolve():reject(Error('پنل فروشگاه کامل بارگذاری نشد.'));};
+      script.onerror=()=>{clearTimeout(tm);script.remove();shopCodeFlight=null;reject(Error('فایل پنل فروشگاه دریافت نشد؛ صفحه را تازه کنید.'));};document.head.appendChild(script);
+    });return shopCodeFlight;
+  }
+  window.PC_SITE_CLOUD={loadShopOps,accessToken,signInAdmin,signOut,changePassword,authSession,authDialog,request:apiFetch,pull,flush,subscribe,settings,table,liveState,useTable,useProduct,useProductReviewMeta,useCard,brandShort,productHref,gateRevision,gateSessionValid,importLegacy,
     status:()=>({phase,pending:Object.keys(queue),error:lastError,lastRead,lastAck,revision}),
     publish,normalizeSetting,normalizeRecord,keyFor,resolvePending};
 })();

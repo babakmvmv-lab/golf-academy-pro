@@ -6,10 +6,14 @@ create table if not exists public.web_store (
   v jsonb not null,
   updated_at timestamptz not null default clock_timestamp(),
   constraint web_store_key_scope check (
-    k ~ '^web_(setting_(brand|theme|contact|menu|hero|about|courses_section|testimonials_section|footer|shop_gate|marquee)|(product|category|course|testimonial|review)_[0-9]+)$'
+    k ~ '^web_(setting_(brand|theme|contact|menu|hero|about|courses_section|testimonials_section|footer|shop_gate|marquee|payment_gateways|pay_cards)|(product|category|course|testimonial|review)_[0-9]+)$'
   ),
   constraint web_store_json_shape check (jsonb_typeof(v) in ('object','array'))
 );
+do $$ begin
+  alter table public.web_store drop constraint if exists web_store_key_scope;
+  alter table public.web_store add constraint web_store_key_scope check (k ~ '^web_(setting_(brand|theme|contact|menu|hero|about|courses_section|testimonials_section|footer|shop_gate|marquee|payment_gateways|pay_cards)|(product|category|course|testimonial|review)_[0-9]+)$');
+end $$;
 alter table public.web_store enable row level security;
 revoke all on public.web_store from anon, authenticated;
 grant select on public.web_store to anon, authenticated;

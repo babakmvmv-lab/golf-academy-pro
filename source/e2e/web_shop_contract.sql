@@ -95,14 +95,60 @@ declare owner_id uuid; sale_user uuid:=gen_random_uuid(); buy_user uuid:=gen_ran
  r=public.web_shop_api(owner_id,'ops_reset','{}');
  if (r->>'ok')::boolean is not true or (r->'removed'->>'documents')::bigint<1 or (r->'removed'->>'parties')::bigint<1 then raise exception 'QA reset result';end if;
  if exists(select 1 from web_shop.documents) or exists(select 1 from web_shop.lines) or exists(select 1 from web_shop.stock_moves) or exists(select 1 from web_shop.journals) or exists(select 1 from web_shop.journal_lines) or exists(select 1 from web_shop.payments) or exists(select 1 from web_shop.parties) or exists(select 1 from web_shop.inventory) or exists(select 1 from web_shop.counters) then raise exception 'QA reset left operational rows';end if;
- if not exists(select 1 from web_shop.products where opening_required) then raise exception 'QA reset must require fresh openings';end if;
- if not exists(select 1 from web_shop.catalogue_sink cs where cs.k='web_product_'||(select min(id) from web_shop.products) and (cs.v->>'stock')::int=0) then raise exception 'QA reset must republish zero sellable stock';end if;
+ if exists(select 1 from web_shop.products) or exists(select 1 from web_shop.inventory) or exists(select 1 from web_shop.orders) or exists(select 1 from web_shop.reservations where released=false) then raise exception 'QA reset left catalog/orders/holds';end if;
+ if exists(select 1 from web_shop.catalogue_sink cs where cs.k like 'web_product_%') then raise exception 'QA reset must remove public product rows';end if;
  if not exists(select 1 from web_shop.audit where action='reset' and actor=owner_id) then raise exception 'QA reset audit entry missing';end if;
  if (select initialized from web_shop.settings) or (select closed_through from web_shop.settings) is not null then raise exception 'QA reset must reopen the books';end if;
- select to_jsonb(p) into p1 from web_shop.products p order by p.id limit 1;
- perform public.web_shop_api(owner_id,'opening_zero',jsonb_build_object('product_id',(p1->>'id')::bigint));
+ if (select nextval('web_shop.product_id_seq'))<>1000000 then raise exception 'QA product ids must restart';end if;
+ -- Numbering and catalogue restart cleanly for the real go-live.
+ p1=public.web_shop_api(owner_id,'product_save','{"name":"کالای پس از صفرسازی","sku":"QA-AFTER-RESET","category":"چوب‌ها","sale_price":90}');
  vendor=public.web_shop_api(owner_id,'party_save','{"name":"تأمین‌کنندهٔ پس از صفرسازی","supplier":true,"type":"store"}');
  r=public.web_shop_api(owner_id,'document_save',jsonb_build_object('client_id',gen_random_uuid(),'kind','purchase','date',web_shop.today(),'party_id',vendor->'id','post',true,'lines',jsonb_build_array(jsonb_build_object('product_id',(p1->>'id')::bigint,'qty',2,'price',50))));
  if r->>'number' <> 'P-'||extract(year from web_shop.today())::text||'-00001' then raise exception 'QA numbering must restart after reset';end if;
+ -- Storefront reservations: cart holds, availability, order pinning and release.
+ perform web_shop.reserve_hold('qa-session-0001',jsonb_build_array(jsonb_build_object('id',(p1->>'id')::bigint,'qty',1)));
+ -- The public wrapper exposes only whitelisted storefront actions.
+ declare w jsonb;begin
+  w=public.web_order_api('reserve',jsonb_build_object('session','qa-wrap-session-01','items',jsonb_build_array(jsonb_build_object('id','x','qty',1))));
+  if (w->'items'->0->>'ok')::boolean or (w->'items'->0->>'available')::int<>0 or (w->>'ttl')::int<>300 then raise exception 'QA wrapper reserve shape';end if;
+ end;
+ begin perform public.web_order_api('bootstrap','{}');raise exception 'QA anon must not reach private actions';exception when insufficient_privilege then null;end;
+ begin perform public.web_order_api('orders','{}');raise exception 'QA anon must not list orders';exception when insufficient_privilege then null;end;
+ if web_shop.held((p1->>'id')::bigint,'qa-other-session')<>1 then raise exception 'QA hold not counted';end if;
+ declare res jsonb;begin
+  res=web_shop.reserve_hold('qa-session-0002',jsonb_build_array(jsonb_build_object('id',(p1->>'id')::bigint,'qty',2)));
+  if (res->'items'->0->>'ok')::boolean then raise exception 'QA overselling hold must fail';end if;
+ end;
+ r=web_shop.order_create('qa-session-0001',jsonb_build_object('client_id',gen_random_uuid(),'payment',jsonb_build_object('method','card2card'),'customer',jsonb_build_object('name','مشتری آنلاین','phone','09120000000'),'items',jsonb_build_array(jsonb_build_object('product_id',(p1->>'id')::bigint,'qty',1))));
+ if (r->>'total')::numeric<>350090 or r->>'code' is null then raise exception 'QA order create';end if;
+ if web_shop.held((p1->>'id')::bigint,'')<>1 then raise exception 'QA order must pin its hold';end if;
+ perform web_shop.order_report((select client_id from web_shop.orders where code=r->>'code'),jsonb_build_object('destination_id',1,'from_card','6037991111111111','date','1405/07/01','time','12:30','trace','12345','reference','REF-1','note','تست'));
+ perform web_shop.order_cancel_public((select client_id from web_shop.orders where code=r->>'code'));
+ if web_shop.held((p1->>'id')::bigint,'')<>0 then raise exception 'QA cancel must release holds';end if;
+ -- Payment options: private credentials, public projection without secrets.
+ perform public.web_shop_api(owner_id,'payments_save',jsonb_build_object('gateways',jsonb_build_array(jsonb_build_object('slug','zarin','kind','zarinpal','title','زرین‌پال','bank','زرین‌پال','logo','/images/pay/zarinpal.png','enabled',true,'position',1,'credentials',jsonb_build_object('merchant_id','xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx','evil','x')))));
+ perform public.web_shop_api(owner_id,'cards_save',jsonb_build_object('cards',jsonb_build_array(jsonb_build_object('bank','بانک ملی','title','حساب فروشگاه','holder','فروشگاه پات کلاب','card_number','6037991122334455','account_number','0123456789','iban','IR820540102680020817909002','logo','/images/pay/melli.png','active',true,'position',1))));
+ if not exists(select 1 from web_shop.payment_gateways where slug='zarin' and credentials->>'merchant_id'='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx') then raise exception 'QA gateway credentials lost';end if;
+ perform public.web_shop_api(owner_id,'payments_save',jsonb_build_object('gateways',jsonb_build_array(jsonb_build_object('slug','zarin','kind','zarinpal','title','زرین‌پال ویرایش','bank','زرین‌پال','logo','/images/pay/zarinpal.png','enabled',true,'position',1,'credentials','{}'::jsonb))));
+ if not exists(select 1 from web_shop.payment_gateways where slug='zarin' and title='زرین‌پال ویرایش' and credentials->>'merchant_id'='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx') then raise exception 'QA credentials must survive empty re-save';end if;
+ if exists(select 1 from web_shop.catalogue_sink cs where cs.k='web_setting_payment_gateways' and cs.v::text like '%merchant_id%') then raise exception 'QA secret leaked to public projection';end if;
+ if not exists(select 1 from web_shop.catalogue_sink cs where cs.k='web_setting_payment_gateways' and cs.v->'methods'->0->>'slug'='zarin') then raise exception 'QA public gateway projection missing';end if;
+ if not exists(select 1 from web_shop.catalogue_sink cs where cs.k='web_setting_pay_cards' and cs.v->'cards'->0->>'card_number'='6037991122334455') then raise exception 'QA public card projection missing';end if;
+ declare cid uuid:=gen_random_uuid();begin
+   r=web_shop.order_create('qa-session-0003',jsonb_build_object('client_id',cid,'payment',jsonb_build_object('method','gateway','gateway','zarin'),'items',jsonb_build_array(jsonb_build_object('product_id',(p1->>'id')::bigint,'qty',1))));
+  if r->>'status'<>'pending_payment' then raise exception 'QA gateway order status';end if;
+  r=web_shop.pay_start_info(cid);
+  if r->>'kind'<>'zarinpal' or (r->'credentials'->>'merchant_id') is null then raise exception 'QA pay start info';end if;
+  perform web_shop.pay_mark(r->>'code','AUTH-1','started','{}'::jsonb);
+  perform web_shop.pay_mark(null,'AUTH-1','paid',jsonb_build_object('ref_id','11'));
+  if (select status from web_shop.orders where client_id=cid)<>'paid' then raise exception 'QA pay mark paid';end if;
+ end;
+ declare ooo jsonb;begin
+  ooo=public.web_shop_api(owner_id,'orders','{}');
+  if jsonb_array_length(ooo)<1 then raise exception 'QA orders list';end if;
+  perform public.web_shop_api(owner_id,'order_status',jsonb_build_object('id',(ooo->0->>'id')::bigint,'status','completed'));
+  if (select count(*) from web_shop.reservations where order_id=(ooo->0->>'id')::bigint and released=false)<>0 then raise exception 'QA completion must release holds';end if;
+ end;
+ begin perform public.web_shop_api(sale_user,'payments_save','{}');raise exception 'QA staff must not configure gateways';exception when insufficient_privilege then null;end;
 end $$;
 select 'PASS: purchasing, landed cost, stock, sale, partial payments, returns, immutable correction, accounting balance, least privilege and period locks. All synthetic and rollback-only.' as result;

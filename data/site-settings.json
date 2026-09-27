@@ -186,5 +186,17 @@
     "value": {
       "items": []
     }
+  },
+  {
+    "key": "paymentGateways",
+    "value": {
+      "methods": []
+    }
+  },
+  {
+    "key": "payCards",
+    "value": {
+      "cards": []
+    }
   }
 ]

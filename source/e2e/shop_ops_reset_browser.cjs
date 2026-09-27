@@ -45,17 +45,20 @@ const OUT=process.env.QA_OUTPUT||'/home/user/.cache/golf-shop-qa/screens';fs.mkd
   assert.equal(await counts('documents'),0);assert.equal(await counts('lines'),0);assert.equal(await counts('stock_moves'),0);
   assert.equal(await counts('payments'),0);assert.equal(await counts('journals'),0);assert.equal(await counts('journal_lines'),0);
   assert.equal(await counts('parties'),0);assert.equal(await counts('inventory'),0);assert.equal(await counts('counters'),0);
-  const after=(await h.call('owner','bootstrap'));
-  assert.equal(after.products.length,1,'catalog survives the reset');
-  assert.equal(after.products[0].opening_required,true,'stock needs a fresh confirmed opening');
+  // Corrected scope (user decision): the reset wipes the whole shop ledger INCLUDING products,
+  // customers, suppliers, purchases, sales, orders and reservations; real registration starts after it.
+  assert.equal(await counts('products'),0,'products are wiped too');
+  assert.equal(await counts('orders'),0);assert.equal(await counts('reservations'),0);
   assert.equal((await h.sql(`select count(*) as n from ${h.schema}.audit where action='reset'`))[0].n,1,'reset is audited');
-  assert.equal((await h.sql(`select v from ${h.schema}.catalogue_sink where k='web_product_${product.id}'`))[0].v.stock,0,'public stock republished as zero');
-  // Numbering restarts from 1 for the real go-live (stock needs a fresh confirmed opening first).
-  await h.call('owner','opening_zero',{product_id:product.id});
+  assert.equal((await h.sql(`select count(*) as n from ${h.schema}.catalogue_sink where k='web_product_${product.id}'`))[0].n,0,'public product row removed, not just zeroed');
+  // Numbering and catalogue restart cleanly for the real go-live.
+  const product2=(await h.call('owner','product_save',{name:'چوب واقعی پس از صفرسازی',sku:'REAL-1',category:'چوب‌ها',sale_price:120,images:['/images/academy-logo.jpg']}));
+  assert.equal(product2.id,1000000,'product ids restart at 1000000 after reset');
+  await h.call('owner','opening_zero',{product_id:product2.id});
   const supplier2=(await h.call('owner','party_save',{name:'تأمین‌کنندهٔ پس از صفرسازی',supplier:true}));
-  const again=await h.call('owner','document_save',{client_id:crypto.randomUUID(),kind:'purchase',date:'2026-09-22',party_id:supplier2.id,post:true,lines:[{product_id:product.id,qty:2,price:50}]});
+  const again=await h.call('owner','document_save',{client_id:crypto.randomUUID(),kind:'purchase',date:'2026-09-22',party_id:supplier2.id,post:true,lines:[{product_id:product2.id,qty:2,price:50}]});
   assert.equal(again.number,'P-2026-00001','document numbering restarts after reset');
-  console.log('PASS ops reset (chromium): owner-only UI, password re-confirmation, wipe, audit, republished zero stock, numbering restart');
+  console.log('PASS ops reset (chromium): owner-only UI, password re-confirmation, full shop wipe including catalog, audit, public rows removed, id and numbering restart');
  }catch(e){console.error('FAIL ops reset:',e.message);fs.writeFileSync(path.join(OUT,'chromium-reset-fail.txt'),e.stack||String(e));process.exitCode=1;}
  finally{for(const c of contexts)await c.close();if(b)await b.close();await h.cleanup().catch(()=>{});}
  if(errors.length){console.error('PAGE ERRORS:',errors);process.exitCode=1;}

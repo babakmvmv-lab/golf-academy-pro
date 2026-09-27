@@ -334,7 +334,7 @@
   }
   async function route(url,init={}){
     const path=url.pathname.replace(/\/$/,''),method=(init.method||'GET').toUpperCase(),admin=path.startsWith('/api/admin/');
-    const matched=/^\/api\/(?:admin\/(?:site\/(?:settings|courses|testimonials)|products|categories|reviews|stats)(?:\/[^/]+)?|site\/(?:content|courses|shop-gate\/unlock))$/.test(path) || path==='/api/site/testimonials' && method==='GET';
+    const matched=/^\/api\/(?:admin\/(?:site\/(?:settings|courses|testimonials)|products|categories|reviews|stats)(?:\/[^/]+)?|site\/(?:content|courses|shop-gate\/unlock))$/.test(path) || path==='/api/site/testimonials' && method==='GET' || path==='/api/orders' && method==='POST';
     if(!matched)return null;
     try{
       if(admin && !isAdmin())return response({error:'ورود به مدیریت لازم است.'},401);
@@ -347,6 +347,10 @@
         const ok=await digest(String(body.attempt||'').slice(-length).toLowerCase())===expected;
         if(ok)try{sessionStorage.setItem('puttclub_shop_gate_revision',gateRevision());}catch(e){}
         return response({ok});
+      }
+      if(path==='/api/orders' && method==='POST'){
+        if(!window.PC_PAY||!window.PC_PAY.handleOrder)return nativeFetch(input,init);
+        return window.PC_PAY.handleOrder(init.body);
       }
       if(!admin)throw error('این عملیات مجاز نیست.',403);
       if(path==='/api/admin/site/settings' && method==='PUT'){

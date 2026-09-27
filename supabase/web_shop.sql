@@ -523,6 +523,20 @@ declare ctx jsonb;v_settings web_shop.settings;v_product web_shop.products;v_par
  elsif p_action='audit' then
   if not web_shop.manager(p_actor) then raise exception using errcode='42501',message='سوابق کنترل فقط برای مدیر است.';end if;
   return coalesce((select jsonb_agg(to_jsonb(x) order by x.id desc) from(select a.id,a.actor,a.action,a.entity,a.entity_id,a.created_at from web_shop.audit a order by a.id desc limit 200) x),'[]');
+ elsif p_action='ops_reset' then
+  -- One-shot operational zeroing for going live: only the web owner (main manager) may run it.
+  -- Catalog, staff, permissions, settings, public site content and the audit trail survive.
+  if not exists(select 1 from auth.users where id=p_actor and raw_app_meta_data->>'web_admin'='true') then raise exception using errcode='42501',message='صفرسازی عملیاتی فقط با مدیر اصلی سایت انجام می‌شود.';end if;
+  declare removed jsonb;begin
+   select jsonb_build_object('documents',(select count(*) from web_shop.documents),'payments',(select count(*) from web_shop.payments),'parties',(select count(*) from web_shop.parties),'moves',(select count(*) from web_shop.stock_moves),'journals',(select count(*) from web_shop.journals),'products',(select count(*) from web_shop.products)) into removed;
+   truncate web_shop.payments,web_shop.journal_lines,web_shop.journals,web_shop.lines,web_shop.stock_moves,web_shop.documents,web_shop.parties,web_shop.inventory restart identity;
+   delete from web_shop.counters;
+   update web_shop.products set opening_required=true,version=version+1,updated_at=now();
+   for v_id in select id from web_shop.products loop perform web_shop.publish_product(v_id);end loop;
+   update web_shop.settings set closed_through=null,initialized=false where web_shop.settings.id;
+   perform web_shop.audit(p_actor,'reset','operations','all',removed,jsonb_build_object('at',now()));
+   return jsonb_build_object('ok',true,'removed',removed);
+  end;
  else raise exception 'عملیات ناشناخته است.';end if;
 end $$;
 revoke all on all functions in schema web_shop from public,anon,authenticated;

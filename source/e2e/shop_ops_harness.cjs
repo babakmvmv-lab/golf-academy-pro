@@ -7,7 +7,7 @@ const ROOT=path.resolve(__dirname,'../..'),BASE=process.env.BASE_URL||'http://12
 const owner='10000000-0000-4000-8000-000000000001',seller='10000000-0000-4000-8000-000000000002',buyer='10000000-0000-4000-8000-000000000003';
 const quote=x=>"'"+String(x).replace(/'/g,"''")+"'";
 class ShopHarness{
- constructor(){this.schema='shop_ui_'+crypto.randomBytes(4).toString('hex');this.denied=[];this.requests=[];this.failed=false;this.users={owner,seller,buyer};}
+ constructor(){this.schema='shop_ui_'+crypto.randomBytes(4).toString('hex');this.denied=[];this.requests=[];this.failed=false;this.authCalls=[];this.users={owner,seller,buyer};}
  async sql(query){
   const token=fs.readFileSync('/home/user/.secrets/supabase_access_token','utf8').trim();
   const ref=fs.readFileSync(path.join(ROOT,'source/js/cloud.js'),'utf8').match(/url: 'https:\/\/([^.]+)/)[1];
@@ -28,6 +28,11 @@ class ShopHarness{
   await c.route('**/*',async r=>{
    const u=new URL(r.request().url());if(u.origin!==new URL(BASE).origin){this.denied.push(u.hostname);return r.abort('blockedbyclient');}
    const reply=(status,x)=>r.fulfill({status,contentType:'application/json',body:JSON.stringify(x)});
+   if(u.pathname==='/__qa_cloud/auth/v1/token'&&u.searchParams.get('grant_type')==='password'){
+    const data=r.request().postDataJSON()||{};this.authCalls.push({email:data.email});
+    if(String(data.password||'')!=='QA-Owner-Password-123!')return reply(400,{error:'invalid_grant'});
+    return reply(200,{access_token:'qa-fresh-'+crypto.randomBytes(8).toString('hex'),refresh_token:'qa-refresh',expires_in:3600,user:{id:this.users.owner,email:data.email,app_metadata:{web_admin:true},user_metadata:{name:'مدیر آزمایشی'}}});
+   }
    if(u.pathname.startsWith('/__qa_cloud/rest/v1/web_store')){const rows=await this.sql(`select k,v,updated_at from ${this.schema}.catalogue_sink order by k`);return reply(200,rows);}
    if(u.pathname==='/__qa_cloud/functions/v1/web-erp'){
     const body=r.request().postDataJSON();this.requests.push({role,action:body.action});

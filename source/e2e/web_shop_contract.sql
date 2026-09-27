@@ -1,6 +1,6 @@
 -- Executed only in an isolated, rollback-only QA schema by web_shop_sql_e2e.py.
 do $$
-declare owner_id uuid; sale_user uuid:=gen_random_uuid(); buy_user uuid:=gen_random_uuid();
+declare owner_id uuid; sale_user uuid:=gen_random_uuid(); buy_user uuid:=gen_random_uuid(); mgr_user uuid:=gen_random_uuid();
  p1 jsonb;p2 jsonb;vendor jsonb;customer jsonb;buydoc jsonb;saledoc jsonb;ret jsonb;edited jsonb;r jsonb;payload jsonb;v numeric;n bigint;oldn bigint;begin
  select id into owner_id from auth.users where raw_app_meta_data->>'web_admin'='true' limit 1;
  if owner_id is null then raise exception 'QA needs an existing owner identity; no real business record is touched.';end if;
@@ -86,5 +86,23 @@ declare owner_id uuid; sale_user uuid:=gen_random_uuid(); buy_user uuid:=gen_ran
  begin perform public.web_shop_api(owner_id,'payment_post',jsonb_build_object('client_id',gen_random_uuid(),'kind','expense','amount',1));raise exception 'QA closed period should reject';exception when raise_exception then if sqlerrm not like 'این دوره%' then raise;end if;end;
  perform public.web_shop_api(owner_id,'staff_save',jsonb_build_object('user_id',sale_user,'name','فروش آزمایشی','department','sales','active',false,'permissions','{}'::jsonb));
  begin perform public.web_shop_api(sale_user,'bootstrap','{}');raise exception 'QA disabled employee accessed';exception when insufficient_privilege then null;end;
+ -- Operational go-live reset: web owner only — even a manager-department staff member must be refused.
+ insert into auth.users(id,email,aud,role,raw_app_meta_data,raw_user_meta_data,created_at,updated_at) values
+ (mgr_user,'rollback-mgr-'||mgr_user||'@example.invalid','authenticated','authenticated','{"web_shop_staff":true}','{}',now(),now());
+ perform public.web_shop_api(owner_id,'staff_save',jsonb_build_object('user_id',mgr_user,'name','مدیر عملیاتی آزمایشی','department','manager','active',true,'permissions','{}'::jsonb));
+ begin perform public.web_shop_api(mgr_user,'ops_reset','{}');raise exception 'QA manager-department staff must not reset';exception when insufficient_privilege then null;end;
+ begin perform public.web_shop_api(sale_user,'ops_reset','{}');raise exception 'QA sales staff must not reset';exception when insufficient_privilege then null;end;
+ r=public.web_shop_api(owner_id,'ops_reset','{}');
+ if (r->>'ok')::boolean is not true or (r->'removed'->>'documents')::bigint<1 or (r->'removed'->>'parties')::bigint<1 then raise exception 'QA reset result';end if;
+ if exists(select 1 from web_shop.documents) or exists(select 1 from web_shop.lines) or exists(select 1 from web_shop.stock_moves) or exists(select 1 from web_shop.journals) or exists(select 1 from web_shop.journal_lines) or exists(select 1 from web_shop.payments) or exists(select 1 from web_shop.parties) or exists(select 1 from web_shop.inventory) or exists(select 1 from web_shop.counters) then raise exception 'QA reset left operational rows';end if;
+ if not exists(select 1 from web_shop.products where opening_required) then raise exception 'QA reset must require fresh openings';end if;
+ if not exists(select 1 from web_shop.catalogue_sink cs where cs.k='web_product_'||(select min(id) from web_shop.products) and (cs.v->>'stock')::int=0) then raise exception 'QA reset must republish zero sellable stock';end if;
+ if not exists(select 1 from web_shop.audit where action='reset' and actor=owner_id) then raise exception 'QA reset audit entry missing';end if;
+ if (select initialized from web_shop.settings) or (select closed_through from web_shop.settings) is not null then raise exception 'QA reset must reopen the books';end if;
+ select to_jsonb(p) into p1 from web_shop.products p order by p.id limit 1;
+ perform public.web_shop_api(owner_id,'opening_zero',jsonb_build_object('product_id',(p1->>'id')::bigint));
+ vendor=public.web_shop_api(owner_id,'party_save','{"name":"تأمین‌کنندهٔ پس از صفرسازی","supplier":true,"type":"store"}');
+ r=public.web_shop_api(owner_id,'document_save',jsonb_build_object('client_id',gen_random_uuid(),'kind','purchase','date',web_shop.today(),'party_id',vendor->'id','post',true,'lines',jsonb_build_array(jsonb_build_object('product_id',(p1->>'id')::bigint,'qty',2,'price',50))));
+ if r->>'number' <> 'P-'||extract(year from web_shop.today())::text||'-00001' then raise exception 'QA numbering must restart after reset';end if;
 end $$;
 select 'PASS: purchasing, landed cost, stock, sale, partial payments, returns, immutable correction, accounting balance, least privilege and period locks. All synthetic and rollback-only.' as result;

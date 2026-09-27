@@ -264,6 +264,14 @@
         seen.add(x.id);return {id:x.id,text:x.text.trim(),visible:x.visible};
       })};
     }
+    if(name==='showcase'){
+      if(!safeObject(value)||!Array.isArray(value.items)||value.items.length>60)throw error('ساختار چیدمان ویترین معتبر نیست؛ حداکثر ۶۰ کالا مجاز است.',422);
+      const seen=new Set();
+      return {items:value.items.map(x=>{
+        if(!safeObject(x)||typeof x.id!=='number'||!Number.isSafeInteger(x.id)||x.id<=0||seen.has(x.id)||typeof x.hidden!=='boolean')throw error('هر ردیف چیدمان باید یک کالای مشخص با وضعیت نمایش معتبر باشد.',422);
+        seen.add(+x.id);return {id:+x.id,hidden:x.hidden};
+      })};
+    }
     if(name==='menu'){
       if(!Array.isArray(value))throw error('ساختار منو معتبر نیست.',422);
       return value.map(x=>{if(!x || !validUrl(x.href) || typeof x.label!=='string')throw error('عنوان یا نشانی منو معتبر نیست.',422);return{label:x.label,href:x.href,visible:x.visible!==false};});
@@ -431,12 +439,21 @@
       let active=true;
       const refresh=()=>{
         const list=table('products'),home=/^\/(?:index\.html)?$/.test(location.pathname);
-        const p=home ? list.filter(x=>x.isFeatured).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))[index] : list.find(x=>x.id===initial.id);
+        const p=home ? showcaseApplied(list.filter(x=>x.isFeatured).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))))[index] : list.find(x=>x.id===initial.id);
         if(active)pair[1](p?{...p,image:p.images?.[0]||p.image||'/images/academy-logo.jpg'}:{...initial,_hidden:true,stock:0});
       };
       const off=subscribe(refresh);pull().then(refresh);return()=>{active=false;off();};
     },[initial.id,index,location.pathname]);
     return pair[0];
+  }
+  function showcaseApplied(list,admin=false){
+    // Homepage composition: published layout first (manager's drag order), then new featured
+    // items in the default order; hidden items never render on the storefront homepage.
+    const cfg=settings(admin).showcase;
+    const items=Array.isArray(cfg&&cfg.items)?cfg.items:[];
+    const order=new Map(),hidden=new Set();
+    items.forEach(x=>{if(safeObject(x)&&Number.isSafeInteger(+x.id)&&+x.id>0){const k=String(+x.id);order.set(k,order.size);if(x.hidden===true)hidden.add(k);}});
+    return [...list.filter(x=>order.has(String(x.id))).sort((a,b)=>order.get(String(a.id))-order.get(String(b.id))),...list.filter(x=>!order.has(String(x.id)))].filter(x=>!hidden.has(String(x.id)));
   }
   function brandShort(b){return b.enShort || (b.enName===C.seed.settings.brand.enName ? 'Putt Club' : b.enName) || 'Putt Club';}
   function productHref(p){return C.exportedSlugs.includes(p.slug)?'/product/'+p.slug:'/product/'+C.exportedSlugs[0]+'/?item='+encodeURIComponent(p.slug);}
@@ -520,5 +537,5 @@
   }
   window.PC_SITE_CLOUD={loadShopOps,accessToken,signInAdmin,signOut,changePassword,authSession,authDialog,request:apiFetch,pull,flush,subscribe,settings,table,liveState,useTable,useProduct,useProductReviewMeta,useCard,brandShort,productHref,gateRevision,gateSessionValid,importLegacy,
     status:()=>({phase,pending:Object.keys(queue),error:lastError,lastRead,lastAck,revision}),
-    publish,normalizeSetting,normalizeRecord,keyFor,resolvePending};
+    publish,normalizeSetting,normalizeRecord,keyFor,resolvePending,showcaseApplied};
 })();

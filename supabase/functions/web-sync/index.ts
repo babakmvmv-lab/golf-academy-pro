@@ -6,6 +6,7 @@ const MAX_BYTES=2*1024*1024;
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
 const settings:Record<string,string[]>={
  marquee:['enabled','items'],
+ showcase:['items'],
  brand:['faName','faShort','enName','enShort','tagline','logo','logoHd'],
  theme:['gold500','gold400','gold300','gold600','forest950','forest900','forest800','cream','sage'],
  contact:['phone','phoneFa','email','address','instagram','instagramUrl','telegram','whatsapp','siteUrl','domain','hours'],
@@ -31,6 +32,14 @@ function valid(k:unknown,v:unknown){
    const ids=new Set<string>();
    for(const x of v.items){
     if(!object(x)||!only(x,['id','text','visible'])||typeof x.id!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(x.id)||ids.has(x.id)||typeof x.text!=='string'||!x.text.trim()||x.text.trim().length>180||typeof x.visible!=='boolean')return false;
+    ids.add(x.id);
+   }
+  }
+  if(setting[1]==='showcase'){
+   if(!Array.isArray(v.items)||v.items.length>60)return false;
+   const ids=new Set<number>();
+   for(const x of v.items){
+    if(!object(x)||!only(x,['id','hidden'])||!Number.isSafeInteger(x.id)||x.id<=0||ids.has(x.id)||typeof x.hidden!=='boolean')return false;
     ids.add(x.id);
    }
   }

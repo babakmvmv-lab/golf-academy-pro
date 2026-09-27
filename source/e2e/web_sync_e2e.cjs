@@ -34,6 +34,21 @@ let passed=0;async function test(n,fn){await fn();passed++;console.log('PASS '+n
   ];
   for(const v of bad)assert.equal((await x.post({action:'kv',rows:[{k:'web_setting_marquee',v,base:null}]})).status,400,JSON.stringify(v));
  });
+ await test('Showcase must be a bounded unique list of product ids with visibility flags',async()=>{
+  const x=boot(),ok={items:[{id:7,hidden:false},{id:3,hidden:true}]};
+  assert.equal((await x.post({action:'kv',rows:[{k:'web_setting_showcase',v:ok,base:null}]})).status,200);
+  const bad=[
+   {items:[{id:7,hidden:false,price:5}]},
+   {items:[{id:7}]},
+   {items:[{id:'7',hidden:false}]},
+   {items:[{id:7,hidden:'yes'}]},
+   {items:[{id:7,hidden:false},{id:7,hidden:true}]},
+   {items:[{id:0,hidden:false}]},
+   {items:Array.from({length:61},(_,i)=>({id:i+1,hidden:false}))},
+   {enabled:true,items:[]},
+  ];
+  for(const v of bad)assert.equal((await x.post({action:'kv',rows:[{k:'web_setting_showcase',v,base:null}]})).status,400,JSON.stringify(v));
+ });
  await test('Gate accepts only a digest, not a plaintext unlock code',async()=>{const x=boot();assert.equal((await x.post({action:'kv',rows:[{k:'web_setting_shop_gate',v:{enabled:true,code:'secret'},base:null}]})).status,400);assert.equal((await x.post({action:'kv',rows:[{k:'web_setting_shop_gate',v:{enabled:true,codeHash:'a'.repeat(64),codeLength:8},base:null}]})).status,200);});
  await test('Tombstone is a public soft deletion, not an academy delete operation',async()=>{const x=boot();assert.equal((await x.post({action:'kv',rows:[{k:'web_product_23',v:{id:23,_deleted:true},base:null}]})).status,200);assert.equal(x.rows.get('web_product_23').v._deleted,true);assert.equal((await x.post({action:'kv',rows:[{k:'web_product_24',v:{id:23,_deleted:true},base:null}]})).status,400);});
  await test('Managed inventory products cannot be overwritten through the old public catalogue endpoint',async()=>{const x=boot();assert.equal((await x.post({action:'kv',rows:[{k:'web_product_999',v:{id:999,_deleted:true},base:null}]})).status,409);assert.equal(x.tables.length,0);});

@@ -4,7 +4,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 const db=createClient(Deno.env.get('SUPABASE_URL')||'',Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',{auth:{persistSession:false,autoRefreshToken:false}});
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
 const MAX=2*1024*1024;
-const actions=new Set(['bootstrap','dashboard','party_save','party_statement','product_save','category_rename','catalog_import','opening_zero','document_save','document_get','documents','document_post','document_void','inventory','payment_post','payment_void','payments','report','journal_get','ledger','staff','staff_save','settings_save','audit']);
+const actions=new Set(['bootstrap','dashboard','party_save','party_statement','product_save','category_rename','catalog_import','opening_zero','document_save','document_get','documents','document_post','document_void','inventory','payment_post','payment_void','payments','report','journal_get','ledger','staff','staff_save','settings_save','audit','ops_reset']);
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...CORS,'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
 const failure=(e:{code?:string,message?:string})=>json({ok:false,error:e.code==='23505'?'کد کالا، بارکد یا شمارهٔ درخواست تکراری است؛ اطلاعات را بررسی کنید.':e.code==='23514'?'مقدار سند با قواعد حسابداری/موجودی سازگار نیست؛ هیچ بخش آن ثبت نشد.':e.message||'عملیات انجام نشد؛ تغییری قطعی اعلام نشده است.',code:e.code||''},e.code==='42501'?403:e.code==='40001'||e.code==='23505'?409:422);
 Deno.serve(async req=>{
@@ -41,6 +41,12 @@ Deno.serve(async req=>{
    return json({ok:true,data:{id:created.data.user.id,email,password}});
   }
   if(!actions.has(action))return json({ok:false,error:'عملیات مجاز نیست.'},400);
+  if(action==='ops_reset'){
+   // Destructive go-live zeroing: web owner only, and only right after a fresh password sign-in.
+   if(user.app_metadata?.web_admin!==true)return json({ok:false,error:'صفرسازی عملیاتی فقط با حساب مدیر اصلی (مالک سایت) انجام می‌شود.'},403);
+   const last=Date.parse(user.last_sign_in_at||'');
+   if(!Number.isFinite(last)||Date.now()-last>10*60*1000)return json({ok:false,error:'برای صفرسازی، ورود تازه با رمز مدیر اصلی لازم است؛ رمز را در همان پنجره وارد کنید.'},401);
+  }
   const result=await db.rpc('web_shop_api',{p_actor:user.id,p_action:action,p_payload:payload});
   if(result.error)return failure(result.error);
   return json({ok:true,data:result.data});

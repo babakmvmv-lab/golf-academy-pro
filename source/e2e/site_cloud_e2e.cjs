@@ -142,6 +142,22 @@ let passed=0;async function test(name,fn){await fn();passed++;console.log('PASS 
    assert.equal(server.rows.get('web_setting_marquee').v.items.length,0);
   }finally{a.close();b.close();}
  });
+ await test('Showcase layout publishes, reloads and bounds the homepage composition',async()=>{
+  const server=backend(),a=boot(server),b=boot(server);try{
+   await a.api('/api/admin/site/settings');
+   const good={items:[{id:2,hidden:false},{id:10,hidden:true},{id:1,hidden:false}]};
+   assert.equal((await a.api('/api/admin/site/settings','PUT',{key:'showcase',value:good})).ok,true);
+   await b.api('/api/site/content');
+   const cfg=b.cloud.settings().showcase;
+   assert.equal(cfg.items.length,3);assert.equal(cfg.items[1].hidden,true);
+   const featured=b.cloud.table('products').filter(x=>x.isFeatured).sort((x,y)=>String(y.createdAt||'').localeCompare(String(x.createdAt||'')));
+   assert.equal(JSON.stringify(b.cloud.showcaseApplied(featured).map(x=>x.id)),JSON.stringify([2,1,6,4]),'layout order first, new items appended, hidden dropped');
+   for(const bad of [{items:{not:'array'}},{nope:true},{items:[{id:2}]},{items:[{id:'2',hidden:false}]},{items:[{id:2,hidden:'yes'}]},{items:[{id:2,hidden:false},{id:2,hidden:true}]},{items:[{id:0,hidden:false}]},{items:Array.from({length:61},(_,i)=>({id:i+1,hidden:false}))}]){
+    const r=await a.api('/api/admin/site/settings','PUT',{key:'showcase',value:bad});
+    assert.equal(r.status,422,JSON.stringify(bad));assert.equal(server.rows.get('web_setting_showcase').v.items.length,3,'rejected value must not overwrite');
+   }
+  }finally{a.close();b.close();}
+ });
  await test('A normal home menu URL is valid and survives a second-device read',async()=>{
   const server=backend(),a=boot(server),b=boot(server);try{await a.api('/api/admin/site/settings');const menu=plain(seed.settings.menu);menu[0].label='خانهٔ ابری';assert.equal((await a.api('/api/admin/site/settings','PUT',{key:'menu',value:menu})).ok,true);await b.cloud.pull(true);assert.equal(b.cloud.settings().menu[0].href,'/');assert.equal(b.cloud.settings().menu[0].label,'خانهٔ ابری');}finally{a.close();b.close();}
  });

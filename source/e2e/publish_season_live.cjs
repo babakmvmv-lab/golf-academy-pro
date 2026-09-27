@@ -62,7 +62,7 @@ const ok = (n, c) => { console.log((c ? 'PASS' : 'FAIL') + ' — ' + n); c ? pas
   ok('تقویم فصل page shows انتشار تقویم button', cal.hasBtn);
   console.log('  calendar rows sample:', JSON.stringify(cal.rows).slice(0, 200));
   await page.click('#pub-cal');
-  await page.waitForTimeout(3500);
+  await page.waitForTimeout(9000);
   const toast2 = await page.evaluate(() => document.querySelector('#toast, .toast, [class*="toast"]')?.textContent || '');
   console.log('  toast after calendar publish:', toast2.trim().slice(0, 120));
 

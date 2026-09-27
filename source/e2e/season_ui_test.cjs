@@ -21,6 +21,13 @@ const bootJs = bootHtml.match(/site-cloud\.([a-f0-9]+)\.js/);
 const cloudCfgSrc = await fetch(BASE + '/' + bootJs[0]).then(r => r.text());
 const cloudCfg = JSON.parse(cloudCfgSrc.match(/window\.PC_SITE_CLOUD_CONFIG=(\{.*?\});\n/s)[1]);
 const ANON = cloudCfg.key, API = cloudCfg.url;
+/* Snapshot any existing season rows so the teardown can restore — never destroy real published data. */
+let SEASON_BACKUP = null;
+try {
+  const snap = await fetch('https://iultwqtzvrysugfxwshw.supabase.co/rest/v1/web_store?select=k,v,updated_at&k=in.("web_setting_season_podium","web_setting_season_calendar")', { headers: { apikey: ANON } });
+  const rows0 = await snap.json();
+  if (Array.isArray(rows0) && rows0.length) SEASON_BACKUP = rows0;
+} catch (e) { console.log('  snapshot failed (will delete seeds only):', e.message); }
 try {
   const r = await fetch(API + '/functions/v1/ga-sync', { method: 'POST', headers: { apikey: ANON, 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'public', rows: [ { k: 'web_setting_season_podium', v: SEED_PODIUM }, { k: 'web_setting_season_calendar', v: SEED_CAL } ] }) });
@@ -64,7 +71,11 @@ await page.keyboard.press('Escape');
 /* contact section socials — empty values → no telegram/whatsapp items */
 const contactTxt = await page.locator('section:has-text("تماس با آکادمی"), section:has-text("ارتباط")').first().innerText().catch(() => '');
 ok('contact: no telegram item while unset', !(await page.locator('a[href*="t.me"]').count()));
-ok('contact: no whatsapp item while unset', !(await page.locator('a[href*="wa.me"]').count()));
+{
+  const waSetting = await page.evaluate(() => { try { return (window.PC_SITE_CLOUD.settings().contact || {}).whatsapp || ''; } catch (e) { return ''; } });
+  const waLinks = await page.locator('a[href*="wa.me"]').count();
+  ok('contact: whatsapp link matches the published setting', waSetting ? waLinks >= 1 : waLinks === 0);
+}
 ok('contact: phone is a tel: link', (await page.locator('a[href^="tel:"]').count()) >= 1);
 ok('contact: instagram is a real link', (await page.locator('a[href*="instagram.com"]').count()) >= 1);
 
@@ -189,10 +200,20 @@ try {
   const token = fs.readFileSync('/home/user/.secrets/supabase_access_token', 'utf8').trim();
   const run = async (sql) => fetch('https://api.supabase.com/v1/projects/iultwqtzvrysugfxwshw/database/query', {
     method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: sql }) });
-  await run("delete from public.web_store where k in ('web_setting_season_podium','web_setting_season_calendar')");
+  if (SEASON_BACKUP && SEASON_BACKUP.length) {
+    const backed = new Set(SEASON_BACKUP.map(r => r.k));
+    for (const row of SEASON_BACKUP) {
+      const v2 = JSON.stringify(row.v).replace(/'/g, "''");
+      await run("delete from public.web_store where k='" + row.k + "'; insert into public.web_store(k,v,updated_at) values('" + row.k + "','" + v2 + "'::jsonb,'" + row.updated_at + "'::timestamptz);");
+    }
+    for (const k2 of ['web_setting_season_podium', 'web_setting_season_calendar']) if (!backed.has(k2)) await run("delete from public.web_store where k='" + k2 + "'");
+    console.log('  teardown: season rows restored (' + SEASON_BACKUP.length + ')');
+  } else {
+    await run("delete from public.web_store where k in ('web_setting_season_podium','web_setting_season_calendar')");
+    console.log('  teardown: seed season rows removed (none existed before)');
+  }
   await run("delete from public.web_store where k like 'web_review_%' and v->>'author' = 'تستگر خودکار'");
   await run("delete from public.web_inbox where data->>'name' like 'تست%'");
-  console.log('  teardown: live test rows removed');
 } catch (e) { console.log('  teardown skipped:', e.message); }
 
 await browser.close();

@@ -11,55 +11,60 @@ const ok = (n, c) => { console.log((c ? 'PASS' : 'FAIL') + ' — ' + n); c ? pas
   await p.goto(BASE + '/source/e2e/pc_shopops_test.html', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await p.waitForTimeout(2200);
   ok('shop-ops mounted', await p.locator('#shop-ops').count() === 1);
+  /* sidebar menu must scroll */
+  const navStyle = await p.evaluate(() => {
+    const n = document.querySelector('.sh-nav');
+    return n ? getComputedStyle(n).overflowY : 'none';
+  });
+  ok('sidebar menu scrolls (overflow-y auto)', navStyle === 'auto');
+
   await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.textContent.trim().startsWith('چیدمان فروشگاه')); if (b2) b2.click(); });
   await p.waitForTimeout(900);
-  ok('layout view shows phone frame', await p.locator('.sh-phone').count() === 1);
-  const chips0 = await p.evaluate(() => [...document.querySelectorAll('.sh-chip')].map(c => c.dataset.name));
-  ok('category chips like the storefront (with counts)', chips0.length === 3 && chips0[0] === 'توپ‌ها');
-  const chipTxt = await p.evaluate(() => document.querySelector('.sh-chip').textContent);
-  ok('chip shows product count', /\(/.test(chipTxt) || /\d|۰|۱|۲|۳|۴|۵|۶|۷|۸|۹/.test(chipTxt));
-  const cards0 = await p.evaluate(() => [...document.querySelectorAll('.sh-card')].map(c => +c.dataset.id));
-  ok('first category cards open by default, sorted by sortOrder (2 before 1)', cards0.length === 2 && cards0[0] === 2 && cards0[1] === 1);
+  ok('no phone frame — full-width storefront look', await p.locator('.sh-phone').count() === 0);
+  const chips0 = await p.evaluate(() => [...document.querySelectorAll('.sh-chip[data-name]')].map(c => c.dataset.name));
+  ok('category chips like the storefront', chips0.length === 3 && chips0[0] === 'توپ‌ها');
+  const cardsAll = await p.evaluate(() => [...document.querySelectorAll('.sh-card')].map(c => +c.dataset.id));
+  ok('default shows ALL products in model order [2,1,3,4]', JSON.stringify(cardsAll) === '[2,1,3,4]');
   const cardLooks = await p.evaluate(() => {
     const c = document.querySelector('.sh-card');
-    return { img: !!c.querySelector('img'), price: !!c.querySelector('.pr b'), name: !!c.querySelector('h4') };
+    return { img: !!c.querySelector('img'), price: !!c.querySelector('.pr b'), name: !!c.querySelector('h4'), cat: !!c.querySelector('.cat') };
   });
-  ok('cards look like storefront (image + name + price)', cardLooks.img && cardLooks.name && cardLooks.price);
-  /* click the second chip → that category's cards */
-  await p.evaluate(() => { document.querySelectorAll('.sh-chip')[1].click(); });
+  ok('cards look like storefront (image + name + price + category)', cardLooks.img && cardLooks.name && cardLooks.price && cardLooks.cat);
+  /* click chip → only that category */
+  await p.evaluate(() => { [...document.querySelectorAll('.sh-chip[data-name]')].find(c => c.dataset.name === 'توپ‌ها').click(); });
   await p.waitForTimeout(400);
-  const cards1 = await p.evaluate(() => [...document.querySelectorAll('.sh-card')].map(c => +c.dataset.id));
-  ok('clicking a chip opens that category (چوب‌ها → id 3)', cards1.length === 1 && cards1[0] === 3);
-  /* back to first chip and drag card 2 below card 1 (whole-card hold+drag, 7px threshold) */
-  await p.evaluate(() => { document.querySelectorAll('.sh-chip')[0].click(); });
-  await p.waitForTimeout(400);
+  const cardsF = await p.evaluate(() => [...document.querySelectorAll('.sh-card')].map(c => +c.dataset.id));
+  ok('clicking a chip filters to that category [2,1]', JSON.stringify(cardsF) === '[2,1]');
+  ok('clear button appears', await p.locator('[data-clear]').count() === 1);
+  /* hold + drag card 2 below card 1 */
   const moved = await p.evaluate(() => {
     const cards = [...document.querySelectorAll('.sh-card')];
     const el = cards[0];
     const b = cards[1].getBoundingClientRect();
-    el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 7, clientX: b.x + 10, clientY: cards[0].getBoundingClientRect().y + 10 }));
-    el.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, clientX: b.x + 10, clientY: cards[0].getBoundingClientRect().y + 16 })); /* cross 7px threshold */
+    const a = cards[0].getBoundingClientRect();
+    el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 7, clientX: a.x + 10, clientY: a.y + 10 }));
+    el.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, clientX: a.x + 10, clientY: a.y + 16 }));
     el.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, clientX: b.x + b.width * 0.25, clientY: b.y + b.height / 2 }));
     el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 7, clientX: b.x + b.width * 0.25, clientY: b.y + b.height / 2 }));
     return [...document.querySelectorAll('.sh-card')].map(c => +c.dataset.id);
   });
-  ok('hold + drag reorders a product card (id 1 now first)', moved[0] === 1 && moved[1] === 2);
-  /* drag first chip after the second (category reorder) */
+  ok('hold + drag reorders a product card (id 1 now first)', JSON.stringify(moved) === '[1,2]');
+  /* drag chip توپ‌ها after چوب‌ها (category reorder) */
   const chipMoved = await p.evaluate(() => {
-    const chips = [...document.querySelectorAll('.sh-chip')];
-    const el = chips[0];
-    const b = chips[1].getBoundingClientRect();
-    el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 8, clientX: b.x - 30, clientY: b.y + 6 }));
-    el.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 8, clientX: b.x - 20, clientY: b.y + 6 }));
+    const chips = [...document.querySelectorAll('.sh-chip[data-name]')];
+    const el = chips[0]; /* توپ‌ها */
+    const b = chips[1].getBoundingClientRect(); /* چوب‌ها */
+    const a = el.getBoundingClientRect();
+    el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 8, clientX: a.x + 10, clientY: a.y + 6 }));
+    el.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 8, clientX: a.x + 4, clientY: a.y + 6 }));
     el.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 8, clientX: b.x + b.width * 0.25, clientY: b.y + b.height / 2 }));
     el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 8, clientX: b.x + b.width * 0.25, clientY: b.y + b.height / 2 }));
-    return [...document.querySelectorAll('.sh-chip')].map(c => c.dataset.name);
+    return [...document.querySelectorAll('.sh-chip[data-name]')].map(c => c.dataset.name);
   });
   ok('hold + drag reorders a category chip (چوب‌ها now first)', chipMoved[0] === 'چوب‌ها');
-  /* the click after a drag must NOT switch category (suppression) */
-  await p.waitForTimeout(120);
-  const selAfter = await p.evaluate(() => document.querySelectorAll('.sh-chip').length && [...document.querySelectorAll('.sh-chip')].findIndex(c => c.classList.contains('on')));
-  ok('post-drag click suppressed (selection unchanged, still توپ‌ها)', selAfter === 1);
+  await p.waitForTimeout(150);
+  const selAfter = await p.evaluate(() => [...document.querySelectorAll('.sh-chip[data-name]')].findIndex(c => c.classList.contains('on')));
+  ok('post-drag click suppressed (filter unchanged, still توپ‌ها)', selAfter === 1);
   await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.getAttribute('data-act') === 'layout-save'); if (b2) b2.click(); });
   await p.waitForTimeout(900);
   const save = await p.evaluate(() => window.__calls.filter(c => c.kind === 'erp' && c.action === 'layout_save').pop());

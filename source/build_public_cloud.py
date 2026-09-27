@@ -14,6 +14,11 @@ MANIFEST=ROOT/'source/public-cloud-manifest.json'
 old_manifest=json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
 outputs={}
 
+def load(name):
+    # Continue from the already-patched output when a chunk is adapted in several
+    # blocks; re-reading the pristine original would silently drop earlier patches.
+    return (CHUNKS/outputs[name]).read_text() if name in outputs else (CHUNKS/name).read_text()
+
 def replace(s,a,b,count=1):
     actual=s.count(a)
     if actual!=count:raise RuntimeError(f'Expected {count} unique adapter anchors, got {actual}: {a[:140]}')
@@ -43,14 +48,14 @@ def save(name,s):
     outputs[name]=filename
 
 # The old public hook returned DEFAULT_SITE_SETTINGS forever; it had no live provider.
-name='00.n2u15h-glt.js';s=(CHUNKS/name).read_text()
+name='00.n2u15h-glt.js';s=load(name)
 a='35607,e=>{"use strict";e.i(43476);var t=e.i(71645),r=e.i(33199);e.i(1517),e.i(88062);let n=(0,t.createContext)(r.DEFAULT_SITE_SETTINGS);e.s(["useSiteSettings",0,function(){return(0,t.useContext)(n)}])}'
 b='35607,e=>{"use strict";var t=e.i(71645),r=e.i(33199),n=e.i(1517);e.s(["useSiteSettings",0,function(){return n.mergeSiteSettings(window.PC_SITE_CLOUD.useTable(t,"settings",r.DEFAULT_SITE_SETTINGS))}])}'
 s=replace(s,a,b)
 save(name,s)
 
 # Original course/testimonial state is retained, but now subscribed to shared published data.
-name='11h9c3275amaf.js';s=(CHUNKS/name).read_text()
+name='11h9c3275amaf.js';s=load(name)
 s=replace(s,'await fetch((0,F.withBase)("/api/site/courses"))','await window.PC_SITE_CLOUD.request((0,F.withBase)("/api/site/courses"))')
 s=replace(s,'await fetch((0,h.withBase)("/api/site/testimonials"))','await window.PC_SITE_CLOUD.request((0,h.withBase)("/api/site/testimonials"))')
 s=replace(s,'[d,x]=(0,l.useState)(Z)','[d,x]=window.PC_SITE_CLOUD.liveState(l,"courses",Z)')
@@ -64,7 +69,7 @@ save(name,s)
 
 # Three copies of the shared product-card module exist in this static export.
 for name in ['07~usxe5i88cs.js','0bk206q4lcysm.js','10zhlc.ydq6io.js']:
-    s=(CHUNKS/name).read_text()
+    s=load(name)
     s=replace(s,'d=e.i(88062);e.s(["default",0,function({p:e,index:c=0}){let',
               'd=e.i(88062);var pcReact=e.i(71645);e.s(["default",0,function({p:e,index:c=0}){e=window.PC_SITE_CLOUD.useCard(pcReact,e,c);let')
     s=replace(s,'href:`/product/${e.slug}`','href:window.PC_SITE_CLOUD.productHref(e)')
@@ -89,7 +94,7 @@ for name in ['07~usxe5i88cs.js','0bk206q4lcysm.js','10zhlc.ydq6io.js']:
     save(name,s)
 
 # Gate remains enabled by default, works on both viewports, and reloads published policy.
-name='0ymry5ef_i~wt.js';s=(CHUNKS/name).read_text()
+name='0ymry5ef_i~wt.js';s=load(name)
 s=replace(s,'await fetch((0,d.withBase)("/api/site/content"))','await window.PC_SITE_CLOUD.request((0,d.withBase)("/api/site/content"))')
 s=replace(s,'await fetch((0,d.withBase)("/api/site/shop-gate/unlock"),','await window.PC_SITE_CLOUD.request((0,d.withBase)("/api/site/shop-gate/unlock"),')
 a='(0,n.useEffect)(()=>{let e=!0;return function(){try{return"1"===sessionStorage.getItem(u)}catch{return!1}}()&&i(!0),p().then(t=>{e&&s(t)}),()=>{e=!1}},[])'
@@ -107,7 +112,7 @@ save(name,s)
 
 # Never expose a cloud gate code in plaintext or silently restore B when the admin
 # merely edits a title. Blank password means keep the existing digest.
-name='0s294n3n15ion.js';s=(CHUNKS/name).read_text()
+name='0s294n3n15ion.js';s=load(name)
 s=replace(s,'label:"فروش کل"','label:"فروش این دستگاه"')
 s=replace(s,'label:"سفارش‌ها",value:','label:"سفارش‌ها (محلی)",value:')
 s=replace(s,'label:"کاربران",value:','label:"کاربران (محلی)",value:')
@@ -127,7 +132,7 @@ s=s[:start]+workspace+s[end:]
 save(name,s)
 
 # Clear the previous green success label before a new save attempt starts.
-name='116gnhx5f2czu.js';s=(CHUNKS/name).read_text()
+name='116gnhx5f2czu.js';s=load(name)
 s=replace(s,'let d=async(e,s)=>{if(i(e),l){','let d=async(e,s)=>{n(null);if(i(e),l){')
 # Item-based marquee management inside the existing content tab; no React coupling.
 # Sibling of the hero card (not nested inside it) so existing section selectors stay unambiguous.
@@ -137,7 +142,7 @@ save(name,s)
 
 # Never silently return to local-demo saves when the cloud bootstrap fails to load.
 for name in ['0h.3tv9nj2ufm.js','0ia~_hsdpy603.js','12lzqn_~_d9qf.js']:
-    s=(CHUNKS/name).read_text()
+    s=load(name)
     pat=re.compile(r'async function (\w+)\((\w+),(\w+)\)\{let (\w+)=(\w+)\(\);try\{')
     matches=list(pat.finditer(s))
     if len(matches)!=1:raise RuntimeError('Admin transport fallback anchor changed: '+name)
@@ -157,15 +162,15 @@ for name in ['0h.3tv9nj2ufm.js','0ia~_hsdpy603.js','12lzqn_~_d9qf.js']:
 
 # ── Public form submissions travel through the cloud layer (orders/reviews/testimonials). ──
 # Static hosting answers 404/405 for these; the old localStorage fallbacks silently faked success.
-name='0tzhqo2g7futr.js';s=(CHUNKS/name).read_text()
+name='0tzhqo2g7futr.js';s=load(name)
 s=replace(s,'s=await fetch((0,C.withBase)("/api/orders"),','s=await window.PC_SITE_CLOUD.request((0,C.withBase)("/api/orders"),')
 save(name,s)
 
-name='10zhlc.ydq6io.js';s=(CHUNKS/name).read_text()
+name='10zhlc.ydq6io.js';s=load(name)
 s=replace(s,'s=await fetch((0,g.withBase)("/api/reviews"),','s=await window.PC_SITE_CLOUD.request((0,g.withBase)("/api/reviews"),')
 save(name,s)
 
-name='11h9c3275amaf.js';s=(CHUNKS/name).read_text()
+name='11h9c3275amaf.js';s=load(name)
 s=replace(s,'e=await fetch((0,h.withBase)("/api/site/testimonials"),{method:"POST"','e=await window.PC_SITE_CLOUD.request((0,h.withBase)("/api/site/testimonials"),{method:"POST"')
 # ── Academy section CTA: the «فروشگاه تجهیزات» pill becomes the two season popup buttons. ──
 acad_shop='(0,t.jsx)(s.default,{href:"/shop",className:"inline-flex items-center justify-center gap-2 rounded-full border border-gold-500/30 px-7 py-3.5 text-sm font-bold text-gold-300 transition-all hover:border-gold-400 hover:bg-gold-500/10",children:"فروشگاه تجهیزات"})'
@@ -187,7 +192,7 @@ s=replace(s,contact_old,contact_new)
 save(name,s)
 
 # ── Storefront: manual order (sortOrder from the shop panel) is the default sort; chips follow category order. ──
-name='0bk206q4lcysm.js';s=(CHUNKS/name).read_text()
+name='0bk206q4lcysm.js';s=load(name)
 s=replace(s,'{key:"popular",label:"محبوب'+chr(0x200c)+'ترین"}','{key:"popular",label:"چیدمان فروشگاه"}')
 s=replace(s,'default:return[...s].sort((e,t)=>t.reviewCount-e.reviewCount)','default:return[...s].sort((e,t)=>(e.sortOrder??1e9)-(t.sortOrder??1e9)||t.reviewCount-e.reviewCount)')
 chips_old='let $=(0,s.useMemo)(()=>{let t=new Map;return e.forEach(e=>t.set(e.category,(t.get(e.category)??0)+1)),[...t.entries()]},[e])'
@@ -199,7 +204,7 @@ s=replace(s,chips_old,chips_new)
 save(name,s)
 
 # ── Footer (site + shop): genuine telegram/whatsapp links; footer category order follows the layout editor. ──
-name='0ymry5ef_i~wt.js';s=(CHUNKS/name).read_text()
+name='0ymry5ef_i~wt.js';s=load(name)
 tg_old='s.telegram&&(0,t.jsx)("a",{href:s.telegram,target:"_blank",rel:"noreferrer","aria-label":"تلگرام آکادمی",className:"grid size-10 place-items-center rounded-full border border-forest-600/70 text-cream/70 transition-all hover:border-gold-400 hover:text-gold-300",children:(0,t.jsx)(E.Send,{size:17,strokeWidth:1.7})}),'
 tg_new=('s.telegram&&(0,t.jsx)("a",{href:/^https?:/i.test(s.telegram)?s.telegram:"https://t.me/"+s.telegram.replace(/^@/,""),target:"_blank",rel:"noreferrer","aria-label":"تلگرام آکادمی",className:"grid size-10 place-items-center rounded-full border border-forest-600/70 text-cream/70 transition-all hover:border-gold-400 hover:text-gold-300",children:(0,t.jsx)(E.Send,{size:17,strokeWidth:1.7})}),'
  's.whatsapp&&(0,t.jsx)("a",{href:/^https?:/i.test(s.whatsapp)?s.whatsapp:"https://wa.me/"+s.whatsapp.replace(/^0/,"98").replace(/[^0-9]/g,""),target:"_blank",rel:"noreferrer","aria-label":"واتس‌اپ آکادمی",className:"grid size-10 place-items-center rounded-full border border-forest-600/70 text-cream/70 transition-all hover:border-gold-400 hover:text-gold-300",children:(0,t.jsx)("svg",{xmlns:"http://www.w3.org/2000/svg",width:17,height:17,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.7,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":!0,children:(0,t.jsx)("path",{d:"M7.9 20A9 9 0 1 0 4 16.1L2 22Z"})})}),')
@@ -213,8 +218,14 @@ s=replace(s,'T.CATEGORIES.map(e=>(0,t.jsx)("li",{children:(0,t.jsx)(a.default,{h
           '((window.PC_SITE_CLOUD&&window.PC_SITE_CLOUD.shopCategories().length)?window.PC_SITE_CLOUD.shopCategories():T.CATEGORIES).map(e=>(0,t.jsx)("li",{children:(0,t.jsx)(a.default,{href:`/shop?cat=${encodeURIComponent(e)}`,className:"transition-colors hover:text-gold-300",children:e})},e))')
 save(name,s)
 
+# ── Site admin: the right sidebar menu must scroll when it outgrows the viewport. ──
+name='116gnhx5f2czu.js';s=load(name)
+s=replace(s,'(0,t.jsx)("nav",{className:"mt-6 flex-1 space-y-1.5",children:ed.map',
+          '(0,t.jsx)("nav",{style:{overflowY:"auto",overscrollBehavior:"contain",scrollbarWidth:"thin"},className:"mt-6 flex-1 space-y-1.5",children:ed.map')
+save(name,s)
+
 # ── Site admin: image upload buttons (URL option stays). ──
-name='116gnhx5f2czu.js';s=(CHUNKS/name).read_text()
+name='116gnhx5f2czu.js';s=load(name)
 s=replace(s,'className:"grid size-11 shrink-0 place-items-center rounded-xl bg-gold-500 text-forest-950","aria-label":"افزودن عکس",children:(0,t.jsx)(_,{size:17})})',
           'className:"grid size-11 shrink-0 place-items-center rounded-xl bg-gold-500 text-forest-950","aria-label":"افزودن عکس",children:(0,t.jsx)(_,{size:17})}),(0,t.jsx)("button",{type:"button",onClick:()=>window.PC_IMG&&window.PC_IMG.pick(1400,u=>{g("images",[...d.images,u]);m("")}),className:"grid size-11 shrink-0 place-items-center rounded-xl border border-gold-500/40 text-gold-300","aria-label":"بارگذاری عکس از فایل",title:"بارگذاری عکس از فایل (تبدیل خودکار به WebP)",children:"⬆"})')
 for label,field_name,max_dim,setter in [('آدرس فایل لوگو','logo',512,'o("brand",{...e.brand,logo:u})'),('آدرس لوگوی باکیفیت','logoHd',1024,'o("brand",{...e.brand,logoHd:u})'),('آدرس تصویر بخش','image',1600,'o("about",{...e.about,image:u})')]:

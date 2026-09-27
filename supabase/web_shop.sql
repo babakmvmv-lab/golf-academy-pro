@@ -39,6 +39,8 @@ create table if not exists web_shop.products (
  opening_required boolean not null default false, created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
 create unique index if not exists web_shop_barcode_unique on web_shop.products(barcode) where barcode is not null and barcode<>'';
+-- Manual storefront ordering (drag-reorder from the shop panel); default keeps legacy ordering.
+alter table web_shop.products add column if not exists sort_order bigint not null default 1000000000;
 create table if not exists web_shop.inventory (
  product_id bigint primary key references web_shop.products(id), qty integer not null default 0 check(qty>=0),
  value numeric(24,2) not null default 0 check(value>=0), updated_at timestamptz not null default now(),
@@ -214,8 +216,8 @@ create or replace function web_shop.publish_product(pid bigint) returns void lan
 declare p web_shop.products;v jsonb;b web_shop.inventory;begin
  select * into p from web_shop.products where id=pid;select * into b from web_shop.inventory where product_id=pid;
  -- The public projection never contains cost, suppliers, customers, ledgers or staff.
- select coalesce(jsonb_object_agg(key,value),'{}') into v from jsonb_each(p.public_data) where key=any(array['id','slug','name','category','price','oldPrice','shortDesc','description','features','images','rating','reviewCount','stock','badge','isNew','isFeatured','createdAt']);
- v=v || jsonb_build_object('id',p.id,'name',p.name,'category',p.category,'price',p.sale_price,'stock',case when p.active and not p.opening_required then coalesce(b.qty,0) else 0 end);
+ select coalesce(jsonb_object_agg(key,value),'{}') into v from jsonb_each(p.public_data) where key=any(array['id','slug','name','category','price','oldPrice','shortDesc','description','features','images','rating','reviewCount','stock','badge','isNew','isFeatured','createdAt','sortOrder']);
+ v=v || jsonb_build_object('id',p.id,'name',p.name,'category',p.category,'price',p.sale_price,'stock',case when p.active and not p.opening_required then coalesce(b.qty,0) else 0 end,'sortOrder',p.sort_order);
  if not p.active then v=jsonb_build_object('id',p.id,'_deleted',true);end if;
  insert into public.web_store(k,v,updated_at) values('web_product_'||pid,v,clock_timestamp()) on conflict(k) do update set v=excluded.v,updated_at=excluded.updated_at;
 end $$;
@@ -278,7 +280,7 @@ begin
  ship=case when subtotal>=5000000 then 0 else 350000 end; -- همان قاعدهٔ نمایش ویترین: رایگان از ۵ میلیون تومان
  insert into web_shop.orders(client_id,code,status,customer,items,subtotal,shipping_amount,total,payment_method,gateway_slug,session_key,note)
   values(cid,null,case when meth='gateway' then 'pending_payment' else 'awaiting_review' end,
-   (select coalesce(jsonb_object_agg(key,left(value::text,300)),'{}') from jsonb_each(coalesce(p_payload->'customer','{}'::jsonb)) where key=any(array['name','phone','email','city','address','postalCode','note'])),
+   (select coalesce(jsonb_object_agg(key,left(value,300)),'{}') from jsonb_each_text(coalesce(p_payload->'customer','{}'::jsonb)) where key=any(array['name','phone','email','city','address','postalCode','note'])),
    items,subtotal,ship,subtotal+ship,meth,gw,p_session,left(coalesce(p_payload->>'note',''),500))
   returning * into o;
  update web_shop.orders set code='W-'||extract(year from web_shop.today())::text||'-'||lpad(o.id::text,5,'0') where id=o.id returning * into o;
@@ -295,7 +297,7 @@ begin
  select * into o from web_shop.orders where client_id=p_client_id;
  if o.id is null then raise exception 'سفارش پیدا نشد.';end if;
  if o.payment_method<>'card2card' or o.status not in ('awaiting_review','pending_payment') then raise exception 'برای این سفارش ارسال رسید کارت به کارت مجاز نیست.';end if;
- update web_shop.orders set card_report=(select coalesce(jsonb_object_agg(key,left(value::text,300)),'{}') from jsonb_each(coalesce(p_report,'{}')) where key=any(array['destination_id','from_card','date','time','trace','reference','note'])),updated_at=now() where id=o.id;
+ update web_shop.orders set card_report=(select coalesce(jsonb_object_agg(key,left(value,300)),'{}') from jsonb_each_text(coalesce(p_report,'{}')) where key=any(array['destination_id','from_card','date','time','trace','reference','note'])),updated_at=now() where id=o.id;
  return jsonb_build_object('ok',true);
 end $$;
 create or replace function web_shop.order_cancel_public(p_client_id uuid) returns jsonb language plpgsql security definer set search_path=pg_catalog,web_shop as $$
@@ -738,6 +740,23 @@ declare ctx jsonb;v_settings web_shop.settings;v_product web_shop.products;v_par
   end loop;
   perform web_shop.publish_payments();
   perform web_shop.audit(p_actor,'save','pay_cards','cards',null,jsonb_build_object('count',jsonb_array_length(coalesce(p_payload->'cards','[]'::jsonb))));return jsonb_build_object('ok',true);
+ elsif p_action='layout_save' then
+  -- Manual storefront order: products (drag within/between categories) + category order, published to the site.
+  perform web_shop.require(p_actor,'catalog.edit');
+  if jsonb_typeof(coalesce(p_payload->'products','[]'::jsonb))<>'array' or jsonb_typeof(coalesce(p_payload->'categories','[]'::jsonb))<>'array' then raise exception 'ترتیب ارسال‌شده معتبر نیست.';end if;
+  for v in select * from jsonb_array_elements(p_payload->'products') loop
+   if (v->>'id') is null or (v->>'id') !~ '^[0-9]+$' or (v->>'sortOrder') is null or (v->>'sortOrder') !~ '^[0-9]+$' then raise exception 'ردیف ترتیب کالا معتبر نیست.';end if;
+   update web_shop.products set sort_order=least(greatest((v->>'sortOrder')::bigint,1),1000000000),version=version+1,updated_at=now() where id=(v->>'id')::bigint;
+  end loop;
+  for v in select * from jsonb_array_elements(p_payload->'products') loop
+   perform web_shop.publish_product((v->>'id')::bigint);
+  end loop;
+  insert into public.web_store(k,v,updated_at)
+   values('web_setting_shop_categories',jsonb_build_object('categories',coalesce((
+     select jsonb_agg(jsonb_build_object('name',left(trim(x->>'name'),80),'sortOrder',least(greatest(coalesce(nullif(x->>'sortOrder','')::int,1),1),1000000)) order by ord)
+     from (select x,ord from jsonb_array_elements(p_payload->'categories') with ordinality as t(x,ord)) s),'[]'::jsonb)),clock_timestamp())
+   on conflict(k) do update set v=excluded.v,updated_at=excluded.updated_at;
+  perform web_shop.audit(p_actor,'save','layout','shop',null,p_payload);return jsonb_build_object('ok',true);
  elsif p_action='orders' then
   if not (web_shop.manager(p_actor) or web_shop.allowed(p_actor,'sales.view')) then raise exception using errcode='42501',message='مشاهدهٔ سفارش‌های آنلاین مجاز نیست.';end if;
   return coalesce((select jsonb_agg(web_shop.order_json(o) order by o.id desc) from (select * from web_shop.orders where (coalesce(p_payload->>'status','')='' or status=p_payload->>'status') order by id desc limit 200) o),'[]');

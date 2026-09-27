@@ -122,6 +122,51 @@ Deno.serve(async req=>{
    }
    return json({ok:true,data:{order:r.data}});
   }
+  if(action==='review'){
+   // Public product review → web_store pending row (moderated in the site admin panel).
+   const productId=Math.floor(Number(enDigits(p?.productId)));
+   const author=String(p?.author??'').trim().slice(0,80);
+   const rating=Math.min(5,Math.max(1,Math.floor(Number(enDigits(p?.rating))||0)));
+   const comment=String(p?.comment??'').trim().slice(0,600);
+   if(!(productId>0&&productId<1e9))return bad('کالا برای ثبت نظر معتبر نیست.');
+   if(author.length<2)return bad('نام شما را کامل بنویسید.');
+   if(!(rating>=1&&rating<=5))return bad('امتیاز معتبر نیست.');
+   if(comment.length<5)return bad('متن نظر کوتاه است؛ کمی بیشتر بنویسید.');
+   const id=Date.now()*1000+Math.floor(Math.random()*1000);
+   const v={id,productId,author,rating,comment,createdAt:new Date().toISOString(),status:'pending'};
+   const w=await db.from('web_store').upsert({k:'web_review_'+id,v});
+   if(w.error)return bad('ثبت نظر انجام نشد؛ لحظاتی بعد دوباره تلاش کنید.');
+   return json({ok:true,data:{review:{...v,status:'pending',pending:true}}});
+  }
+  if(action==='testimonial'){
+   // Public testimonial → web_store pending row (public-safe fields only; no contact data).
+   const name=String(p?.name??'').trim().slice(0,80);
+   const phone=String(enDigits(p?.phone)??'').trim().slice(0,20);
+   const text=String(p?.text??'').trim().slice(0,600);
+   const rating=Math.min(5,Math.max(1,Math.floor(Number(enDigits(p?.rating))||0)));
+   if(name.length<2)return bad('نام و نام خانوادگی را کامل وارد کنید.');
+   if(!/^09\d{9}$/.test(phone))return bad('شماره تماس معتبر نیست (مثل ۰۹۱۲۳۴۵۶۷۸۹).');
+   if(text.length<10)return bad('متن نظر کوتاه است؛ کمی بیشتر بنویسید.');
+   const id=Date.now()*1000+Math.floor(Math.random()*1000);
+   const v={id,name,text,rating,createdAt:new Date().toISOString(),status:'pending'};
+   const w=await db.from('web_store').upsert({k:'web_testimonial_'+id,v});
+   if(w.error)return bad('ثبت نظر ناموفق بود؛ لحظاتی بعد دوباره تلاش کنید.');
+   return json({ok:true,data:{ok:true}});
+  }
+  if(action==='signup'){
+   // Public course registration → PRIVATE web_inbox row (phone never becomes public).
+   const name=String(p?.name??'').trim().slice(0,80);
+   const phone=String(enDigits(p?.phone)??'').trim().slice(0,20);
+   const course=String(p?.course??'').trim().slice(0,120);
+   const note=String(p?.note??'').trim().slice(0,500);
+   const mode=p?.mode==='register'?'register':'presignup';
+   if(name.length<2)return bad('نام و نام خانوادگی را کامل وارد کنید.');
+   if(!/^09\d{9}$/.test(phone))return bad('شماره موبایل معتبر نیست (مثل ۰۹۱۲۳۴۵۶۷۸۹).');
+   const id=Date.now()*1000+Math.floor(Math.random()*1000);
+   const w=await db.from('web_inbox').insert({id,kind:'signup',data:{name,phone,course,note,mode}});
+   if(w.error)return bad('ثبت‌نام انجام نشد؛ لحظاتی بعد دوباره تلاش کنید.');
+   return json({ok:true,data:{ok:true}});
+  }
   if(action==='report'){
    const client_id=String(p.client_id||'');
    const report={};['destination_id','from_card','date','time','trace','reference','note'].forEach(k=>{const v=String(p?.report?.[k]??'').trim();if(v)report[k]=enDigits(v).slice(0,300);});

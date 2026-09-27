@@ -758,6 +758,11 @@
         if (!hasCred() || !sn || !sn.id) return;
         return edgeRequest({ action: 'shots', session: sn, shots: arr || [] }).then(function () { return true; }, function () { return false; });
       } catch (e) {}
+    },
+    /* انتشار دادهٔ عمومی فصل (سکو/تقویم) در سایت — فقط دو کلید مجاز در ga-sync */
+    public: function (rows) {
+      if (!hasCred()) return Promise.reject(new Error('اتصال ابر آکادمی تنظیم نشده است.'));
+      return edgeRequest({ action: 'public', rows: rows });
     }
   };
 

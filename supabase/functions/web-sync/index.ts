@@ -12,11 +12,15 @@ const settings:Record<string,string[]>={
  contact:['phone','phoneFa','email','address','instagram','instagramUrl','telegram','whatsapp','siteUrl','domain','hours'],
  hero:['badge','line1','line2','subtitle','stats'],about:['kicker','title','paragraphs','image','imageCaption'],
  courses_section:['kicker','title','titleAccent','desc'],testimonials_section:['kicker','title','titleAccent','desc'],
- footer:['aboutText'],shop_gate:['enabled','showOnShop','showOnCheckout','title','message','backLabel','overlayOpacity','overlayBlur','codeHash','codeLength']
+ footer:['aboutText'],shop_gate:['enabled','showOnShop','showOnCheckout','title','message','backLabel','overlayOpacity','overlayBlur','codeHash','codeLength'],
+ season_podium:['seasonYear','matchesHeld','playersActive','updatedAt','top'],
+ season_calendar:['seasonYear','updatedAt','events'],
+ course_signup:['mode','thankYou'],
+ shop_categories:['categories']
 };
 const records:Record<string,string[]>={
- product:['id','slug','name','category','price','oldPrice','shortDesc','description','features','images','rating','reviewCount','stock','badge','isNew','isFeatured','createdAt'],
- category:['id','name','description','image','created_at'],
+ product:['id','slug','name','category','price','oldPrice','shortDesc','description','features','images','rating','reviewCount','stock','badge','isNew','isFeatured','createdAt','sortOrder'],
+ category:['id','name','description','image','created_at','sortOrder'],
  course:['id','title','subtitle','shortDesc','fullDesc','icon','images','galleryMode','layout','cardSize','titleColor','textColor','accentColor','titleSize','bodySize','bodyAlign','footerItems','socials','sortOrder','isActive','createdAt'],
  testimonial:['id','name','role','text','rating','status','createdAt'],review:['id','productId','author','rating','comment','status','createdAt']
 };
@@ -45,6 +49,10 @@ function valid(k:unknown,v:unknown){
   }
   if(setting[1]==='shop_gate' && (!/^[0-9a-f]{64}$/.test(String(v.codeHash||''))||!Number.isInteger(Number(v.codeLength))||Number(v.codeLength)<1||Number(v.codeLength)>20))return false;
   if(setting[1]==='hero'&&v.stats!==undefined&&(!Array.isArray(v.stats)||!v.stats.every(x=>object(x)&&only(x,['label','value']))))return false;
+  if(setting[1]==='shop_categories'&&(!Array.isArray(v.categories)||v.categories.length>40||!v.categories.every(x=>object(x)&&only(x,['name','sortOrder'])&&typeof x.name==='string'&&x.name.trim().length>=1&&x.name.length<=80&&Number.isSafeInteger(x.sortOrder)&&x.sortOrder>0&&x.sortOrder<=1000000)))return false;
+  if(setting[1]==='course_signup'&&(v.mode!=='register'&&v.mode!=='presignup'||typeof v.thankYou!=='string'||v.thankYou.length>300))return false;
+  if(setting[1]==='season_podium'&&(!Number.isInteger(Number(v.seasonYear))||!Array.isArray(v.top)||v.top.length>3||!v.top.every(x=>object(x)&&only(x,['rank','name','pts','rankText','rankColor','avatar']))||typeof v.updatedAt!=='string'))return false;
+  if(setting[1]==='season_calendar'&&(!Number.isInteger(Number(v.seasonYear))||!Array.isArray(v.events)||v.events.length>400||!v.events.every(x=>object(x)&&only(x,['date','jalali','icon','name','kind','extra','past']))||typeof v.updatedAt!=='string'))return false;
   return true;
  }
  const rec=/^web_(product|category|course|testimonial|review)_([0-9]+)$/.exec(k);
@@ -72,6 +80,19 @@ Deno.serve(async req=>{
   if(Number(req.headers.get('content-length')||0)>MAX_BYTES)return json({ok:false,err:'payload too large',maxBytes:MAX_BYTES},413);
   const raw=await req.text();if(new TextEncoder().encode(raw).byteLength>MAX_BYTES)return json({ok:false,err:'payload too large',maxBytes:MAX_BYTES},413);
   let body;try{body=JSON.parse(raw);}catch{return json({ok:false,err:'invalid JSON'},400);}
+  /* Private inbox actions (course-signup submissions) — same auth, no public record. */
+  if(body?.action==='inbox'||body?.action==='inbox_delete'){
+   if(body.action==='inbox'){
+    const list=await db.from('web_inbox').select('id,kind,data,created_at').order('id',{ascending:false}).limit(300);
+    if(list.error)return json({ok:false,err:'Inbox read failed'},502);
+    return json({ok:true,rows:list.data||[]});
+   }
+   const id=Number(body?.id);
+   if(!Number.isSafeInteger(id)||id<=0)return json({ok:false,err:'Invalid inbox id'},400);
+   const del=await db.from('web_inbox').delete().eq('id',id).select('id');
+   if(del.error)return json({ok:false,err:'Inbox delete failed'},502);
+   return json({ok:true,deleted:(del.data||[]).length});
+  }
   if(body?.action!=='kv'||!Array.isArray(body.rows)||body.rows.length!==1)return json({ok:false,err:'Exactly one public record per acknowledged request'},400);
   const row=body.rows[0];
   if(!row||!valid(row.k,row.v)||!Object.prototype.hasOwnProperty.call(row,'base')||(row.base!==null&&(typeof row.base!=='string'||!Number.isFinite(Date.parse(row.base)))))return json({ok:false,err:'Invalid public website record or revision',code:'INVALID_WEB_RECORD'},400);

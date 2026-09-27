@@ -757,8 +757,18 @@
           const cv = document.createElement('canvas');
           cv.width = Math.max(1, Math.round(im.width * k));
           cv.height = Math.max(1, Math.round(im.height * k));
-          cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
-          cb(jpeg ? cv.toDataURL('image/jpeg', 0.82) : cv.toDataURL('image/png'));
+          const ctx = cv.getContext('2d');
+          ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(im, 0, 0, cv.width, cv.height);
+          /* بهترین فرمت وب: WebP (حجم بسیار کمتر بدون افت محسوس)؛ برای مرورگرهای قدیمی JPEG/PNG */
+          if (jpeg === 'png'){ cb(cv.toDataURL('image/png')); return; }
+          if (!jpeg){
+            const webp = cv.toDataURL('image/webp', 0.9);
+            cb(webp.indexOf('data:image/webp') === 0 ? webp : cv.toDataURL('image/png'));
+            return;
+          }
+          const webp = cv.toDataURL('image/webp', 0.88);
+          cb(webp.indexOf('data:image/webp') === 0 ? webp : cv.toDataURL('image/jpeg', 0.82));
         };
         im.onerror = () => APP.toast('تصویر خوانده نشد', 'red');
         im.src = rd.result;
@@ -771,7 +781,7 @@
     });
     $('#ac-fav').addEventListener('change', e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
-      readImg(f, 128, false, u => { pending.favicon = u; $('#ac-fav-prev').src = u; });
+      readImg(f, 128, 'png', u => { pending.favicon = u; $('#ac-fav-prev').src = u; });
     });
     $('#ac-bg').addEventListener('change', e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
@@ -2067,17 +2077,20 @@
       const pars = parVals.map(v => Math.max(3, Math.min(6, +v || 4)));
       if (!pars.length){ APP.toast('حداقل یک میدان لازم است','red'); return; }
       const lat = +$('#ec-lat').value || 24.7136, lng = +$('#ec-lng').value || 46.6753;
+      /* ایندکس سختی میدان‌ها هم مثل پار باید ذخیره شود؛ قبلاً جا افتاده بود و ویرایش ایندکس پس از «ذخیره» بی‌اثر می‌شد. */
+      const idxSave = idxVals.slice(0, pars.length).map((v,i) => Math.max(1, Math.min(pars.length, +v || (i + 1))));
       if (r.base){
         let ov = {};
         try { ov = JSON.parse(localStorage.getItem('ga_course_override') || '{}'); } catch(e){}
-        ov[r.id] = { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng };
+        ov[r.id] = Object.assign({}, ov[r.id], { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave });
         localStorage.setItem('ga_course_override', JSON.stringify(ov));
         if (D.PAR_MAP) D.PAR_MAP[r.id] = pars.slice();
+        if (D.INDEX_MAP) D.INDEX_MAP[r.id] = idxSave.slice();
         if (D.COURSE_NAME) D.COURSE_NAME[r.id] = name;
       } else {
         const lst = extraCourses();
         const c = lst[r.idx];
-        if (c){ c.name = name; c.loc = $('#ec-loc').value.trim(); c.pars = pars; c.holes = pars.length; c.lat = lat; c.lng = lng; }
+        if (c){ c.name = name; c.loc = $('#ec-loc').value.trim(); c.pars = pars; c.holes = pars.length; c.lat = lat; c.lng = lng; c.index = idxSave; }
         saveCourses(lst);
       }
       APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';

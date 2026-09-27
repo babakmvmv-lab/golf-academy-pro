@@ -58,6 +58,30 @@ Deno.serve(async (req) => {
       return json({ ok: true, put: put.length, del: del.length });
     }
 
+    /* ── اکشن ۳: انتشار دادهٔ عمومی فصل در سایت (سکو و تقویم) ──
+       فقط دو کلید مجاز است؛ دادهٔ خصوصی آکادمی هرگز از این مسیر خارج نمی‌شود.
+       گیت: اعتبارسنجی سخت شکل + سقف حجم + محدودیت نرخ (هر کلید حداکثر یک‌بار در ۱۵ ثانیه). */
+    if (body.action === "public") {
+      const rows = (body.rows || []).filter((r: any) =>
+        r && typeof r.k === "string" && /^web_setting_(season_podium|season_calendar)$/.test(r.k) &&
+        r.v && typeof r.v === "object" && !Array.isArray(r.v) && JSON.stringify(r.v).length <= 60000
+      );
+      if (!rows.length) return json({ ok: false, err: "no valid rows" }, 400);
+      for (const r of rows) {
+        const prev = await db.from("web_store").select("updated_at").eq("k", r.k).maybeSingle();
+        if (prev.data && prev.data.updated_at) {
+          const age = Date.now() - new Date(prev.data.updated_at).getTime();
+          if (age >= 0 && age < 15000) {
+            return json({ ok: false, err: "تازه‌ترین انتشار همین حالا ثبت شده؛ کمی بعد دوباره تلاش کنید." }, 429);
+          }
+        }
+        r.updated_at = new Date().toISOString();
+      }
+      const e1 = await db.from("web_store").upsert(rows);
+      if (e1.error) return json({ ok: false, err: e1.error.message }, 502);
+      return json({ ok: true, put: rows.length });
+    }
+
     /* ── اکشن ۲: ثبت جلسه + ضربه‌ها در جدول‌های واقعی (فاز ۱) ── */
     if (body.action === "shots") {
       const sn = body.session || {};

@@ -132,7 +132,7 @@ s=replace(s,'let d=async(e,s)=>{if(i(e),l){','let d=async(e,s)=>{n(null);if(i(e)
 # Item-based marquee management inside the existing content tab; no React coupling.
 # Sibling of the hero card (not nested inside it) so existing section selectors stay unambiguous.
 s=replace(s,'(0,t.jsx)(ee,{onSave:()=>a("hero",e.hero),saving:"hero"===r,saved:"hero"===i})]})',
-          '(0,t.jsx)(ee,{onSave:()=>a("hero",e.hero),saving:"hero"===r,saved:"hero"===i})]}),(0,t.jsx)("section",{className:"rounded-3xl border border-gold-500/10 bg-forest-900/70 p-6",ref:function(el){el&&window.PC_SITE_CLOUD&&window.PC_SITE_CLOUD.marqueeEditor(el)}}),(0,t.jsx)("section",{className:"rounded-3xl border border-gold-500/10 bg-forest-900/70 p-6",ref:function(el){el&&window.PC_SITE_CLOUD&&window.PC_SITE_CLOUD.showcaseEditor(el)}})')
+          '(0,t.jsx)(ee,{onSave:()=>a("hero",e.hero),saving:"hero"===r,saved:"hero"===i})]}),(0,t.jsx)("section",{className:"rounded-3xl border border-gold-500/10 bg-forest-900/70 p-6",ref:function(el){el&&window.PC_SITE_CLOUD&&window.PC_SITE_CLOUD.marqueeEditor(el)}}),(0,t.jsx)("section",{className:"rounded-3xl border border-gold-500/10 bg-forest-900/70 p-6",ref:function(el){el&&window.PC_SITE_CLOUD&&window.PC_SITE_CLOUD.showcaseEditor(el)}}),(0,t.jsx)("section",{className:"rounded-3xl border border-gold-500/10 bg-forest-900/70 p-6",ref:function(el){el&&window.PC_SITE_CLOUD&&window.PC_SITE_CLOUD.signupEditor&&window.PC_SITE_CLOUD.signupEditor(el)}})')
 save(name,s)
 
 # Never silently return to local-demo saves when the cloud bootstrap fails to load.
@@ -155,6 +155,73 @@ for name in ['0h.3tv9nj2ufm.js','0ia~_hsdpy603.js','12lzqn_~_d9qf.js']:
                   '}catch(err){S(err?.message||"ارتباط با سرور برقرار نشد.")}finally{v(!1)}')
     save(name,s)
 
+# ── Public form submissions travel through the cloud layer (orders/reviews/testimonials). ──
+# Static hosting answers 404/405 for these; the old localStorage fallbacks silently faked success.
+name='0tzhqo2g7futr.js';s=(CHUNKS/name).read_text()
+s=replace(s,'s=await fetch((0,C.withBase)("/api/orders"),','s=await window.PC_SITE_CLOUD.request((0,C.withBase)("/api/orders"),')
+save(name,s)
+
+name='10zhlc.ydq6io.js';s=(CHUNKS/name).read_text()
+s=replace(s,'s=await fetch((0,g.withBase)("/api/reviews"),','s=await window.PC_SITE_CLOUD.request((0,g.withBase)("/api/reviews"),')
+save(name,s)
+
+name='11h9c3275amaf.js';s=(CHUNKS/name).read_text()
+s=replace(s,'e=await fetch((0,h.withBase)("/api/site/testimonials"),{method:"POST"','e=await window.PC_SITE_CLOUD.request((0,h.withBase)("/api/site/testimonials"),{method:"POST"')
+# ── Academy section: the shop banner card becomes «سکوی قهرمانی فصل» + «تقویم فصل» (popups, no navigation). ──
+shop_card='(0,t.jsx)(T.Reveal,{delay:.1,children:(0,t.jsxs)(s.default,{href:"/shop",className:"group mt-8 flex flex-col items-center justify-between gap-4 rounded-3xl border border-gold-500/20 bg-gradient-to-l from-forest-800 to-forest-900 px-7 py-6 sm:flex-row",children:[(0,t.jsxs)("span",{className:"flex items-center gap-4",children:[(0,t.jsx)("span",{className:"grid size-12 place-items-center rounded-2xl bg-gold-500 text-forest-950",children:(0,t.jsx)(w.ShoppingBag,{size:21,strokeWidth:1.9})}),(0,t.jsxs)("span",{children:[(0,t.jsx)("span",{className:"block text-base font-black",children:"فروشگاه تجهیزات پات کلاب"}),(0,t.jsx)("span",{className:"mt-1 block text-xs text-sage",children:"چوب، توپ، کیف و پوشاک اورجینال با ضمانت اصالت"})]})]}),(0,t.jsxs)("span",{className:"inline-flex items-center gap-2 text-sm font-bold text-gold-300",children:["ورود به فروشگاه",(0,t.jsx)(i.ArrowLeft,{size:16,className:"transition-transform group-hover:-translate-x-1"})]})]})})'
+season_cards='(0,t.jsxs)("div",{className:"mt-8 grid gap-4 sm:grid-cols-2",children:[(0,t.jsx)(T.Reveal,{delay:.1,children:(0,t.jsxs)("button",{type:"button","data-season-popup":"podium",className:"group flex w-full flex-col items-center justify-between gap-4 rounded-3xl border border-gold-500/20 bg-gradient-to-l from-forest-800 to-forest-900 px-7 py-6 text-start sm:flex-row",children:[(0,t.jsxs)("span",{className:"flex items-center gap-4",children:[(0,t.jsx)("span",{className:"grid size-12 place-items-center rounded-2xl bg-gold-500 text-forest-950",children:"🏆"}),(0,t.jsxs)("span",{children:[(0,t.jsx)("span",{className:"block text-base font-black",children:"سکوی قهرمانی فصل"}),(0,t.jsx)("span",{className:"mt-1 block text-xs text-sage",children:"سه نفر برتر فصل پات‌کلاب"})]})]}),(0,t.jsxs)("span",{className:"inline-flex items-center gap-2 text-sm font-bold text-gold-300",children:["مشاهده سکو",(0,t.jsx)(i.ArrowLeft,{size:16,className:"transition-transform group-hover:-translate-x-1"})]})]})}),(0,t.jsx)(T.Reveal,{delay:.18,children:(0,t.jsxs)("button",{type:"button","data-season-popup":"calendar",className:"group flex w-full flex-col items-center justify-between gap-4 rounded-3xl border border-gold-500/20 bg-gradient-to-l from-forest-800 to-forest-900 px-7 py-6 text-start sm:flex-row",children:[(0,t.jsxs)("span",{className:"flex items-center gap-4",children:[(0,t.jsx)("span",{className:"grid size-12 place-items-center rounded-2xl bg-gold-500 text-forest-950",children:"📅"}),(0,t.jsxs)("span",{children:[(0,t.jsx)("span",{className:"block text-base font-black",children:"تقویم فصل"}),(0,t.jsx)("span",{className:"mt-1 block text-xs text-sage",children:"مسابقات، دوره‌ها، اردوها و تمرین‌ها"})]})]}),(0,t.jsxs)("span",{className:"inline-flex items-center gap-2 text-sm font-bold text-gold-300",children:["مشاهده تقویم",(0,t.jsx)(i.ArrowLeft,{size:16,className:"transition-transform group-hover:-translate-x-1"})]})]})})]})'
+s=replace(s,shop_card,season_cards)
+# ── Contact section: real Telegram/WhatsApp links when the admin fills them. ──
+contact_old='let e=(0,x.useSiteSettings)().contact,s=[{icon:d.Phone,title:"تلفن آکادمی",value:e.phoneFa,href:`tel:${e.phone}`,ltr:!0},{icon:o.Mail,title:"ایمیل",value:e.email,href:`mailto:${e.email}`,ltr:!0},{icon:n.MapPin,title:"آدرس",value:e.address,href:void 0,ltr:!1},{icon:l.Camera,title:"اینستاگرام",value:`@${e.instagram}`,href:e.instagramUrl,ltr:!0}];'
+contact_new=('let e=(0,x.useSiteSettings)().contact,'
+ 'pcT=v2=>String(v2||"").trim(),'
+ 'pcTg=p2=>(0,t.jsxs)("svg",{xmlns:"http://www.w3.org/2000/svg",width:p2.size||24,height:p2.size||24,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",className:p2.className,"aria-hidden":!0,children:[(0,t.jsx)("path",{d:"m22 2-7 20-4-9-9-4Z"}),(0,t.jsx)("path",{d:"M22 2 11 13"})]}),'
+ 'pcWa=p2=>(0,t.jsx)("svg",{xmlns:"http://www.w3.org/2000/svg",width:p2.size||24,height:p2.size||24,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",className:p2.className,"aria-hidden":!0,children:(0,t.jsx)("path",{d:"M7.9 20A9 9 0 1 0 4 16.1L2 22Z"})}),'
+ 'pcTel=v2=>/^https?:\\/\\//i.test(v2)?v2:"https://t.me/"+v2.replace(/^@/,""),'
+ 'pcWaU=v2=>/^https?:\\/\\//i.test(v2)?v2:"https://wa.me/"+v2.replace(/^0/,"98").replace(/[^0-9]/g,""),'
+ 's=[{icon:d.Phone,title:"تلفن آکادمی",value:e.phoneFa,href:`tel:${e.phone}`,ltr:!0},{icon:o.Mail,title:"ایمیل",value:e.email,href:`mailto:${e.email}`,ltr:!0},{icon:n.MapPin,title:"آدرس",value:e.address,href:void 0,ltr:!1},{icon:l.Camera,title:"اینستاگرام",value:`@${e.instagram}`,href:e.instagramUrl,ltr:!0},'
+ '...(pcT(e.telegram)?[{icon:pcTg,title:"تلگرام",value:pcT(e.telegram).replace(/^@/,""),href:pcTel(e.telegram),ltr:!0}]:[]),'
+ '...(pcT(e.whatsapp)?[{icon:pcWa,title:"واتس‌اپ",value:pcT(e.whatsapp),href:pcWaU(e.whatsapp),ltr:!0}]:[])];')
+s=replace(s,contact_old,contact_new)
+save(name,s)
+
+# ── Storefront: manual order (sortOrder from the shop panel) is the default sort; chips follow category order. ──
+name='0bk206q4lcysm.js';s=(CHUNKS/name).read_text()
+s=replace(s,'{key:"popular",label:"محبوب'+chr(0x200c)+'ترین"}','{key:"popular",label:"چیدمان فروشگاه"}')
+s=replace(s,'default:return[...s].sort((e,t)=>t.reviewCount-e.reviewCount)','default:return[...s].sort((e,t)=>(e.sortOrder??1e9)-(t.sortOrder??1e9)||t.reviewCount-e.reviewCount)')
+chips_old='let $=(0,s.useMemo)(()=>{let t=new Map;return e.forEach(e=>t.set(e.category,(t.get(e.category)??0)+1)),[...t.entries()]},[e])'
+chips_new=('let $=(0,s.useMemo)(()=>{let t=new Map;e.forEach(e=>t.set(e.category,(t.get(e.category)??0)+1));'
+ 'let o=[];try{o=window.PC_SITE_CLOUD?window.PC_SITE_CLOUD.shopCategories():[]}catch(x){}'
+ 'let w=x=>{const c=o.indexOf(x);return c<0?1e3:c};'
+ 'return[...t.entries()].sort((x,c)=>w(x[0])-w(c[0]))},[e])')
+s=replace(s,chips_old,chips_new)
+save(name,s)
+
+# ── Footer (site + shop): genuine telegram/whatsapp links; footer category order follows the layout editor. ──
+name='0ymry5ef_i~wt.js';s=(CHUNKS/name).read_text()
+tg_old='s.telegram&&(0,t.jsx)("a",{href:s.telegram,target:"_blank",rel:"noreferrer","aria-label":"تلگرام آکادمی",className:"grid size-10 place-items-center rounded-full border border-forest-600/70 text-cream/70 transition-all hover:border-gold-400 hover:text-gold-300",children:(0,t.jsx)(E.Send,{size:17,strokeWidth:1.7})}),'
+tg_new=('s.telegram&&(0,t.jsx)("a",{href:/^https?:/i.test(s.telegram)?s.telegram:"https://t.me/"+s.telegram.replace(/^@/,""),target:"_blank",rel:"noreferrer","aria-label":"تلگرام آکادمی",className:"grid size-10 place-items-center rounded-full border border-forest-600/70 text-cream/70 transition-all hover:border-gold-400 hover:text-gold-300",children:(0,t.jsx)(E.Send,{size:17,strokeWidth:1.7})}),'
+ 's.whatsapp&&(0,t.jsx)("a",{href:/^https?:/i.test(s.whatsapp)?s.whatsapp:"https://wa.me/"+s.whatsapp.replace(/^0/,"98").replace(/[^0-9]/g,""),target:"_blank",rel:"noreferrer","aria-label":"واتس‌اپ آکادمی",className:"grid size-10 place-items-center rounded-full border border-forest-600/70 text-cream/70 transition-all hover:border-gold-400 hover:text-gold-300",children:(0,t.jsx)("svg",{xmlns:"http://www.w3.org/2000/svg",width:17,height:17,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.7,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":!0,children:(0,t.jsx)("path",{d:"M7.9 20A9 9 0 1 0 4 16.1L2 22Z"})})}),')
+s=replace(s,tg_old,tg_new)
+phone_li='(0,t.jsxs)("li",{className:"flex items-center gap-3",dir:"ltr",children:[(0,t.jsx)(C.Phone,{size:16,className:"shrink-0 text-gold-500"}),(0,t.jsx)("a",{href:`tel:${s.phone}`,className:"transition-colors hover:text-gold-300",children:s.phoneFa})]})'
+phone_new=(phone_li+
+ ',s.telegram&&(0,t.jsxs)("li",{className:"flex items-center gap-3",dir:"ltr",children:[(0,t.jsx)(E.Send,{size:16,className:"shrink-0 text-gold-500"}),(0,t.jsx)("a",{href:/^https?:/i.test(s.telegram)?s.telegram:"https://t.me/"+s.telegram.replace(/^@/,""),target:"_blank",rel:"noreferrer",className:"transition-colors hover:text-gold-300",children:"تلگرام"})]}),'
+ 's.whatsapp&&(0,t.jsxs)("li",{className:"flex items-center gap-3",dir:"ltr",children:[(0,t.jsx)("svg",{xmlns:"http://www.w3.org/2000/svg",width:16,height:16,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",className:"shrink-0 text-gold-500","aria-hidden":!0,children:(0,t.jsx)("path",{d:"M7.9 20A9 9 0 1 0 4 16.1L2 22Z"})}),(0,t.jsx)("a",{href:/^https?:/i.test(s.whatsapp)?s.whatsapp:"https://wa.me/"+s.whatsapp.replace(/^0/,"98").replace(/[^0-9]/g,""),target:"_blank",rel:"noreferrer",className:"transition-colors hover:text-gold-300",children:"واتس‌اپ"})]})')
+s=replace(s,phone_li,phone_new)
+s=replace(s,'T.CATEGORIES.map(e=>(0,t.jsx)("li",{children:(0,t.jsx)(a.default,{href:`/shop?cat=${encodeURIComponent(e)}`,className:"transition-colors hover:text-gold-300",children:e})},e))',
+          '((window.PC_SITE_CLOUD&&window.PC_SITE_CLOUD.shopCategories().length)?window.PC_SITE_CLOUD.shopCategories():T.CATEGORIES).map(e=>(0,t.jsx)("li",{children:(0,t.jsx)(a.default,{href:`/shop?cat=${encodeURIComponent(e)}`,className:"transition-colors hover:text-gold-300",children:e})},e))')
+save(name,s)
+
+# ── Site admin: image upload buttons (URL option stays). ──
+name='116gnhx5f2czu.js';s=(CHUNKS/name).read_text()
+s=replace(s,'className:"grid size-11 shrink-0 place-items-center rounded-xl bg-gold-500 text-forest-950","aria-label":"افزودن عکس",children:(0,t.jsx)(_,{size:17})})',
+          'className:"grid size-11 shrink-0 place-items-center rounded-xl bg-gold-500 text-forest-950","aria-label":"افزودن عکس",children:(0,t.jsx)(_,{size:17})}),(0,t.jsx)("button",{type:"button",onClick:()=>window.PC_IMG&&window.PC_IMG.pick(1400,u=>{g("images",[...d.images,u]);m("")}),className:"grid size-11 shrink-0 place-items-center rounded-xl border border-gold-500/40 text-gold-300","aria-label":"بارگذاری عکس از فایل",title:"بارگذاری عکس از فایل (تبدیل خودکار به WebP)",children:"⬆"})')
+for label,field_name,max_dim,setter in [('آدرس فایل لوگو','logo',512,'o("brand",{...e.brand,logo:u})'),('آدرس لوگوی باکیفیت','logoHd',1024,'o("brand",{...e.brand,logoHd:u})'),('آدرس تصویر بخش','image',1600,'o("about",{...e.about,image:u})')]:
+    inp_old='(0,t.jsx)(et,{label:"'+label+'",children:(0,t.jsx)("input",{value:e.'+( 'brand.' if field_name in('logo','logoHd') else 'about.')+field_name+',onChange:t=>o("'+('brand' if field_name in('logo','logoHd') else 'about')+'",{...e.'+('brand' if field_name in('logo','logoHd') else 'about')+','+field_name+':t.target.value}),dir:"ltr",className:`${Y} text-left font-mono text-xs`})})'
+    inp_new='(0,t.jsx)(et,{label:"'+label+'",children:(0,t.jsxs)("div",{className:"flex gap-2",children:[(0,t.jsx)("input",{value:e.'+('brand.' if field_name in('logo','logoHd') else 'about.')+field_name+',onChange:t=>o("'+('brand' if field_name in('logo','logoHd') else 'about')+'",{...e.'+('brand' if field_name in('logo','logoHd') else 'about')+','+field_name+':t.target.value}),dir:"ltr",className:`${Y} text-left font-mono text-xs`}),(0,t.jsx)("button",{type:"button",onClick:()=>window.PC_IMG&&window.PC_IMG.pick('+str(max_dim)+',u=>'+setter+'),className:"shrink-0 self-center rounded-xl border border-gold-500/40 px-3 py-2 text-xs font-bold text-gold-300",children:"بارگذاری"})]})})'
+    s=replace(s,inp_old,inp_new)
+save(name,s)
+
 # Build one blocking bootstrap before the original async Next chunks.
 cloud=(ROOT/'source/js/cloud.js').read_text()
 url=re.search(r"url: '([^']+)'",cloud).group(1)
@@ -172,6 +239,7 @@ shop_asset='shop-ops.'+hashlib.sha256(ops.encode()).hexdigest()[:12]+'.js'
 (ROOT/shop_asset).write_text(ops);config['shopOpsAsset']=shop_asset
 script='/* Generated by source/build_public_cloud.py; edit source/js/site-cloud.js instead. */\nwindow.PC_SITE_CLOUD_CONFIG='+json.dumps(config,ensure_ascii=False,separators=(',',':'))+';\n'+(ROOT/'source/js/site-cloud.js').read_text()
 script+='\n'+(ROOT/'source/js/site-marquee.js').read_text()+'\n'+(ROOT/'source/js/site-showcase.js').read_text()+'\n'+(ROOT/'source/js/site-payments.js').read_text()
+script+='\n'+(ROOT/'source/js/site-img.js').read_text()+'\n'+(ROOT/'source/js/site-season.js').read_text()+'\n'+(ROOT/'source/js/site-signup.js').read_text()
 bootstrap='site-cloud.'+hashlib.sha256(script.encode()).hexdigest()[:12]+'.js'
 (ROOT/bootstrap).write_text(script)
 

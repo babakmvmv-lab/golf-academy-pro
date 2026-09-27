@@ -21,3 +21,22 @@
 .sh-balance-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin:15px 0}.sh-report-balance{overflow-wrap:anywhere}@media(max-width:760px){.sh-balance-grid{grid-template-columns:1fr}.sh-line-table{min-width:550px}}
 
 .sh-scan{position:relative;margin-bottom:12px}.sh-scan>label{display:flex;align-items:center;gap:9px;color:#d9c58e}.sh-scan [data-scan-results]{position:absolute;top:100%;right:0;left:0;z-index:5;background:#173823;border:1px solid #b8aa6555;border-radius:10px;box-shadow:0 10px 35px #0007;overflow:hidden;margin-top:5px}.sh-scan [data-scan-results] button{display:block;width:100%;text-align:right;padding:10px 13px;background:transparent;border:0;border-bottom:1px solid #ddc07c20;color:#eee8d7;font:inherit;cursor:pointer}.sh-scan [data-scan-results] button:hover{background:#ddc07c15}.sh-scan [data-scan-results] small{display:block;font-size:10px;color:#aac3aa}.sh-scan [hidden]{display:none}
+
+/* ── چیدمان فروشگاه (پیش‌نمایش موبایلی با کشیدن) ── */
+.sh-layout-wrap{display:flex;justify-content:center;padding:8px 0 28px}
+.sh-phone{width:390px;max-width:100%;border:10px solid #1c2a22;border-radius:38px;background:#050d09;box-shadow:0 24px 70px -18px rgba(0,0,0,.7);overflow:hidden}
+.sh-phone-notch{width:120px;height:18px;border-radius:0 0 14px 14px;background:#1c2a22;margin:0 auto}
+.sh-phone-body{padding:14px 12px 22px;min-height:420px;max-height:64vh;overflow:auto}
+.sh-lay-cat{border:1px solid #c9a24b22;border-radius:14px;margin-bottom:10px;background:#0a1712}
+.sh-lay-cat>.sh-drag-row{padding:9px 12px}
+.sh-drag-row{display:flex;align-items:center;gap:10px;border-radius:10px;user-select:none}
+.sh-drag-row.sh-drag-on{background:#c9a24b18;outline:1.5px dashed #c9a24b88}
+.sh-grip{color:#c9a24baa;font-size:15px;letter-spacing:-2px;cursor:grab;touch-action:none;padding:4px 2px}
+.sh-grip:active{cursor:grabbing}
+.sh-lay-cathead{flex:1;display:flex;justify-content:space-between;align-items:center;gap:8px;font:inherit;font-size:12.5px;font-weight:800;color:#e3c98f;background:none;border:none;cursor:pointer;padding:0;min-width:0}
+.sh-lay-cathead span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh-lay-cathead small{color:#93aa9c;font-weight:600;font-size:10.5px;flex-shrink:0}
+.sh-lay-prods{padding:0 6px 6px 18px}
+.sh-lay-prod{padding:7px 8px}
+.sh-lay-prod .t{font-size:12px;color:#dce6d8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh-btn.attention{box-shadow:0 0 0 2px #c9a24b88}

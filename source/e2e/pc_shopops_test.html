@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><script src="/site-cloud.8e38119a3b78.js"></script>
+<title>shop-ops layout test</title></head><body>
+<div id="host"></div>
+<script>
+/* Stub cloud layer; the real shop-ops asset is loaded after this. */
+window.PC_SITE_CLOUD_CONFIG={url:'http://stub.local',key:'stub-key'};
+window.__calls=[];
+window.PC_SITE_CLOUD={
+  accessToken:async()=>'stub-token',
+  pull:async()=>true,
+  shopCategories:()=>['توپ‌ها','چوب‌ها'],
+  request:async(url,init={})=>{
+    window.__calls.push({kind:'request',url,method:init.method||'GET',body:init.body});
+    if(url==='/api/admin/reviews'){
+      return {ok:true,json:async()=>({reviews:[
+        {id:11,productId:1,author:' Ali ',rating:5,comment:'عالی بود',status:'pending',createdAt:'2026-09-27T10:00:00.000Z'},
+        {id:12,productId:2,author:'Sara',rating:4,comment:'خوب',status:'approved',createdAt:'2026-09-26T10:00:00.000Z'}
+      ]})};
+    }
+    return {ok:true,json:async()=>({ok:true})};
+  },
+  authDialog(){},settings:()=>({brand:{},marquee:{enabled:false}}),subscribe(){},table:()=>[],brandShort:()=>'پات‌کلاب',authSession:()=>({user:{app_metadata:{}}}),
+};
+</script>
+<script src="/shop-ops.adc71b9af182.js"></script>
+<script>
+/* Intercept web-erp calls (shop-ops api() uses raw fetch to the stub URL). */
+const realFetch=window.fetch;
+window.fetch=async(url,init={})=>{
+  const u=String(url);
+  if(u.includes('stub.local/functions/v1/web-erp')){
+    const body=JSON.parse(init.body||'{}');
+    window.__calls.push({kind:'erp',action:body.action,payload:body.payload});
+    let data=null;
+    if(body.action==='bootstrap'){
+      data={user:{manager:true,name:'مدیر تست',today:'2026-09-27',permissions:{}},
+        products:[
+          {id:1,name:'توپ A',category:'توپ‌ها',sale_price:100,stock:5,sku:'T1',unit:'عدد',attributes:{},public_data:{sortOrder:2,images:[]}},
+          {id:2,name:'توپ B',category:'توپ‌ها',sale_price:200,stock:5,sku:'T2',unit:'عدد',attributes:{},public_data:{sortOrder:1,images:[]}},
+          {id:3,name:'چوب C',category:'چوب‌ها',sale_price:300,stock:5,sku:'C3',unit:'عدد',attributes:{},public_data:{sortOrder:1,images:[]}},
+          {id:4,name:'کیف D',category:'کیف‌ها',sale_price:400,stock:5,sku:'K4',unit:'عدد',attributes:{},public_data:{images:[]}}
+        ]};
+    }
+    if(body.action==='layout_save')data={ok:true};
+    return {ok:true,json:async()=>({ok:true,data})};
+  }
+  return realFetch(url,init);
+};
+window.addEventListener('error',e=>console.log('PAGEERROR',e.message));
+</script>
+</body></html>
+<script>window.SHOP_OPS&&window.SHOP_OPS.mount(document.getElementById('host'));</script>

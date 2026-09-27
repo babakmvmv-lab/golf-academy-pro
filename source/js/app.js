@@ -106,6 +106,13 @@
 
   /* ── ابزارهای کمکی UI ── */
   const avatar = pid => (window.Data && Data.photoOf) ? Data.photoOf(pid) : (pid % 2 ? 'assets/avatar_m.webp' : 'assets/avatar_f.webp');
+  /* انتشار عمومی در سایت: مسیرهای نسبی باید مطلق شوند تا روی صفحهٔ سایت کار کنند */
+  const siteAsset = u => /^(https?:|data:)/.test(u || '') ? u : '/' + String(u || '').replace(/^\/+/, '');
+  async function publishToSite(rows){
+    if (!window.GA_SYNC || !GA_SYNC.public) { APP.toast('لایهٔ ابر بارگذاری نشده است.', 'orange'); return false; }
+    try { await GA_SYNC.public(rows); return true; }
+    catch (e) { APP.toast('انتشار در سایت انجام نشد: ' + (e && e.message || e), 'red'); return false; }
+  }
   const ringColor = rk => rk === 'Gold Elite' ? 'gold' : rk === 'Red' ? 'red' : rk === 'Blue' ? 'blue' : rk === 'Green' ? 'green' : 'dim';
   function rankPill(rk){
     const def = D.RANK_DEF.find(r => r[0] === rk) || D.RANK_DEF[0];
@@ -446,7 +453,7 @@
     <div class="grid cols-4" id="cmd-stats"></div>
     <div class="grid cols-3" style="margin-top:18px">
       <div class="glass tilt" style="grid-column:span 2">
-        <div class="card-head"><span class="ic">🏆</span><h3>سکوی قهرمانی فصل</h3><span class="tag">FedEx Style</span>${storyBtn('st-podium')}</div>
+        <div class="card-head"><span class="ic">🏆</span><h3>سکوی قهرمانی فصل</h3><span class="tag">FedEx Style</span>${storyBtn('st-podium')}<button class="btn sm ghost" id="pub-podium" title="نمایش همین سکو در پاپ‌آپ سایت" style="margin-right:auto">🌐 انتشار در سایت</button></div>
         <div class="podium">
           ${[1,0,2].map(k => {
             const r = top[k];
@@ -541,6 +548,26 @@
       if (apply){
         apply.addEventListener('click', () => drawMonthlyChart());
       }
+      const pubP = $('#pub-podium');
+      if (pubP) pubP.addEventListener('click', async () => {
+        const top3 = raceLB().LB.slice(0, 3);
+        const value = {
+          seasonYear: D.seasonYear,
+          matchesHeld: A.MATCHES_HELD,
+          playersActive: A.LB.length,
+          updatedAt: new Date().toISOString(),
+          top: top3.map((r, k) => ({
+            rank: k + 1, name: r.name, pts: r.pts,
+            rankText: D.RANK_TEXT[r.color] || '',
+            rankColor: (D.RANK_DEF.find(x => x[0] === r.color) || [])[3] || '#8A93A6',
+            avatar: siteAsset(avatar(r.pid))
+          }))
+        };
+        pubP.disabled = true;
+        const ok = await publishToSite([{ k: 'web_setting_season_podium', v: value }]);
+        pubP.disabled = false;
+        if (ok) APP.toast('سکوی قهرمانی در سایت منتشر شد ✓', 'green');
+      });
       const sp = $('#st-podium');
       if (sp) sp.addEventListener('click', () => {
         const top3 = raceLB().LB.slice(0, 3);
@@ -2232,6 +2259,7 @@
         <div style="font-size:16px;font-weight:800" class="gold-text">${D.fa(events.length)} رویداد</div>
       </div>
         <button class="btn sm" id="st-cal" style="background:linear-gradient(135deg,#d62976,#fa7e1e);color:#fff;font-weight:800">📱 استوری</button>
+        <button class="btn sm ghost" id="pub-cal" title="نمایش همین تقویم در پاپ‌آپ سایت">🌐 انتشار در سایت</button>
         <button class="btn sm ghost" onclick="APP.go('mgmt')">⚙️ مدیریت ${esc(L('nav.cal','تقویم فصل'))}</button>
     </div>
 
@@ -2265,6 +2293,26 @@
       </div>
     </div>`;
 
+    const pubCal = $('#pub-cal');
+    if (pubCal) pubCal.addEventListener('click', async () => {
+      /* همان منابع رویداد پنل — بدون فیلتر ماه، برای کل فصل */
+      const rows = events.filter(e => e.d && !isNaN(e.d)).map(e => {
+        const j = D.jalaliInfo(e.d);
+        return {
+          date: `${j.jy}/${String(j.mm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`,
+          jd: j.jd, jm: j.mm,
+          icon: e.icon || TYPE_ICON[e.type] || '📌',
+          name: e.name || 'رویداد', kind: e.kind || e.type || '',
+          extra: String(e.extra || '').replace(/<[^>]*>/g, '').slice(0, 80),
+          past: e.d < D.TODAY
+        };
+      });
+      const value = { seasonYear: D.seasonYear, updatedAt: new Date().toISOString(), events: rows };
+      pubCal.disabled = true;
+      const ok = await publishToSite([{ k: 'web_setting_season_calendar', v: value }]);
+      pubCal.disabled = false;
+      if (ok) APP.toast(`تقویم فصل با ${D.fa(rows.length)} رویداد در سایت منتشر شد ✓`, 'green');
+    });
     const stCal = $('#st-cal');
     if (stCal) stCal.addEventListener('click', () => {
       const nx = events[nextIdx];

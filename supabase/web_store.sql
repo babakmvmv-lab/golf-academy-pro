@@ -6,13 +6,13 @@ create table if not exists public.web_store (
   v jsonb not null,
   updated_at timestamptz not null default clock_timestamp(),
   constraint web_store_key_scope check (
-    k ~ '^web_(setting_(brand|theme|contact|menu|hero|about|courses_section|testimonials_section|footer|shop_gate|marquee|payment_gateways|pay_cards)|(product|category|course|testimonial|review)_[0-9]+)$'
+    k ~ '^web_(setting_(brand|theme|contact|menu|hero|about|courses_section|testimonials_section|footer|shop_gate|marquee|payment_gateways|pay_cards|season_podium|season_calendar|course_signup|shop_categories)|(product|category|course|testimonial|review)_[0-9]+)$'
   ),
   constraint web_store_json_shape check (jsonb_typeof(v) in ('object','array'))
 );
 do $$ begin
   alter table public.web_store drop constraint if exists web_store_key_scope;
-  alter table public.web_store add constraint web_store_key_scope check (k ~ '^web_(setting_(brand|theme|contact|menu|hero|about|courses_section|testimonials_section|footer|shop_gate|marquee|payment_gateways|pay_cards)|(product|category|course|testimonial|review)_[0-9]+)$');
+  alter table public.web_store add constraint web_store_key_scope check (k ~ '^web_(setting_(brand|theme|contact|menu|hero|about|courses_section|testimonials_section|footer|shop_gate|marquee|payment_gateways|pay_cards|season_podium|season_calendar|course_signup|shop_categories)|(product|category|course|testimonial|review)_[0-9]+)$');
 end $$;
 alter table public.web_store enable row level security;
 revoke all on public.web_store from anon, authenticated;
@@ -24,5 +24,18 @@ do $$ begin
   end if;
 end $$;
 comment on table public.web_store is 'Website/shop PUBLIC content only. Independent of academy storage. Writes exclusively through authenticated web-sync; no credentials, customer orders, or private submissions.';
+-- Private inbox for public form submissions that contain contact data (course signups).
+-- Never readable by anon/authenticated browsers; only service-role functions touch it.
+create table if not exists public.web_inbox (
+  id bigint primary key,
+  kind text not null,
+  data jsonb not null,
+  created_at timestamptz not null default clock_timestamp(),
+  constraint web_inbox_kind check (kind in ('signup'))
+);
+alter table public.web_inbox enable row level security;
+revoke all on public.web_inbox from anon, authenticated;
+grant all on public.web_inbox to service_role;
+comment on table public.web_inbox is 'Private contact-carrying submissions (course signups). Read/deleted only through authenticated web-sync by the site owner; never published.';
 create index if not exists web_store_updated_at_idx on public.web_store(updated_at);
 commit;

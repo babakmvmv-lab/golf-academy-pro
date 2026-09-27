@@ -332,9 +332,45 @@
     }
     return null;
   }
+  /* Public form submissions (review / testimonial / course signup) → web-order edge function. */
+  async function submitPublic(action,payload){
+    try{
+      const res=await nativeFetch(C.url.replace(/\/+$/,'')+'/functions/v1/web-order',{
+        method:'POST',
+        headers:{apikey:C.key,'Content-Type':'application/json'},
+        body:JSON.stringify({action,payload:payload||{}}),
+      });
+      const out=await res.json().catch(()=>null);
+      if(!res.ok||!out||out.ok!==true)return {error:(out&&out.error)||'ارسال انجام نشد؛ دوباره تلاش کنید.'};
+      return out.data||{};
+    }catch(e){return {error:'ارتباط با سرور برقرار نشد؛ دوباره تلاش کنید.'};}
+  }
+  /* Shop category order (published from the shop panel's layout editor). */
+  function shopCategories(){
+    try{
+      const v=settings().shopCategories;
+      const list=v&&Array.isArray(v.categories)?v.categories:[];
+      return list.map(x=>x&&x.name).filter(x=>typeof x==='string'&&x);
+    }catch(e){return [];}
+  }
+  /* Private signup inbox — read/deleted only by the authenticated site owner. */
+  async function signupInbox(){
+    const access=await accessToken();
+    if(!access)throw error('برای دیدن ثبت‌نام‌ها، وارد حساب مدیر سایت شوید.',401,'WEB_AUTH_REQUIRED');
+    const r=await request(C.url.replace(/\/+$/,'')+'/functions/v1/web-sync',{method:'POST',headers:{...headers(),Authorization:'Bearer '+access},body:JSON.stringify({action:'inbox'})});
+    if(!r||r.ok!==true||!Array.isArray(r.rows))throw error('خواندن ثبت‌نام‌ها انجام نشد.',502);
+    return r.rows;
+  }
+  async function signupDelete(id){
+    const access=await accessToken();
+    if(!access)throw error('برای حذف ثبت‌نام، وارد حساب مدیر سایت شوید.',401,'WEB_AUTH_REQUIRED');
+    const r=await request(C.url.replace(/\/+$/,'')+'/functions/v1/web-sync',{method:'POST',headers:{...headers(),Authorization:'Bearer '+access},body:JSON.stringify({action:'inbox_delete',id:+id})});
+    if(!r||r.ok!==true)throw error('حذف ثبت‌نام انجام نشد.',502);
+    return true;
+  }
   async function route(url,init={}){
     const path=url.pathname.replace(/\/$/,''),method=(init.method||'GET').toUpperCase(),admin=path.startsWith('/api/admin/');
-    const matched=/^\/api\/(?:admin\/(?:site\/(?:settings|courses|testimonials)|products|categories|reviews|stats)(?:\/[^/]+)?|site\/(?:content|courses|shop-gate\/unlock))$/.test(path) || path==='/api/site/testimonials' && method==='GET' || path==='/api/orders' && method==='POST';
+    const matched=/^\/api\/(?:admin\/(?:site\/(?:settings|courses|testimonials)|products|categories|reviews|stats)(?:\/[^/]+)?|site\/(?:content|courses|shop-gate\/unlock))$/.test(path) || path==='/api/site/testimonials' && (method==='GET'||method==='POST') || path==='/api/orders' && method==='POST' || path==='/api/reviews' && method==='POST';
     if(!matched)return null;
     try{
       if(admin && !isAdmin())return response({error:'ورود به مدیریت لازم است.'},401);
@@ -351,6 +387,17 @@
       if(path==='/api/orders' && method==='POST'){
         if(!window.PC_PAY||!window.PC_PAY.handleOrder)return nativeFetch(input,init);
         return window.PC_PAY.handleOrder(init.body);
+      }
+      /* Public form submissions travel through the web-order edge function (anon key, capped). */
+      if(path==='/api/reviews' && method==='POST'){
+        const out=await submitPublic('review',body);
+        if(out.error)return response({error:out.error},400);
+        return response({ok:true,review:out.review||null});
+      }
+      if(path==='/api/site/testimonials' && method==='POST'){
+        const out=await submitPublic('testimonial',body);
+        if(out.error)return response({error:out.error},400);
+        return response({ok:true});
       }
       if(!admin)throw error('این عملیات مجاز نیست.',403);
       if(path==='/api/admin/site/settings' && method==='PUT'){
@@ -539,7 +586,7 @@
       script.onerror=()=>{clearTimeout(tm);script.remove();shopCodeFlight=null;reject(Error('فایل پنل فروشگاه دریافت نشد؛ صفحه را تازه کنید.'));};document.head.appendChild(script);
     });return shopCodeFlight;
   }
-  window.PC_SITE_CLOUD={loadShopOps,accessToken,signInAdmin,signOut,changePassword,authSession,authDialog,request:apiFetch,pull,flush,subscribe,settings,table,liveState,useTable,useProduct,useProductReviewMeta,useCard,brandShort,productHref,gateRevision,gateSessionValid,importLegacy,
+  window.PC_SITE_CLOUD={loadShopOps,accessToken,signInAdmin,signOut,changePassword,authSession,authDialog,request:apiFetch,pull,flush,subscribe,settings,table,liveState,useTable,useProduct,useProductReviewMeta,useCard,brandShort,productHref,gateRevision,gateSessionValid,importLegacy,submitPublic,signupInbox,signupDelete,shopCategories,
     status:()=>({phase,pending:Object.keys(queue),error:lastError,lastRead,lastAck,revision}),
     publish,normalizeSetting,normalizeRecord,keyFor,resolvePending,showcaseApplied};
 })();

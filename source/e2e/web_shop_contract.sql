@@ -122,6 +122,7 @@ declare owner_id uuid; sale_user uuid:=gen_random_uuid(); buy_user uuid:=gen_ran
  r=web_shop.order_create('qa-session-0001',jsonb_build_object('client_id',gen_random_uuid(),'payment',jsonb_build_object('method','card2card'),'customer',jsonb_build_object('name','مشتری آنلاین','phone','09120000000'),'items',jsonb_build_array(jsonb_build_object('product_id',(p1->>'id')::bigint,'qty',1))));
  if (r->>'total')::numeric<>350090 or r->>'code' is null then raise exception 'QA order create';end if;
  if web_shop.held((p1->>'id')::bigint,'')<>1 then raise exception 'QA order must pin its hold';end if;
+ if (r->'customer'->>'name') is distinct from 'مشتری آنلاین' or (r->'customer'->>'phone') is distinct from '09120000000' then raise exception 'QA customer values must not carry JSON quotes: %',r->'customer';end if;
  perform web_shop.order_report((select client_id from web_shop.orders where code=r->>'code'),jsonb_build_object('destination_id',1,'from_card','6037991111111111','date','1405/07/01','time','12:30','trace','12345','reference','REF-1','note','تست'));
  perform web_shop.order_cancel_public((select client_id from web_shop.orders where code=r->>'code'));
  if web_shop.held((p1->>'id')::bigint,'')<>0 then raise exception 'QA cancel must release holds';end if;

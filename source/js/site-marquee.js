@@ -27,18 +27,58 @@
   let cfg;try{cfg=clean(api.settings().marquee||defaults());}catch(e){cfg=defaults();}
   const items=cfg.items.filter(x=>x.visible&&x.text.trim());
   const on=cfg.enabled&&!!items.length;
-  if(!on){bar.style.display='none';track.textContent='';}
+  if(!on){bar.style.display='none';track.textContent='';stopMqLoop();}
   else bar.style.display='';
   const dot='<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-dot text-gold-500" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="12" r="10"></circle></svg>';
-  const span=(x,hidden)=>'<span class="flex items-center gap-8 whitespace-nowrap text-sm font-medium text-cream/70" data-marquee-id="'+esc(x.id)+'"'+(hidden?' aria-hidden="true"':'')+'>'+esc(x.text)+dot+'</span>';
-  const half=copy=>'<div class="flex items-center gap-8"'+(copy?' aria-hidden="true"':'')+'>'+items.map(x=>span(x,false)).join('')+items.map(x=>span(x,true)).join('')+'</div>';
-  track.innerHTML=on?half(false)+half(true):'';
+  const span=x=>'<span class="flex items-center gap-8 whitespace-nowrap text-sm font-medium text-cream/70" data-marquee-id="'+esc(x.id)+'">'+esc(x.text)+dot+'</span>';
+  /* Single LTR sequence: enters from the right, exits left, 2s pause, repeat. */
+  track.dir='ltr';
+  track.innerHTML=on?items.map(span).join(''):'';
   bar.classList.add('pc-public-marquee');
   bar.setAttribute('role','region');
   bar.setAttribute('aria-label','پیام‌های کوتاه آکادمی و فروشگاه');
   bar.setAttribute('data-site-marquee',on?'on':'off');
+  if(on)startMqLoop(bar,track);
  }
  let publicWatch=false;
+ /* JS-driven marquee cycle: one full pass (enter right → exit left), then a 2s pause before the first item starts again. */
+ let mqAnim=null,mqTimer=null;
+ function stopMqLoop(){
+  try{if(mqAnim)mqAnim.cancel();}catch(e){}
+  mqAnim=null;
+  if(mqTimer){clearTimeout(mqTimer);mqTimer=null;}
+ }
+ function startMqLoop(bar,track){
+  stopMqLoop();
+  try{
+   if(!track||!track.isConnected)return;
+   track.style.animation='none'; /* take over from the original 34s CSS keyframes */
+   const W=bar.clientWidth||window.innerWidth||0,seq=track.scrollWidth;
+   if(!W||!seq)return;
+   if(typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches){
+    track.style.transform='translateX(0)'; /* static: show whatever fits */
+    return;
+   }
+   const travel=W+seq; /* from fully off-screen right to fully off-screen left */
+   const duration=Math.max(6000,Math.round(travel/70*1000)); /* ~70px/s, same reading speed as before */
+   const run=()=>{
+    if(!track.isConnected)return;
+    mqAnim=track.animate([{transform:'translateX('+W+'px)'},{transform:'translateX(-'+seq+'px)'}],{duration,easing:'linear',fill:'forwards'});
+    mqAnim.onfinish=()=>{if(!track.isConnected)return;mqTimer=setTimeout(run,2000);}; /* ۲ ثانیه مکث بین دو دور */
+   };
+   track.style.transform='translateX('+W+'px)';
+   run();
+   if(!bar.dataset.mqPauseBound){
+    bar.dataset.mqPauseBound='1';
+    const pause=()=>{try{if(mqAnim)mqAnim.pause();}catch(e){}};
+    const resume=()=>{try{if(mqAnim)mqAnim.play();}catch(e){}};
+    bar.addEventListener('mouseenter',pause);
+    bar.addEventListener('mouseleave',resume);
+    bar.addEventListener('focusin',pause);
+    bar.addEventListener('focusout',resume);
+   }
+  }catch(e){}
+ }
  function startPublicWatch(){
   if(publicWatch||typeof document==='undefined')return;publicWatch=true;
   const run=()=>{try{style();hydratePublic();}catch(e){}};

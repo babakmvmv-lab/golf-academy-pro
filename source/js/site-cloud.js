@@ -256,6 +256,14 @@
   }
   async function normalizeSetting(name,value){
     if(!SETTING_KEYS.includes(name))throw error('نام تنظیمات معتبر نیست.',422);
+    if(name==='marquee'){
+      if(!safeObject(value)||typeof value.enabled!=='boolean'||!Array.isArray(value.items)||value.items.length>40)throw error('ساختار نوار متحرک معتبر نیست؛ حداکثر ۴۰ آیتم مجاز است.',422);
+      const seen=new Set();
+      return {enabled:value.enabled,items:value.items.map(x=>{
+        if(!safeObject(x)||typeof x.id!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(x.id)||seen.has(x.id)||typeof x.text!=='string'||!x.text.trim()||x.text.trim().length>180||typeof x.visible!=='boolean')throw error('متن هر آیتم باید بین ۱ تا ۱۸۰ نویسه باشد؛ ردیف خالی یا تکرار شناسه مجاز نیست.',422);
+        seen.add(x.id);return {id:x.id,text:x.text.trim(),visible:x.visible};
+      })};
+    }
     if(name==='menu'){
       if(!Array.isArray(value))throw error('ساختار منو معتبر نیست.',422);
       return value.map(x=>{if(!x || !validUrl(x.href) || typeof x.label!=='string')throw error('عنوان یا نشانی منو معتبر نیست.',422);return{label:x.label,href:x.href,visible:x.visible!==false};});

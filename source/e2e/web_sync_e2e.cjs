@@ -21,6 +21,19 @@ let passed=0;async function test(n,fn){await fn();passed++;console.log('PASS '+n
  await test('Fresh insert cannot overwrite an already-created record',async()=>{const x=boot(),body={action:'kv',rows:[{k:'web_setting_hero',v:{line1:'A'},base:null}]};assert.equal((await x.post(body)).status,200);body.rows[0].v.line1='B';assert.equal((await x.post(body)).status,409);assert.equal(x.rows.get('web_setting_hero').v.line1,'A');});
  await test('Update is atomic compare-and-set; stale revision never overwrites',async()=>{const x=boot(),body={action:'kv',rows:[{k:'web_setting_hero',v:{line1:'A'},base:null}]};const first=await x.post(body);const base=first.data.rows[0].updated_at;const stale=await x.post({action:'kv',rows:[{k:'web_setting_hero',v:{line1:'B'},base:'2000-01-01T00:00:00Z'}]});assert.equal(stale.status,409);assert.equal(x.rows.get('web_setting_hero').v.line1,'A');assert.equal((await x.post({action:'kv',rows:[{k:'web_setting_hero',v:{line1:'C'},base}]})).status,200);assert.equal(x.rows.get('web_setting_hero').v.line1,'C');});
  await test('Unapproved or private feedback fields cannot be stored publicly',async()=>{const x=boot();for(const v of [{id:1,name:'Test',status:'pending'},{id:1,name:'Test',status:'approved',phone:'private'},{id:1,name:'Test',email:'private'},{id:1,name:'Test',password:'private'}])assert.equal((await x.post({action:'kv',rows:[{k:'web_testimonial_1',v,base:null}]})).status,400);assert.equal(x.tables.length,0);});
+ await test('Marquee record must be a bounded list of well-formed public items',async()=>{
+  const x=boot(),ok={enabled:true,items:[{id:'m1',text:'پیام تست',visible:true}]};
+  assert.equal((await x.post({action:'kv',rows:[{k:'web_setting_marquee',v:ok,base:null}]})).status,200);
+  const bad=[
+   {enabled:1,items:ok.items},
+   {enabled:true,items:[{id:'m1',text:'ok',visible:true,phone:'x'}]},
+   {enabled:true,items:[{id:'m1',text:'ok'}]},
+   {enabled:true,items:[{id:'m1',text:'',visible:true}]},
+   {enabled:true,items:[{id:'m 1',text:'ok',visible:true}]},
+   {enabled:true,items:Array.from({length:41},(_,i)=>({id:'m'+i,text:'ok',visible:true}))},
+  ];
+  for(const v of bad)assert.equal((await x.post({action:'kv',rows:[{k:'web_setting_marquee',v,base:null}]})).status,400,JSON.stringify(v));
+ });
  await test('Gate accepts only a digest, not a plaintext unlock code',async()=>{const x=boot();assert.equal((await x.post({action:'kv',rows:[{k:'web_setting_shop_gate',v:{enabled:true,code:'secret'},base:null}]})).status,400);assert.equal((await x.post({action:'kv',rows:[{k:'web_setting_shop_gate',v:{enabled:true,codeHash:'a'.repeat(64),codeLength:8},base:null}]})).status,200);});
  await test('Tombstone is a public soft deletion, not an academy delete operation',async()=>{const x=boot();assert.equal((await x.post({action:'kv',rows:[{k:'web_product_23',v:{id:23,_deleted:true},base:null}]})).status,200);assert.equal(x.rows.get('web_product_23').v._deleted,true);assert.equal((await x.post({action:'kv',rows:[{k:'web_product_24',v:{id:23,_deleted:true},base:null}]})).status,400);});
  await test('Managed inventory products cannot be overwritten through the old public catalogue endpoint',async()=>{const x=boot();assert.equal((await x.post({action:'kv',rows:[{k:'web_product_999',v:{id:999,_deleted:true},base:null}]})).status,409);assert.equal(x.tables.length,0);});

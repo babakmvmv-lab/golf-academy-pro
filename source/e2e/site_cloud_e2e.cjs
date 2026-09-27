@@ -125,6 +125,23 @@ let passed=0;async function test(name,fn){await fn();passed++;console.log('PASS 
  await test('Gate cannot be unlocked with the default shortcut during a failed initial cloud read',async()=>{
   const b=boot();try{b.server.readFail=500;const r=await b.api('/api/site/shop-gate/unlock','POST',{attempt:'B'});assert.equal(r.ok,false);assert.equal(b.cloud.settings().shopGate.enabled,true);}finally{b.close();}
  });
+ await test('Marquee items save, reload and survive a second device; bad rows are rejected',async()=>{
+  const server=backend(),a=boot(server),b=boot(server);
+  try{
+   const good={enabled:true,items:[{id:'m1',text:'پیام تست ابری',visible:true},{id:'m2',text:'ارسال سریع',visible:false}]};
+   assert.equal((await a.api('/api/admin/site/settings','PUT',{key:'marquee',value:good})).ok,true);
+   assert.equal(server.rows.get('web_setting_marquee').v.items[0].text,'پیام تست ابری');
+   await b.api('/api/site/content');
+   assert.equal(JSON.stringify(b.cloud.settings().marquee.items.map(x=>x.text)),JSON.stringify(['پیام تست ابری','ارسال سریع']));
+   assert.equal(b.cloud.settings().marquee.enabled,true);
+   for(const bad of [{enabled:'yes',items:[]},{enabled:true,items:[{id:'m1',text:'   ',visible:true}]},{enabled:true,items:[{id:'m1',text:'ok',visible:'yes'}]},{enabled:true,items:Array.from({length:41},(_,i)=>({id:'m'+i,text:'x',visible:true}))}]){
+    const r=await a.api('/api/admin/site/settings','PUT',{key:'marquee',value:bad});
+    assert.equal(r.status,422,bad);assert.equal(server.rows.get('web_setting_marquee').v.items.length,2,'rejected value must not overwrite');
+   }
+   assert.equal((await a.api('/api/admin/site/settings','PUT',{key:'marquee',value:{enabled:true,items:[]}})).ok,true,'empty item list is a valid editable state');
+   assert.equal(server.rows.get('web_setting_marquee').v.items.length,0);
+  }finally{a.close();b.close();}
+ });
  await test('A normal home menu URL is valid and survives a second-device read',async()=>{
   const server=backend(),a=boot(server),b=boot(server);try{await a.api('/api/admin/site/settings');const menu=plain(seed.settings.menu);menu[0].label='خانهٔ ابری';assert.equal((await a.api('/api/admin/site/settings','PUT',{key:'menu',value:menu})).ok,true);await b.cloud.pull(true);assert.equal(b.cloud.settings().menu[0].href,'/');assert.equal(b.cloud.settings().menu[0].label,'خانهٔ ابری');}finally{a.close();b.close();}
  });

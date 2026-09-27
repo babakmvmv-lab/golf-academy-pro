@@ -5,6 +5,7 @@ const db=createClient(Deno.env.get('SUPABASE_URL')||'',Deno.env.get('SUPABASE_SE
 const MAX_BYTES=2*1024*1024;
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
 const settings:Record<string,string[]>={
+ marquee:['enabled','items'],
  brand:['faName','faShort','enName','enShort','tagline','logo','logoHd'],
  theme:['gold500','gold400','gold300','gold600','forest950','forest900','forest800','cream','sage'],
  contact:['phone','phoneFa','email','address','instagram','instagramUrl','telegram','whatsapp','siteUrl','domain','hours'],
@@ -25,6 +26,14 @@ function valid(k:unknown,v:unknown){
  if(k==='web_setting_menu')return Array.isArray(v)&&v.every(x=>object(x)&&only(x,['label','href','visible'])&&typeof x.label==='string'&&typeof x.href==='string');
  const setting=/^web_setting_([a-z_]+)$/.exec(k);
  if(setting){const f=settings[setting[1]];if(!Object.prototype.hasOwnProperty.call(settings,setting[1])||!f||!object(v)||!only(v,f))return false;
+  if(setting[1]==='marquee'){
+   if(typeof v.enabled!=='boolean'||!Array.isArray(v.items)||v.items.length>40)return false;
+   const ids=new Set<string>();
+   for(const x of v.items){
+    if(!object(x)||!only(x,['id','text','visible'])||typeof x.id!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(x.id)||ids.has(x.id)||typeof x.text!=='string'||!x.text.trim()||x.text.trim().length>180||typeof x.visible!=='boolean')return false;
+    ids.add(x.id);
+   }
+  }
   if(setting[1]==='shop_gate' && (!/^[0-9a-f]{64}$/.test(String(v.codeHash||''))||!Number.isInteger(Number(v.codeLength))||Number(v.codeLength)<1||Number(v.codeLength)>20))return false;
   if(setting[1]==='hero'&&v.stats!==undefined&&(!Array.isArray(v.stats)||!v.stats.every(x=>object(x)&&only(x,['label','value']))))return false;
   return true;

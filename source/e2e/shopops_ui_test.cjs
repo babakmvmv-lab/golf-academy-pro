@@ -14,32 +14,52 @@ const ok = (n, c) => { console.log((c ? 'PASS' : 'FAIL') + ' — ' + n); c ? pas
   await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.textContent.trim().startsWith('چیدمان فروشگاه')); if (b2) b2.click(); });
   await p.waitForTimeout(900);
   ok('layout view shows phone frame', await p.locator('.sh-phone').count() === 1);
-  const cats = await p.evaluate(() => [...document.querySelectorAll('.sh-lay-cat')].map(c => c.dataset.name));
-  ok('categories ordered per shopCategories (توپ‌ها first)', cats[0] === 'توپ‌ها');
-  ok('all categories present (3)', cats.length === 3 && cats.includes('کیف‌ها'));
-  const prods = await p.evaluate(() => [...document.querySelectorAll('.sh-lay-prods:not([hidden]) .sh-lay-prod')].map(r => +r.dataset.id));
-  ok('products sorted by sortOrder (2 before 1)', prods.length === 2 && prods[0] === 2 && prods[1] === 1);
+  const chips0 = await p.evaluate(() => [...document.querySelectorAll('.sh-chip')].map(c => c.dataset.name));
+  ok('category chips like the storefront (with counts)', chips0.length === 3 && chips0[0] === 'توپ‌ها');
+  const chipTxt = await p.evaluate(() => document.querySelector('.sh-chip').textContent);
+  ok('chip shows product count', /\(/.test(chipTxt) || /\d|۰|۱|۲|۳|۴|۵|۶|۷|۸|۹/.test(chipTxt));
+  const cards0 = await p.evaluate(() => [...document.querySelectorAll('.sh-card')].map(c => +c.dataset.id));
+  ok('first category cards open by default, sorted by sortOrder (2 before 1)', cards0.length === 2 && cards0[0] === 2 && cards0[1] === 1);
+  const cardLooks = await p.evaluate(() => {
+    const c = document.querySelector('.sh-card');
+    return { img: !!c.querySelector('img'), price: !!c.querySelector('.pr b'), name: !!c.querySelector('h4') };
+  });
+  ok('cards look like storefront (image + name + price)', cardLooks.img && cardLooks.name && cardLooks.price);
+  /* click the second chip → that category's cards */
+  await p.evaluate(() => { document.querySelectorAll('.sh-chip')[1].click(); });
+  await p.waitForTimeout(400);
+  const cards1 = await p.evaluate(() => [...document.querySelectorAll('.sh-card')].map(c => +c.dataset.id));
+  ok('clicking a chip opens that category (چوب‌ها → id 3)', cards1.length === 1 && cards1[0] === 3);
+  /* back to first chip and drag card 2 below card 1 (whole-card hold+drag, 7px threshold) */
+  await p.evaluate(() => { document.querySelectorAll('.sh-chip')[0].click(); });
+  await p.waitForTimeout(400);
   const moved = await p.evaluate(() => {
-    const rows = [...document.querySelectorAll('.sh-lay-prods:not([hidden]) .sh-lay-prod')];
-    const grip = rows[0].querySelector('.sh-grip');
-    const target = rows[1].getBoundingClientRect();
-    grip.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 7, clientX: target.x + 5, clientY: rows[0].getBoundingClientRect().y + 5 }));
-    grip.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, clientX: target.x + 5, clientY: target.y + target.height - 2 }));
-    grip.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 7, clientX: target.x + 5, clientY: target.y + target.height - 2 }));
-    return [...document.querySelectorAll('.sh-lay-prods:not([hidden]) .sh-lay-prod')].map(r => +r.dataset.id);
+    const cards = [...document.querySelectorAll('.sh-card')];
+    const el = cards[0];
+    const b = cards[1].getBoundingClientRect();
+    el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 7, clientX: b.x + 10, clientY: cards[0].getBoundingClientRect().y + 10 }));
+    el.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, clientX: b.x + 10, clientY: cards[0].getBoundingClientRect().y + 16 })); /* cross 7px threshold */
+    el.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, clientX: b.x + b.width * 0.25, clientY: b.y + b.height / 2 }));
+    el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 7, clientX: b.x + b.width * 0.25, clientY: b.y + b.height / 2 }));
+    return [...document.querySelectorAll('.sh-card')].map(c => +c.dataset.id);
   });
-  ok('product drag reorders (id 1 now first)', moved[0] === 1 && moved[1] === 2);
-  const catMoved = await p.evaluate(() => {
-    const blocks = [...document.querySelectorAll('.sh-lay-cat')];
-    const grip = blocks[0].querySelector('.sh-grip');
-    const t = blocks[1].getBoundingClientRect();
-    grip.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 8, clientX: t.x + 5, clientY: t.y + 5 }));
-    grip.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 8, clientX: t.x + 5, clientY: t.y + t.height - 2 }));
-    grip.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 8, clientX: t.x + 5, clientY: t.y + t.height - 2 }));
-    return [...document.querySelectorAll('.sh-lay-cat')].map(c => c.dataset.name);
+  ok('hold + drag reorders a product card (id 1 now first)', moved[0] === 1 && moved[1] === 2);
+  /* drag first chip after the second (category reorder) */
+  const chipMoved = await p.evaluate(() => {
+    const chips = [...document.querySelectorAll('.sh-chip')];
+    const el = chips[0];
+    const b = chips[1].getBoundingClientRect();
+    el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 8, clientX: b.x - 30, clientY: b.y + 6 }));
+    el.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 8, clientX: b.x - 20, clientY: b.y + 6 }));
+    el.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 8, clientX: b.x + b.width * 0.25, clientY: b.y + b.height / 2 }));
+    el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 8, clientX: b.x + b.width * 0.25, clientY: b.y + b.height / 2 }));
+    return [...document.querySelectorAll('.sh-chip')].map(c => c.dataset.name);
   });
-  console.log('  cat order after drag:', catMoved.join(' | '));
-  ok('category drag reorders (چوب‌ها now first)', catMoved[0] === 'چوب‌ها');
+  ok('hold + drag reorders a category chip (چوب‌ها now first)', chipMoved[0] === 'چوب‌ها');
+  /* the click after a drag must NOT switch category (suppression) */
+  await p.waitForTimeout(120);
+  const selAfter = await p.evaluate(() => document.querySelectorAll('.sh-chip').length && [...document.querySelectorAll('.sh-chip')].findIndex(c => c.classList.contains('on')));
+  ok('post-drag click suppressed (selection unchanged, still توپ‌ها)', selAfter === 1);
   await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.getAttribute('data-act') === 'layout-save'); if (b2) b2.click(); });
   await p.waitForTimeout(900);
   const save = await p.evaluate(() => window.__calls.filter(c => c.kind === 'erp' && c.action === 'layout_save').pop());
@@ -49,7 +69,7 @@ const ok = (n, c) => { console.log((c ? 'PASS' : 'FAIL') + ' — ' + n); c ? pas
     console.log('  payload categories:', JSON.stringify(save.payload.categories.map(x => x.name)));
     ok('save payload: all 4 products w/ sortOrder', save.payload.products.length === 4 && save.payload.products.every(x => x.sortOrder > 0));
     ok('save payload: توپ‌ها products in dragged order [1,2]', JSON.stringify(save.payload.products.filter(x => [1, 2].includes(x.id)).map(x => x.id)) === '[1,2]');
-    ok('save payload: categories in dragged order', save.payload.categories.length === 3 && save.payload.categories[0].name === 'چوب‌ها');
+    ok('save payload: categories in dragged order [چوب‌ها, توپ‌ها, کیف‌ها]', save.payload.categories.length === 3 && save.payload.categories[0].name === 'چوب‌ها' && save.payload.categories[1].name === 'توپ‌ها');
   }
   await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.textContent.trim().startsWith('دیدگاه‌های سایت')); if (b2) b2.click(); });
   await p.waitForTimeout(900);

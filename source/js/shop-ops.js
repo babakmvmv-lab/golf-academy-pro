@@ -72,69 +72,110 @@
  async function inventory(el){el.innerHTML='<div class="sh-screen-title"><div class="sh-tabs"><button class="'+(inventoryTab==='catalog'?'on':'')+'" data-invtab="catalog">کالا و موجودی</button><button class="'+(inventoryTab==='moves'?'on':'')+'" data-invtab="moves">گردش انبار</button></div><div class="sh-actions">'+(can('catalog.create')?btn(I('plus')+' کالای جدید','new-product'):'')+(can('inventory.create')?btn('اصلاح موجودی','new-adjustment','secondary'):'')+'</div></div>';el.querySelectorAll('[data-invtab]').forEach(b=>b.onclick=()=>{inventoryTab=b.dataset.invtab;navigate('inventory');});
   if(inventoryTab==='moves'){if(!can('inventory.view'))throw Error('اجازهٔ مشاهدهٔ گردش انبار ندارید.');const rows=await api('inventory');el.innerHTML+=filterBar('نام، کد کالا یا سند…')+'<div data-list></div>';const paint=()=>{const q=el.querySelector('[data-search]').value;el.querySelector('[data-list]').innerHTML=table(['کالا','تاریخ','سند','ورود / خروج',...(can('cost.view')?['ارزش گردش']:[]),'توضیح'],rows.filter(r=>[r.name,r.sku,r.number].join(' ').includes(q)).map(r=>tr(['<b>'+E(r.name)+'</b><span class="muted">'+E(r.sku)+'</span>',D(r.move_date),'<button class="sh-link" data-doc="'+r.document_id+'">'+E(r.number)+'</button>','<span class="sh-pill '+(r.qty>0?'green':'red')+'">'+(r.qty>0?'+':'')+F(r.qty)+'</span>',...(can('cost.view')?[F(r.value)]:[]),E(kinds[r.kind])+(r.reversal?' · اصلاح معکوس':'')])));};paint();el.querySelector('[data-search]').oninput=paint;return;}
   el.innerHTML+=filterBar('نام، کد کالا، بارکد، برند یا مدل…')+'<div data-list></div>';const paint=()=>{const q=el.querySelector('[data-search]').value.toLowerCase();el.querySelector('[data-list]').innerHTML=table(['کالا / مشخصات گلف','کد','موجودی','قیمت فروش',...(can('cost.view')?['میانگین بها']:[]),'وضعیت','عملیات'],state.products.filter(p=>[p.name,p.sku,p.barcode,p.brand,p.model,detail(p)].join(' ').toLowerCase().includes(q)).map(p=>tr(['<b>'+E(p.name)+'</b><span class="muted">'+E(p.category+' · '+detail(p))+'</span>','<span class="code">'+E(p.sku)+'</span>',F(p.stock)+' '+E(p.unit),F(p.sale_price),...(can('cost.view')?[F(p.average_cost)]:[]),p.opening_required?pill('draft','افتتاحیه لازم'):pill(p.active?'green':'red',p.active?'فعال':'غیرفعال'),'<div class="sh-row-actions">'+(can('catalog.edit')?'<button data-product="'+p.id+'">ویرایش</button>':'')+(state.user.manager&&p.opening_required?'<button data-opening="'+p.id+'">تأیید افتتاحیه</button>':'')+'</div>'])))+'<div class="sh-table-foot">'+F(state.products.length)+' کد کالای مستقل · سایز، دست، لوفت و فلکس متفاوت، موجودی جدا دارند.</div>';};paint();el.querySelector('[data-search]').oninput=paint;}
- /* ── چیدمان فروشگاه: پیش‌نمایش موبایلی با جابه‌جایی کشیدنی دسته‌ها و کالاها ── */
+ /* ── چیدمان فروشگاه: پیش‌نمایش موبایلی مثل خود ویترین؛ دسته‌ها و کارت کالاها را بگیرید و بکشید ── */
+ let layoutModel=null,layoutSel=0;
  function attachSortable(wrap,changed){
-  let drag=null;
+  let drag=null, suppressClick=false;
   wrap.addEventListener('pointerdown',e=>{
-   const grip=e.target.closest('.sh-grip');
-   if(!grip||!wrap.contains(grip))return;
-   const row=grip.closest('[data-drag-unit]');
-   if(!row||!row.parentElement)return;
-   drag={el:row,list:row.parentElement};
-   try{row.setPointerCapture(e.pointerId);}catch(x){}
-   row.classList.add('sh-drag-on');
-   e.preventDefault();
+   if(e.button!==undefined&&e.button!==0)return;
+   const unit=e.target.closest('[data-drag-unit]');
+   if(!unit||!wrap.contains(unit)||!unit.parentElement)return;
+   drag={el:unit,list:unit.parentElement,sx:e.clientX,sy:e.clientY,started:false};
+   try{unit.setPointerCapture(e.pointerId);}catch(x){}
   });
   wrap.addEventListener('pointermove',e=>{
    if(!drag)return;
-   const list=drag.list,rows=[...list.children];
-   for(const r of rows){
-    if(r===drag.el)continue;
-    const b=r.getBoundingClientRect();
-    if(e.clientY>=b.top&&e.clientY<=b.bottom){
-     const db=drag.el.getBoundingClientRect();
-     list.insertBefore(drag.el,b.top>db.top?r.nextSibling:r);
-     changed();
-     break;
-    }
+   if(!drag.started){
+    if(Math.abs(e.clientX-drag.sx)<7&&Math.abs(e.clientY-drag.sy)<7)return;
+    drag.started=true;suppressClick=true;drag.el.classList.add('sh-drag-on');
    }
+   e.preventDefault();
+   const list=drag.list,rows=[...list.children];
+   let best=null,bestD=1e15;
+   for(const r of rows){
+    if(r===drag.el||!r.hasAttribute('data-drag-unit'))continue;
+    const b=r.getBoundingClientRect();
+    const dx=e.clientX-(b.left+b.width/2),dy=e.clientY-(b.top+b.height/2);
+    if(e.clientX>=b.left&&e.clientX<=b.right&&e.clientY>=b.top&&e.clientY<=b.bottom){best={r,dx,dy};break;} /* داخل خودِ کارت: هدف قطعی */
+    if(e.clientX<b.left-60||e.clientX>b.right+60||e.clientY<b.top-60||e.clientY>b.bottom+60)continue;
+    const d=dx*dx+dy*dy;
+    if(d<bestD){bestD=d;best={r,dx,dy};}
+   }
+   if(!best)return;
+   /* پنل راست‌به‌چپ است: سمتِ راستِ هدف در نمایش = قبل در ترتیب ذخیره */
+   const before=list.dataset.dragList==='y'?best.dy<0:best.dx>0;
+   const ref=before?best.r:best.r.nextSibling;
+   if(ref!==drag.el)list.insertBefore(drag.el,ref);
+   if(ref!==drag.el)changed();
   });
-  const end=()=>{if(drag){drag.el.classList.remove('sh-drag-on');drag=null;}};
+  const end=()=>{if(drag){drag.el.classList.remove('sh-drag-on');drag=null;setTimeout(()=>{suppressClick=false;},50);}};
   wrap.addEventListener('pointerup',end);
   wrap.addEventListener('pointercancel',end);
+  wrap.addEventListener('click',e=>{if(suppressClick){e.stopPropagation();e.preventDefault();}},true);
  }
  async function layout(el){
   if(!can('catalog.edit'))throw Error('اجازهٔ تغییر چیدمان ندارید.');
-  el.innerHTML='<div class="sh-screen-title"><p class="sh-note">چیدمان ویترین سایت را مثل یک اپ موبایل مرتب کنید: دسته‌ها و کالاهای هر دسته را از دستگیره بگیرید و بالا/پایین بکشید. با «ذخیره»، ترتیب واقعی فروشگاه عوض می‌شود.</p><div class="sh-actions">'+btn(I('check')+' ذخیره چیدمان','layout-save')+'</div></div><div class="sh-layout-wrap" data-layout></div>';
+  el.innerHTML='<div class="sh-screen-title"><p class="sh-note">ویترین، دقیقاً مثل سایت در یک گوشی موبایل: دسته‌ها را از نوار بالا بگیرید و بکشید؛ با لمس هر دسته، کالاهای آن باز می‌شود و هر کارت را با نگه‌داشتن و کشیدن جابه‌جا کنید. «ذخیره» ترتیب واقعی فروشگاه را عوض می‌کند.</p><div class="sh-actions">'+btn(I('check')+' ذخیره چیدمان','layout-save')+'</div></div><div class="sh-layout-wrap" data-layout></div>';
   const wrap=el.querySelector('[data-layout]');
   const order=(PC_SITE_CLOUD.shopCategories?PC_SITE_CLOUD.shopCategories():[]);
   const byCat=new Map();
   state.products.forEach(p=>{
    const pub=p.public_data||{};
-   const row={id:p.id,name:p.name,sortOrder:Number.isFinite(+pub.sortOrder)&&+pub.sortOrder>0?+pub.sortOrder:1e9};
+   const row={id:p.id,name:p.name,price:+p.sale_price||0,oldPrice:+pub.oldPrice||0,stock:p.stock,badge:pub.badge||'',isNew:!!pub.isNew,image:(pub.images&&pub.images[0])||'',sortOrder:Number.isFinite(+pub.sortOrder)&&+pub.sortOrder>0?+pub.sortOrder:1e9};
    const c=(p.category||'').trim()||'بدون دسته';
    if(!byCat.has(c))byCat.set(c,[]);
    byCat.get(c).push(row);
   });
   const names=[...byCat.keys()].sort((a,b)=>(order.indexOf(a)<0?999:order.indexOf(a))-(order.indexOf(b)<0?999:order.indexOf(b)));
-  const cats=names.map(n=>({name:n,open:n===names[0],products:byCat.get(n).sort((x,y)=>x.sortOrder-y.sortOrder||x.id-y.id)}));
+  layoutModel=names.map(n=>({name:n,products:byCat.get(n).sort((x,y)=>x.sortOrder-y.sortOrder||x.id-y.id)}));
+  layoutSel=0;
+  const fa=n=>Number(n||0).toLocaleString('fa-IR');
+  const img=u=>/^(https?:|data:|\/)/.test(u||'')?u:'/images/academy-logo.jpg';
+  const card=(p,cn)=>'<div class="sh-card" data-drag-unit="1" data-id="'+p.id+'" title="بگیرید و بکشید">'+
+   '<span class="grip">⋮⋮</span>'+
+   '<div class="sh-card-img"><img loading="lazy" src="'+E(img(p.image))+'" alt="">'+
+    (p.badge?'<span class="tagb">'+E(p.badge)+'</span>':(p.isNew?'<span class="tagb new">جدید</span>':''))+
+    (p.oldPrice>p.price?'<span class="off">٪'+fa(Math.round((1-p.price/p.oldPrice)*100))+'</span>':'')+
+   '</div>'+
+   '<div class="sh-card-b"><span class="cat">'+E(cn)+'</span><h4>'+E(p.name)+'</h4>'+
+    '<div class="pr">'+(p.oldPrice>p.price?'<s>'+fa(p.oldPrice)+'</s>':'')+'<b>'+fa(p.price)+'</b><small>تومان</small></div>'+
+    (p.stock<=0?'<span class="st oos">ناموجود</span>':p.stock<=4?'<span class="st">تنها '+fa(p.stock)+' عدد</span>':p.stock<=8?'<span class="st">موجودی محدود</span>':'')+
+   '</div></div>';
   const paint=()=>{
-   wrap.innerHTML='<div class="sh-phone"><div class="sh-phone-notch"></div><div class="sh-phone-body" data-catlist>'+
-    cats.map(c=>'<div class="sh-lay-cat" data-drag-unit="1" data-name="'+E(c.name)+'"><div class="sh-drag-row"><span class="sh-grip">⋮⋮</span><button type="button" class="sh-lay-cathead" data-toggle="1"><span>'+E(c.name)+'</span><small>'+F(c.products.length)+' کالا ▾</small></button></div><div class="sh-lay-prods" data-prodlist'+(c.open?'':' hidden')+'>'+
-     c.products.map(p=>'<div class="sh-drag-row sh-lay-prod" data-drag-unit="1" data-id="'+p.id+'"><span class="sh-grip">⋮⋮</span><span class="t">'+E(p.name)+'</span></div>').join('')+'</div></div>').join('')+
+   const cat=layoutModel[layoutSel]||{name:'',products:[]};
+   let brand='پات‌کلاب';try{brand=PC_SITE_CLOUD.brandShort(PC_SITE_CLOUD.settings().brand);}catch(e){}
+   wrap.innerHTML='<div class="sh-phone"><div class="sh-phone-notch"></div>'+
+    '<div class="sh-phone-head"><span class="dot"></span><b>'+E(brand)+'</b><i>فروشگاه · چیدمان</i></div>'+
+    '<div class="sh-phone-body">'+
+     '<div class="sh-chips" data-drag-list="x">'+layoutModel.map((c,i)=>'<button type="button" class="sh-chip'+(i===layoutSel?' on':'')+'" data-drag-unit="1" data-name="'+E(c.name)+'" data-cat="'+i+'" title="دسته را بگیرید و بکشید"><span class="grip">⋮⋮</span>'+E(c.name)+' <i>'+fa(c.products.length)+'</i></button>').join('')+'</div>'+
+     '<div class="sh-cards" data-drag-list="grid">'+cat.products.map(p=>card(p,cat.name)).join('')+'</div>'+
+     (cat.products.length?'':'<div class="sh-lay-empty">کالایی در این دسته نیست</div>')+
     '</div></div>';
-   wrap.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=()=>{const blk=b.closest('[data-drag-block]');const list2=blk.querySelector('[data-prodlist]');list2.hidden=!list2.hidden;});
   };
   paint();
-  attachSortable(wrap,()=>{const s=el.querySelector('[data-act="layout-save"]');if(s)s.classList.add('attention');});
+  const syncFromDOM=()=>{
+   const cur=layoutModel[layoutSel];
+   if(cur){
+    const ids=[...wrap.querySelectorAll('.sh-card')].map(x=>+x.dataset.id);
+    const map=new Map(cur.products.map(p=>[p.id,p]));
+    cur.products=ids.map(id=>map.get(id)).filter(Boolean);
+   }
+   const byName=new Map(layoutModel.map(c=>[c.name,c]));
+   const chipNames=[...wrap.querySelectorAll('.sh-chip')].map(x=>x.dataset.name);
+   const next=chipNames.map(n=>byName.get(n)).filter(Boolean);
+   if(next.length===layoutModel.length)layoutModel=next;
+   layoutSel=Math.max(0,layoutModel.indexOf(cur));
+  };
+  wrap.addEventListener('click',e=>{
+   const chip=e.target.closest('.sh-chip');
+   if(chip){layoutSel=+chip.dataset.cat||0;paint();}
+  });
+  attachSortable(wrap,()=>{syncFromDOM();const s=el.querySelector('[data-act="layout-save"]');if(s)s.classList.add('attention');});
  }
  async function saveLayout(){
-  const wrap=root.querySelector('[data-layout]');if(!wrap)return;
+  if(!layoutModel||!layoutModel.length){toast('کالایی برای مرتب‌سازی نیست.',true);return;}
   const products=[];let n=0;const categories=[];
-  wrap.querySelectorAll('.sh-lay-cat').forEach((cat,ci)=>{
-   categories.push({name:cat.dataset.name,sortOrder:ci+1});
-   cat.querySelectorAll(':scope > [data-prodlist] > .sh-lay-prod').forEach(row=>{products.push({id:+row.dataset.id,sortOrder:++n});});
-  });
+  layoutModel.forEach(c=>{categories.push({name:c.name,sortOrder:categories.length+1});c.products.forEach(p=>products.push({id:p.id,sortOrder:++n}));});
   if(!products.length){toast('کالایی برای مرتب‌سازی نیست.',true);return;}
   await api('layout_save',{products,categories});
   try{await PC_SITE_CLOUD.pull(true);}catch(e){}

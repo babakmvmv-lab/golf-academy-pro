@@ -24,7 +24,7 @@
  function style(){
   if(document.getElementById('pc-pay-style'))return;
   const el=document.createElement('style');el.id='pc-pay-style';
-  el.textContent='.pc-pay-toast{position:fixed;bottom:18px;right:50%;transform:translateX(50%);z-index:10060;max-width:min(430px,92vw);background:#0a1712f2;border:1px solid #c9a24b77;color:#f2ecdd;border-radius:13px;padding:11px 16px;font:12px/1.9 Vazirmatn,Tahoma,sans-serif;box-shadow:0 10px 40px #0007;animation:pcPayIn .25s}.pc-pay-toast.bad{border-color:#b85458;color:#ffd9d9}@keyframes pcPayIn{from{opacity:0;transform:translateX(50%) translateY(14px)}}.pc-pay-badge{position:fixed;bottom:14px;inset-inline-start:14px;z-index:10040;display:flex;align-items:center;gap:9px;background:#0a1712f2;border:1px solid #c9a24b55;color:#f2ecdd;border-radius:999px;padding:8px 15px;font:12px/1 Vazirmatn,Tahoma,sans-serif;box-shadow:0 8px 30px #0006}.pc-pay-badge b{color:#e3c98f;font-weight:900;min-width:38px;text-align:center;direction:ltr}.pc-pay-badge button{border:0;background:none;color:#93aa9c;cursor:pointer;font:inherit;font-size:11px}.pc-pay-gw{margin:10px 0 4px;display:grid;gap:9px}.pc-pay-gw label{display:flex;align-items:center;gap:11px;border:1px solid #c9a24b33;border-radius:14px;padding:10px 13px;cursor:pointer;background:#050d0980;transition:border-color .2s}.pc-pay-gw label:hover{border-color:#d4af6a}.pc-pay-gw input{accent-color:#c9a24b;width:16px;height:16px}.pc-pay-gw img{width:42px;height:42px;object-fit:contain;background:#f2ecdd;border-radius:9px;padding:4px;flex:none}.pc-pay-gw .t{display:flex;flex-direction:column;gap:3px}.pc-pay-gw .t b{font-size:13px;color:#f2ecdd}.pc-pay-gw .t small{font-size:11px;color:#93aa9c}.pc-pay-hint{margin:9px 0 3px;border:1px dashed #c9a24b44;border-radius:12px;padding:10px 13px;font-size:11.5px;line-height:2;color:#b4c6b8}.pc-pay-report{max-width:760px;margin:14px auto;border:1px solid #c9a24b33;border-radius:18px;background:#0a1712;padding:20px;color:#f2ecdd;font-family:Vazirmatn,Tahoma,sans-serif}.pc-pay-report h3{margin:0 0 6px;font-size:16px}.pc-pay-report p{font-size:12px;line-height:2;color:#93aa9c;margin:0 0 12px}.pc-pay-report .cards{display:grid;gap:9px;margin:10px 0}.pc-pay-report .cards label{display:flex;align-items:center;gap:11px;border:1px solid #c9a24b2e;border-radius:13px;padding:10px 13px;cursor:pointer}.pc-pay-report .cards input{accent-color:#c9a24b}.pc-pay-report .cards img{width:40px;height:40px;object-fit:contain;background:#f2ecdd;border-radius:8px;padding:3px}.pc-pay-report .cards b{font-size:12.5px}.pc-pay-report .cards small{display:block;font-size:10.5px;color:#93aa9c;direction:ltr;text-align:right}.pc-pay-report .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0}.pc-pay-report .f{display:flex;flex-direction:column;gap:5px;font-size:11.5px;color:#b4c6b8}.pc-pay-report input,.pc-pay-report textarea{font:inherit;font-size:13px;padding:9px 11px;border:1px solid #c9a24b33;border-radius:9px;background:#050d09;color:#f2ecdd;direction:ltr;text-align:right}.pc-pay-report textarea{direction:rtl;grid-column:1/-1}.pc-pay-report button{font:inherit;font-size:12.5px;font-weight:800;border:0;border-radius:10px;padding:11px 22px;background:#c9a24b;color:#050d09;cursor:pointer}.pc-pay-report .ok{color:#93dbb1;margin-inline-start:9px;font-size:12px}.pc-pay-result{position:fixed;inset:0;z-index:10070;display:grid;place-items:center;background:#020806e0;backdrop-filter:blur(8px);padding:16px}.pc-pay-result>div{width:min(430px,100%);border:1px solid #c9a24b55;border-radius:18px;background:#0a1712;padding:26px;color:#f2ecdd;font-family:Vazirmatn,Tahoma,sans-serif;text-align:center}.pc-pay-result h3{margin:0 0 10px;font-size:18px}.pc-pay-result p{font-size:12.5px;line-height:2.1;color:#b4c6b8;margin:0 0 8px}.pc-pay-result .code{font-size:15px;font-weight:900;color:#e3c98f;letter-spacing:1px;margin:8px 0}.pc-pay-result button{font:inherit;margin-top:12px;border:1px solid #c9a24b66;background:#c9a24b;color:#050d09;font-weight:800;border-radius:10px;padding:10px 22px;cursor:pointer}';
+  el.textContent='.pc-pay-toast{position:fixed;bottom:18px;right:50%;transform:translateX(50%);z-index:10060;max-width:min(430px,92vw);background:#0a1712f2;border:1px solid #c9a24b77;color:#f2ecdd;border-radius:13px;padding:11px 16px;font:12px/1.9 Vazirmatn,Tahoma,sans-serif;box-shadow:0 10px 40px #0007;animation:pcPayIn .25s}.pc-pay-toast.bad{border-color:#b85458;color:#ffd9d9}@keyframes pcPayIn{from{opacity:0;transform:translateX(50%) translateY(14px)}}.pc-pay-gw{margin:10px 0 4px;display:grid;gap:9px}.pc-pay-gw label{display:flex;align-items:center;gap:11px;border:1px solid #c9a24b33;border-radius:14px;padding:10px 13px;cursor:pointer;background:#050d0980;transition:border-color .2s}.pc-pay-gw label:hover{border-color:#d4af6a}.pc-pay-gw input{accent-color:#c9a24b;width:16px;height:16px}.pc-pay-gw img{width:42px;height:42px;object-fit:contain;background:#f2ecdd;border-radius:9px;padding:4px;flex:none}.pc-pay-gw .t{display:flex;flex-direction:column;gap:3px}.pc-pay-gw .t b{font-size:13px;color:#f2ecdd}.pc-pay-gw .t small{font-size:11px;color:#93aa9c}.pc-pay-hint{margin:9px 0 3px;border:1px dashed #c9a24b44;border-radius:12px;padding:10px 13px;font-size:11.5px;line-height:2;color:#b4c6b8}.pc-pay-report{max-width:760px;margin:14px auto;border:1px solid #c9a24b33;border-radius:18px;background:#0a1712;padding:20px;color:#f2ecdd;font-family:Vazirmatn,Tahoma,sans-serif}.pc-pay-report h3{margin:0 0 6px;font-size:16px}.pc-pay-report p{font-size:12px;line-height:2;color:#93aa9c;margin:0 0 12px}.pc-pay-report .cards{display:grid;gap:9px;margin:10px 0}.pc-pay-report .cards label{display:flex;align-items:center;gap:11px;border:1px solid #c9a24b2e;border-radius:13px;padding:10px 13px;cursor:pointer}.pc-pay-report .cards input{accent-color:#c9a24b}.pc-pay-report .cards img{width:40px;height:40px;object-fit:contain;background:#f2ecdd;border-radius:8px;padding:3px}.pc-pay-report .cards b{font-size:12.5px}.pc-pay-report .cards small{display:block;font-size:10.5px;color:#93aa9c;direction:ltr;text-align:right}.pc-pay-report .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0}.pc-pay-report .f{display:flex;flex-direction:column;gap:5px;font-size:11.5px;color:#b4c6b8}.pc-pay-report input,.pc-pay-report textarea{font:inherit;font-size:13px;padding:9px 11px;border:1px solid #c9a24b33;border-radius:9px;background:#050d09;color:#f2ecdd;direction:ltr;text-align:right}.pc-pay-report textarea{direction:rtl;grid-column:1/-1}.pc-pay-report button{font:inherit;font-size:12.5px;font-weight:800;border:0;border-radius:10px;padding:11px 22px;background:#c9a24b;color:#050d09;cursor:pointer}.pc-pay-report .ok{color:#93dbb1;margin-inline-start:9px;font-size:12px}.pc-pay-result{position:fixed;inset:0;z-index:10070;display:grid;place-items:center;background:#020806e0;backdrop-filter:blur(8px);padding:16px}.pc-pay-result>div{width:min(430px,100%);border:1px solid #c9a24b55;border-radius:18px;background:#0a1712;padding:26px;color:#f2ecdd;font-family:Vazirmatn,Tahoma,sans-serif;text-align:center}.pc-pay-result h3{margin:0 0 10px;font-size:18px}.pc-pay-result p{font-size:12.5px;line-height:2.1;color:#b4c6b8;margin:0 0 8px}.pc-pay-result .code{font-size:15px;font-weight:900;color:#e3c98f;letter-spacing:1px;margin:8px 0}.pc-pay-result button{font:inherit;margin-top:12px;border:1px solid #c9a24b66;background:#c9a24b;color:#050d09;font-weight:800;border-radius:10px;padding:10px 22px;cursor:pointer}';
   document.head.appendChild(el);
  }
  async function call(action,payload){
@@ -49,41 +49,23 @@
   const removed=[...prev.keys()].filter(id=>!next.has(id)&&!heldByOrder.has(id));
   lastCart=items;
   if(removed.length)call('release',{session:session(),items:removed.map(id=>({id}))}).catch(()=>{});
-  if(!items.length){expiry=0;renderBadge();return;}
+  if(!items.length){expiry=0;return;}
   if(flight)return scheduleSync();
   flight=call('reserve',{session:session(),items:items.map(x=>({id:x.id,qty:x.qty}))}).then(d=>{
    expiry=0;
    (d&&d.items||[]).forEach(x=>{
     avail[x.id]=x.available;
     if(x.ok&&x.expires_at)expiry=Math.max(expiry,Date.parse(x.expires_at));
-    if(x.ok===false){
+    if(x.ok===false){ /* فقط بازخورد کاربردی هنگام انتخاب کالا؛ خود رزرو بی‌صدا است */
      const it=items.find(i=>i.id===+x.id);
      toast('موجودی «'+((it&&it.name)||'کالا')+'» کافی نیست؛ '+fa(x.available)+' عدد باقی مانده است.',true);
     }
    });
-   renderBadge();
   }).catch(()=>{}).finally(()=>{flight=null;});
  }
- let badge=null;
- function renderBadge(){
-  if(!document.body)return;
-  const left=expiry-Date.now();
-  if(!expiry||left<=0||!lastCart.length){
-   if(badge){badge.remove();badge=null;}
-   if(expiry&&left<=0&&lastCart.length){toast('زمان رزرو سبد خرید تمام شد؛ کالاها به انبار برگشت. دوباره به سبد اضافه کنید.',true);expiry=0;}
-   return;
-  }
-  if(!badge){
-   badge=document.createElement('div');badge.className='pc-pay-badge';badge.dir='rtl';
-   badge.innerHTML='<span>⏳ رزرو سبد خرید:</span><b>—</b><button type="button">آزاد کنید</button>';
-   badge.querySelector('button').onclick=()=>{const ids=lastCart.map(x=>x.id);lastCart=[];call('release',{session:session(),items:ids.map(id=>({id}))}).catch(()=>{});try{localStorage.setItem('puttclub-cart',JSON.stringify({state:{items:[],isOpen:false},version:0}));}catch(e){}expiry=0;renderBadge();toast('رزرو آزاد شد.');};
-   document.body.appendChild(badge);
-  }
-  const s=Math.floor(left/1000);
-  badge.querySelector('b').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
- }
- setInterval(renderBadge,1000);
- setInterval(syncCart,30000);
+ /* رزرو کاملاً بی‌صدا: بدون نشان، بدون شمارش معکوس، بدون پیام انقضا.
+    سرور خودش بعد از ۵ دقیقه موجودی را برمی‌گرداند؛ خریدار دوباره شروع کند، دوباره رزرو می‌شود. */
+ setInterval(()=>{if(expiry&&expiry-Date.now()<=0)expiry=0;},5000);
  try{window.addEventListener('storage',e=>{if(e.key==='puttclub-cart')scheduleSync();});}catch(e){}
  // Same-tab cart changes do not fire storage; poll the store quickly while the drawer is open.
  setInterval(()=>{const cur=readCart();if(cur.length||lastCart.length){const a=JSON.stringify(cur.map(x=>[x.id,x.qty])),b=JSON.stringify(lastCart.map(x=>[x.id,x.qty]));if(a!==b)scheduleSync();}},1200);

@@ -623,6 +623,7 @@
 
   /* ═══════════════ صفحه: پلن مدیریت (تب‌ها) ═══════════════ */
   let mgmtTab = 'players';
+  let kmlDraft = null; /* سطح ماژول: رندر دوبارهٔ تب، پیش‌نویس KML را نمی‌پاکد */
   function pageMgmt(){
     const v = $('#view');
     const tabs = [
@@ -1785,32 +1786,32 @@
   }
 
   function previewKmlMap(el, g){
-    if (!el || typeof L === 'undefined' || !g || !g.holes) return;
+    if (!el || typeof window.L === 'undefined' || !g || !g.holes) return;
     el.style.display = 'block';
     if (el._leaf){ try { el._leaf.remove(); } catch(e){} el._leaf = null; }
     el.innerHTML = '';
-    const map = L.map(el, { zoomControl:true, attributionControl:false }).setView([31.90, 49.31], 16);
+    const map = window.L.map(el, { zoomControl:true, attributionControl:false }).setView([31.90, 49.31], 16);
     el._leaf = map;
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:20, subdomains:'abcd' }).addTo(map);
+    window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:20, subdomains:'abcd' }).addTo(map);
     const group = [];
     Object.keys(g.holes).forEach(function(k){
       const h = g.holes[k];
       (h.fairways||[]).forEach(function(fw){
-        group.push(L.polygon(fw.latlngs, { color:'#3d9e6a', weight:1.4, fillOpacity:0.22 }).addTo(map));
+        group.push(window.L.polygon(fw.latlngs, { color:'#3d9e6a', weight:1.4, fillOpacity:0.22 }).addTo(map));
       });
       if (h.teeF || h.tee){
         const t = h.teeF || h.tee;
-        group.push(L.circleMarker([t.lat,t.lng], { radius:6, color:'#f0d989', fillColor:'#f0d989', fillOpacity:1 }).bindTooltip('T'+k+' W', { permanent:false }).addTo(map));
+        group.push(window.L.circleMarker([t.lat,t.lng], { radius:6, color:'#f0d989', fillColor:'#f0d989', fillOpacity:1 }).bindTooltip('T'+k+' W', { permanent:false }).addTo(map));
       }
       if (h.teeM){
-        group.push(L.circleMarker([h.teeM.lat,h.teeM.lng], { radius:6, color:'#2E86DE', fillColor:'#2E86DE', fillOpacity:1 }).bindTooltip('T'+k+' M', { permanent:false }).addTo(map));
+        group.push(window.L.circleMarker([h.teeM.lat,h.teeM.lng], { radius:6, color:'#2E86DE', fillColor:'#2E86DE', fillOpacity:1 }).bindTooltip('T'+k+' M', { permanent:false }).addTo(map));
       }
       if (h.green){
-        group.push(L.circleMarker([h.green.lat,h.green.lng], { radius:7, color:'#1e3d2f', fillColor:'#1e3d2f', fillOpacity:1 }).bindTooltip('H'+k, { permanent:false }).addTo(map));
+        group.push(window.L.circleMarker([h.green.lat,h.green.lng], { radius:7, color:'#1e3d2f', fillColor:'#1e3d2f', fillOpacity:1 }).bindTooltip('H'+k, { permanent:false }).addTo(map));
       }
     });
     if (group.length){
-      try { map.fitBounds(L.featureGroup(group).getBounds().pad(0.2), { maxZoom:18 }); } catch(e){}
+      try { map.fitBounds(window.L.featureGroup(group).getBounds().pad(0.2), { maxZoom:18 }); } catch(e){}
     }
     setTimeout(function(){ try { map.invalidateSize(); } catch(e){} }, 80);
   }
@@ -1858,7 +1859,6 @@
     </div>`;
     let parVals = Array.from({length:18}, () => 4);
     let idxVals = Array.from({length:18}, (_,i) => i + 1);
-    let kmlDraft = null;
     bindParEditor($('#mc-pars'), parVals, idxVals);
     const kmlInp = $('#mc-kml');
     if (kmlInp) kmlInp.addEventListener('change', function(){
@@ -1871,6 +1871,17 @@
           const g = CourseGeo.parseKml(String(reader.result || ''));
           const sm = CourseGeo.summary(g);
           kmlDraft = g;
+          /* عکس‌های زمین (ماهواره + توپوگرافی، ۳ برابر محدوده) همان‌جا گرفته می‌شوند */
+          if (g.bounds && window.EarthShot){
+            kmlDraft._shots = EarthShot.captureFor('pending', g.bounds, (mode, p) => {
+              const repEl = $('#mc-kml-rep'); /* هر بار تازه — صفحه ممکن است دوباره رندر شده باشد */
+              if (!repEl) return;
+              if (!repEl.dataset.base) repEl.dataset.base = repEl.innerHTML;
+              repEl.innerHTML = repEl.dataset.base + '<br>' + (mode === 'sat'
+                ? ('🛰 تصویر ماهواره‌ای: ' + D.fa(p) + '٪')
+                : ('⛰ تصویر توپوگرافی: ' + D.fa(p) + '٪'));
+            }).catch(() => null);
+          }
           if (sm.pars && sm.pars.length){
             parVals = sm.pars.slice();
             while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
@@ -1885,6 +1896,7 @@
           $('#mc-kml-rep').innerHTML = `خوانده شد: ${D.fa(sm.holes)} میدان · تی خانم ${D.fa(sm.teesF)} · تی آقا ${D.fa(sm.teesM)} · حفره ${D.fa(sm.greens)} · فروی ${D.fa(sm.fairways)}` + (sm.teesM ? '' : ' — تی آقایان در فایل نیست (بعداً با -M یا ویرایش نقشه).');
           previewKmlMap($('#mc-kml-map'), g);
         } catch(err){
+          try { console.error('mc-kml parse:', err); } catch(e){}
           kmlDraft = null;
           APP.toast('خواندن KML ناموفق بود', 'red');
         }
@@ -1896,7 +1908,7 @@
       APP.toast('موقعیت انتخاب شد: ' + c.lat + ' , ' + c.lng, 'green');
     }, { lat:+$('#mc-lat').value, lng:+$('#mc-lng').value }));
     $('#mc-map').addEventListener('click', () => showSatelliteModal({ id:999, name:$('#mc-name').value||'زمین جدید', lat:+$('#mc-lat').value, lng:+$('#mc-lng').value }, parVals.length));
-    $('#mc-add').addEventListener('click', () => {
+    $('#mc-add').addEventListener('click', async () => {
       const name = $('#mc-name').value.trim();
       if (!name){ APP.toast('نام زمین را وارد کنید', 'red'); return; }
       const pars = parVals.slice();
@@ -1905,7 +1917,20 @@
       if (kmlDraft && window.CourseGeo){
         rec.geoId = 'c' + Date.now();
         kmlDraft.name = name;
+        /* اگر عکس‌ها هنوز در حال گرفته‌شدن‌اند، همین‌جا کامل شوند */
+        let satMeta = null;
+        if (kmlDraft._shots){
+          APP.toast('در حال آماده‌سازی تصویر زمین…', 'blue');
+          try {
+            const shots = await kmlDraft._shots;
+            if (shots && shots.sat) satMeta = shots.sat.meta;
+          } catch(e){}
+        }
+        if (!satMeta && kmlDraft.bounds && window.EarthShot) satMeta = EarthShot.expand(kmlDraft.bounds);
+        delete kmlDraft._shots;
+        if (satMeta) kmlDraft.sat = { south: satMeta.south, west: satMeta.west, north: satMeta.north, east: satMeta.east, zoom: satMeta.zoom, src: satMeta.src || 'earthshot' };
         CourseGeo.set(rec.geoId, kmlDraft);
+        if (window.EarthShot) EarthShot.rekey('pending', rec.geoId).catch(()=>{});
       }
       extra.push(rec);
       saveCourses(extra); APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
@@ -1995,6 +2020,10 @@
             <button type="button" class="em-seg-btn" data-gender="M">مرد</button>
           </div>
           <button type="button" class="btn sm ghost on" id="earth-edit-geo">✏️ ویرایش تی / حفره / فروی</button>
+          <div class="em-bg" style="display:flex;gap:4px">
+            <button type="button" class="em-btn on" data-earth-bg="sat" title="ماهواره"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 2.2v1.8M8 12v1.8M2.2 8h1.8M12 8h1.8M4.1 4.1l1.3 1.3M10.6 10.6l1.3 1.3M4.1 11.9l1.3-1.3M10.6 5.4l1.3-1.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+            <button type="button" class="em-btn" data-earth-bg="topo" title="توپوگرافی"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 12.6L5.2 6.2l2.6 3.6L11.2 3.8 14.4 12.6Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg></button>
+          </div>
           <span id="earth-geo-hint" style="font-size:12px;color:var(--muted);line-height:1.5"></span>
         </div>
       </div>
@@ -2051,7 +2080,19 @@
           const sm = CourseGeo.summary(g);
           const geoId = r.base ? String(r.id) : (extraCourses()[r.idx] && extraCourses()[r.idx].geoId) || ('c'+Date.now());
           g.name = ($('#ec-name').value || '').trim() || g.name;
+          /* عکس‌های ۳برابر خودکار: متا همان لحظه، عکس‌ها در پس‌زمینه */
+          if (g.bounds && window.EarthShot){
+            const ext = EarthShot.expand(g.bounds);
+            if (ext) g.sat = { south: ext.south, west: ext.west, north: ext.north, east: ext.east, src: 'earthshot' };
+          }
           CourseGeo.set(geoId, g);
+          if (g.bounds && window.EarthShot){
+            const repEl = $('#ec-kml-rep');
+            const baseRep = 'KML ذخیره شد ✓';
+            EarthShot.captureFor(geoId, g.bounds, (mode, p) => {
+              if (repEl) repEl.textContent = baseRep + ' — ' + (mode === 'sat' ? '🛰 ماهواره ' : '⛰ توپوگرافی ') + p + '٪';
+            }).then(() => { if (repEl) repEl.textContent = baseRep + ' — 🛰 ماهواره ✓ ⛰ توپوگرافی ✓'; }).catch(() => {});
+          }
           if (!r.base){
             const lst = extraCourses();
             if (lst[r.idx]) lst[r.idx].geoId = geoId;

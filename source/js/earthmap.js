@@ -86,10 +86,27 @@
     if (window.CourseGeo && CourseGeo.yardsOf) return CourseGeo.yardsOf(h, geoGender());
     return h && h.yards;
   }
-  function bgUrl(){
+  function addBgOverlay(url, b){
+    if (!map || !url || !b) return;
+    if (!map.getPane('satpane')){
+      map.createPane('satpane');
+      map.getPane('satpane').style.zIndex = 350;
+    }
+    bgLayer = L.imageOverlay(url, [[b.south, b.west],[b.north, b.east]], { opacity:1, interactive:false, pane:'satpane' });
+    bgLayer.addTo(map);
+  }
+  /* محدودهٔ تصویر: اول sat رکورد؛ بعد bounds خود KML؛ بعد مرکز زمین (±~۴۰۰ متر) */
+  function shotExtent(){
     const s = satInfo();
-    if (!s) return '';
-    return (bgMode === 'topo' && s.topo) ? s.topo : s.url;
+    if (s && isFinite(s.south) && isFinite(s.north)) return s;
+    if (window.EarthShot && window.CourseGeo){
+      try {
+        const p = CourseGeo.pack(courseKey());
+        if (p && p.bounds && isFinite(p.bounds.south)) return EarthShot.expand(p.bounds);
+      } catch(e){}
+    }
+    if (window.EarthShot && mountCenter) return EarthShot.expand({ south: mountCenter.lat, north: mountCenter.lat, west: mountCenter.lng, east: mountCenter.lng });
+    return null;
   }
   function applyBg(){
     if (!map) return;
@@ -99,15 +116,18 @@
       b.classList.toggle('on', b.getAttribute('data-earth-bg') === bgMode);
       b.classList.toggle('ghost', b.getAttribute('data-earth-bg') !== bgMode);
     });
-    if (!s || !s.url){
-      return;
-    }
-    if (!map.getPane('satpane')){
-      map.createPane('satpane');
-      map.getPane('satpane').style.zIndex = 350;
-    }
-    bgLayer = L.imageOverlay(bgUrl(), [[s.south, s.west],[s.north, s.east]], { opacity:1, interactive:false, pane:'satpane' });
-    bgLayer.addTo(map);
+    /* ۱) عکس ثابت (زمین پایه) */
+    const staticUrl = s ? ((bgMode === 'topo' && s.topo) ? s.topo : s.url) : '';
+    if (staticUrl){ addBgOverlay(staticUrl, s); return; }
+    /* ۲) عکسِ خودکار (EarthShot) */
+    if (!window.EarthShot) return;
+    const ext = shotExtent();
+    if (!ext) return;
+    let key = null;
+    try { key = (window.CourseGeo && CourseGeo.keyOf) ? CourseGeo.keyOf(courseKey()) : String(courseKey()); } catch(e){ key = String(courseKey()); }
+    const have = EarthShot.urlFor(key, bgMode);
+    if (have){ addBgOverlay(have, ext); return; }
+    EarthShot.ensure(key, bgMode, ext).then(function(u){ if (u && map) applyBg(); }).catch(function(){});
   }
   function holeNums(){ return Object.keys(holesData()).map(Number).sort((a,b)=>a-b); }
   function activeHoles(){
@@ -608,6 +628,7 @@
     if (mode==='measure') redrawMeasure();
   }
 
+  let mountCenter = null;
   function mount(el, opts){
     destroy();
     if (!el) return;
@@ -623,6 +644,7 @@
       return;
     }
 
+    mountCenter = { lat: center.lat, lng: center.lng };
     map = L.map(el, { zoomControl:false, attributionControl:false, tap:true, minZoom:14, maxZoom:20 }).setView([center.lat, center.lng], 16);
     applyBg();
     if (!satInfo() || !satInfo().url){

@@ -14,7 +14,7 @@ if(location.protocol==='http:' && !/^(localhost|127\.0\.0\.1)$/.test(location.ho
 (function(){function p(){var w=innerWidth||800,c=false,h=false;try{c=matchMedia("(pointer:coarse)").matches;h=matchMedia("(hover:none)").matches;}catch(e){}var u=/iPhone|iPod|Android.+Mobile|Windows Phone|webOS|BlackBerry/i.test(navigator.userAgent||"");return w<=820||(u&&w<=920)||(c&&h&&w<=900);}var on=p();document.documentElement.classList.toggle("phone-mode",on);document.documentElement.classList.toggle("site-mode",!on);})();
 </script>
 <!-- ═══ امنیت: CSP (فقط اسکریپت/استایل خودِ ما + CDN تأییدشدهٔ jsDelivr برای PDF)، قفل دامنه، حذف مجوزهای حساس ═══ -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.open-meteo.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com https://server.arcgisonline.com https://tile.opentopomap.org https://*.basemaps.cartocdn.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.open-meteo.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()">
 <meta name="description" content="داشبورد حرفه‌ای آکادمی گلف پات کلاب — فارسی، آفلاین و تک‌فایل؛ با لابی سینمایی، اقتصاد سکه، فروشگاه برند و رنک افتخار.">
@@ -166,6 +166,7 @@ if(location.protocol==='http:' && !/^(localhost|127\.0\.0\.1)$/.test(location.ho
     <script src="js/leaflet.js"></script>
 <script src="js/mis-golf.js"></script>
 <script src="js/coursegeo.js"></script>
+<script src="js/earthshot.js"></script>
 <script src="js/earthmap.js"></script>
 <script src="js/app.js"></script>
 </body>

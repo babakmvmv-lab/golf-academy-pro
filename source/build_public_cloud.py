@@ -224,6 +224,12 @@ s=replace(s,'(0,t.jsx)("nav",{className:"mt-6 flex-1 space-y-1.5",children:ed.ma
           '(0,t.jsx)("nav",{style:{overflowY:"auto",overscrollBehavior:"contain",scrollbarWidth:"thin"},className:"mt-6 flex-1 space-y-1.5",children:ed.map')
 save(name,s)
 
+# ── Site admin: course eye-toggle must not fail silently (expired session etc.) ──
+name='116gnhx5f2czu.js';s=load(name)
+s=replace(s,'if(s&&s.ok){let e=await s.json();l(s=>s?.map(s=>s.id===t.id?e.course:s)??null)}f(null)',
+          'if(s&&s.ok){let e=await s.json();l(s=>s?.map(s=>s.id===t.id?e.course:s)??null)}else{window.alert("تغییر نمایش دوره ذخیره نشد؛ از آیکون ☁ پایین، وضعیت ابر و ورود مدیر را بررسی کنید.")}f(null)')
+save(name,s)
+
 # ── Site admin: image upload buttons (URL option stays). ──
 name='116gnhx5f2czu.js';s=load(name)
 s=replace(s,'className:"grid size-11 shrink-0 place-items-center rounded-xl bg-gold-500 text-forest-950","aria-label":"افزودن عکس",children:(0,t.jsx)(_,{size:17})})',

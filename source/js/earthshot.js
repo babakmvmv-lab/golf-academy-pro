@@ -13,7 +13,7 @@
   var MAX_DIM = 4096;      /* سقف ابعاد بوم */
   var MAX_ZOOM = 19, MIN_ZOOM = 14;
   var AREA_FACTOR = 3;     /* «۳ برابر این محدوده» — مساحت ×۳ (هر ضلع ×√۳) */
-  var MIN_HALF_DEG = 0.0032; /* زمین خیلی کوچک؟ حداقل شعاع ~۳۵۰ متر */
+  var MIN_HALF_DEG = 0.0015; /* زمین خیلی کوچک؟ حداقل شعاع ~۳۵۰ متر */
 
   var SOURCES = {
     sat: [
@@ -196,9 +196,46 @@
       var k = keyOf(from, m);
       return idb('get', k).then(function(rec){
         if (!rec) return;
-        return idb('put', keyOf(to, m), rec).then(function(){ return idb('del', k); });
+        return idb('put', keyOf(to, m), rec).then(function(){ return idb('del', k); }).then(function(){
+          /* حافظهٔ درون‌جلسه هم باید به کلید جدید برود تا urlFor بی‌درنگ بیابد */
+          if (urls.has(k)){ urls.set(keyOf(to, m), urls.get(k)); urls.delete(k); }
+        });
       }).catch(function(){});
     }));
+  }
+
+  /* data-URL فشرده برای جا شدن در رکورد زمین (ga_course_geo) */
+  function toCompact(blob, maxChars){
+    return new Promise(function(res){
+      try{
+        var fr=new FileReader();
+        fr.onload=function(){
+          var u=fr.result;
+          if(!maxChars||u.length<=maxChars)return res(u);
+          var im=new Image();
+          im.onload=function(){
+            var dims=[1536,1280,1024,860,700];
+            var i=0;
+            (function step(){
+              if(i>=dims.length)return res(null);
+              var d=dims[i++];
+              var sc=Math.min(1,d/Math.max(im.naturalWidth,im.naturalHeight));
+              var w=Math.max(1,Math.round(im.naturalWidth*sc)),h=Math.max(1,Math.round(im.naturalHeight*sc));
+              var cv=document.createElement('canvas');cv.width=w;cv.height=h;
+              var cx=cv.getContext('2d');cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality='high';cx.drawImage(im,0,0,w,h);
+              var out=cv.toDataURL('image/webp',0.74);
+              if(out.indexOf('data:image/webp')!==0)out=cv.toDataURL('image/jpeg',0.68);
+              if(out.length<=maxChars)return res(out);
+              step();
+            })();
+          };
+          im.onerror=function(){res(null);};
+          im.src=u;
+        };
+        fr.onerror=function(){res(null);};
+        fr.readAsDataURL(blob);
+      }catch(e){res(null);}
+    });
   }
 
   window.EarthShot = {
@@ -208,6 +245,7 @@
     urlFor: urlFor,
     rekey: rekey,
     meta: function(key, mode){ return idb('get', keyOf(key, mode)).then(function(r){ return r && r.meta; }).catch(function(){ return null; }); },
-    pickZoomFor: function(b){ return pickZoom(expand(b) || b); }
+    pickZoomFor: function(b){ return pickZoom(expand(b) || b); },
+    toCompact: toCompact
   };
 })();

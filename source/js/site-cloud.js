@@ -428,7 +428,8 @@
         privateState[kind+':'+old.id]={kind,value:v};put('puttclub_private_moderation_v1',privateState);
         return response({ok:true,[kind==='testimonials'?'testimonial':'review']:v});
       }
-      const value=normalizeRecord(kind,{...body,id:old?old.id:newId(),createdAt:old?.createdAt||new Date().toISOString()},old);
+      const merged={...(old||{}),...body,id:old?old.id:newId(),createdAt:old?.createdAt||new Date().toISOString()};
+      const value=normalizeRecord(kind,merged,old);
       if(kind==='products' && collection.some(x=>x.id!==value.id&&x.slug===value.slug))throw error('این اسلاگ متعلق به محصول دیگری است.',409);
       if(kind==='categories' && collection.some(x=>x.id!==value.id&&x.name===value.name))throw error('این دسته قبلاً وجود دارد.',409);
       if(kind==='categories' && old && old.name!==value.name){

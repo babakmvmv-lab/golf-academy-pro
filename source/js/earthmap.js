@@ -116,18 +116,31 @@
       b.classList.toggle('on', b.getAttribute('data-earth-bg') === bgMode);
       b.classList.toggle('ghost', b.getAttribute('data-earth-bg') !== bgMode);
     });
-    /* ۱) عکس ثابت (زمین پایه) */
-    const staticUrl = s ? ((bgMode === 'topo' && s.topo) ? s.topo : s.url) : '';
-    if (staticUrl){ addBgOverlay(staticUrl, s); return; }
-    /* ۲) عکسِ خودکار (EarthShot) */
-    if (!window.EarthShot) return;
+    const recUrl = (m) => { /* عکس دائمی داخل رکورد زمین؛ همه‌جا هست و شبکه نمی‌خواهد */
+      if (!s) return '';
+      return m === 'topo' ? (s.imgTopo || s.topo || '') : (s.img || s.url || '');
+    };
+    if (!window.EarthShot){ if (recUrl(bgMode)) addBgOverlay(recUrl(bgMode), s); return; }
     const ext = shotExtent();
     if (!ext) return;
     let key = null;
     try { key = (window.CourseGeo && CourseGeo.keyOf) ? CourseGeo.keyOf(courseKey()) : String(courseKey()); } catch(e){ key = String(courseKey()); }
+    /* ۱) فایل ایستای زمین‌های پایه (مسجدسلیمان و…) */
+    const staticUrl = s ? ((bgMode === 'topo' ? s.topo : s.url) || '') : '';
+    if (staticUrl){ addBgOverlay(staticUrl, s); return; }
+    /* ۲) عکسِ همین دستگاه (IDB، تمام‌اندازه) — تازه یا پس از همگام‌سازی */
     const have = EarthShot.urlFor(key, bgMode);
     if (have){ addBgOverlay(have, ext); return; }
-    EarthShot.ensure(key, bgMode, ext).then(function(u){ if (u && map) applyBg(); }).catch(function(){});
+    EarthShot.meta(key, bgMode).then(function(m){
+      if (m){
+        EarthShot.ensure(key, bgMode, ext).then(function(u){ if (u) addBgOverlay(u, ext); }).catch(function(){});
+        return;
+      }
+      /* ۳) عکس دائمی رکورد زمین */
+      if (recUrl(bgMode)){ addBgOverlay(recUrl(bgMode), s); return; }
+      /* ۴) تولید خودکار تازه */
+      EarthShot.ensure(key, bgMode, ext).then(function(u){ if (u && map) applyBg(); }).catch(function(){});
+    }).catch(function(){ const u2 = recUrl(bgMode); if (u2) addBgOverlay(u2, s); });
   }
   function holeNums(){ return Object.keys(holesData()).map(Number).sort((a,b)=>a-b); }
   function activeHoles(){

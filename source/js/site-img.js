@@ -39,5 +39,35 @@
   document.body.appendChild(inp);
   inp.click();
  }
- window.PC_IMG={pick:pick};
+ /* فشرده‌سازی بیشتر یک data-URL تا زیر سقف مشخص (برای ارسال به سرور با محدودیت حجم) */
+ function shrink(dataUrl,maxBytes){
+  return new Promise(function(resolve){
+  try{
+   var im=new Image();
+   im.onload=function(){
+    try{
+     var dim=Math.max(im.naturalWidth,im.naturalHeight)||1024;
+     var dims=[dim,Math.round(dim*0.78),Math.round(dim*0.6),Math.round(dim*0.45),Math.round(dim*0.34)];
+     for(var i=0;i<dims.length;i++){
+      var d=Math.max(320,dims[i]);
+      var sc=Math.min(1,d/Math.max(im.naturalWidth,im.naturalHeight));
+      var w=Math.max(1,Math.round(im.naturalWidth*sc)),h=Math.max(1,Math.round(im.naturalHeight*sc));
+      var cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      var cx=cv.getContext('2d');cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality='high';cx.drawImage(im,0,0,w,h);
+      var qs=[0.8,0.72,0.62];
+      for(var j=0;j<qs.length;j++){
+       var out=cv.toDataURL('image/webp',qs[j]);
+       if(out.indexOf('data:image/webp')!==0)out=cv.toDataURL('image/jpeg',qs[j]-0.06);
+       if(out.length<=maxBytes){resolve(out);return;}
+      }
+     }
+     resolve(null); /* حتی با کوچک‌ترین حالت زیر سقف نیامد */
+    }catch(e){resolve(null);}
+   };
+   im.onerror=function(){resolve(null);};
+   im.src=dataUrl;
+  }catch(e){resolve(null);}
+  });
+ }
+ window.PC_IMG={pick:pick,shrink:shrink};
 })();

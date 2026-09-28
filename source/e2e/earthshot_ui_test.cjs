@@ -59,13 +59,18 @@ try {
   /* register the ground */
   await page.fill('#mc-name', 'زمین تست ایثار');
   await page.click('#mc-add');
-  await page.waitForTimeout(2500);
-  const stored = await page.evaluate(() => {
+  /* ثبت ممکن است منتظر کامل‌شدن کپچر بماند — تا ۶۰ث صبر می‌کنیم نه وقفهٔ ثابت */
+  const storedKey = await page.waitForFunction(() => {
+    try {
+      const geo = JSON.parse(localStorage.getItem('ga_course_geo') || '{}');
+      return Object.keys(geo).find(k => geo[k] && geo[k].name === 'زمین تست ایثار') || false;
+    } catch (e) { return false; }
+  }, null, { timeout: 60000 }).then(r => r.jsonValue()).catch(() => null);
+  const stored = await page.evaluate(key => {
     const geo = JSON.parse(localStorage.getItem('ga_course_geo') || '{}');
-    const key = Object.keys(geo).find(k => geo[k] && geo[k].name === 'زمین تست ایثار');
     const g = key ? geo[key] : null;
     return { key, sat: g && g.sat, bounds: g && g.bounds };
-  });
+  }, storedKey);
   ok('ground saved with geo record', !!stored.key);
   if (stored.sat && stored.bounds) {
     const a0 = (stored.bounds.north - stored.bounds.south) * (stored.bounds.east - stored.bounds.west);
@@ -104,7 +109,54 @@ try {
   });
   ok('topo toggle switches the background image', !!bg2 && bg2.startsWith('blob:') && bg2 !== bg1.src, bg2 || 'no overlay');
 
-  await page.screenshot({ path: '/home/user/ground_topo_mode.png' });
+  /* ── عکس دائمی داخل رکورد: پس‌زمینه فشرده‌سازی تمام شود ── */
+  const recShot = await page.waitForFunction(() => {
+    try {
+      const geo = JSON.parse(localStorage.getItem('ga_course_geo') || '{}');
+      const k = Object.keys(geo).find(k => geo[k] && geo[k].name === 'زمین تست ایثار');
+      const s = k && geo[k].sat;
+      return !!(s && s.img && s.imgTopo && s.img.length > 40000 && s.imgTopo.length > 40000 &&
+                s.img.startsWith('data:image/') && s.imgTopo.startsWith('data:image/')) ? k : false;
+    } catch (e) { return false; }
+  }, null, { timeout: 30000 }).then(r => r.jsonValue()).catch(() => null);
+  ok('record carries permanent compact images (sat+topo)', !!recShot, recShot ? 'geoId=' + recShot : 'missing');
+  const recLens = await page.evaluate(k => {
+    const geo = JSON.parse(localStorage.getItem('ga_course_geo') || '{}');
+    return { img: (geo[k].sat.img || '').length, topo: (geo[k].sat.imgTopo || '').length };
+  }, recShot || '').catch(() => ({ img: 0, topo: 0 }));
+  ok('compact images within budget', recLens.img > 40000 && recLens.img <= 360000 && recLens.topo > 40000 && recLens.topo <= 360000,
+     Math.round(recLens.img / 1024) + 'KB / ' + Math.round(recLens.topo / 1024) + 'KB');
+
+  /* ── شبیه دستگاه دیگر: بدون IDB و بدون دسترسی به تایل‌ها (شبکهٔ بسته) ── */
+  const recKey = recShot;
+  await page.evaluate(() => new Promise(res => {
+    const rq = indexedDB.deleteDatabase('ga_earth_shots');
+    rq.onsuccess = rq.onerror = rq.onblocked = () => res();
+  }).catch(() => {}));
+  await Promise.all(['**/vt/lyrs**', '**server.arcgisonline.com**', '**tile.opentopomap.org**', '**mt*.google.com**']
+    .map(pat => page.route(pat, r => r.abort())));
+  await page.reload({ waitUntil: 'load', timeout: 90000 });
+  await page.waitForFunction(() => window.APP && window.UI_LABELS, null, { timeout: 45000 });
+  await page.waitForTimeout(1200);
+  await page.evaluate(() => { window.APP.go('mgmt'); });
+  await page.waitForTimeout(700);
+  await page.evaluate(() => { const t = document.querySelector('.mgmt-tab[data-tab="courses"]'); if (t) t.click(); });
+  await page.waitForSelector('#mc-kml', { timeout: 20000 });
+  await page.evaluate(() => { const b = [...document.querySelectorAll('[data-act="editc"]')].pop(); if (b) b.click(); });
+  const bg3 = await page.waitForFunction(() => {
+    const im = document.querySelector('#ec-geo-map .leaflet-image-layer img') || document.querySelector('#ec-geo-map .leaflet-image-layer');
+    return im ? { src: (im.src || '').slice(0, 60), w: im.naturalWidth || im.width } : null;
+  }, null, { timeout: 30000 }).then(r => r.jsonValue()).catch(() => null);
+  ok('offline device shows the permanent record image (no tiles, no IDB)',
+     !!bg3 && bg3.src.startsWith('data:image/'), bg3 ? bg3.src.slice(0, 30) + ' ' + bg3.w + 'px' : 'no overlay');
+  await page.evaluate(() => { const b = document.querySelector('[data-earth-bg="topo"]'); if (b) b.click(); });
+  const bg4 = await page.waitForFunction(() => {
+    const im = document.querySelector('#ec-geo-map .leaflet-image-layer img') || document.querySelector('#ec-geo-map .leaflet-image-layer');
+    return im ? (im.src || '').slice(0, 30) : null;
+  }, null, { timeout: 30000 }).then(r => r.jsonValue()).catch(() => null);
+  ok('offline topo mode also from record', !!bg4 && bg4.startsWith('data:image/'), bg4 || 'no overlay');
+
+  await page.screenshot({ path: '/home/user/ground_permanent_record.png' });
 
   /* cleanup local test data (nothing synced — local build, no cloud session) */
   await page.evaluate(() => { try { localStorage.removeItem('ga_courses'); localStorage.removeItem('ga_course_geo'); } catch (e) {} });

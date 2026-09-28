@@ -1918,19 +1918,34 @@
         rec.geoId = 'c' + Date.now();
         kmlDraft.name = name;
         /* اگر عکس‌ها هنوز در حال گرفته‌شدن‌اند، همین‌جا کامل شوند */
-        let satMeta = null;
+        let satMeta = null, shots = null;
         if (kmlDraft._shots){
           APP.toast('در حال آماده‌سازی تصویر زمین…', 'blue');
-          try {
-            const shots = await kmlDraft._shots;
-            if (shots && shots.sat) satMeta = shots.sat.meta;
-          } catch(e){}
+          try { shots = await kmlDraft._shots; if (shots && shots.sat) satMeta = shots.sat.meta; } catch(e){}
         }
         if (!satMeta && kmlDraft.bounds && window.EarthShot) satMeta = EarthShot.expand(kmlDraft.bounds);
         delete kmlDraft._shots;
         if (satMeta) kmlDraft.sat = { south: satMeta.south, west: satMeta.west, north: satMeta.north, east: satMeta.east, zoom: satMeta.zoom, src: satMeta.src || 'earthshot' };
+        /* ثبت فوری؛ عکس‌های فشرده در پس‌زمینه، دائمی داخل خود رکورد می‌نشینند */
         CourseGeo.set(rec.geoId, kmlDraft);
         if (window.EarthShot) EarthShot.rekey('pending', rec.geoId).catch(()=>{});
+        if (kmlDraft.sat && window.EarthShot && EarthShot.toCompact && shots){
+          const cap = 360000; /* هر عکس حداکثر ~۳۶۰KB کاراکتر */
+          const pImg  = (shots.sat  && shots.sat.blob)  ? EarthShot.toCompact(shots.sat.blob, cap)  : Promise.resolve(null);
+          const pTopo = (shots.topo && shots.topo.blob) ? EarthShot.toCompact(shots.topo.blob, cap) : Promise.resolve(null);
+          Promise.all([pImg, pTopo]).then(([img, imgTopo]) => {
+            if (!img && !imgTopo) return;
+            try {
+              const all = JSON.parse(localStorage.getItem('ga_course_geo') || '{}');
+              const r = all[rec.geoId];
+              if (!r || !r.sat) return;
+              r.sat = Object.assign({}, r.sat);
+              if (img) r.sat.img = img;
+              if (imgTopo) r.sat.imgTopo = imgTopo;
+              CourseGeo.set(rec.geoId, r);
+            } catch(e){}
+          }).catch(() => {});
+        }
       }
       extra.push(rec);
       saveCourses(extra); APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
@@ -2080,7 +2095,7 @@
           const sm = CourseGeo.summary(g);
           const geoId = r.base ? String(r.id) : (extraCourses()[r.idx] && extraCourses()[r.idx].geoId) || ('c'+Date.now());
           g.name = ($('#ec-name').value || '').trim() || g.name;
-          /* عکس‌های ۳برابر خودکار: متا همان لحظه، عکس‌ها در پس‌زمینه */
+          /* عکس‌های ۳برابر خودکار: متا همان لحظه، عکس‌ها در پس‌زمینه + نسخهٔ فشردهٔ دائمی داخل رکورد */
           if (g.bounds && window.EarthShot){
             const ext = EarthShot.expand(g.bounds);
             if (ext) g.sat = { south: ext.south, west: ext.west, north: ext.north, east: ext.east, src: 'earthshot' };
@@ -2091,7 +2106,19 @@
             const baseRep = 'KML ذخیره شد ✓';
             EarthShot.captureFor(geoId, g.bounds, (mode, p) => {
               if (repEl) repEl.textContent = baseRep + ' — ' + (mode === 'sat' ? '🛰 ماهواره ' : '⛰ توپوگرافی ') + p + '٪';
-            }).then(() => { if (repEl) repEl.textContent = baseRep + ' — 🛰 ماهواره ✓ ⛰ توپوگرافی ✓'; }).catch(() => {});
+            }).then(async (shots) => {
+              if (shots && EarthShot.toCompact){
+                const cap = 360000;
+                const all = JSON.parse(localStorage.getItem('ga_course_geo') || '{}');
+                const rec = all[geoId];
+                if (rec){
+                  if (shots.sat && shots.sat.blob){ const img = await EarthShot.toCompact(shots.sat.blob, cap); if (img) rec.sat = Object.assign({}, rec.sat, { img }); }
+                  if (shots.topo && shots.topo.blob){ const imgT = await EarthShot.toCompact(shots.topo.blob, cap); if (imgT) rec.sat = Object.assign({}, rec.sat, { imgTopo: imgT }); }
+                  CourseGeo.set(geoId, rec);
+                }
+              }
+              if (repEl) repEl.textContent = baseRep + ' — 🛰 ماهواره ✓ ⛰ توپوگرافی ✓ (دائمی در رکورد ذخیره شد)';
+            }).catch(() => {});
           }
           if (!r.base){
             const lst = extraCourses();

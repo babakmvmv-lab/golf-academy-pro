@@ -33,7 +33,15 @@ try {
     const area1 = (e.north - e.south) * (e.east - e.west);
     return { ratio: +(area1 / area0).toFixed(2), zoom: window.EarthShot.pickZoomFor(b) };
   });
-  ok('expand: area ≈ 4× original (got ' + unit.ratio + '×)', unit.ratio >= 3.6 && unit.ratio <= 4.4);
+  ok('expand: area ≈ 4-8× original (got ' + unit.ratio + '×)', unit.ratio >= 3.6 && unit.ratio <= 8.6);
+  const unitAsp = await page.evaluate(() => {
+    const b = { south: 31.900, north: 31.918, west: 49.300, east: 49.330 };
+    const e = window.EarthShot.expand(b);
+    const hM = (e.north - e.south) * 111320;
+    const wM = (e.east - e.west) * 111320 * Math.cos(31.9 * Math.PI / 180);
+    return +(wM / hM).toFixed(2);
+  });
+  ok('expand: landscape aspect ≥ 2 (got ' + unitAsp + ')', unitAsp >= 1.95 && unitAsp <= 2.6);
   ok('zoom picked in sane range (got z' + unit.zoom + ')', unit.zoom >= 14 && unit.zoom <= 19);
 
   /* go to مدیریت → زمین‌ها */
@@ -76,7 +84,7 @@ try {
     const a0 = (stored.bounds.north - stored.bounds.south) * (stored.bounds.east - stored.bounds.west);
     const a1 = (stored.sat.north - stored.sat.south) * (stored.sat.east - stored.sat.west);
     const r = +(a1 / a0).toFixed(2);
-    ok('saved sat meta = 4× extent (got ' + r + '×)', r >= 3.6 && r <= 4.6);
+    ok('saved sat meta = 4-8× extent (got ' + r + '×)', r >= 3.6 && r <= 8.6);
   } else ok('saved sat meta present', false);
 
   /* images stored in IndexedDB under the final geoId */

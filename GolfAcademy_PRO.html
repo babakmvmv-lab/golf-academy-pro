@@ -16286,7 +16286,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
 </script>
 <script>/* EarthShot — گرفتن خودکارِ تصویر پس‌زمینهٔ نقشهٔ زمین.
    با هر KML، بدون هیچ کاری از طرف کاربر:
-   ۱) محدودهٔ زمین ۴ برابر (مساحت) بزرگ می‌شود،
+   ۱) محدودهٔ زمین ۴ برابر (مساحت) بزرگ می‌شود و نسبت افقی صفحه (عرض ≥ ۲× ارتفاع) می‌گیرد،
    ۲) با بهترین زوم ممکن کاشی‌های ماهواره‌ای و توپوگرافی از سرویس‌های عمومی
       (بدون کلید) گرفته و روی یک بوم دوخته می‌شوند،
    ۳) هر دو حالت از همان اول ذخیره می‌شوند (IndexedDB — عکس بزرگ است، localStorage نه).
@@ -16295,11 +16295,12 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
 (function(){
   'use strict';
   var TILE = 256;          /* اندازهٔ استاندارد کاشی */
-  var MAX_TILES = 256;     /* سقف تعداد کاشی هر عکس (۱۶×۱۶) */
-  var MAX_DIM = 4096;      /* سقف ابعاد بوم */
+  var MAX_TILES = 320;     /* سقف تعداد کاشی هر عکس — با نسبت افقی، زوی بالا حفظ می‌شود */
+  var MAX_DIM = 5632;      /* سقف ابعاد بوم (نسبت افقی؛ مساحت زیر سقف امن iOS می‌ماند) */
   var MAX_ZOOM = 19, MIN_ZOOM = 14;
   var MAX_ZOOM_TOPO = 17; /* توپوگرافی: OpenTopoMap بیش از z17 ندارد؛ بالاتر کاشی خالی/تیره می‌دهد */
   var AREA_FACTOR = 4;     /* «۴ برابر این محدوده» — مساحت ×۴ (هر ضلع ×۲) */
+  var LANDSCAPE = 2.0;     /* صفحهٔ نقشه افقی است؛ تصویر باید کل صفحه را بپوشاند (عرض ≥ ۲× ارتفاع) تا گوشه‌ها خالی نماند */
   var MIN_HALF_DEG = 0.003; /* زمین خیلی کوچک؟ حداقل عرضِ تصویر ~۶۶۰ متر (زمین‌های کوچک هم بافت اطراف را می‌گیرند) */
 
   /* اگر کاشی مستقیم نیامد (شبکهٔ بسته مثل ایران)، از پروکسی عمومی ابر می‌آید؛
@@ -16328,6 +16329,9 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
     var dLat = Math.max((b.north - b.south) / 2 * k, MIN_HALF_DEG);
     var cosLat = Math.max(0.2, Math.cos(cLat * Math.PI / 180));
     var dLng = Math.max((b.east - b.west) / 2 * k, MIN_HALF_DEG / cosLat);
+    /* نسبت افقی: خروجی مربع نباشد؛ صفحهٔ نقشه افقی است و تصویر باید تمامش را بپوشاند.
+       فقط عرض را زیاد می‌کنیم (جزئیات و زوم دست‌نخورده) — هرگز ارتفاع را کم نمی‌کنیم. */
+    if (dLng * cosLat < dLat * LANDSCAPE) dLng = dLat * LANDSCAPE / cosLat;
     return { south: cLat - dLat, north: cLat + dLat, west: cLng - dLng, east: cLng + dLng };
   }
 

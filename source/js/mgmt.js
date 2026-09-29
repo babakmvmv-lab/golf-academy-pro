@@ -1982,9 +1982,17 @@
     }
     m.innerHTML = `
     <div class="glass gold-border" style="width:min(720px,94vw);padding:18px;max-height:92vh;overflow:auto;-webkit-overflow-scrolling:touch">
-      <div class="card-head"><span class="ic">🛰</span><h3>نمای ماهواره‌ای — ${esc(course.name)}</h3><span class="tag">${D.fa(holes)} حفره</span> <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px;line-height:1.4">✕</button></div>
-      <div class="sat-wrap" style="margin-top:12px">
-        <canvas id="sat-canvas"></canvas>
+      <div class="card-head"><span class="ic">🛰</span><h3>نمای زمین — ${esc(course.name)}</h3><span class="tag">${D.fa(holes)} حفره</span> <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px;line-height:1.4">✕</button></div>
+      <div style="display:flex;gap:6px;margin-top:12px;align-items:center;flex-wrap:wrap">
+        <div class="em-bg" style="display:flex;gap:4px">
+          <button type="button" class="em-btn on" data-satmode="sat">🛰 ماهواره‌ای</button>
+          <button type="button" class="em-btn" data-satmode="topo">⛰ توپوگرافی</button>
+        </div>
+        <span id="sat-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div class="sat-wrap" style="margin-top:10px">
+        <img id="sat-img" alt="نمای زمین" style="display:none;width:100%;aspect-ratio:2/1;object-fit:cover" />
+        <canvas id="sat-canvas" style="display:none"></canvas>
         <div class="sat-overlay">${esc(course.name)} • ${esc(course.loc||'')}</div>
         <div class="sat-coords">${(course.lat||24.7136).toFixed(5)}, ${(course.lng||46.6753).toFixed(5)}</div>
       </div>
@@ -1994,7 +2002,49 @@
       </div>
     </div>`;
     m.style.display = 'flex';
-    drawSatellite($('#sat-canvas'), { id: course.id||1, lat: course.lat||24.7136, lng: course.lng||46.6753 }, holes);
+    /* عکس واقعی زمین: اول نسخهٔ دائمی رکورد (همه‌جا هست)، بعد نسخهٔ این دستگاه، بعد گرفتن تازه.
+       فقط اگر هیچ‌کدام نبود، طرح شماتیک قدیمی نشان داده می‌شود. */
+    const st = $('#sat-status'), im = $('#sat-img'), cvEl = $('#sat-canvas');
+    const courseId = course.base ? 'mis' : String(course.id || '');
+    function satRec(){ try { return (window.CourseGeo && CourseGeo.pack) ? (CourseGeo.pack(courseId).sat || null) : null; } catch(e){ return null; } }
+    function geoKey(){ try { return (window.CourseGeo && CourseGeo.keyOf) ? CourseGeo.keyOf(courseId) : String(courseId); } catch(e){ return String(courseId); } }
+    function geoBounds(){ try { const p = (window.CourseGeo && CourseGeo.pack) ? CourseGeo.pack(courseId) : null; return (p && p.bounds) || null; } catch(e){ return null; } }
+    let mode = 'sat';
+    function resolve(){
+      const rec = satRec();
+      const recUrl = mode === 'topo' ? (rec && (rec.imgTopo || rec.topo)) : (rec && (rec.img || rec.url));
+      if (recUrl) return Promise.resolve({ url: recUrl, from: 'permanent' });
+      if (!window.EarthShot) return Promise.resolve(null);
+      const have = EarthShot.urlFor(geoKey(), mode);
+      if (have) return Promise.resolve({ url: have, from: 'device' });
+      const ext = (rec && isFinite(rec.south)) ? rec : (geoBounds() ? EarthShot.expand(geoBounds()) : null);
+      if (!ext) return Promise.resolve(null);
+      st.textContent = 'در حال آماده‌سازی تصویر زمین…';
+      return EarthShot.ensure(geoKey(), mode, ext).then(u => u ? { url: u, from: 'fresh' } : null).catch(() => null);
+    }
+    function fallback(){
+      st.textContent = 'تصویر واقعی این زمین هنوز در دسترس نیست؛ با واردکردن KML به‌صورت خودکار ساخته می‌شود.';
+      im.style.display = 'none'; cvEl.style.display = 'block';
+      drawSatellite(cvEl, { id: course.id||1, lat: course.lat||24.7136, lng: course.lng||46.6753 }, holes);
+    }
+    function render(){
+      st.textContent = '';
+      resolve().then(r => {
+        if (r && r.url){
+          im.style.display = 'block'; cvEl.style.display = 'none';
+          im.onerror = () => { im.style.display = 'none'; fallback(); };
+          im.src = r.url;
+          st.textContent = r.from === 'permanent' ? 'عکس واقعی زمین — ذخیرهٔ دائمی و در همه‌جا در دسترس' :
+                           (r.from === 'device' ? 'عکس واقعی زمین — نسخهٔ همین دستگاه' : 'عکس واقعی زمین — همین حالا گرفته شد');
+        } else fallback();
+      }).catch(() => fallback());
+    }
+    m.querySelectorAll('[data-satmode]').forEach(b => b.addEventListener('click', () => {
+      mode = b.getAttribute('data-satmode') || 'sat';
+      m.querySelectorAll('[data-satmode]').forEach(x => x.classList.toggle('on', x === b));
+      render();
+    }));
+    render();
     $('#sat-close').addEventListener('click', () => m.style.display = 'none');
     $('#sat-gmaps').addEventListener('click', () => {
       window.open('https://www.google.com/maps?q=' + (course.lat||24.7136) + ',' + (course.lng||46.6753), '_blank');
@@ -2095,11 +2145,14 @@
           const sm = CourseGeo.summary(g);
           const geoId = r.base ? String(r.id) : (extraCourses()[r.idx] && extraCourses()[r.idx].geoId) || ('c'+Date.now());
           g.name = ($('#ec-name').value || '').trim() || g.name;
-          /* عکس‌های ۳برابر خودکار: متا همان لحظه، عکس‌ها در پس‌زمینه + نسخهٔ فشردهٔ دائمی داخل رکورد */
+          /* عکس‌های ۳برابر خودکار: متا همان لحظه، عکس‌ها در پس‌زمینه + نسخهٔ فشردهٔ دائمی داخل رکورد.
+             عکس‌های دائمی قبلی هرگز پاک نمی‌شوند مگر نسخهٔ تازه واقعاً کامل شود (شبکهٔ بسته). */
+          let oldSat = null;
+          try { const allGeo = JSON.parse(localStorage.getItem('ga_course_geo') || '{}'); oldSat = (allGeo[geoId] && allGeo[geoId].sat) || null; } catch(e){}
           if (g.bounds && window.EarthShot){
             const ext = EarthShot.expand(g.bounds);
-            if (ext) g.sat = { south: ext.south, west: ext.west, north: ext.north, east: ext.east, src: 'earthshot' };
-          }
+            if (ext) g.sat = Object.assign({ img: oldSat && oldSat.img, imgTopo: oldSat && oldSat.imgTopo }, ext, { src: 'earthshot' });
+          } else if (oldSat){ g.sat = oldSat; }
           CourseGeo.set(geoId, g);
           if (g.bounds && window.EarthShot){
             const repEl = $('#ec-kml-rep');

@@ -109,6 +109,23 @@ try {
   });
   ok('topo toggle switches the background image', !!bg2 && bg2.startsWith('blob:') && bg2 !== bg1.src, bg2 || 'no overlay');
 
+  /* ── دکمهٔ «🛰 نقشه» — باید عکس واقعی زمین را نشان بدهد، نه طرح شماتیک ── */
+  await page.evaluate(() => { const c = document.querySelector('#ec-cancel'); if (c) c.click(); });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { const b = [...document.querySelectorAll('[data-act="sat"]')].pop(); if (b) b.click(); });
+  const mimg = await page.waitForFunction(() => {
+    const i = document.querySelector('#modal-sat #sat-img');
+    return (i && i.style.display !== 'none' && /^(data:image|blob:)/.test(i.src || '')) ? (i.src || '').slice(0, 40) : false;
+  }, null, { timeout: 30000 }).then(r => r.jsonValue()).catch(() => null);
+  ok('«🛰 نقشه» shows the real imagery (not the sketch)', !!mimg, mimg || 'sketch shown');
+  await page.evaluate(() => { const b = document.querySelector('#modal-sat [data-satmode="topo"]'); if (b) b.click(); });
+  const mimg2 = await page.waitForFunction(() => {
+    const i = document.querySelector('#modal-sat #sat-img');
+    return (i && i.style.display !== 'none' && /^(data:image|blob:)/.test(i.src || '')) ? (i.src || '').slice(0, 40) : false;
+  }, null, { timeout: 30000 }).then(r => r.jsonValue()).catch(() => null);
+  ok('«🛰 نقشه» topo mode shows real topo image', !!mimg2 && mimg2 !== mimg, mimg2 || 'none');
+  await page.evaluate(() => { const x = document.querySelector('#sat-close'); if (x) x.click(); });
+
   /* ── عکس دائمی داخل رکورد: پس‌زمینه فشرده‌سازی تمام شود ── */
   const recShot = await page.waitForFunction(() => {
     try {
@@ -155,6 +172,17 @@ try {
     return im ? (im.src || '').slice(0, 30) : null;
   }, null, { timeout: 30000 }).then(r => r.jsonValue()).catch(() => null);
   ok('offline topo mode also from record', !!bg4 && bg4.startsWith('data:image/'), bg4 || 'no overlay');
+
+  /* ── دکمهٔ «🛰 نقشه» روی دستگاه بدون شبکه و بدون IDB → عکس دائمی رکورد ── */
+  await page.evaluate(() => { const c = document.querySelector('#ec-cancel'); if (c) c.click(); });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { const b = [...document.querySelectorAll('[data-act="sat"]')].pop(); if (b) b.click(); });
+  const mimg3 = await page.waitForFunction(() => {
+    const i = document.querySelector('#modal-sat #sat-img');
+    return (i && i.style.display !== 'none' && (i.src || '').startsWith('data:image/')) ? (i.src || '').slice(0, 30) : false;
+  }, null, { timeout: 30000 }).then(r => r.jsonValue()).catch(() => null);
+  ok('offline «🛰 نقشه» shows the permanent record image', !!mimg3, mimg3 || 'sketch/none');
+  await page.evaluate(() => { const x = document.querySelector('#sat-close'); if (x) x.click(); });
 
   await page.screenshot({ path: '/home/user/ground_permanent_record.png' });
 

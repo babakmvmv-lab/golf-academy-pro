@@ -14,7 +14,7 @@ if(location.protocol==='http:' && !/^(localhost|127\.0\.0\.1)$/.test(location.ho
 (function(){function p(){var w=innerWidth||800,c=false,h=false;try{c=matchMedia("(pointer:coarse)").matches;h=matchMedia("(hover:none)").matches;}catch(e){}var u=/iPhone|iPod|Android.+Mobile|Windows Phone|webOS|BlackBerry/i.test(navigator.userAgent||"");return w<=820||(u&&w<=920)||(c&&h&&w<=900);}var on=p();document.documentElement.classList.toggle("phone-mode",on);document.documentElement.classList.toggle("site-mode",!on);})();
 </script>
 <!-- ═══ امنیت: CSP (فقط اسکریپت/استایل خودِ ما + CDN تأییدشدهٔ jsDelivr برای PDF)، قفل دامنه، حذف مجوزهای حساس ═══ -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com https://server.arcgisonline.com https://tile.opentopomap.org https://*.basemaps.cartocdn.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.open-meteo.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com https://server.arcgisonline.com https://tile.opentopomap.org https://*.basemaps.cartocdn.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.open-meteo.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()">
 <meta name="description" content="داشبورد حرفه‌ای آکادمی گلف پات کلاب — فارسی، آفلاین و تک‌فایل؛ با لابی سینمایی، اقتصاد سکه، فروشگاه برند و رنک افتخار.">
@@ -3460,10 +3460,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
             if (remoteNewer) {
               var newVal = decode(r.v);
               if (r.k === 'ga_sp_sessions' || r.k === 'ga_sp_shots' || r.k === 'ga_sp_tomb') newVal = mergeSpKey(r.k, L.getItem(r.k), newVal);
-              try { L.setItem(r.k, newVal); } catch (e) {}
-              ts[r.k] = r.updated_at;
-              applied++;
-              if (localDirty) delete d[r.k];
+              try {
+                L.setItem(r.k, newVal);
+                /* مهر زمان فقط وقتی بنویسد که واقعاً نوشته شده؛ اگر حافظهٔ مرورگر پر بود،
+                   دفعهٔ بعد دوباره تلاش می‌شود و رکورد برای همیشه گم نمی‌شود. */
+                ts[r.k] = r.updated_at;
+                applied++;
+                if (localDirty) delete d[r.k];
+              } catch (e) {}
             }
           });
           stripSpStorage(L);
@@ -11851,9 +11855,17 @@ window.addEventListener('ga:brand-changed', function(){
     }
     m.innerHTML = `
     <div class="glass gold-border" style="width:min(720px,94vw);padding:18px;max-height:92vh;overflow:auto;-webkit-overflow-scrolling:touch">
-      <div class="card-head"><span class="ic">🛰</span><h3>نمای ماهواره‌ای — ${esc(course.name)}</h3><span class="tag">${D.fa(holes)} حفره</span> <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px;line-height:1.4">✕</button></div>
-      <div class="sat-wrap" style="margin-top:12px">
-        <canvas id="sat-canvas"></canvas>
+      <div class="card-head"><span class="ic">🛰</span><h3>نمای زمین — ${esc(course.name)}</h3><span class="tag">${D.fa(holes)} حفره</span> <button type="button" class="btn sm ghost" onclick="this.closest('[id^=modal]').style.display='none'" style="padding:2px 9px;font-size:15px;line-height:1.4">✕</button></div>
+      <div style="display:flex;gap:6px;margin-top:12px;align-items:center;flex-wrap:wrap">
+        <div class="em-bg" style="display:flex;gap:4px">
+          <button type="button" class="em-btn on" data-satmode="sat">🛰 ماهواره‌ای</button>
+          <button type="button" class="em-btn" data-satmode="topo">⛰ توپوگرافی</button>
+        </div>
+        <span id="sat-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div class="sat-wrap" style="margin-top:10px">
+        <img id="sat-img" alt="نمای زمین" style="display:none;width:100%;aspect-ratio:2/1;object-fit:cover" />
+        <canvas id="sat-canvas" style="display:none"></canvas>
         <div class="sat-overlay">${esc(course.name)} • ${esc(course.loc||'')}</div>
         <div class="sat-coords">${(course.lat||24.7136).toFixed(5)}, ${(course.lng||46.6753).toFixed(5)}</div>
       </div>
@@ -11863,7 +11875,49 @@ window.addEventListener('ga:brand-changed', function(){
       </div>
     </div>`;
     m.style.display = 'flex';
-    drawSatellite($('#sat-canvas'), { id: course.id||1, lat: course.lat||24.7136, lng: course.lng||46.6753 }, holes);
+    /* عکس واقعی زمین: اول نسخهٔ دائمی رکورد (همه‌جا هست)، بعد نسخهٔ این دستگاه، بعد گرفتن تازه.
+       فقط اگر هیچ‌کدام نبود، طرح شماتیک قدیمی نشان داده می‌شود. */
+    const st = $('#sat-status'), im = $('#sat-img'), cvEl = $('#sat-canvas');
+    const courseId = course.base ? 'mis' : String(course.id || '');
+    function satRec(){ try { return (window.CourseGeo && CourseGeo.pack) ? (CourseGeo.pack(courseId).sat || null) : null; } catch(e){ return null; } }
+    function geoKey(){ try { return (window.CourseGeo && CourseGeo.keyOf) ? CourseGeo.keyOf(courseId) : String(courseId); } catch(e){ return String(courseId); } }
+    function geoBounds(){ try { const p = (window.CourseGeo && CourseGeo.pack) ? CourseGeo.pack(courseId) : null; return (p && p.bounds) || null; } catch(e){ return null; } }
+    let mode = 'sat';
+    function resolve(){
+      const rec = satRec();
+      const recUrl = mode === 'topo' ? (rec && (rec.imgTopo || rec.topo)) : (rec && (rec.img || rec.url));
+      if (recUrl) return Promise.resolve({ url: recUrl, from: 'permanent' });
+      if (!window.EarthShot) return Promise.resolve(null);
+      const have = EarthShot.urlFor(geoKey(), mode);
+      if (have) return Promise.resolve({ url: have, from: 'device' });
+      const ext = (rec && isFinite(rec.south)) ? rec : (geoBounds() ? EarthShot.expand(geoBounds()) : null);
+      if (!ext) return Promise.resolve(null);
+      st.textContent = 'در حال آماده‌سازی تصویر زمین…';
+      return EarthShot.ensure(geoKey(), mode, ext).then(u => u ? { url: u, from: 'fresh' } : null).catch(() => null);
+    }
+    function fallback(){
+      st.textContent = 'تصویر واقعی این زمین هنوز در دسترس نیست؛ با واردکردن KML به‌صورت خودکار ساخته می‌شود.';
+      im.style.display = 'none'; cvEl.style.display = 'block';
+      drawSatellite(cvEl, { id: course.id||1, lat: course.lat||24.7136, lng: course.lng||46.6753 }, holes);
+    }
+    function render(){
+      st.textContent = '';
+      resolve().then(r => {
+        if (r && r.url){
+          im.style.display = 'block'; cvEl.style.display = 'none';
+          im.onerror = () => { im.style.display = 'none'; fallback(); };
+          im.src = r.url;
+          st.textContent = r.from === 'permanent' ? 'عکس واقعی زمین — ذخیرهٔ دائمی و در همه‌جا در دسترس' :
+                           (r.from === 'device' ? 'عکس واقعی زمین — نسخهٔ همین دستگاه' : 'عکس واقعی زمین — همین حالا گرفته شد');
+        } else fallback();
+      }).catch(() => fallback());
+    }
+    m.querySelectorAll('[data-satmode]').forEach(b => b.addEventListener('click', () => {
+      mode = b.getAttribute('data-satmode') || 'sat';
+      m.querySelectorAll('[data-satmode]').forEach(x => x.classList.toggle('on', x === b));
+      render();
+    }));
+    render();
     $('#sat-close').addEventListener('click', () => m.style.display = 'none');
     $('#sat-gmaps').addEventListener('click', () => {
       window.open('https://www.google.com/maps?q=' + (course.lat||24.7136) + ',' + (course.lng||46.6753), '_blank');
@@ -11964,11 +12018,14 @@ window.addEventListener('ga:brand-changed', function(){
           const sm = CourseGeo.summary(g);
           const geoId = r.base ? String(r.id) : (extraCourses()[r.idx] && extraCourses()[r.idx].geoId) || ('c'+Date.now());
           g.name = ($('#ec-name').value || '').trim() || g.name;
-          /* عکس‌های ۳برابر خودکار: متا همان لحظه، عکس‌ها در پس‌زمینه + نسخهٔ فشردهٔ دائمی داخل رکورد */
+          /* عکس‌های ۳برابر خودکار: متا همان لحظه، عکس‌ها در پس‌زمینه + نسخهٔ فشردهٔ دائمی داخل رکورد.
+             عکس‌های دائمی قبلی هرگز پاک نمی‌شوند مگر نسخهٔ تازه واقعاً کامل شود (شبکهٔ بسته). */
+          let oldSat = null;
+          try { const allGeo = JSON.parse(localStorage.getItem('ga_course_geo') || '{}'); oldSat = (allGeo[geoId] && allGeo[geoId].sat) || null; } catch(e){}
           if (g.bounds && window.EarthShot){
             const ext = EarthShot.expand(g.bounds);
-            if (ext) g.sat = { south: ext.south, west: ext.west, north: ext.north, east: ext.east, src: 'earthshot' };
-          }
+            if (ext) g.sat = Object.assign({ img: oldSat && oldSat.img, imgTopo: oldSat && oldSat.imgTopo }, ext, { src: 'earthshot' });
+          } else if (oldSat){ g.sat = oldSat; }
           CourseGeo.set(geoId, g);
           if (g.bounds && window.EarthShot){
             const repEl = $('#ec-kml-rep');
@@ -16244,6 +16301,10 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
   var AREA_FACTOR = 3;     /* «۳ برابر این محدوده» — مساحت ×۳ (هر ضلع ×√۳) */
   var MIN_HALF_DEG = 0.0015; /* زمین خیلی کوچک؟ حداقل شعاع ~۳۵۰ متر */
 
+  /* اگر کاشی مستقیم نیامد (شبکهٔ بسته مثل ایران)، از پروکسی عمومی ابر می‌آید؛
+     فقط خواندن کاشی نقشه است — نه کلید، نه دیتابیس. */
+  var PROXY = 'https://iultwqtzvrysugfxwshw.supabase.co/functions/v1/earth-tile?m={m}&z={z}&x={x}&y={y}';
+
   var SOURCES = {
     sat: [
       { name: 'google', url: function(x, y, z){ return 'https://mt' + ((x + y) % 4) + '.google.com/vt/lyrs=s&x=' + x + '&y=' + y + '&z=' + z; } },
@@ -16296,7 +16357,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
   }
 
   /* دوختن کاشی‌ها روی یک بوم؛ ۸ دانلود موازی، هر منبع شکست خورد منبع بعدی امتحان می‌شود */
-  function stitch(src, b, z, onProgress){
+  function stitch(mode, src, b, z, onProgress){
     var t = tilesOf(b, z), total = t.nx * t.ny;
     if (!total || total > MAX_TILES * 2) return Promise.reject(Error('extent too large'));
     var cv = document.createElement('canvas');
@@ -16308,7 +16369,9 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       if (state.abort || state.idx >= total) return Promise.resolve();
       var i = state.idx++;
       var x = t.x0 + (i % t.nx), y = t.y0 + Math.floor(i / t.nx);
-      return loadImg(src.url(x, y, z)).then(function(im){
+      return loadImg(src.url(x, y, z)).catch(function(){
+        return loadImg(PROXY.replace('{m}', mode).replace('{z}', z).replace('{x}', x).replace('{y}', y));
+      }).then(function(im){
         cx.drawImage(im, (x - t.x0) * TILE, (y - t.y0) * TILE);
       }).catch(function(){ state.failed++; }).then(function(){
         state.done++;
@@ -16330,7 +16393,7 @@ window.MIS_GOLF.sat={url:"mis_sat.jpg?v=4",topo:"mis_topo.jpg?v=4",south:31.8927
       var list = SOURCES[mode];
       if (i >= list.length) return Promise.reject(lastErr || Error('no source'));
       var src = list[i++];
-      return stitch(src, b, z, function(p){ if (onProgress) onProgress(mode, p, src.name); }).then(function(cv){
+      return stitch(mode, src, b, z, function(p){ if (onProgress) onProgress(mode, p, src.name); }).then(function(cv){
         return new Promise(function(res){ cv.toBlob(res, mode === 'sat' ? 'image/jpeg' : 'image/png', mode === 'sat' ? 0.92 : undefined); })
           .then(function(blob){ return { cv: cv, blob: blob }; });
       }).then(function(r){

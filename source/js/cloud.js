@@ -370,10 +370,14 @@
             if (remoteNewer) {
               var newVal = decode(r.v);
               if (r.k === 'ga_sp_sessions' || r.k === 'ga_sp_shots' || r.k === 'ga_sp_tomb') newVal = mergeSpKey(r.k, L.getItem(r.k), newVal);
-              try { L.setItem(r.k, newVal); } catch (e) {}
-              ts[r.k] = r.updated_at;
-              applied++;
-              if (localDirty) delete d[r.k];
+              try {
+                L.setItem(r.k, newVal);
+                /* مهر زمان فقط وقتی بنویسد که واقعاً نوشته شده؛ اگر حافظهٔ مرورگر پر بود،
+                   دفعهٔ بعد دوباره تلاش می‌شود و رکورد برای همیشه گم نمی‌شود. */
+                ts[r.k] = r.updated_at;
+                applied++;
+                if (localDirty) delete d[r.k];
+              } catch (e) {}
             }
           });
           stripSpStorage(L);

@@ -15,6 +15,10 @@
   var AREA_FACTOR = 3;     /* «۳ برابر این محدوده» — مساحت ×۳ (هر ضلع ×√۳) */
   var MIN_HALF_DEG = 0.0015; /* زمین خیلی کوچک؟ حداقل شعاع ~۳۵۰ متر */
 
+  /* اگر کاشی مستقیم نیامد (شبکهٔ بسته مثل ایران)، از پروکسی عمومی ابر می‌آید؛
+     فقط خواندن کاشی نقشه است — نه کلید، نه دیتابیس. */
+  var PROXY = 'https://iultwqtzvrysugfxwshw.supabase.co/functions/v1/earth-tile?m={m}&z={z}&x={x}&y={y}';
+
   var SOURCES = {
     sat: [
       { name: 'google', url: function(x, y, z){ return 'https://mt' + ((x + y) % 4) + '.google.com/vt/lyrs=s&x=' + x + '&y=' + y + '&z=' + z; } },
@@ -67,7 +71,7 @@
   }
 
   /* دوختن کاشی‌ها روی یک بوم؛ ۸ دانلود موازی، هر منبع شکست خورد منبع بعدی امتحان می‌شود */
-  function stitch(src, b, z, onProgress){
+  function stitch(mode, src, b, z, onProgress){
     var t = tilesOf(b, z), total = t.nx * t.ny;
     if (!total || total > MAX_TILES * 2) return Promise.reject(Error('extent too large'));
     var cv = document.createElement('canvas');
@@ -79,7 +83,9 @@
       if (state.abort || state.idx >= total) return Promise.resolve();
       var i = state.idx++;
       var x = t.x0 + (i % t.nx), y = t.y0 + Math.floor(i / t.nx);
-      return loadImg(src.url(x, y, z)).then(function(im){
+      return loadImg(src.url(x, y, z)).catch(function(){
+        return loadImg(PROXY.replace('{m}', mode).replace('{z}', z).replace('{x}', x).replace('{y}', y));
+      }).then(function(im){
         cx.drawImage(im, (x - t.x0) * TILE, (y - t.y0) * TILE);
       }).catch(function(){ state.failed++; }).then(function(){
         state.done++;
@@ -101,7 +107,7 @@
       var list = SOURCES[mode];
       if (i >= list.length) return Promise.reject(lastErr || Error('no source'));
       var src = list[i++];
-      return stitch(src, b, z, function(p){ if (onProgress) onProgress(mode, p, src.name); }).then(function(cv){
+      return stitch(mode, src, b, z, function(p){ if (onProgress) onProgress(mode, p, src.name); }).then(function(cv){
         return new Promise(function(res){ cv.toBlob(res, mode === 'sat' ? 'image/jpeg' : 'image/png', mode === 'sat' ? 0.92 : undefined); })
           .then(function(blob){ return { cv: cv, blob: blob }; });
       }).then(function(r){

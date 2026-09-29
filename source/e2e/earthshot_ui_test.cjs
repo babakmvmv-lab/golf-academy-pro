@@ -134,6 +134,49 @@ try {
   ok('«🛰 نقشه» topo mode shows real topo image', !!mimg2 && mimg2 !== mimg, mimg2 || 'none');
   await page.evaluate(() => { const x = document.querySelector('#sat-close'); if (x) x.click(); });
 
+  /* ── قفل حداکثر زوم زمین (مدیر تعیین می‌کند؛ نمایش‌ها محدود می‌شوند) ── */
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { const b = [...document.querySelectorAll('[data-act="editc"]')].pop(); if (b) b.click(); });
+  await page.waitForSelector('#ec-zoomlock', { timeout: 20000 });
+  const zCur = await page.evaluate(() => window.EarthMap.zoom());
+  ok('current zoom readable for locking', zCur >= 14 && zCur <= 20, 'z' + zCur);
+  await page.evaluate(() => { const b = document.querySelector('#ec-zl-lock'); if (b) b.click(); });
+  const lockSaved = await page.evaluate(key => {
+    const g = JSON.parse(localStorage.getItem('ga_course_geo') || '{}');
+    return g[key] && g[key].maxLock;
+  }, stored.key);
+  ok('lock saved into the ground record', lockSaved === zCur, 'maxLock=' + lockSaved + ' (zoom was ' + zCur + ')');
+  const barState = await page.evaluate(() => (document.querySelector('#ec-zl-val') || {}).textContent);
+  ok('lock bar shows locked state', /قفل/.test(barState || ''), barState);
+  /* نمایشِ بدون ویرایش باید قفل را بگیرد (مثل هوش زمین) */
+  const stLocked = await page.evaluate(key => {
+    const d = document.createElement('div'); d.id = 'scratch-map'; d.style.cssText = 'height:300px';
+    document.body.appendChild(d);
+    window.EarthMap.mount(d, { center: { lat: 31.9, lng: 49.31 }, zoom: 16, courseId: key });
+    return window.EarthMap.state();
+  }, stored.key);
+  ok('display mount honors the lock', stLocked.maxZoom === lockSaved && stLocked.zoom === Math.min(16, lockSaved),
+     'maxZoom=' + stLocked.maxZoom + ' opened z' + stLocked.zoom);
+  await page.evaluate(() => { const b = document.querySelector('#ec-zl-plus'); if (b) b.click(); });
+  const lockPlus = await page.evaluate(key => {
+    const g = JSON.parse(localStorage.getItem('ga_course_geo') || '{}');
+    return g[key] && g[key].maxLock;
+  }, stored.key);
+  ok('stepper ＋ raises the lock', lockPlus === lockSaved + 1, 'maxLock=' + lockPlus);
+  await page.evaluate(() => { const b = document.querySelector('#ec-zl-minus'); if (b) b.click(); });
+  const lockMinus = await page.evaluate(key => {
+    const g = JSON.parse(localStorage.getItem('ga_course_geo') || '{}');
+    return g[key] && g[key].maxLock;
+  }, stored.key);
+  ok('stepper − lowers the lock', lockMinus === lockSaved, 'maxLock=' + lockMinus);
+  await page.evaluate(() => { const b = document.querySelector('#ec-zl-open'); if (b) b.click(); });
+  const stFree = await page.evaluate(key => {
+    const g = JSON.parse(localStorage.getItem('ga_course_geo') || '{}');
+    return { rec: g[key] && g[key].maxLock };
+  }, stored.key);
+  ok('unlock clears the record', !stFree.rec, 'maxLock=' + stFree.rec);
+  await page.evaluate(() => { const d = document.querySelector('#scratch-map'); if (d) d.remove(); });
+
   /* ── عکس دائمی داخل رکورد: پس‌زمینه فشرده‌سازی تمام شود ── */
   const recShot = await page.waitForFunction(() => {
     try {

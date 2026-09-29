@@ -645,6 +645,8 @@
   }
 
   let mountCenter = null;
+  let appliedLock = 0;   /* قفل حداکثر زوم زمین (۰ = آزاد) — توسط مدیر در ویرایش زمین تعیین می‌شود */
+  const zoomCbs = [];    /* نوار «قفل زوم» پنل، زوم فعلی را زنده می‌خواند */
   function mount(el, opts){
     destroy();
     if (!el) return;
@@ -661,7 +663,18 @@
     }
 
     mountCenter = { lat: center.lat, lng: center.lng };
-    map = L.map(el, { zoomControl:false, attributionControl:false, tap:true, minZoom:14, maxZoom:20 }).setView([center.lat, center.lng], 16);
+    /* قفل حداکثر زومِ زمین (اگر مدیر تعیین کرده) — در همهٔ نمایش‌های این زمین اعمال می‌شود */
+    appliedLock = 0;
+    try {
+      if (window.CourseGeo && CourseGeo.keyOf){
+        var gk = CourseGeo.keyOf(courseKey());
+        var grec = (JSON.parse(localStorage.getItem('ga_course_geo') || '{}') || {})[gk];
+        if (grec && isFinite(+grec.maxLock)) appliedLock = Math.max(12, Math.min(20, Math.round(+grec.maxLock)));
+      }
+    } catch (e) {}
+    map = L.map(el, { zoomControl:false, attributionControl:false, tap:true, minZoom:14, maxZoom: appliedLock || 20 })
+          .setView([center.lat, center.lng], appliedLock ? Math.min(16, appliedLock) : 16);
+    map.on('zoomend', function(){ try { zoomCbs.forEach(function(f){ f(map.getZoom()); }); } catch (e) {} });
     applyBg();
     if (!satInfo() || !satInfo().url){
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -1094,5 +1107,16 @@
     } else go(false);
   }
 
-  window.EarthMap = { mount, destroy, setEdit: function(on){ editOn = !!on; drawCourse(); } };
+  window.EarthMap = {
+    mount, destroy,
+    setEdit: function(on){
+      editOn = !!on;
+      /* ویرایش‌گر آزادانه زوم می‌کند تا سطح درست را بسنجد؛ نمایش‌ها قفل را می‌گیرند */
+      try { if (map) map.setMaxZoom((!on && appliedLock) ? appliedLock : 20); } catch (e) {}
+      drawCourse();
+    },
+    zoom: function(){ return map ? map.getZoom() : null; },
+    state: function(){ return map ? { zoom: map.getZoom(), maxZoom: map.getMaxZoom(), lock: appliedLock || 0 } : null; },
+    onZoom: function(fn){ if (typeof fn !== 'function') return; zoomCbs.push(fn); if (map){ try { fn(map.getZoom()); } catch (e) {} } }
+  };
 })();

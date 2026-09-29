@@ -128,11 +128,14 @@
     /* ۱) فایل ایستای زمین‌های پایه (مسجدسلیمان و…) */
     const staticUrl = s ? ((bgMode === 'topo' ? s.topo : s.url) || '') : '';
     if (staticUrl){ addBgOverlay(staticUrl, s); return; }
-    /* ۲) عکسِ همین دستگاه (IDB، تمام‌اندازه) — تازه یا پس از همگام‌سازی */
+    /* ۲) عکسِ همین دستگاه (IDB، تمام‌اندازه) — فقط اگر هم‌نسلِ رکورد باشد
+       (همان محدوده؛ وگرنه رکورد/نسخهٔ تازه‌تر معتبر است، نه عکس کهنهٔ دستگاه) */
     const have = EarthShot.urlFor(key, bgMode);
     if (have){ addBgOverlay(have, ext); return; }
     EarthShot.meta(key, bgMode).then(function(m){
-      if (m){
+      const sameGen = m && s && isFinite(s.south) && isFinite(m.south) &&
+        Math.abs(m.south - s.south) < 1e-6 && Math.abs(m.west - s.west) < 1e-6;
+      if (m && (!s || sameGen)){
         EarthShot.ensure(key, bgMode, ext).then(function(u){ if (u) addBgOverlay(u, ext); }).catch(function(){});
         return;
       }

@@ -1871,7 +1871,7 @@
           const g = CourseGeo.parseKml(String(reader.result || ''));
           const sm = CourseGeo.summary(g);
           kmlDraft = g;
-          /* عکس‌های زمین (ماهواره + توپوگرافی، ۳ برابر محدوده) همان‌جا گرفته می‌شوند */
+          /* عکس‌های زمین (ماهواره + توپوگرافی، ۴ برابر محدوده) همان‌جا گرفته می‌شوند */
           if (g.bounds && window.EarthShot){
             kmlDraft._shots = EarthShot.captureFor('pending', g.bounds, (mode, p) => {
               const repEl = $('#mc-kml-rep'); /* هر بار تازه — صفحه ممکن است دوباره رندر شده باشد */

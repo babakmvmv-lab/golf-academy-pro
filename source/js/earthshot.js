@@ -1,6 +1,6 @@
 /* EarthShot — گرفتن خودکارِ تصویر پس‌زمینهٔ نقشهٔ زمین.
    با هر KML، بدون هیچ کاری از طرف کاربر:
-   ۱) محدودهٔ زمین ۳ برابر (مساحت) بزرگ می‌شود،
+   ۱) محدودهٔ زمین ۴ برابر (مساحت) بزرگ می‌شود،
    ۲) با بهترین زوم ممکن کاشی‌های ماهواره‌ای و توپوگرافی از سرویس‌های عمومی
       (بدون کلید) گرفته و روی یک بوم دوخته می‌شوند،
    ۳) هر دو حالت از همان اول ذخیره می‌شوند (IndexedDB — عکس بزرگ است، localStorage نه).
@@ -12,8 +12,13 @@
   var MAX_TILES = 256;     /* سقف تعداد کاشی هر عکس (۱۶×۱۶) */
   var MAX_DIM = 4096;      /* سقف ابعاد بوم */
   var MAX_ZOOM = 19, MIN_ZOOM = 14;
-  var AREA_FACTOR = 3;     /* «۳ برابر این محدوده» — مساحت ×۳ (هر ضلع ×√۳) */
-  var MIN_HALF_DEG = 0.0015; /* زمین خیلی کوچک؟ حداقل شعاع ~۳۵۰ متر */
+  var MAX_ZOOM_TOPO = 17; /* توپوگرافی: OpenTopoMap بیش از z17 ندارد؛ بالاتر کاشی خالی/تیره می‌دهد */
+  var AREA_FACTOR = 4;     /* «۴ برابر این محدوده» — مساحت ×۴ (هر ضلع ×۲) */
+  var MIN_HALF_DEG = 0.003; /* زمین خیلی کوچک؟ حداقل عرضِ تصویر ~۶۶۰ متر (زمین‌های کوچک هم بافت اطراف را می‌گیرند) */
+
+  /* اگر کاشی مستقیم نیامد (شبکهٔ بسته مثل ایران)، از پروکسی عمومی ابر می‌آید؛
+     فقط خواندن کاشی نقشه است — نه کلید، نه دیتابیس. */
+  var PROXY = 'https://iultwqtzvrysugfxwshw.supabase.co/functions/v1/earth-tile?m={m}&z={z}&x={x}&y={y}';
 
   /* اگر کاشی مستقیم نیامد (شبکهٔ بسته مثل ایران)، از پروکسی عمومی ابر می‌آید؛
      فقط خواندن کاشی نقشه است — نه کلید، نه دیتابیس. */
@@ -32,7 +37,7 @@
 
   function expand(b, factor){
     if (!b || !isFinite(b.south) || !isFinite(b.north) || !isFinite(b.west) || !isFinite(b.east)) return null;
-    var k = Math.sqrt(factor || AREA_FACTOR); /* مساحت ×۳ ⇒ ضلع ×√۳ */
+    var k = Math.sqrt(factor || AREA_FACTOR); /* مساحت ×۴ ⇒ ضلع ×۲ */
     var cLat = (b.north + b.south) / 2, cLng = (b.east + b.west) / 2;
     var dLat = Math.max((b.north - b.south) / 2 * k, MIN_HALF_DEG);
     var cosLat = Math.max(0.2, Math.cos(cLat * Math.PI / 180));
@@ -52,8 +57,9 @@
     var y0 = Math.floor(lat2y(b.north, z)), y1 = Math.floor(lat2y(b.south, z));
     return { x0: x0, x1: x1, y0: y0, y1: y1, nx: x1 - x0 + 1, ny: y1 - y0 + 1 };
   }
-  function pickZoom(b){
-    for (var z = MAX_ZOOM; z > MIN_ZOOM; z--){
+  function pickZoom(b, mode){
+    var top = (mode === 'topo') ? MAX_ZOOM_TOPO : MAX_ZOOM;
+    for (var z = top; z > MIN_ZOOM; z--){
       var t = tilesOf(b, z);
       if (t.nx * t.ny <= MAX_TILES && Math.max(t.nx, t.ny) * TILE <= MAX_DIM) return z;
     }
@@ -97,12 +103,20 @@
     var workers = Array.from({ length: Math.min(8, total) }, function(){ return one(); });
     return Promise.all(workers).then(function(){
       if (state.failed > Math.max(3, Math.floor(total * 0.04))) throw Error('too many failed tiles (' + state.failed + '/' + total + ')');
+      /* محافظ «بوم خالی»: سرویسِ بی‌پوشش کاشی تیره می‌دهد؛ عکس تهی هرگز ذخیره نمی‌شود */
+      try {
+        var smp = cx.getImageData(0, 0, cv.width, cv.height).data;
+        var sum = 0, sum2 = 0, n = 0;
+        for (var i = 0; i < smp.length; i += 64){ var v = (smp[i] + smp[i+1] + smp[i+2]) / 3; sum += v; sum2 += v * v; n++; }
+        var mean = sum / n;
+        if (Math.sqrt(sum2 / n - mean * mean) < 6) throw Error('blank canvas (source has no coverage)');
+      } catch (e){ if (String(e && e.message).indexOf('blank') >= 0) throw e; }
       return cv;
     });
   }
 
   function render(mode, b, onProgress){
-    var z = pickZoom(b), lastErr = null, i = 0;
+    var z = pickZoom(b, mode), lastErr = null, i = 0;
     function tryNext(){
       var list = SOURCES[mode];
       if (i >= list.length) return Promise.reject(lastErr || Error('no source'));

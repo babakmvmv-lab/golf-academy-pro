@@ -1,4 +1,4 @@
-/* E2E: طراحی زمین — KML → عکس‌های خودکار (ماهواره + توپوگرافی، ۳ برابر محدوده) → ثبت → نمایش دو حالت.
+/* E2E: طراحی زمین — KML → عکس‌های خودکار (ماهواره + توپوگرافی، ۴ برابر محدوده) → ثبت → نمایش دو حالت.
  * Runs against the LOCAL monolith build (no cloud credentials → nothing syncs anywhere). */
 (async () => {
 const { chromium } = require('playwright-core');
@@ -33,7 +33,7 @@ try {
     const area1 = (e.north - e.south) * (e.east - e.west);
     return { ratio: +(area1 / area0).toFixed(2), zoom: window.EarthShot.pickZoomFor(b) };
   });
-  ok('expand: area ≈ 3× original (got ' + unit.ratio + '×)', unit.ratio >= 2.7 && unit.ratio <= 3.3);
+  ok('expand: area ≈ 4× original (got ' + unit.ratio + '×)', unit.ratio >= 3.6 && unit.ratio <= 4.4);
   ok('zoom picked in sane range (got z' + unit.zoom + ')', unit.zoom >= 14 && unit.zoom <= 19);
 
   /* go to مدیریت → زمین‌ها */
@@ -76,7 +76,7 @@ try {
     const a0 = (stored.bounds.north - stored.bounds.south) * (stored.bounds.east - stored.bounds.west);
     const a1 = (stored.sat.north - stored.sat.south) * (stored.sat.east - stored.sat.west);
     const r = +(a1 / a0).toFixed(2);
-    ok('saved sat meta = 3× extent (got ' + r + '×)', r >= 2.5 && r <= 3.6);
+    ok('saved sat meta = 4× extent (got ' + r + '×)', r >= 3.6 && r <= 4.6);
   } else ok('saved sat meta present', false);
 
   /* images stored in IndexedDB under the final geoId */

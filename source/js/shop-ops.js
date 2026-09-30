@@ -543,6 +543,10 @@
   // چون آن حالت عمداً غیرقابل‌ذخیره است (گزارشی به هیچ‌جا نمی‌رود)
   emails:{notify:!!((cur&&cur.emails&&cur.emails.list)||[]).length,onSuccess:false,digest:'weekly'},
   verify:{afterWrite:true,restoreDrill:'weekly'}});
+ // per-destination defaults come from the same field list the form renders, so a settings object
+ // written by v1 (no config at all) still saves a complete config instead of an empty one
+ const bk2DestCfg=(type,have)=>{const o={};((BK2_DEST[type]||{}).fields||[]).forEach(([k,,dflt])=>{
+   const v=(have||{})[k];o[k]=(v===undefined||v===null||v==='')?dflt:v;});return o;};
  function bk2Merge(base,over){const o={...base};for(const k in (over||{})){const v=over[k];
   o[k]=(v&&typeof v==='object'&&!Array.isArray(v)&&base[k]&&!Array.isArray(base[k]))?bk2Merge(base[k],v):v;}return o;}
  function bk2Validate(st){const errors=[],warnings=[];
@@ -568,12 +572,12 @@
   const num=(f,name,lo,hi,dflt)=>Math.max(lo,Math.min(hi,N(f.elements[name]?.value)||dflt));
   function paint(){
    const ok=bst&&bst.result==='ok',part=bst&&bst.result==='partial';
-   const destHtml=(st.destinations||[]).map((d,i)=>{const c=BK2_DEST[d.type]||{fields:[]};
+   const destHtml=(st.destinations||[]).map((d,i)=>{const c=BK2_DEST[d.type]||{fields:[]};const cfg=bk2DestCfg(d.type,d.config);
     return '<div class="sh-bk-dest" data-dest="'+i+'" style="display:block">'+
      '<div class="sh-bk-dest-main"><b>'+(c.icon||'📦')+' '+E(d.label||d.type)+'</b><small>'+E(c.desc||'')+'</small></div>'+
      '<label class="sh-switch"><input type="checkbox" data-dest-on="'+i+'" '+(d.on?'checked':'')+'><span></span></label>'+
      '<button type="button" class="sh-btn ghost sm" data-dest-del="'+i+'" title="حذف مقصد">✕</button>'+
-     (d.on&&(c.fields||[]).length?'<div class="sh-form-grid" style="margin-top:8px">'+c.fields.map(([k,lab,dflt])=>field(lab,'cfg-'+i+'-'+k,(d.config||{})[k]??dflt,'text','data-cfg="'+i+':'+k+'"')).join('')+'</div>':'')+
+     (d.on&&(c.fields||[]).length?'<div class="sh-form-grid" style="margin-top:8px">'+c.fields.map(([k,lab,dflt])=>field(lab,'cfg-'+i+'-'+k,cfg[k],'text','data-cfg="'+i+':'+k+'"')).join('')+'</div>':'')+
      (c.fields&&c.fields.length&&!d.on?'<p class="sh-note" style="margin:6px 0 0">برای دیدن تنظیمات این مقصد، کلیدش را روشن کن.</p>':'')+'</div>';}).join('');
    const avail=Object.keys(BK2_DEST).filter(t=>!(st.destinations||[]).some(d=>d.type===t));
    const mails=(st.emails&&st.emails.list)||[];
@@ -645,6 +649,7 @@
    st.time=(s.elements.time.value||'04:00').padStart(5,'0');
    st.intervalHours=num(s,'intervalHours',1,168,6);st.weekday=num(s,'weekday',0,6,6);st.monthDay=num(s,'monthDay',1,28,1);
    st.structures={siteShop:w.elements.siteShop.checked,academy:w.elements.academy.checked};
+   st.destinations=(st.destinations||[]).map(d=>({...d,config:bk2DestCfg(d.type,d.config)}));
    st.format=w.elements.format.value;st.compress=w.elements.compress.checked;
    st.redact={authUsers:w.elements.authUsers.value,
     dropTables:String(w.elements.dropTables.value||'').split(',').map(v=>v.trim()).filter(Boolean)};

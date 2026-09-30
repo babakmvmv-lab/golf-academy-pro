@@ -4,7 +4,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 const db=createClient(Deno.env.get('SUPABASE_URL')||'',Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',{auth:{persistSession:false,autoRefreshToken:false}});
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
 const MAX=2*1024*1024;
-const actions=new Set(['bootstrap','dashboard','party_save','party_statement','product_save','category_rename','catalog_import','opening_zero','document_save','document_get','documents','document_post','document_void','inventory','payment_post','payment_void','payments','report','journal_get','ledger','staff','staff_save','settings_save','audit','ops_reset','payments_save','cards_save','orders','order_get','order_status','layout_save']);
+const actions=new Set(['backup_get','backup_save','backup_now','bootstrap','dashboard','party_save','party_statement','product_save','category_rename','catalog_import','opening_zero','document_save','document_get','documents','document_post','document_void','inventory','payment_post','payment_void','payments','report','journal_get','ledger','staff','staff_save','settings_save','audit','ops_reset','payments_save','cards_save','orders','order_get','order_status','layout_save']);
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...CORS,'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
 const failure=(e:{code?:string,message?:string})=>json({ok:false,error:e.code==='23505'?'کد کالا، بارکد یا شمارهٔ درخواست تکراری است؛ اطلاعات را بررسی کنید.':e.code==='23514'?'مقدار سند با قواعد حسابداری/موجودی سازگار نیست؛ هیچ بخش آن ثبت نشد.':e.message||'عملیات انجام نشد؛ تغییری قطعی اعلام نشده است.',code:e.code||''},e.code==='42501'?403:e.code==='40001'||e.code==='23505'?409:422);
 Deno.serve(async req=>{
@@ -41,6 +41,31 @@ Deno.serve(async req=>{
    return json({ok:true,data:{id:created.data.user.id,email,password}});
   }
   if(!actions.has(action))return json({ok:false,error:'عملیات مجاز نیست.'},400);
+  /* ── مدیریت نسخه پشتیبان: فقط مدیر اصلی سایت ── */
+  if(action==='backup_get'||action==='backup_save'||action==='backup_now'){
+   if(user.app_metadata?.web_admin!==true)return json({ok:false,error:'مدیریت نسخه پشتیبان فقط با حساب مدیر اصلی سایت انجام می‌شود.'},403);
+   if(action==='backup_get'){
+    const s=await db.from('web_store').select('v,updated_at').eq('k','web_setting_backup').maybeSingle();
+    const st=await db.from('web_store').select('v,updated_at').eq('k','web_setting_backup_state').maybeSingle();
+    const defaults={enabled:true,mode:'daily',time:'04:00',intervalHours:6,structures:{siteShop:true,academy:true},destinations:[{type:'github',label:'ریپوی گیت‌هاب (golf-academy-backups)',on:true},{type:'supabase',label:'فضای ابری سوپابیس',on:false}],emails:{notify:false,onSuccess:true,list:[]}};
+    const settings={...defaults,...(s.data?.v||{}),structures:{...defaults.structures,...(s.data?.v?.structures||{})},emails:{...defaults.emails,...(s.data?.v?.emails||{})}};
+    return json({ok:true,data:{settings,state:(st.data?.v||null),updatedAt:(s.data?.updated_at||null)}});
+   }
+   if(action==='backup_save'){
+    const v=payload?.settings;
+    if(!v||typeof v!=='object')return json({ok:false,error:'تنظیمات نامعتبر است.'},422);
+    const {error:e1}=await db.from('web_store').upsert({k:'web_setting_backup',v,updated_at:new Date().toISOString()},{onConflict:'k'});
+    if(e1)return failure(e1);
+    return json({ok:true,data:{saved:true}});
+   }
+   if(action==='backup_now'){
+    const tok=Deno.env.get('BACKUP_GITHUB_TOKEN')||'';
+    if(!tok)return json({ok:false,error:'توکن راه‌انداز بکاپ روی سرور تنظیم نشده است.'},500);
+    const r=await fetch('https://api.github.com/repos/babakmvmv-lab/golf-academy-backups/actions/workflows/backup.yml/dispatches',{method:'POST',headers:{Authorization:`Bearer ${tok}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({ref:'main'})});
+    if(!r.ok)return json({ok:false,error:'راه‌اندازی بکاپ فوری ناموفق بود ('+r.status+').'},502);
+    return json({ok:true,data:{started:true}});
+   }
+  }
   if(action==='ops_reset'){
    // Destructive go-live zeroing: web owner only, and only right after a fresh password sign-in.
    if(user.app_metadata?.web_admin!==true)return json({ok:false,error:'صفرسازی عملیاتی فقط با حساب مدیر اصلی (مالک سایت) انجام می‌شود.'},403);

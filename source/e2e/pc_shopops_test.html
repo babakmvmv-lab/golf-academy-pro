@@ -1,9 +1,9 @@
-<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><script src="/site-cloud.8e38119a3b78.js"></script>
+<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><script src="/site-cloud.6424a6071063.js"></script>
 <title>shop-ops layout test</title></head><body>
 <div id="host"></div>
 <script>
 /* Stub cloud layer; the real shop-ops asset is loaded after this. */
-window.PC_SITE_CLOUD_CONFIG={url:'http://stub.local',key:'stub-key'};
+window.PC_SITE_CLOUD_CONFIG={url:'http://stub.local',key:'stub-key'};window.__WEB_ADMIN=true;
 window.__calls=[];
 window.PC_SITE_CLOUD={
   accessToken:async()=>'stub-token',
@@ -19,11 +19,11 @@ window.PC_SITE_CLOUD={
     }
     return {ok:true,json:async()=>({ok:true})};
   },
-  authDialog(){},settings:()=>({brand:{},marquee:{enabled:false}}),subscribe(){},table:()=>[],brandShort:()=>'پات‌کلاب',authSession:()=>({user:{app_metadata:{}}}),
+  authDialog(){},settings:()=>({brand:{},marquee:{enabled:false}}),subscribe(){},table:()=>[],brandShort:()=>'پات‌کلاب',authSession:()=>({user:{app_metadata:{web_admin:window.__WEB_ADMIN===true}}}),
 };
 </script>
 <script src="/source/js/site-img.js"></script>
-  <script src="/shop-ops.8f37129a821e.js"></script>
+  <script src="/shop-ops.79d6881b8d57.js"></script>
 <script>
 /* Intercept web-erp calls (shop-ops api() uses raw fetch to the stub URL). */
 const realFetch=window.fetch;
@@ -43,6 +43,9 @@ window.fetch=async(url,init={})=>{
         ]};
     }
     if(body.action==='layout_save')data={ok:true};
+    if(body.action==='backup_get')data={settings:{enabled:true,mode:'daily',time:'04:00',intervalHours:6,structures:{siteShop:true,academy:true},destinations:[{type:'github',label:'ریپوی گیت‌هاب (golf-academy-backups)',on:true}],emails:{notify:false,onSuccess:true,list:[]}},state:{result:'ok',lastRunFa:'2026-09-30 09:39',trigger:'دستی (فوری)',ran:['سایت+فروشگاه','پنل اعضا'],totalKB:2851,files:35,destinations:{github:true,supabase:false},nextDue:'فردا 04:00',errors:[]}};
+    if(body.action==='backup_save')data={saved:true};
+    if(body.action==='backup_now')data={started:true};
     return {ok:true,json:async()=>({ok:true,data})};
   }
   return realFetch(url,init);

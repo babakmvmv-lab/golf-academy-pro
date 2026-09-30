@@ -85,6 +85,47 @@ const ok = (n, c) => { console.log((c ? 'PASS' : 'FAIL') + ' — ' + n); c ? pas
   await p.waitForTimeout(700);
   const appr = await p.evaluate(() => window.__calls.filter(c => c.kind === 'request' && c.url.includes('/api/admin/reviews/11')).pop());
   ok('approve PUT sent with status approved', !!appr && appr.method === 'PUT' && JSON.parse(appr.body).status === 'approved');
+
+  /* ═══ تب نسخه پشتیبان ═══ */
+  await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.textContent.trim().startsWith('نسخه پشتیبان')); if (b2) b2.click(); });
+  await p.waitForTimeout(900);
+  const bkTxt = await p.evaluate(() => document.querySelector('#sh-view').innerText);
+  ok('backup view opens with status card', bkTxt.includes('وضعیت آخرین نسخه پشتیبان') && bkTxt.includes('موفق') && bkTxt.includes('فردا 04:00'));
+  ok('backup view shows all config sections', bkTxt.includes('زمان‌بندی خودکار') && bkTxt.includes('چه داده‌هایی بکاپ شود') && bkTxt.includes('کجا ذخیره شود') && bkTxt.includes('اطلاع‌رسانی ایمیلی'));
+  const modeVis = await p.evaluate(() => {
+    const sel = document.querySelector('[data-bk-sched] [name=mode]');
+    sel.value = 'interval'; sel.onchange();
+    return { time: getComputedStyle(document.querySelector('[data-bk-time]')).display, int: getComputedStyle(document.querySelector('[data-bk-int]')).display };
+  });
+  ok('mode switch: interval shows hours field, hides time', modeVis.time === 'none' && modeVis.int !== 'none');
+  const dests1 = await p.evaluate(() => document.querySelectorAll('.sh-bk-dest').length);
+  ok('one default destination (github)', dests1 === 1);
+  await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.getAttribute('data-act') === 'bk-add-dest'); if (b2) b2.click(); });
+  await p.waitForTimeout(400);
+  const added = await p.evaluate(() => {
+    const pick = document.querySelector('[data-pick=supabase]'); if (pick) pick.click();
+    return document.querySelectorAll('.sh-bk-dest').length;
+  });
+  ok('adding supabase destination inline (now 2)', added === 2);
+  const mailAdded = await p.evaluate(() => {
+    const inp = document.querySelector('[data-mail-new]');
+    inp.value = 'b@puttclub.ir';
+    document.querySelector('[data-mail-add]').click();
+    return document.querySelectorAll('.sh-bk-mails .sh-pill').length;
+  });
+  ok('email added inline as a pill', mailAdded === 1);
+  await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.getAttribute('data-act') === 'bk-save'); if (b2) b2.click(); });
+  await p.waitForTimeout(700);
+  const bkSave = await p.evaluate(() => window.__calls.filter(c => c.kind === 'erp' && c.action === 'backup_save').pop());
+  ok('backup_save posted', !!bkSave);
+  if (bkSave) {
+    const st = bkSave.payload.settings;
+    ok('saved settings carry mode/interval/dests/emails', st.mode === 'interval' && Array.isArray(st.destinations) && st.destinations.length === 2 && st.emails.list.includes('b@puttclub.ir') && st.structures.siteShop && st.structures.academy);
+  }
+  await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.getAttribute('data-act') === 'bk-now'); if (b2) b2.click(); });
+  await p.waitForTimeout(700);
+  const bkNow = await p.evaluate(() => window.__calls.filter(c => c.kind === 'erp' && c.action === 'backup_now').pop());
+  ok('بکاپ فوری dispatches backup_now', !!bkNow);
   await b.close();
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

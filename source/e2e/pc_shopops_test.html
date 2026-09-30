@@ -43,9 +43,21 @@ window.fetch=async(url,init={})=>{
         ]};
     }
     if(body.action==='layout_save')data={ok:true};
-    if(body.action==='backup_get')data={settings:{enabled:true,mode:'daily',time:'04:00',intervalHours:6,structures:{siteShop:true,academy:true},destinations:[{type:'github',label:'ریپوی گیت‌هاب (golf-academy-backups)',on:true}],emails:{notify:false,onSuccess:true,list:[]}},state:{result:'ok',nextDueByKind:{siteShop:"فردا ۰۴:۰۰",academy:"امروز ۲۲:۰۰"},lastRunFa:'2026-09-30 09:39',trigger:'دستی (فوری)',ran:['سایت+فروشگاه','پنل اعضا'],totalKB:2851,files:35,destinations:{github:true,supabase:false},nextDue:'فردا 04:00',errors:[]}};
-    if(body.action==='backup_save')data={saved:true};
-    if(body.action==='backup_now')data={started:true};
+    const backupProfile=system=>({version:3,enabled:true,mode:'daily',time:system==='academy'?'04:30':'04:00',intervalHours:6,weekday:6,monthDay:1,
+      structures:{siteShop:system==='siteShop',academy:system==='academy'},academySchedule:{on:false},format:'json',compress:true,
+      redact:{authUsers:'ids-only',dropTables:[]},retention:{daily:30,weekly:13,monthly:12,maxTotalMB:4000,pinOnRelease:true,pinnedDates:[]},
+      destinations:[{type:'supabase',label:'فضای ابری خصوصی سوپابیس',on:true,config:{bucket:'puttclub-backups',public:false}}],
+      emails:{notify:false,onSuccess:true,list:[],digest:'none',subjectPrefix:'[پات‌کلاب]'},
+      verify:{afterWrite:true,restoreDrill:'weekly',graceMinutes:90},limits:{maxTotalMB:2000,timeoutSec:1800,retries:2}});
+    window.__backupProfiles=window.__backupProfiles||{siteShop:backupProfile('siteShop'),academy:backupProfile('academy')};
+    if(body.action==='backup_get'){const system=body.payload?.system||'siteShop';const settings=window.__backupProfiles[system]||backupProfile(system);data={system,settings,
+      state:{result:'ok',lastRun:'2026-09-30T05:00:00Z',lastRunFa:'2026-09-30 08:30',trigger:'روزانه ساعت 04:00',totalKB:2851,files:5,verified:true,nextDue:'فردا 04:00',runId:system+'-run-1',errors:[],warnings:[]},
+      runs:[{run_id:system+'-run-1',system_key:system,date_fa:'2026-09-30',started_fa:'2026-09-30 08:30',trigger:'دستی',result:'ok',files:5,total_bytes:2048,
+        archive_path:'backups/'+(system==='academy'?'academy':'site-shop')+'/2026-09-30/'+system+'-run-1/bundle.zip',archive_bucket:'puttclub-backups',
+        destination_status:{supabase:{uploaded:5,verified:true}},state:{emailDelivery:{status:'sent',accepted:1,requested:1}}}]};}
+    if(body.action==='backup_save'){const system=body.payload?.system||'siteShop';window.__backupProfiles[system]=body.payload.settings;data={saved:true,system};}
+    if(body.action==='backup_now')data={started:true,system:body.payload?.system};
+    if(body.action==='backup_download')data={url:'https://storage.example.invalid/private/bundle.zip?token=test',expiresIn:300};
     return {ok:true,json:async()=>({ok:true,data})};
   }
   return realFetch(url,init);

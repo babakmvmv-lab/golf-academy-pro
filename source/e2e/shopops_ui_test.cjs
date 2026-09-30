@@ -86,46 +86,70 @@ const ok = (n, c) => { console.log((c ? 'PASS' : 'FAIL') + ' — ' + n); c ? pas
   const appr = await p.evaluate(() => window.__calls.filter(c => c.kind === 'request' && c.url.includes('/api/admin/reviews/11')).pop());
   ok('approve PUT sent with status approved', !!appr && appr.method === 'PUT' && JSON.parse(appr.body).status === 'approved');
 
-  /* ═══ تب نسخه پشتیبان ═══ */
+  /* ═══ بکاپ مستقل v3: دو پروفایل، گیرنده‌ها، تاریخچه و دانلود خصوصی ═══ */
   await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.textContent.trim().startsWith('نسخه پشتیبان')); if (b2) b2.click(); });
   await p.waitForTimeout(900);
   const bkTxt = await p.evaluate(() => document.querySelector('#sh-view').innerText);
-  ok('backup view opens with status card', bkTxt.includes('وضعیت آخرین نسخه پشتیبان') && bkTxt.includes('موفق') && bkTxt.includes('فردا 04:00'));
-  ok('backup view shows all config sections', bkTxt.includes('زمان‌بندی خودکار') && bkTxt.includes('چه داده‌هایی بکاپ شود') && bkTxt.includes('کجا ذخیره شود') && bkTxt.includes('اطلاع‌رسانی ایمیلی'));
+  ok('v3 backup view opens with private status', bkTxt.includes('وضعیت آخرین نسخهٔ سایت + فروشگاه') && bkTxt.includes('نسخه سالم') && bkTxt.includes('فردا 04:00'));
+  ok('v3 page shows independent profile controls', bkTxt.includes('زمان‌بندی مستقل') && bkTxt.includes('محتوا و قالب') && bkTxt.includes('مقصدهای ذخیره‌سازی') && bkTxt.includes('گیرنده‌ها مستقل'));
+  ok('history has a direct ZIP download control', await p.locator('[data-run-download]').count() === 1);
+  ok('history shows actual email-relay acceptance status', bkTxt.includes('پذیرفته شد (1/1)'));
   const modeVis = await p.evaluate(() => {
-    const sel = document.querySelector('[data-bk-sched] [name=mode]');
-    sel.value = 'interval'; sel.onchange();
-    return { time: getComputedStyle(document.querySelector('[data-bk-time]')).display, int: getComputedStyle(document.querySelector('[data-bk-int]')).display };
+    const sel = document.querySelector('[data-bk3-sched] [name=mode]');
+    sel.value = 'interval'; sel.dispatchEvent(new Event('change', {bubbles:true}));
+    return { time: getComputedStyle(document.querySelector('[data-bk3-time]')).display, int: getComputedStyle(document.querySelector('[data-bk3-int]')).display };
   });
-  ok('mode switch: interval shows hours field, hides time', modeVis.time === 'none' && modeVis.int !== 'none');
-  const dests1 = await p.evaluate(() => document.querySelectorAll('.sh-bk-dest').length);
-  ok('one default destination (github)', dests1 === 1);
-  await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.getAttribute('data-act') === 'bk-add-dest'); if (b2) b2.click(); });
-  await p.waitForTimeout(400);
-  const added = await p.evaluate(() => {
-    const pick = document.querySelector('[data-pick=supabase]'); if (pick) pick.click();
-    return document.querySelectorAll('.sh-bk-dest').length;
-  });
-  ok('adding supabase destination inline (now 2)', added === 2);
+  ok('v3 interval shows hours and hides fixed time', modeVis.time === 'none' && modeVis.int !== 'none');
+  ok('one private destination is enabled by default', await p.locator('.sh-bk-dest').count() === 1);
+  await p.evaluate(() => { const add = [...document.querySelectorAll('button')].find(x => x.getAttribute('data-act') === 'bk3-add-dest'); if (add) add.click(); });
+  await p.waitForTimeout(300);
+  await p.evaluate(() => { const pick = document.querySelector('[data-pick=github]'); if (pick) pick.click(); });
+  await p.waitForTimeout(200);
+  ok('optional private GitHub destination can be added independently', await p.locator('.sh-bk-dest').count() === 2);
   const mailAdded = await p.evaluate(() => {
-    const inp = document.querySelector('[data-mail-new]');
-    inp.value = 'b@puttclub.ir';
+    const inp = document.querySelector('[data-mail-new]'); inp.value = 'b@puttclub.ir';
     document.querySelector('[data-mail-add]').click();
     return document.querySelectorAll('.sh-bk-mails .sh-pill').length;
   });
-  ok('email added inline as a pill', mailAdded === 1);
-  await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.getAttribute('data-act') === 'bk-save'); if (b2) b2.click(); });
-  await p.waitForTimeout(700);
-  const bkSave = await p.evaluate(() => window.__calls.filter(c => c.kind === 'erp' && c.action === 'backup_save').pop());
-  ok('backup_save posted', !!bkSave);
-  if (bkSave) {
-    const st = bkSave.payload.settings;
-    ok('saved settings carry mode/interval/dests/emails', st.mode === 'interval' && Array.isArray(st.destinations) && st.destinations.length === 2 && st.emails.list.includes('b@puttclub.ir') && st.structures.siteShop && st.structures.academy);
+  ok('recipient can be added to this profile', mailAdded === 1);
+  const mailEdited = await p.evaluate(() => {
+    const edit = document.querySelector('[data-mail-edit="0"]'); if (!edit) return false;
+    edit.click();
+    const input = document.querySelector('[data-mail-edit-input]'); if (!input) return false;
+    input.value = 'ops@puttclub.ir';
+    document.querySelector('[data-mail-save]').click();
+    return document.querySelector('.sh-bk-mails').innerText.includes('ops@puttclub.ir');
+  });
+  ok('recipient can be edited within this profile', mailEdited);
+  await p.evaluate(() => { const save = [...document.querySelectorAll('button')].find(x => x.getAttribute('data-act') === 'bk3-save'); if (save) save.click(); });
+  await p.waitForTimeout(180);
+  if (!await p.evaluate(() => window.__calls.some(c => c.kind === 'erp' && c.action === 'backup_save'))) {
+    await p.evaluate(() => { const save = [...document.querySelectorAll('button')].find(x => x.getAttribute('data-act') === 'bk3-save'); if (save) save.click(); });
   }
-  await p.evaluate(() => { const b2 = [...document.querySelectorAll('button')].find(x => x.getAttribute('data-act') === 'bk-now'); if (b2) b2.click(); });
   await p.waitForTimeout(700);
-  const bkNow = await p.evaluate(() => window.__calls.filter(c => c.kind === 'erp' && c.action === 'backup_now').pop());
-  ok('بکاپ فوری dispatches backup_now', !!bkNow);
+  const siteSave = await p.evaluate(() => window.__calls.filter(c => c.kind === 'erp' && c.action === 'backup_save').pop());
+  ok('backup_save includes selected system', !!siteSave && siteSave.payload.system === 'siteShop');
+  if (siteSave) {
+    const st = siteSave.payload.settings;
+    ok('site+shop settings are scoped to siteShop only', st.mode === 'interval' && st.structures.siteShop && !st.structures.academy && st.destinations.length === 2 && st.emails.list.includes('ops@puttclub.ir'));
+  }
+  await p.evaluate(() => { const run = [...document.querySelectorAll('button')].find(x => x.getAttribute('data-act') === 'bk3-now'); if (run) run.click(); });
+  await p.waitForTimeout(500);
+  const siteNow = await p.evaluate(() => window.__calls.filter(c => c.kind === 'erp' && c.action === 'backup_now').pop());
+  ok('manual run dispatches only siteShop', !!siteNow && siteNow.payload.system === 'siteShop');
+  await p.evaluate(() => { const tab = document.querySelector('[data-system=academy]'); if (tab) tab.click(); });
+  await p.waitForTimeout(700);
+  const academyText = await p.evaluate(() => document.querySelector('#sh-view').innerText);
+  ok('academy has its own profile and history view', academyText.includes('وضعیت آخرین نسخهٔ آکادمی') && academyText.includes('فقط داده‌های آکادمی'));
+  await p.evaluate(() => {
+    const sel = document.querySelector('[data-bk3-sched] [name=mode]'); sel.value='weekly'; sel.dispatchEvent(new Event('change',{bubbles:true}));
+    const save=[...document.querySelectorAll('button')].find(x=>x.getAttribute('data-act')==='bk3-save');if(save)save.click();
+  });
+  await p.waitForTimeout(700);
+  const academySave = await p.evaluate(() => window.__calls.filter(c => c.kind === 'erp' && c.action === 'backup_save').pop());
+  ok('academy save is a different RPC profile', !!academySave && academySave.payload.system === 'academy' && academySave.payload.settings.mode === 'weekly' && !academySave.payload.settings.structures.siteShop && academySave.payload.settings.structures.academy);
+  const isolated = await p.evaluate(() => ({site:window.__backupProfiles.siteShop.mode,academy:window.__backupProfiles.academy.mode}));
+  ok('changing academy schedule does not overwrite site+shop', isolated.site === 'interval' && isolated.academy === 'weekly');
   await b.close();
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

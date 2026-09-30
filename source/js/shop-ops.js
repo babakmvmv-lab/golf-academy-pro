@@ -57,7 +57,7 @@
   root.innerHTML='<div class="sh-layout"><aside class="sh-side"><div class="sh-brand"><img src="'+E(brand.logo)+'" alt=""><div><b>'+E(PC_SITE_CLOUD.brandShort(brand))+'</b><small>عملیات فروشگاه گلف</small></div></div><nav class="sh-nav">'+nav.filter(n=>n[3]).map((n,i)=>(n[0]==='team'||n[0]==='backup'?'<div class="sh-nav-label">مدیریت</div>':'')+'<button type="button" data-nav="'+n[0]+'" class="'+(n[0]===view?'on':'')+'">'+I(n[2])+n[1]+'</button>').join('')+'</nav><div class="sh-side-bottom"><b>'+E(state.user.name)+'</b><small>'+dep(state.user.department)+'</small><div class="sh-side-links"><button data-act="password">تغییر رمز</button><a href="/">مشاهده سایت</a>'+(PC_SITE_CLOUD.authSession()?.user?.app_metadata?.web_admin?'<a href="/admin/site/">مدیریت سایت</a>':'')+'<button data-act="logout">خروج</button></div></div></aside><main class="sh-main"><header class="sh-top"><div style="display:flex;gap:10px;align-items:center"><button class="sh-hamburger" data-act="menu" aria-label="بازکردن منو">'+I('menu')+'</button><div><div class="sh-eyebrow">GOLF STORE · OPERATIONS</div><h1>'+nav.find(n=>n[0]===view)[1]+'</h1></div></div><div class="sh-top-meta"><span>'+D(today())+'</span><span class="sh-online" data-connection><span class="sh-dot"></span> فضای مستقل فروشگاه</span></div></header><div id="sh-view"></div></main></div>';
  }
  async function navigate(to){await reload();if(!root?.isConnected)return;view=to;shell();const el=root.querySelector('#sh-view');el.innerHTML='<div class="sh-loader"><span class="sh-spinner"></span><p>دریافت اطلاعات معتبر از سرور…</p></div>';
-  try{if(to==='dashboard')await dashboard(el);if(['sales','purchases'].includes(to))await documents(el,to);if(to==='inventory')await inventory(el);if(to==='orders')await orders(el);if(to==='layout')await layout(el);if(to==='reviews')await reviewsView(el);if(to==='backup')await backupView(el);
+  try{if(to==='dashboard')await dashboard(el);if(['sales','purchases'].includes(to))await documents(el,to);if(to==='inventory')await inventory(el);if(to==='orders')await orders(el);if(to==='layout')await layout(el);if(to==='reviews')await reviewsView(el);if(to==='backup')await backupView2(el);   // v1 با همان نام backupView برای بازگشت دست‌نخورده ماند
   if(to==='parties')parties(el);if(to==='finance')await finance(el);if(to==='team')await team(el);if(to==='settings')settings(el);}catch(e){el.innerHTML='<div class="sh-alert red">'+E(e.message)+'</div>'+btn('تلاش دوباره','refresh','secondary');}
  }
  async function dashboard(el){const x=await api('dashboard');el.innerHTML='<div class="sh-screen-title"><p class="sh-note">'+E(state.settings.warehouse_name)+' · ثبت یک‌باره، اثر یکپارچه در کالا و حسابداری</p>'+btn(I('refresh')+' تازه‌سازی','refresh','secondary small')+'</div>'+(x.needs_opening?'<div class="sh-alert">'+F(x.needs_opening)+' کالا منتظر تأیید موجودی افتتاحیه و بهای خرید است؛ عدد قدیمی سایت، موجودی قطعی نیست.'+btn('بررسی کالاها','inventory','secondary small')+'</div>':'')+(!state.products.length?'<div class="sh-onboard"><div><h3>شروع مرتب، بدون موجودی ساختگی</h3><p>کالاهای قبلی را به‌عنوان فهرست اولیه وارد کنید؛ تعداد و بهای افتتاحیه فقط با تأیید مدیر وارد دفاتر می‌شوند.</p></div>'+btn('ورود فهرست کالاهای قبلی','import')+'</div>':'')+'<div class="sh-grid kpis">'+[['فروش امروز',x.sales_today,'sale','مبلغ فاکتورهای قطعی'],['خرید امروز',x.purchases_today,'buy','ثبت‌شده با رسید انبار'],['کالای رو به اتمام',x.low_stock,'box','بر اساس حداقل موجودی'],['اسناد پیش‌نویس',x.pending,'clock','بدون اثر روی موجودی']].filter(x=>x[1]!==null).map(a=>'<div class="sh-card sh-kpi">'+I(a[2])+'<span class="label">'+a[0]+'</span><strong>'+F(a[1])+'</strong><small>'+a[3]+'</small></div>').join('')+'</div><div class="sh-quick">'+[[can('sales.create'),'new-sale','sale','فروش سریع','کالا، مشتری، دریافت'],[can('purchases.create'),'new-purchase','buy','خرید جدید','تأمین‌کننده و ورود کالا'],[can('finance.create'),'new-receipt','cash','دریافت و پرداخت','تسویهٔ مرتبط با فاکتور'],[can('inventory.view'),'inventory','box','موجودی و گردش','تعداد واقعی و هشدارها']].filter(a=>a[0]).map(a=>'<button data-act="'+a[1]+'">'+I(a[2])+'<span><b>'+a[3]+'</b><small>'+a[4]+'</small></span></button>').join('')+'</div><div class="sh-split"><section class="sh-card"><h2>کالاهای نیازمند توجه</h2><p>موجودی فقط از سند معتبر تغییر می‌کند، نه از یک عدد دستی.</p>'+table(['کالا','موجود','حداقل'],state.products.filter(p=>p.stock<=p.min_stock||p.opening_required).slice(0,7).map(p=>tr(['<b>'+E(p.name)+'</b><small class="muted">'+E(p.sku)+'</small>',p.opening_required?pill('draft','افتتاحیه تأیید نشده'):F(p.stock),F(p.min_stock)])),'موجودی بحرانی ندارید')+'</section><section class="sh-card"><h2>مسیر کار روزانه</h2><p>۱. خرید قطعی → ورود کالا + بدهی تأمین‌کننده</p><p>۲. فروش قطعی → خروج کالا + فروش و بهای تمام‌شده</p><p>۳. دریافت/پرداخت → تسویهٔ همان فاکتور</p><hr class="sh-separator"><p>اطلاعات مالی و اشخاص در فضای خصوصی فروشگاه است. فقط قیمت و موجودی قابل‌فروش به ویترین عمومی می‌رود.</p><p>اسناد قطعی سابقه‌دارند؛ اجازهٔ ویرایش و اصلاح را مدیر مشخص می‌کند.</p></section></div>';}
@@ -515,6 +515,184 @@
    const on=e.target.closest('[data-dest-on]');
    if(on){const i=+on.dataset.destOn;st.destinations[i].on=on.checked;toast('برای اعمال، «ذخیره تنظیمات» را بزنید');}
   });
+ }
+
+ /* ── نسخهٔ ۲ تنظیمات بکاپ: همان api()های قبلی (backup_get / backup_save / backup_now) و همان
+   ذخیره در web_setting_backup، ولی همهٔ کلیدهایی که موتور v2 می‌خواند در دسترس است.
+   موتور مقادیر ناشناخته/خراب را clamp می‌کند و هشدارش را در «وضعیت» نشان می‌دهد، پس این فرم
+   نمی‌تواند بکاپ را بشکند. برای بازگشت: در navigate() همان backupView(el) را بگذارید. ── */
+ const BK2_DEST={
+  github:{icon:'🐙',label:'ریپوی گیت‌هاب (golf-academy-backups)',desc:'سابقهٔ کامل با تاریخ — بدون رمزنگاری، پس اطلاعات شخصی را بیرون نگه دار',fields:[['branch','شاخه','main'],['path','مسیر داخل ریپو','backups'],['commitPrefix','پیشوند کامیت','backup']]},
+  supabase:{icon:'☁️',label:'فضای ابری سوپابیس (bucket خصوصی)',desc:'آپلود می‌کند و بعد فایل را دوباره می‌خواند تا از سالم‌بودن مطمئن شود',fields:[['bucket','نام bucket','golf-backups']]},
+  s3:{icon:'🪣',label:'S3 / R2 / Backblaze / MinIO',desc:'ارزان‌ترین لایهٔ بلندمدت، با lifecycle و نسخه‌گذاری (rclone روی runner لازم است)',fields:[['endpoint','endpoint (اگر غیر از آماز)',''],['bucket','نام bucket',''],['region','region','auto'],['prefix','پیشوند مسیر','puttclub'],['storageClass','کلاس ذخیره','Standard']]},
+  webhook:{icon:'🔗',label:'وب‌هوک گزارش (n8n / Slack / Telegram)',desc:'فقط گزارش اجرا می‌رود؛ هیچ داده‌ای ارسال نمی‌شود. آدرس در Secrets گیت‌هاب',fields:[['urlRef','نام Secret آدرس','BACKUP_WEBHOOK']]},
+  email:{icon:'✉️',label:'پیوست ایمیل (نسخهٔ کوچک)',desc:'برای «فردا صبح یک نسخه دستم باشد» — تا سقف حجم پیوست',fields:[['maxMB','سقف پیوست (مگابایت)','20']]}
+ };
+ const BK2_WEEK=['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
+ const bk2Defaults=()=>({version:2,enabled:true,mode:'daily',time:'04:00',intervalHours:6,weekday:6,monthDay:1,
+  structures:{siteShop:true,academy:true},format:'json',compress:false,
+  redact:{authUsers:'off',dropTables:[]},
+  retention:{daily:30,weekly:13,monthly:12,maxTotalMB:2000,pinOnRelease:true},
+  destinations:[{type:'github',label:BK2_DEST.github.label,on:true,config:{branch:'main',path:'backups',commitPrefix:'backup'}},
+   {type:'supabase',label:BK2_DEST.supabase.label,on:false,config:{bucket:'golf-backups'}}],
+  emails:{notify:false,onSuccess:true,list:[],digest:'none',subjectPrefix:'[پات‌کلاب]'},
+  verify:{afterWrite:true,restoreDrill:'none',graceMinutes:90},
+  limits:{maxTotalMB:900,timeoutSec:900,retries:2}});
+ const bk2Safe=cur=>({compress:true,redact:{authUsers:'ids-only',dropTables:['audit']},
+  // «فقط هنگام خطا» + خلاصهٔ هفتگی؛ ولی اطلاع‌رسانی را روشن نمی‌کنیم اگر گیرنده‌ای نباشد،
+  // چون آن حالت عمداً غیرقابل‌ذخیره است (گزارشی به هیچ‌جا نمی‌رود)
+  emails:{notify:!!((cur&&cur.emails&&cur.emails.list)||[]).length,onSuccess:false,digest:'weekly'},
+  verify:{afterWrite:true,restoreDrill:'weekly'}});
+ function bk2Merge(base,over){const o={...base};for(const k in (over||{})){const v=over[k];
+  o[k]=(v&&typeof v==='object'&&!Array.isArray(v)&&base[k]&&!Array.isArray(base[k]))?bk2Merge(base[k],v):v;}return o;}
+ function bk2Validate(st){const errors=[],warnings=[];
+  if(!/^\d{1,2}:\d{2}$/.test(String(st.time||'')) )errors.push('ساعت را به شکل ۰۴:۰۰ وارد کن.');
+  if(!st.structures.siteShop&&!st.structures.academy)errors.push('هیچ ساختاری انتخاب نشده — بکاپی گرفته نمی‌شود.');
+  if(!(st.destinations||[]).some(d=>d.on))errors.push('بدون مقصد فعال، نسخه فقط روی دیسک runner می‌ماند و از بین می‌رود.');
+  const mails=(st.emails&&st.emails.list)||[];
+  if(mails.some(m=>!/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(m)))errors.push('یک نشانی ایمیل معتبر نیست.');
+  if(st.emails.notify&&!mails.length)errors.push('اطلاع‌رسانی روشن است ولی گیرنده‌ای نیست.');
+  if(st.retention.maxTotalMB<st.limits.maxTotalMB)warnings.push('سقف نگهداشت از سقف یک اجرا کمتر است؛ با بزرگ‌شدن نسخه‌ها، نسخه‌های قدیمی زود حذف می‌شوند.');
+  if((st.destinations||[]).some(d=>d.on&&d.type==='github')&&st.redact.authUsers==='off')warnings.push('در گیت‌هاب «کاربران با ایمیل/تلفن» نریز — بهتر است روی ids-only بگذاری.');
+  if(!st.compress)warnings.push('بدون فشرده‌سازی، حجم نسخه‌ها چند برابر است.');
+  if(!st.verify.afterWrite)warnings.push('«تأیید بعد از نوشتن» خاموش است: نسخه‌ای که نخوانده بشه، نسخه نیست.');
+  if(st.retention.daily>60)warnings.push('نگهداشت روزانه بیش از ۶۰ روز است؛ برای حجم در گیت‌هاب سنگین می‌شود.');
+  return {errors,warnings};
+ }
+ async function backupView2(el){
+  const isAdmin=!!(PC_SITE_CLOUD.authSession()?.user?.app_metadata?.web_admin);
+  if(!isAdmin){el.innerHTML='<div class="sh-empty">'+I('shield')+'<h3>دسترسی محدود</h3><p>مدیریت نسخه پشتیبان فقط با حساب مدیر اصلی سایت انجام می‌شود.</p></div>';return;}
+  let data;
+  try{data=await api('backup_get');}catch(e){el.innerHTML='<div class="sh-empty"><h3>دریافت تنظیمات ناموفق بود</h3><p>'+E(e.message)+'</p></div>';return;}
+  let st=bk2Merge(bk2Defaults(),data.settings||{}),bst=data.state,notes=[];
+  const num=(f,name,lo,hi,dflt)=>Math.max(lo,Math.min(hi,N(f.elements[name]?.value)||dflt));
+  function paint(){
+   const ok=bst&&bst.result==='ok',part=bst&&bst.result==='partial';
+   const destHtml=(st.destinations||[]).map((d,i)=>{const c=BK2_DEST[d.type]||{fields:[]};
+    return '<div class="sh-bk-dest" data-dest="'+i+'" style="display:block">'+
+     '<div class="sh-bk-dest-main"><b>'+(c.icon||'📦')+' '+E(d.label||d.type)+'</b><small>'+E(c.desc||'')+'</small></div>'+
+     '<label class="sh-switch"><input type="checkbox" data-dest-on="'+i+'" '+(d.on?'checked':'')+'><span></span></label>'+
+     '<button type="button" class="sh-btn ghost sm" data-dest-del="'+i+'" title="حذف مقصد">✕</button>'+
+     (d.on&&(c.fields||[]).length?'<div class="sh-form-grid" style="margin-top:8px">'+c.fields.map(([k,lab,dflt])=>field(lab,'cfg-'+i+'-'+k,(d.config||{})[k]??dflt,'text','data-cfg="'+i+':'+k+'"')).join('')+'</div>':'')+
+     (c.fields&&c.fields.length&&!d.on?'<p class="sh-note" style="margin:6px 0 0">برای دیدن تنظیمات این مقصد، کلیدش را روشن کن.</p>':'')+'</div>';}).join('');
+   const avail=Object.keys(BK2_DEST).filter(t=>!(st.destinations||[]).some(d=>d.type===t));
+   const mails=(st.emails&&st.emails.list)||[];
+   const mailHtml=mails.map((m,i)=>'<span class="sh-pill">'+E(m)+' <button type="button" data-mail-del="'+i+'">×</button></span>').join('')||'<small class="muted">هنوز کسی اضافه نشده</small>';
+   el.innerHTML=
+   '<div class="sh-screen-title"><div class="sh-tabs"><button class="on">تنظیم نسخه پشتیبان</button></div><div class="sh-actions">'+btn('به‌روزرسانی وضعیت','bk-refresh','secondary')+btn(I('plus')+' بکاپ فوری','bk-now')+'</div></div>'+
+   '<section class="sh-card"><h2>وضعیت آخرین نسخه پشتیبان</h2><div id="bk-status">'+(bst?
+     '<div class="sh-bk-stat '+(ok?'good':part?'warn':'bad')+'"><div><b>'+(ok?'✓ موفق':part?'⚠ ناقص':'✕ ناموفق')+'</b><small>'+(bst.lastRunFa?'آخرین اجرا: '+E(bst.lastRunFa)+(bst.trigger?' — '+E(bst.trigger):''):'هنوز اجرا ثبت نشده')+'</small></div>'+
+     '<div class="sh-bk-stat-rows"><span>بخش‌ها: '+E((bst.ran||[]).join('، ')||'—')+'</span><span>حجم: '+F(bst.totalKB)+'KB در '+F(bst.files)+' فایل</span>'+
+      '<span>مقصدها: '+E(Object.keys(bst.destinations||{}).join('، ')||'—')+'</span>'+(bst.tookSec?'<span>زمان: '+F(bst.tookSec)+' ثانیه</span>':'')+
+      (bst.nextDue?'<span>اجرای بعدی: '+E(bst.nextDue)+'</span>':'')+'</div>'+
+     ((bst.errors&&bst.errors.length)?'<div class="sh-form-error">خطاها: '+E(bst.errors.join('؛ '))+'</div>':'')+
+     ((bst.warnings&&bst.warnings.length)?'<div class="sh-alert">'+E(bst.warnings.join(' | '))+'</div>':'')+'</div>'
+     :'<div class="sh-bk-stat"><div><b>هنوز نسخه‌ای گرفته نشده</b><small>با دکمهٔ «بکاپ فوری» همین حالا یکی بگیرید</small></div></div>')+'</div></section>'+
+   (notes.length?'<section class="sh-card"><h2>قبل از ذخیره</h2>'+notes.map(x=>'<div class="sh-alert red">'+E(x)+'</div>').join('')+'</section>':'')+
+   '<section class="sh-card"><h2>زمان‌بندی خودکار</h2><p class="sh-note">ساعت‌ها به وقت تهران است؛ موتور هر ۱۵ دقیقه بیدار می‌شود و خودش تصمیم می‌گیرد.</p><form data-bk-sched class="sh-form-grid">'+
+    '<label class="sh-checkbox"><input type="checkbox" name="enabled" '+(st.enabled?'checked':'')+'> بکاپ خودکار فعال باشد</label>'+
+    select('دورهٔ اجرا','mode',[['daily','روزانه در ساعت معین'],['interval','هر چند ساعت یک‌بار'],['weekly','هفتگی در یک روز'],['monthly','ماهانه در یک روز']],st.mode)+
+    '<div class="sh-field" data-bk-time><label>ساعت اجرا</label><input class="sh-input" type="time" name="time" value="'+E(st.time||'04:00')+'"></div>'+
+    '<div class="sh-field" data-bk-int><label>فاصله (ساعت)</label><input class="sh-input" type="number" name="intervalHours" min="1" max="168" value="'+E(st.intervalHours||6)+'"></div>'+
+    select('روز هفته','weekday',BK2_WEEK.map((x,i)=>[i,x]),st.weekday,'data-bk-week')+
+    field('روز ماه (۱ تا ۲۸)','monthDay',st.monthDay,'number','min="1" max="28" data-bk-md')+'</form></section>'+
+   '<section class="sh-card"><h2>چه چیزی و در چه قالبی</h2><form data-bk-what class="sh-form-grid">'+
+    '<label class="sh-checkbox"><input type="checkbox" name="siteShop" '+(st.structures.siteShop?'checked':'')+'> <b>سایت + فروشگاه</b> — محتوا، کالاها، سفارش‌ها، حسابداری</label>'+
+    '<label class="sh-checkbox"><input type="checkbox" name="academy" '+(st.structures.academy?'checked':'')+'> <b>پنل اعضا (آکادمی)</b> — بازیکنان، نتایج، زمین‌ها و عکس‌ها</label>'+
+    select('قالب فایل‌ها','format',[['json','JSON — مناسب گیت‌هاب و diff'],['sql','SQL — آمادهٔ بازگردانی']],st.format)+
+    '<label class="sh-checkbox"><input type="checkbox" name="compress" '+(st.compress?'checked':'')+'> فشرده‌سازی gzip (توصیه می‌شود)</label>'+
+    select('کاربران ابری در نسخه','authUsers',[['off','همان امروز — با ایمیل و تلفن'],['ids-only','فقط شناسه‌ها (توصیه)'],['sha','شناسه + اثر انگشت ایمیل'],['skip','اصلاً کاربران را نگیر']],st.redact.authUsers)+
+    field('جدول‌های بدون محتوا در نسخه','dropTables',(st.redact.dropTables||[]).join(', '),'text','placeholder="مثلاً audit، با کاما جدا کن"')+
+    '</form></section>'+
+   '<section class="sh-card"><h2>کجا ذخیره شود</h2><div class="sh-bk-dests">'+(destHtml||'<div class="sh-note">هیچ مقصدی نیست — با دکمهٔ زیر اضافه کنید</div>')+'</div>'+
+    '<div class="sh-actions" style="margin-top:10px">'+(avail.length?btn(I('plus')+' افزودن مقصد ذخیره','bk-add-dest','secondary'):'')+'</div></section>'+
+   '<section class="sh-card"><h2>گزارش ایمیلی</h2><form data-bk-mail class="sh-form-grid">'+
+    '<label class="sh-checkbox"><input type="checkbox" name="notify" '+((st.emails.notify)?'checked':'')+'> گزارش اجراها برای این ایمیل‌ها فرستاده شود</label>'+
+    select('کِی؟','onSuccess',[['true','هر اجرا (موفق و ناموفق)'],['false','فقط وقتی چیزی اشکال داشت']],String(!!st.emails.onSuccess))+
+    select('خلاصهٔ هفتگی','digest',[['none','نداشته باش'],['weekly','جمعه‌ها یک جمع‌بندی']],st.emails.digest)+
+    field('پیشوند موضوع','subjectPrefix',st.emails.subjectPrefix||'','text','')+
+    '<div class="sh-field full"><label>گیرنده‌ها</label><div class="sh-bk-mails">'+mailHtml+'</div>'+
+     '<div style="display:flex;gap:6px;margin-top:6px"><input class="sh-input" data-mail-new placeholder="name@example.com" dir="ltr" style="flex:1"><button type="button" class="sh-btn secondary" data-mail-add>افزودن</button></div></div>'+
+     '<div style="display:flex;gap:6px;margin-top:6px"><input class="sh-input" data-mail-new placeholder="name@example.com" dir="ltr" style="flex:1"><button type="button" class="sh-btn secondary" data-mail-add>افزودن</button></div></div>'+
+    '</form></section>'+
+   '<section class="sh-card"><h2>نگهداشت، تأیید و سقف‌ها</h2><form data-bk-more class="sh-form-grid">'+
+    field('چند روزِ آخر نگه دار','rDaily',st.retention.daily,'number','min="0" max="3650"')+
+    field('چند هفتهٔ آخر (جمعه‌ها)','rWeekly',st.retention.weekly,'number','min="0" max="600"')+
+    field('چند ماهِ آخر (اول ماه)','rMonthly',st.retention.monthly,'number','min="0" max="600"')+
+    field('سقف حجم نسخه‌های نگه‌داشته (MB)','rMaxMB',st.retention.maxTotalMB,'number','min="50"')+
+    field('سقف حجم هر اجرا (MB)','lMaxMB',st.limits.maxTotalMB,'number','min="1"')+
+    field('سقف زمان هر اجرا (ثانیه)','lTimeout',st.limits.timeoutSec,'number','min="60" max="3600"')+
+    '<label class="sh-checkbox"><input type="checkbox" name="pinOnRelease" '+(st.retention.pinOnRelease?'checked':'')+'> بکاپِ دستی/فوری همیشه نگه داشته شود</label>'+
+    '<label class="sh-checkbox"><input type="checkbox" name="afterWrite" '+(st.verify.afterWrite?'checked':'')+'> بعد از نوشتن، فایل را از مقصد بخوان و کد اصلاحش را مقایسه کن</label>'+
+    select('تمرین بازگردانی','restoreDrill',[['none','انجام نشود'],['weekly','هفته‌ای یک‌بار روی جدول آزمایشی']],st.verify.restoreDrill)+
+    field('چند دقیقه تأخیر مجاز است','graceMinutes',st.verify.graceMinutes,'number','min="10" max="1440"')+
+    '</form></section>'+
+   '<section class="sh-card"><div class="sh-form-actions">'+btn('💾 ذخیره تنظیمات','bk-save')+
+    btn('تنظیمات ایمن پیشنهادی','bk-safe','secondary')+btn('بازگشت به رفتار امروز','bk-reset','secondary')+btn('چک کردن پیش از ذخیره','bk-notes','secondary')+'</div>'+
+    '<p class="sh-note">«تنظیمات ایمن» فقط فرم را پر می‌کند؛ تا «ذخیره» را نزنی چیزی عوض نمی‌شود. بازگردانی نسخه‌ها: README ریپوی golf-academy-backups.</p></section>';
+   const f=el.querySelector('[data-bk-sched]');
+   const syncMode=()=>{const m=f.elements.mode.value;
+    el.querySelector('[data-bk-time]').style.display=(m==='interval')?'none':'';
+    el.querySelector('[data-bk-int]').style.display=(m==='interval')?'':'none';
+    el.querySelector('[data-bk-week]').closest('.sh-field').style.display=(m==='weekly')?'':'none';
+    el.querySelector('[data-bk-md]').closest('.sh-field').style.display=(m==='monthly')?'':'none';};
+   f.onchange=syncMode;f.oninput=syncMode;syncMode();
+  }
+  function collect(){
+   const s=el.querySelector('[data-bk-sched]'),w=el.querySelector('[data-bk-what]'),m=el.querySelector('[data-bk-mail]'),x=el.querySelector('[data-bk-more]');
+   if(!s||!w||!m||!x)return;
+   st.enabled=s.elements.enabled.checked;st.mode=s.elements.mode.value;
+   st.time=(s.elements.time.value||'04:00').padStart(5,'0');
+   st.intervalHours=num(s,'intervalHours',1,168,6);st.weekday=num(s,'weekday',0,6,6);st.monthDay=num(s,'monthDay',1,28,1);
+   st.structures={siteShop:w.elements.siteShop.checked,academy:w.elements.academy.checked};
+   st.format=w.elements.format.value;st.compress=w.elements.compress.checked;
+   st.redact={authUsers:w.elements.authUsers.value,
+    dropTables:String(w.elements.dropTables.value||'').split(',').map(v=>v.trim()).filter(Boolean)};
+   st.emails.notify=m.elements.notify.checked;st.emails.onSuccess=m.elements.onSuccess.value==='true';
+   st.emails.digest=m.elements.digest.value;st.emails.subjectPrefix=m.elements.subjectPrefix.value.trim()||'[پات‌کلاب]';
+   st.retention.daily=num(x,'rDaily',0,3650,30);st.retention.weekly=num(x,'rWeekly',0,600,13);
+   st.retention.monthly=num(x,'rMonthly',0,600,12);st.retention.maxTotalMB=num(x,'rMaxMB',50,100000,2000);
+   st.retention.pinOnRelease=x.elements.pinOnRelease.checked;st.verify.afterWrite=x.elements.afterWrite.checked;
+   st.verify.restoreDrill=x.elements.restoreDrill.value;st.verify.graceMinutes=num(x,'graceMinutes',10,1440,90);
+   st.limits.maxTotalMB=num(x,'lMaxMB',1,100000,900);st.limits.timeoutSec=num(x,'lTimeout',60,3600,900);
+  }
+  paint();
+  el.addEventListener('click',async e=>{
+   const t=e.target.closest('[data-act],[data-dest-del],[data-mail-del],[data-mail-add]');
+   if(!t)return;const act=t.dataset.act;
+   if(act==='bk-refresh'){try{const d=await api('backup_get');st=bk2Merge(bk2Defaults(),d.settings||{});bst=d.state;notes=[];paint();toast('وضعیت به‌روز شد');}catch(x){toast(x.message,true);}return;}
+   if(act==='bk-now'){try{await api('backup_now');toast('بکاپ فوری شروع شد ✓ — حدود یک دقیقه؛ بعد «به‌روزرسانی وضعیت» را بزنید');}catch(x){toast(x.message,true);}return;}
+   if(act==='bk-notes'){
+    collect();const v=bk2Validate(st);notes=v.warnings.map(x=>'⚠ '+x).concat(v.errors.map(x=>'✕ '+x));if(!notes.length)notes=['همه‌چیز درست به نظر می‌رسد.'];paint();return;}
+   if(act==='bk-save'){
+    collect();const v=bk2Validate(st);
+    if(v.errors.length){notes=v.errors.map(x=>'✕ '+x);paint();toast(v.errors[0],true);return;}
+    if(v.warnings.length&&!el._bk2Warn){el._bk2Warn=1;notes=v.warnings.map(x=>'⚠ '+x);paint();toast('هشدارها را ببین — برای ذخیره دوباره بزن');return;}
+    notes=[];
+    try{await api('backup_save',{settings:st});el._bk2Warn=0;toast('تنظیمات نسخه پشتیبان ذخیره شد ✓');paint();}catch(x){toast(x.message,true);}
+    return;}
+   if(act==='bk-safe'){collect();st=bk2Merge(st,bk2Safe(st));notes=(((st.emails.list||[]).length)?[]:['برای اینکه گزارش ایمیل به دستت برسد، اول یک گیرنده اضافه کن.']);paint();toast('تنظیمات ایمن روی فرم اعمال شد — هنوز ذخیره نشده');return;}
+   if(act==='bk-reset'){st=bk2Defaults();notes=[];paint();toast('فرم به رفتار امروز برگشت — هنوز ذخیره نشده');return;}
+   if(act==='bk-add-dest'){
+    const avail=Object.keys(BK2_DEST).filter(x=>!(st.destinations||[]).some(d=>d.type===x));
+    const o=modal('افزودن مقصد ذخیره','<div class="sh-bk-dests">'+avail.map(x=>'<button type="button" class="sh-bk-dest" data-pick="'+x+'"><div class="sh-bk-dest-main"><b>'+BK2_DEST[x].icon+' '+BK2_DEST[x].label+'</b><small>'+BK2_DEST[x].desc+'</small></div><span class="sh-pill">افزودن +</span></button>').join('')+'</div>');
+    o.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{collect();st.destinations=st.destinations||[];st.destinations.push({type:b.dataset.pick,label:BK2_DEST[b.dataset.pick].label,on:true,config:{}});o.close();paint();toast('مقصد اضافه شد — «ذخیره تنظیمات» را بزن');});
+    return;}
+   if(t.hasAttribute('data-dest-del')){collect();st.destinations.splice(+t.dataset.destDel,1);paint();toast('مقصد حذف شد — «ذخیره تنظیمات» را بزن');return;}
+   if(t.hasAttribute('data-mail-del')){collect();st.emails.list.splice(+t.dataset.mailDel,1);paint();return;}
+   if(t.matches('[data-mail-add]')){
+    const inp=el.querySelector('[data-mail-new]'),v=(inp.value||'').trim().toLowerCase();
+    if(!/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(v)){toast('نشانی ایمیل معتبر نیست',true);return;}
+    collect();st.emails.list=st.emails.list||[];if(!st.emails.list.includes(v))st.emails.list.push(v);
+    inp.value='';paint();toast('ایمیل اضافه شد — «ذخیره تنظیمات» را بزن');return;}
+  });
+  el.addEventListener('change',e=>{
+   const on=e.target.closest('[data-dest-on]');
+   if(on){st.destinations[+on.dataset.destOn].on=on.checked;paint();return;}
+   const cfg=e.target.closest('[data-cfg]');
+   if(cfg){const [i,k]=cfg.dataset.cfg.split(':');const d=st.destinations[+i];d.config=d.config||{};d.config[k]=cfg.value.trim();}
+  });
+  el._bk2Warn=0;
  }
 
 })();

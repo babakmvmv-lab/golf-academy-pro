@@ -65,3 +65,4 @@ GA_CLOUD.pull(); GA_CLOUD.push('manual');
 ## کلید حجیم `ga_academy` و انتشار تابع
 
 برای خطای حجم حدود ۸۲۳KiB، کد پنل و `functions/ga-sync/index.ts` به سقف یکسان **۲MiB UTF-8** هماهنگ شده‌اند. تابع باید در خود Supabase منتشر شود؛ GitHub Pages فقط پنل را منتشر می‌کند. مراحل دقیق در [`docs/DEPLOY_GA_SYNC_SIZE.md`](../docs/DEPLOY_GA_SYNC_SIZE.md) است. تا انتشار نسخهٔ سرور، خطای 413 ممکن است باقی بماند و داده در صف حفظ می‌شود. هیچ جدول یا مجوز جدیدی لازم نیست.
+- `backup_v2_settings.sql` — تنظیمات و تاریخچهٔ بکاپ از `web_store` عمومی به `web_shop.backup_*` (خصوصی) منتقل می‌شود؛ همراه با موتور `scripts/run.py` در ریپوی golf-academy-backups و تب «نسخه پشتیبان» پنل. **هنوز اجرا نشده.**

@@ -45,6 +45,14 @@ Deno.serve(async req=>{
   if(action==='backup_get'||action==='backup_save'||action==='backup_now'){
    if(user.app_metadata?.web_admin!==true)return json({ok:false,error:'مدیریت نسخه پشتیبان فقط با حساب مدیر اصلی سایت انجام می‌شود.'},403);
    if(action==='backup_get'){
+    // v2: تنظیمات می‌تواند در جدول خصوصی web_shop.backup_settings باشد (supabase/backup_v2_settings.sql).
+    // تا وقتی آن تابع‌ها ساخته نشده‌اند (PGRST202) همان کلید قدیمی خوانده می‌شود؛ ترتیبِ اعمال مهم است ولی شکست نمی‌خورد.
+    const priv=await db.rpc('backup_get');
+    if(!priv.error&&priv.data){
+     const d=priv.data as any;
+     const st=await db.from('web_store').select('v,updated_at').eq('k','web_setting_backup_state').maybeSingle();
+     return json({ok:true,data:{settings:d.settings||{},state:d.state||st.data?.v||null,runs:d.runs||[],updatedAt:d.updated_at||st.data?.updated_at||null}});
+    }
     const s=await db.from('web_store').select('v,updated_at').eq('k','web_setting_backup').maybeSingle();
     const st=await db.from('web_store').select('v,updated_at').eq('k','web_setting_backup_state').maybeSingle();
     const defaults={enabled:true,mode:'daily',time:'04:00',intervalHours:6,structures:{siteShop:true,academy:true},destinations:[{type:'github',label:'ریپوی گیت‌هاب (golf-academy-backups)',on:true},{type:'supabase',label:'فضای ابری سوپابیس',on:false}],emails:{notify:false,onSuccess:true,list:[]}};
@@ -54,6 +62,8 @@ Deno.serve(async req=>{
    if(action==='backup_save'){
     const v=payload?.settings;
     if(!v||typeof v!=='object')return json({ok:false,error:'تنظیمات نامعتبر است.'},422);
+    const privPut=await db.rpc('backup_put',{p_actor:user.id,p_settings:v as object});
+    if(!privPut.error)return json({ok:true,data:{saved:true,stored:'private'}});
     const {error:e1}=await db.from('web_store').upsert({k:'web_setting_backup',v,updated_at:new Date().toISOString()},{onConflict:'k'});
     if(e1)return failure(e1);
     return json({ok:true,data:{saved:true}});

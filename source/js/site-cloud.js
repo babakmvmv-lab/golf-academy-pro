@@ -28,7 +28,14 @@
   let readFlight=null, pushFlight=null, booted=false, lastRead=0, serial=0, retryTimer=null, backoff=5000, revision=0, resumed=false;
   const listeners=new Set(), editBase={};
   let phase='loading', lastAck='', statusNode=null, cloudBtn=null, statusSignature='', writeEpoch=0, authFlight=null;
-  function isAdmin(){const a=json('puttclub_admin',null);return !!(a && typeof a.email==='string' && a.email.length>3 && /^\/admin(?:\/|$)/.test(location.pathname));}
+  function isAdmin(){
+    /* A live cloud session is the only proof that matters. The old test also demanded a path under
+       /admin, which was true while the panel lived at puttclub.ir/admin — on this host the panel IS
+       the root, so every /api/admin read came back 401 and every admin screen rendered empty. */
+    if(authSession())return true;
+    const a=json('puttclub_admin',null);
+    return !!(a && typeof a.email==='string' && a.email.length>3 && /^\/admin(?:\/|$)/.test(location.pathname));
+  }
   function descriptor(key){
     if(own(settingNames,key))return {kind:'settings',id:settingNames[key]};
     for(const kind of Object.keys(GROUPS)){
@@ -330,11 +337,38 @@
   function newId(){return Date.now()*1000+Math.floor(Math.random()*1000);}
   const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
   function adminTable(kind){let list=table(kind,true);if(kind==='categories'){const p=table('products',true);list=list.map(c=>({...c,productCount:p.filter(x=>x.category===c.name).length}));}return list;}
+  /* The private shop workspace (documents, staff) is only reachable through web-erp, which answers
+     to the signed-in user's JWT — never to the anon key. The exported admin screens still ask for
+     them as REST paths, so those two paths are translated here. */
+  async function erp(action,payload={}){
+    const access=await accessToken();
+    if(!access)throw error('برای دیدن فضای فروشگاه باید وارد حساب مدیر شوید.',401,'WEB_AUTH_REQUIRED');
+    const res=await request(C.url.replace(/\/+$/,'')+'/functions/v1/web-erp',{method:'POST',
+      headers:{'Content-Type':'application/json',apikey:C.key,Authorization:'Bearer '+access},
+      body:JSON.stringify({action,...payload})});
+    const data=await res.json().catch(()=>null);
+    if(!res.ok||!data||data.ok!==true)throw error(String((data&&data.error)||'فضای فروشگاه پاسخ نداد.'),res.status||502,'WEB_ERP');
+    return data.data;
+  }
+
   async function readAPI(path,admin){
     await pull();if(admin){rememberBases();if(!resumed){resumed=true;schedule();}}
     if(path==='/api/site/content' || path==='/api/admin/site/settings')return {settings:settings(admin),cloud:{readAt:lastRead,offline:!!lastError,pending:Object.keys(queue).length}};
     const kind=path.includes('/site/courses')?'courses':path.includes('/site/testimonials')?'testimonials':path.split('/').pop();
     if(GROUPS[kind])return {[kind]:admin?adminTable(kind):table(kind)};
+    if(path==='/api/admin/orders'){
+      const rows=await erp('orders');
+      return {orders:(rows||[]).map(o=>({id:o.id,code:o.code||('ORD-'+o.id),
+        customer:(o.customer&&(o.customer.name||o.customer.email))||(typeof o.customer==='string'?o.customer:'—'),
+        subtotal:+o.subtotal||0,total:+o.total||0,status:o.status||'paid',
+        created_at:o.created_at,items:Array.isArray(o.items)?o.items.length:(+o.items||0),
+        payment_method:o.payment_method||'',gateway:o.gateway_slug||''}))};
+    }
+    if(path==='/api/admin/users'){
+      const rows=await erp('staff');
+      return {users:(rows||[]).map(u=>({id:u.user_id??u.id,name:u.name||'',email:u.email||'',
+        department:u.department||'sales',active:u.active!==false,permissions:u.permissions||{},manager:!!u.manager}))};
+    }
     if(path==='/api/admin/stats'){
       const p=table('products',true),cats=new Map();p.forEach(x=>cats.set(x.category,(cats.get(x.category)||0)+1));
       const savedOrders=json('puttclub_local_orders',[]),savedUsers=json('puttclub_local_users',[]);
@@ -381,7 +415,7 @@
   }
   async function route(url,init={}){
     const path=url.pathname.replace(/\/$/,''),method=(init.method||'GET').toUpperCase(),admin=path.startsWith('/api/admin/');
-    const matched=/^\/api\/(?:admin\/(?:site\/(?:settings|courses|testimonials)|products|categories|reviews|stats)(?:\/[^/]+)?|site\/(?:content|courses|shop-gate\/unlock))$/.test(path) || path==='/api/site/testimonials' && (method==='GET'||method==='POST') || path==='/api/orders' && method==='POST' || path==='/api/reviews' && method==='POST';
+    const matched=/^\/api\/(?:admin\/(?:site\/(?:settings|courses|testimonials)|products|categories|reviews|stats|orders|users)(?:\/[^/]+)?|site\/(?:content|courses|shop-gate\/unlock))$/.test(path) || path==='/api/site/testimonials' && (method==='GET'||method==='POST') || path==='/api/orders' && method==='POST' || path==='/api/reviews' && method==='POST';
     if(!matched)return null;
     try{
       if(admin && !isAdmin())return response({error:'ورود به مدیریت لازم است.'},401);

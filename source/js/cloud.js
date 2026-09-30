@@ -35,6 +35,7 @@
     'ga_session': 1,
     'ga_seed_v2': 1,
     'ga_cloud_cfg': 1,
+    'ga_backup_slots': 1,      // نسخه‌های محلیِ «پشتیبان آکادمی»: فقط روی همین دستگاه، ابری نیست
     'ga_cloud_dirty': 1,
     'ga_cloud_ts': 1,
     '__ga_t': 1,
@@ -779,6 +780,7 @@
     tombShots: tombShots,
     tombSession: tombSession,
     stripSp: stripSpStorage,
+    syncable: syncableKeys,           // «پشتیبان آکادمی» همین فهرست را می‌گیرد تا از list اصلی جا نماند
     dirty: pendingKeys,
     queueInfo: queueInfo,
     cfg: cfg,

@@ -6,7 +6,7 @@ new project or public API server is created. The dedicated web_store migration a
 web-sync deployment are separate, explicit operations; academy storage stays untouched.
 """
 from pathlib import Path
-import hashlib,json,re,sys,subprocess
+import hashlib,json,re,shutil,sys,subprocess
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 ROOT=Path(__file__).resolve().parent.parent
 CHUNKS=ROOT/'_next/static/chunks'
@@ -308,5 +308,12 @@ for file in ROOT.rglob('*'):
     for name in set(re.findall(r'/_next/static/chunks/([^"\'/]+\.js)',file.read_text())):
         if name.startswith('pc-') and not (CHUNKS/name).exists():raise RuntimeError('Dangling adapted chunk reference '+name+' in '+str(rel))
 MANIFEST.write_text(json.dumps({'bootstrap':bootstrap,'shopOpsAsset':shop_asset,'chunks':outputs,'version':2},indent=2)+'\n')
+# The operations panel is published by its own host (golf-academy-admin → admin.puttclub.ir).
+# Nothing under /admin belongs on the public site, so the exported copy is dropped here instead of
+# leaving a second working path for the same UI. Assets stay: the admin host mirrors shop-ops/site-cloud
+# from this repo, and its own workflow keeps its shell self-sufficient if this repo ever changes layout.
+if (ROOT/'admin').exists():
+    shutil.rmtree(ROOT/'admin')
+    print('Removed /admin from the public export (ops panel lives on admin.puttclub.ir)')
 print('Public bootstrap:',bootstrap)
 print('Adapted hashed chunks:',len(outputs),'updated reference files:',len(updated))

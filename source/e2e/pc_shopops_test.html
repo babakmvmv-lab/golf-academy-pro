@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><script src="/site-cloud.6424a6071063.js"></script>
+<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><script src="/site-cloud.current.js"></script>
 <title>shop-ops layout test</title></head><body>
 <div id="host"></div>
 <script>
@@ -23,7 +23,7 @@ window.PC_SITE_CLOUD={
 };
 </script>
 <script src="/source/js/site-img.js"></script>
-  <script src="/shop-ops.507c21ba0344.js"></script>
+  <script src="/shop-ops.current.js"></script>
 <script>
 /* Intercept web-erp calls (shop-ops api() uses raw fetch to the stub URL). */
 const realFetch=window.fetch;
@@ -43,7 +43,7 @@ window.fetch=async(url,init={})=>{
         ]};
     }
     if(body.action==='layout_save')data={ok:true};
-    if(body.action==='backup_get')data={settings:{enabled:true,mode:'daily',time:'04:00',intervalHours:6,structures:{siteShop:true,academy:true},destinations:[{type:'github',label:'ریپوی گیت‌هاب (golf-academy-backups)',on:true}],emails:{notify:false,onSuccess:true,list:[]}},state:{result:'ok',lastRunFa:'2026-09-30 09:39',trigger:'دستی (فوری)',ran:['سایت+فروشگاه','پنل اعضا'],totalKB:2851,files:35,destinations:{github:true,supabase:false},nextDue:'فردا 04:00',errors:[]}};
+    if(body.action==='backup_get')data={settings:{enabled:true,mode:'daily',time:'04:00',intervalHours:6,structures:{siteShop:true,academy:true},destinations:[{type:'github',label:'ریپوی گیت‌هاب (golf-academy-backups)',on:true}],emails:{notify:false,onSuccess:true,list:[]}},state:{result:'ok',nextDueByKind:{siteShop:"فردا ۰۴:۰۰",academy:"امروز ۲۲:۰۰"},lastRunFa:'2026-09-30 09:39',trigger:'دستی (فوری)',ran:['سایت+فروشگاه','پنل اعضا'],totalKB:2851,files:35,destinations:{github:true,supabase:false},nextDue:'فردا 04:00',errors:[]}};
     if(body.action==='backup_save')data={saved:true};
     if(body.action==='backup_now')data={started:true};
     return {ok:true,json:async()=>({ok:true,data})};

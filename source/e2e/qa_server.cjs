@@ -14,6 +14,8 @@ const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=
 http.createServer((req,res)=>{
  const u=new URL(req.url,'http://127.0.0.1');
  let file=path.normalize(path.join(ROOT,decodeURIComponent(u.pathname)));
+ const alias={'/shop-ops.current.js':manifest.shopOpsAsset,'/site-cloud.current.js':manifest.bootstrap};
+ if(alias[u.pathname])file=path.join(ROOT,alias[u.pathname]);   // harness pages never hard-code a hash again
  if(!file.startsWith(ROOT)){res.writeHead(403);return res.end();}
  if(u.pathname==='/'||u.pathname.endsWith('/'))file=path.join(file,'index.html');
  if(!fs.existsSync(file)||!fs.statSync(file).isFile()){

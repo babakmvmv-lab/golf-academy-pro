@@ -1,5 +1,8 @@
 (function () {
-  var PANEL = "/GolfAcademy_PRO.html";
+  /* پنل اعضا به زیردامنهٔ اختصاصی منتقل شد (panel.puttclub.ir).
+     نشانی http تا زمان صدور گواهی HTTPS زیردامنه است؛ پس از فعال‌شدن اجبار HTTPS،
+     سرور خودکار به نسخهٔ امن ارتقا می‌دهد. */
+  var PANEL = "http://panel.puttclub.ir";
   function isAcademyPath(href) {
     if (!href) return false;
     try {

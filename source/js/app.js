@@ -795,8 +795,9 @@
   const PODIUM_AUTO_RETRY_MS=16000, PODIUM_AUTO_MAX_RETRIES=3;
   const PODIUM_AUTO_LAST_KEY='pc_site_podium_last_attempt_at_v1';
   const PODIUM_AUTO_PENDING_KEY='pc_site_podium_auto_pending_v1';
+  const PODIUM_AUTO_RESULTS_HASH_KEY='pc_site_podium_published_results_hash_v1';
   let podiumAutoTimer=null, podiumAutoPending=store.get(PODIUM_AUTO_PENDING_KEY)==='1';
-  let podiumAutoAttempts=0, podiumPublishFlight=null;
+  let podiumAutoAttempts=0, podiumPublishFlight=null, podiumBootstrapFlight=null;
   let podiumLastAttemptAt=Number(store.get(PODIUM_AUTO_LAST_KEY)||0)||0;
 
   function setPodiumAutoPending(value){
@@ -820,12 +821,31 @@
     return !!(root && root.classList.contains('on') && isAdmin(currentUser));
   }
   function retryablePodiumError(e){return !!(e && (e.status===429 || e.status>=500 || e.network===true));}
+  function podiumResultsHash(){
+    try{return cyrb53(JSON.stringify(D.loadResults()||{}));}catch(e){return '';}
+  }
+  /* یک‌بار پس از ورود مدیر، دادهٔ فعلی را با آخرین نتایج ابری تطبیق بده؛
+     اگر snapshot هنوز از این دستگاه منتشر نشده، خودش از مسیر عمومی موجود منتشر شود. */
+  function reconcilePodiumOnAdminEntry(){
+    if(!isAdmin(currentUser))return;
+    if(podiumAutoPending){planPodiumAutoPublish(PODIUM_AUTO_DEBOUNCE_MS);return;}
+    if(podiumBootstrapFlight || store.get(PODIUM_AUTO_RESULTS_HASH_KEY))return;
+    const cloud=window.GA_CLOUD;
+    if(!cloud || typeof cloud.pull!=='function')return;
+    let flight;
+    flight=Promise.resolve().then(()=>cloud.pull()).then(ok=>{
+      if(!ok || !podiumAutoAllowed())return;
+      if(!store.get(PODIUM_AUTO_RESULTS_HASH_KEY) && podiumResultsHash())queuePodiumAutoPublish();
+    }).catch(()=>{}).finally(()=>{if(podiumBootstrapFlight===flight)podiumBootstrapFlight=null;});
+    podiumBootstrapFlight=flight;
+  }
   async function publishSeasonPodium(source,attempt){
     if(podiumPublishFlight)return podiumPublishFlight;
     const task=(async()=>{
       let failure=null;
       try{
         reloadData();
+        const resultsHash=podiumResultsHash();
         const top3=raceLB().LB.slice(0,3);
         const value={
           seasonYear:D.seasonYear,
@@ -845,7 +865,10 @@
           quiet:source==='auto' && attempt>0,
           onError:e=>{failure=e;}
         });
-        if(ok)APP.toast(source==='auto'?'سکوی سایت با نتایج جدید به‌روز شد ✓':'سکوی قهرمانی در سایت منتشر شد ✓','green');
+        if(ok){
+          if(resultsHash)store.set(PODIUM_AUTO_RESULTS_HASH_KEY,resultsHash);
+          APP.toast(source==='auto'?'سکوی سایت با نتایج جدید به‌روز شد ✓':'سکوی قهرمانی در سایت منتشر شد ✓','green');
+        }
         return {ok,error:failure};
       }catch(e){
         failure=e;
@@ -3758,7 +3781,7 @@
     const _hp = (location.hash || '').slice(1);
     const _dp = PAGES[_hp] ? _hp : 'cmd';
     go(rec && rec.role === 'member' ? 'memberzone' : _dp);
-    if (podiumAutoPending && isAdmin(currentUser)) planPodiumAutoPublish(PODIUM_AUTO_DEBOUNCE_MS);
+    if (isAdmin(currentUser)) reconcilePodiumOnAdminEntry();
     tickClock();
     if (!enterApp._clk) enterApp._clk = setInterval(tickClock, 1000);
     msgGate(); /* پیام خوانده‌نشده؟ → گیت اجباری قبل از ورود به پنل */

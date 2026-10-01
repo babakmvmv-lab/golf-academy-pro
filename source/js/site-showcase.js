@@ -31,7 +31,7 @@
    (p.hidden?'<span class="pc-sc-hidden-tag">مخفی در صفحهٔ اول</span>':'')+
    '<button type="button" class="pc-sc-grip" data-sc-grip="1" aria-label="جابه‌جایی '+esc(p.name)+'" title="بگیر و بکش">'+grip+'</button>'+
    '<span class="pc-sc-pos" aria-label="جایگاه">'+fa(i+1)+'</span>'+
-   '<span class="pc-sc-frame"><span class="pc-sc-img"><img src="'+esc(p.image||'/images/academy-logo.jpg')+'" alt="" loading="lazy">'+
+   '<span class="pc-sc-frame"><span class="pc-sc-img"><img src="'+esc(p.image||'/images/academy-logo.webp')+'" alt="" loading="lazy">'+
    (p.badge?'<span class="pc-sc-badge">'+esc(p.badge)+'</span>':'')+
    (d?'<span class="pc-sc-off">٪'+fa(d)+' تخفیف</span>':'')+
    '</span><span class="pc-sc-body"><span class="pc-sc-meta"><span>'+esc(p.category||'')+'</span><b>★ '+fa(p.rating||0)+' <small>('+fa(p.reviewCount||0)+')</small></b></span>'+
@@ -140,7 +140,7 @@
    if(!s.ok)throw Error(sv.error||'خواندن تنظیمات انجام نشد.');
    if(!p.ok)throw Error(pv.error||'خواندن کالاها انجام نشد.');
    const products=Array.isArray(pv.products)?pv.products:[];
-   const featured=products.filter(x=>x&&x.isFeatured===true).map(x=>({...x,image:(x.images&&x.images[0])||x.image||'/images/academy-logo.jpg'}));
+   const featured=products.filter(x=>x&&x.isFeatured===true).map(x=>({...x,image:(x.images&&x.images[0])||x.image||'/images/academy-logo.webp'}));
    featured.sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
    let cfg;try{cfg=clean(sv.settings&&sv.settings.showcase?sv.settings.showcase:{items:[]});}catch(err){cfg={items:[]};}
    const order=new Map(),hidden=new Set();

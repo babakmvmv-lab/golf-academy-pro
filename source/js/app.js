@@ -252,7 +252,7 @@
       c.restore(); afterLogo();
     };
     img.onerror = () => { if (!drew){ drew = true; afterLogo(); } };
-    img.src = (window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.png';
+    img.src = (window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.webp';
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {});
   }
   function pbar(pct, cls='', w=0){
@@ -1290,7 +1290,9 @@
         a += span;
       });
     }
-    return '<img width="' + px + '" height="' + px + '" style="display:block;margin:0 auto" src="' + cv.toDataURL('image/png') + '" alt="">';
+    const webp = cv.toDataURL('image/webp', 1);
+    const image = webp.indexOf('data:image/webp;') === 0 ? webp : cv.toDataURL('image/png');
+    return '<img width="' + px + '" height="' + px + '" style="display:block;margin:0 auto" src="' + image + '" alt="">';
   }
   function paTopRes(cl){
     let best = 'straight', bn = -1;

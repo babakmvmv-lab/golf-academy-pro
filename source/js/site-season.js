@@ -91,7 +91,7 @@
     const pill=r.rankColor?' style="background:' + esc(r.rankColor) + '22;color:' + esc(r.rankColor) + ';border-color:' + esc(r.rankColor) + '55"':'';
     return '<div class="step'+(first?' first':'')+'">'+
      '<div class="medal">'+['🥇','🥈','🥉'][idx]+'</div>'+
-     '<img class="avatar" src="'+esc(r.avatar||'/images/academy-logo.jpg')+'" alt="">'+
+     '<img class="avatar" src="'+esc(r.avatar||'/images/academy-logo.webp')+'" alt="">'+
      '<div class="base" style="height:'+(hs[pos]+58)+'px">'+
      '<div class="pname">'+esc(r.name||'—')+'</div>'+
      '<div class="ppts">'+fa(r.pts||0)+' امتیاز</div>'+

@@ -681,8 +681,8 @@
 
   function mgmtAcademy(body){
     const B = (window.GA_BRAND && GA_BRAND.get()) || {};
-    const logo = (window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.png';
-    const fav = (window.GA_BRAND && GA_BRAND.faviconUrl()) || 'assets/puttclub_favicon.png';
+    const logo = (window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.webp';
+    const fav = (window.GA_BRAND && GA_BRAND.faviconUrl()) || 'assets/puttclub_favicon.webp';
     const field = (id, lab, val, extra) =>
       '<label style="display:block;margin:0 0 4px"><span style="display:block;font-size:11.5px;color:var(--muted);margin-bottom:5px">' + lab + '</span>' +
       '<input id="' + id + '" class="inp" value="' + esc(val || '') + '" ' + (extra || '') + ' style="width:100%"></label>';
@@ -747,7 +747,7 @@
       '</div>';
 
     const pending = {};
-    function readImg(file, max, jpeg, cb){
+    function readImg(file, max, quality, cb){
       if (!file) return;
       if (file.size > 6 * 1024 * 1024){ APP.toast('حجم فایل زیاد است (حداکثر ۶ مگابایت)', 'red'); return; }
       const rd = new FileReader();
@@ -761,40 +761,35 @@
           const ctx = cv.getContext('2d');
           ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(im, 0, 0, cv.width, cv.height);
-          /* بهترین فرمت وب: WebP (حجم بسیار کمتر بدون افت محسوس)؛ برای مرورگرهای قدیمی JPEG/PNG */
-          if (jpeg === 'png'){ cb(cv.toDataURL('image/png')); return; }
-          if (!jpeg){
-            const webp = cv.toDataURL('image/webp', 0.9);
-            cb(webp.indexOf('data:image/webp') === 0 ? webp : cv.toDataURL('image/png'));
-            return;
-          }
-          const webp = cv.toDataURL('image/webp', 0.88);
-          cb(webp.indexOf('data:image/webp') === 0 ? webp : cv.toDataURL('image/jpeg', 0.82));
+          const webp = cv.toDataURL('image/webp', quality || 0.9);
+          if (webp.indexOf('data:image/webp;') !== 0){ APP.toast('این مرورگر خروجی WebP را پشتیبانی نمی‌کند؛ لطفاً مرورگر را به‌روز کنید.', 'red'); return; }
+          cb(webp);
         };
         im.onerror = () => APP.toast('تصویر خوانده نشد', 'red');
         im.src = rd.result;
       };
+      rd.onerror = () => APP.toast('فایل تصویر خوانده نشد', 'red');
       rd.readAsDataURL(file);
     }
     $('#ac-logo').addEventListener('change', e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
-      readImg(f, 512, false, u => { pending.logo = u; $('#ac-logo-prev').src = u; });
+      readImg(f, 512, 0.9, u => { pending.logo = u; $('#ac-logo-prev').src = u; });
     });
     $('#ac-fav').addEventListener('change', e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
-      readImg(f, 128, 'png', u => { pending.favicon = u; $('#ac-fav-prev').src = u; });
+      readImg(f, 128, 0.96, u => { pending.favicon = u; $('#ac-fav-prev').src = u; });
     });
     $('#ac-bg').addEventListener('change', e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
-      readImg(f, 1400, true, u => { pending.loginBg = u; $('#ac-bg-prev').src = u; });
+      readImg(f, 1400, 0.86, u => { pending.loginBg = u; $('#ac-bg-prev').src = u; });
     });
     $('#ac-lobby').addEventListener('change', e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
-      readImg(f, 1600, true, u => { pending.lobbyBg = u; $('#ac-lobby-prev').src = u; syncCrop(); });
+      readImg(f, 1600, 0.86, u => { pending.lobbyBg = u; $('#ac-lobby-prev').src = u; syncCrop(); });
     });
     $('#ac-lobby-m').addEventListener('change', e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
-      readImg(f, 1400, true, u => { pending.lobbyBgMobile = u; $('#ac-lobby-m-prev').src = u; syncCrop(); });
+      readImg(f, 1400, 0.86, u => { pending.lobbyBgMobile = u; $('#ac-lobby-m-prev').src = u; syncCrop(); });
     });
     function cropSrc(){ return pending.lobbyBgMobile || pending.lobbyBg || B.lobbyBgMobile || B.lobbyBg || 'assets/lobby_bg_v3.webp'; }
     function syncCrop(){
@@ -1303,8 +1298,10 @@
       try {
         if (typeof qrcode === 'undefined') throw new Error('qr');
         const qr = qrcode(0, 'M'); qr.addData(link); qr.make();
-        const img = document.createElement('img'); img.src = qr.createDataURL(4, 8); img.alt = 'QR همگام‌سازی نام‌ها';
+        const img = document.createElement('img'); img.alt = 'QR همگام‌سازی نام‌ها';
+        const qrImage = window.PC_QR ? window.PC_QR.toWebP(qr, 4, 8) : Promise.resolve(qr.createDataURL(4, 8));
         host.innerHTML = ''; host.appendChild(img); host.insertAdjacentHTML('beforeend','<small>برای اعمال روی موبایل اسکن کنید</small>');
+        qrImage.then(src => { img.src = src; }).catch(() => { img.src = qr.createDataURL(4, 8); });
       } catch(e){ host.innerHTML = '<span>لینک را با دکمهٔ «کپی لینک» به گوشی بفرستید.</span>'; }
     }, 30);
   }
@@ -1322,7 +1319,7 @@
         <div style="flex:1">
           <label>عکس بازیکن (آپلود یا لمس برای انتخاب)</label>
           <input class="input" type="file" id="pf-file" accept="image/*" style="width:100%;margin-top:5px;font-size:11.5px">
-          <div style="font-size:10.5px;color:var(--muted);margin-top:4px">فرمت‌های PNG / JPG — حداکثر ~۲ مگابایت</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:4px">عکس بارگذاری‌شده خودکار به WebP تبدیل می‌شود — حداکثر ~۲ مگابایت</div>
         </div>
       </div>
       <div><label>نام</label><input class="input" id="pf-name" value="${esc(p.name)}" style="width:100%" placeholder="مثلاً علی"></div>
@@ -1391,16 +1388,17 @@
       rd.onload = () => {
         const im = new Image();
         im.onload = () => {
-          let url = rd.result;
-          /* کوچک‌نمایی خودکار به حداکثر ۳۲۰px — سبک برای ذخیره و سینک ابری */
+          let url;
+          /* کوچک‌نمایی خودکار به حداکثر ۳۲۰px و نگهداری عکس پروفایل به‌صورت WebP */
           try {
             const MAX = 320, k = Math.min(1, MAX / Math.max(im.width || MAX, im.height || MAX));
             const cv = document.createElement('canvas');
             cv.width = Math.max(1, Math.round((im.width || MAX) * k));
             cv.height = Math.max(1, Math.round((im.height || MAX) * k));
             cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
-            url = cv.toDataURL('image/jpeg', .84);
-          } catch(e){}
+            url = cv.toDataURL('image/webp', .86);
+            if (url.indexOf('data:image/webp;') !== 0) throw new Error('webp unsupported');
+          } catch(e){ APP.toast('تبدیل عکس به WebP انجام نشد؛ مرورگر را به‌روز کنید.', 'red'); return; }
           const img = q('#pf-photo');
           img.src = url; img.classList.remove('empty');
           img.removeAttribute('data-empty'); /* فیکس باگ: بدون این، عکس جدید در ذخیره نادیده گرفته می‌شد */
@@ -3157,7 +3155,7 @@
       el.innerHTML =
           '<div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#7a5f17,' + G + ',#f7e7ac,' + G + ',#7a5f17)"></div>'
         + '<div class="pdfk-head" style="display:flex;align-items:center;gap:14px;padding:17px 28px 13px;border-bottom:1px solid rgba(212,175,55,.35)">'
-        +   '<img src="' + ((window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.png') + '" alt="" style="width:58px;height:58px;border-radius:50%;object-fit:cover;border:2px solid ' + G + '">'
+        +   '<img src="' + ((window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.webp') + '" alt="" style="width:58px;height:58px;border-radius:50%;object-fit:cover;border:2px solid ' + G + '">'
         +   '<div style="flex:1"><div style="font-size:20px;font-weight:900;color:' + GL + '">' + ((window.GA_BRAND && GA_BRAND.get().nameFa) || '') + '</div>'
         +   '<div style="font-size:8.5px;letter-spacing:3px;color:rgba(212,175,55,.85);margin-top:4px;direction:ltr;text-align:right">' + ((window.GA_BRAND && GA_BRAND.get().nameEn) || '') + '</div></div>'
         +   '<div style="text-align:left"><div style="font-size:10px;color:#9aa7b5">' + (opts.kind || 'گزارش') + '</div>'
@@ -3236,7 +3234,7 @@
         el.innerHTML =
             '<div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#7a5f17,' + G + ',#f7e7ac,' + G + ',#7a5f17)"></div>'
           + '<div class="pdfk-head" style="display:flex;align-items:center;gap:14px;padding:14px 28px 10px;border-bottom:1px solid rgba(212,175,55,.35)">'
-          +   '<img src="' + ((window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.png') + '" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid ' + G + '">'
+          +   '<img src="' + ((window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.webp') + '" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid ' + G + '">'
           +   '<div style="flex:1"><div style="font-size:18px;font-weight:900;color:' + GL + '">' + ((window.GA_BRAND && GA_BRAND.get().nameFa) || '') + '</div>'
           +   '<div style="font-size:8px;letter-spacing:3px;color:rgba(212,175,55,.85);margin-top:3px;direction:ltr;text-align:right">' + ((window.GA_BRAND && GA_BRAND.get().nameEn) || '') + '</div></div>'
           +   '<div style="text-align:left"><div style="font-size:10px;color:#9aa7b5">' + (opts.kind || pg.kind || 'گزارش') + '</div>'
@@ -3434,7 +3432,7 @@
         };
         img.onload = () => { drawImg(); doneLogo(); };
         img.onerror = () => { if (!drew){ drew = true; c.save(); c.beginPath(); c.arc(W / 2, 172, 76, 0, 7); c.fillStyle = '#111c2a'; c.fill(); c.clip(); c.textAlign = 'center'; c.fillStyle = GL; c.font = '64px serif'; c.fillText('⛳', W / 2, 196); c.restore(); } doneLogo(); };
-        img.src = (window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.png';
+        img.src = (window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.webp';
       };
 
       const save = cvs => {
@@ -4003,7 +4001,7 @@
     const mail  = (ct.email && String(ct.email).trim()) || Br.email || 'info@puttclub.ir';
     const addr  = (ct.address && String(ct.address).trim()) || 'زمین گلف مسجدسلیمان';
     const web   = (ct.website && String(ct.website).trim()) || Br.domain || 'puttclub.ir';
-    let logoSrc = (window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.png';
+    let logoSrc = (window.GA_BRAND && GA_BRAND.logoUrl()) || 'assets/puttclub_logo.webp';
     if (!/^data:|^https?:\/\//i.test(logoSrc)) {
       logoSrc = 'https://' + String(web).replace(/^https?:\/\//i,'').replace(/\/.*$/,'') + '/' + String(logoSrc).replace(/^\//,'');
     }

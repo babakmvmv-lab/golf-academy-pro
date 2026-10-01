@@ -1,5 +1,5 @@
 /* Shared image upload for the site/shop admin panels: pick a file → resize → WebP data URL.
-   Keeps the URL option; uploads are converted automatically (best web format, no visible quality loss). */
+   Keeps the URL option; file uploads are stored as WebP. */
 (function(){
  'use strict';
  function pick(maxDim,cb){
@@ -26,9 +26,8 @@
      ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
      ctx.drawImage(img,0,0,w,h);
      URL.revokeObjectURL(url);
-     /* WebP when supported (much smaller, no visible loss); JPEG fallback for old Safari. */
-     let out=cv.toDataURL('image/webp',0.88);
-     if(out.indexOf('data:image/webp')!==0)out=cv.toDataURL('image/jpeg',0.84);
+     const out=cv.toDataURL('image/webp',0.88);
+     if(out.indexOf('data:image/webp;')!==0){alert('این مرورگر خروجی WebP را پشتیبانی نمی‌کند؛ لطفاً مرورگر را به‌روز کنید.');return;}
      if(out.length>1500000){alert('تصویر تبدیل‌شده همچنان بزرگ است (بیش از ~۱.۱ مگابایت)؛ عکس کوچک‌تری انتخاب کنید.');return;}
      cb(out);
     }catch(e){URL.revokeObjectURL(url);alert('تبدیل تصویر انجام نشد.');}
@@ -57,7 +56,7 @@
       var qs=[0.8,0.72,0.62];
       for(var j=0;j<qs.length;j++){
        var out=cv.toDataURL('image/webp',qs[j]);
-       if(out.indexOf('data:image/webp')!==0)out=cv.toDataURL('image/jpeg',qs[j]-0.06);
+       if(out.indexOf('data:image/webp;')!==0){resolve(null);return;}
        if(out.length<=maxBytes){resolve(out);return;}
       }
      }

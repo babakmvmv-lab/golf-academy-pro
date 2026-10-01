@@ -12,6 +12,47 @@
   const MAX_BYTES=2*1024*1024, TIMEOUT=20000;
   const GROUPS={products:'product',categories:'category',courses:'course',testimonials:'testimonial',reviews:'review'};
   const LEGACY={products:'products',categories:'categories',courses:'site-courses',testimonials:'site-testimonials',reviews:'reviews'};
+  // Existing local images and the current Pexels placeholders are served as first-party WebP.
+  // Public web_store/web_shop records are normalized at render time; this does not write to Supabase.
+  const LOCAL_WEBP=Object.freeze({
+    '/images/academy-logo.jpg':'/images/academy-logo.webp','/images/academy-logo-hd.jpg':'/images/academy-logo-hd.webp','/images/academy-about.jpg':'/images/academy-about.webp',
+    '/images/products/driver.jpg':'/images/products/driver.webp','/images/products/irons.jpg':'/images/products/irons.webp','/images/products/putter.jpg':'/images/products/putter.webp',
+    '/images/products/bag.jpg':'/images/products/bag.webp','/images/products/glove.jpg':'/images/products/glove.webp','/images/products/shoes.jpg':'/images/products/shoes.webp',
+    '/images/products/balls.jpg':'/images/products/balls.webp','/images/products/polo.jpg':'/images/products/polo.webp','/images/products/umbrella.jpg':'/images/products/umbrella.webp','/images/products/rangefinder.jpg':'/images/products/rangefinder.webp',
+    '/images/pay/idpay.png':'/images/pay/idpay.webp','/images/pay/keshavarzi.png':'/images/pay/keshavarzi.webp','/images/pay/mellat.png':'/images/pay/mellat.webp',
+    '/images/pay/melli.png':'/images/pay/melli.webp','/images/pay/parsian.png':'/images/pay/parsian.webp','/images/pay/pasargad.png':'/images/pay/pasargad.webp',
+    '/images/pay/saderat.png':'/images/pay/saderat.webp','/images/pay/saman.png':'/images/pay/saman.webp','/images/pay/sepah.png':'/images/pay/sepah.webp',
+    '/images/pay/tejarat.png':'/images/pay/tejarat.webp','/images/pay/zarinpal.png':'/images/pay/zarinpal.webp','/images/pay/zibal.png':'/images/pay/zibal.webp',
+    '/source/assets/puttclub_logo.png':'/source/assets/puttclub_logo.webp','/source/assets/puttclub_favicon.png':'/source/assets/puttclub_favicon.webp',
+    '/mis_sat.jpg':'/mis_sat.webp','/mis_topo.jpg':'/mis_topo.webp'
+  });
+  const PEXELS_WEBP=Object.freeze({
+    '6542443-1200':'/images/remote/pexels-6542443-1200.webp','9207649-1200':'/images/remote/pexels-9207649-1200.webp',
+    '15376334-1200':'/images/remote/pexels-15376334-1200.webp','6256593-1200':'/images/remote/pexels-6256593-1200.webp',
+    '19334919-1600':'/images/remote/pexels-19334919-1600.webp','4398355-1600':'/images/remote/pexels-4398355-1600.webp',
+    '6256827-1200':'/images/remote/pexels-6256827-1200.webp','6256834-1200':'/images/remote/pexels-6256834-1200.webp',
+    '6256829-1600':'/images/remote/pexels-6256829-1600.webp','19334920-1600':'/images/remote/pexels-19334920-1600.webp',
+    '6256754-1600':'/images/remote/pexels-6256754-1600.webp'
+  });
+  function webpImageUrl(value){
+    if(typeof value!=='string'||!value)return value;
+    const raw=value.trim().replace(/&amp;/g,'&'),pexels=raw.match(/^https?:\/\/images\.pexels\.com\/photos\/(\d+)\/pexels-photo-\d+\.jpeg(?:\?|$)/i);
+    if(pexels){const id=pexels[1],size=(raw.match(/[?&]w=(1200|1600)\b/)||[])[1]||'1200';return PEXELS_WEBP[id+'-'+size]||PEXELS_WEBP[id+'-1200']||PEXELS_WEBP[id+'-1600']||raw;}
+    let candidate=raw;
+    if(/^https?:\/\//i.test(raw)){
+      try{const u=new URL(raw);if(['puttclub.ir','www.puttclub.ir','admin.puttclub.ir','panel.puttclub.ir'].includes(u.hostname))candidate=u.pathname+u.search+u.hash;}catch(e){}
+    }
+    const clean=candidate.split(/[?#]/,1)[0],key=clean.startsWith('/')?clean:'/'+clean,mapped=LOCAL_WEBP[key];
+    return mapped ? mapped+candidate.slice(clean.length) : raw;
+  }
+  function webpImageFields(value){
+    if(Array.isArray(value))return value.map(webpImageFields);
+    if(typeof value==='string')return webpImageUrl(value);
+    if(!safeObject(value))return value;
+    const out={...value};
+    for(const key of ['image','images','logo','logoHd','favicon','icon','avatar','poster','src'])if(own(out,key))out[key]=webpImageFields(out[key]);
+    return out;
+  }
   const SETTING_KEYS=Object.keys(C.seed.settings);
   const settingKey=k=>PFX+'setting_'+k.replace(/[A-Z]/g,x=>'_'+x.toLowerCase());
   const settingNames=Object.fromEntries(SETTING_KEYS.map(k=>[settingKey(k),k]));
@@ -160,7 +201,8 @@
       delete out.shopGate.code;
       if(admin)out.shopGate.code=rows[settingKey('shopGate')] && rows[settingKey('shopGate')].v.codeHash ? '' : String((legacy.shopGate||{}).code || C.defaultGateCode || 'B');
     }
-    return out;
+    // Public responses are a read-only WebP projection; keep editor/API values raw so an unrelated admin save cannot migrate stored records.
+    return admin ? out : webpImageFields(out);
   }
   function table(kind,admin=false){
     let base=clone(C.seed[kind]||[]);
@@ -185,7 +227,7 @@
       if(!admin)list=list.filter(x=>!x.status || x.status==='approved');
       if(!admin)list=list.map(x=>{const v={...x};delete v.phone;delete v.email;return v;});
     }
-    return list;
+    return admin ? list : list.map(webpImageFields);
   }
   function rememberBases(){
     const keys=new Set([...Object.keys(rows),...SETTING_KEYS.map(settingKey)]);
@@ -326,7 +368,7 @@
     if(kind==='products'){
       if(typeof out.slug!=='string'||!/^[\p{L}\p{N}_-]{2,120}$/u.test(out.slug))throw error('اسلاگ محصول معتبر نیست.',422);
       if(!Number.isFinite(+out.price)||+out.price<=0||!Number.isSafeInteger(+out.stock)||+out.stock<0)throw error('قیمت یا موجودی محصول معتبر نیست.',422);
-      out.price=+out.price;out.stock=+out.stock;out.images=out.images?.length?out.images:['/images/academy-logo.jpg'];out.features=Array.isArray(out.features)?out.features:[];
+      out.price=+out.price;out.stock=+out.stock;out.images=out.images?.length?out.images:['/images/academy-logo.webp'];out.features=Array.isArray(out.features)?out.features:[];
       out.rating=Number.isFinite(+out.rating)?+out.rating:0;out.reviewCount=+out.reviewCount||0;
     }
     if(out.images && (!Array.isArray(out.images)||out.images.some(x=>!validUrl(x))))throw error('نشانی تصویر معتبر نیست.',422);
@@ -504,7 +546,7 @@
         let v=kind==='settings'?settings():table(kind);
         if(options.byPage){const slug=new URLSearchParams(location.search).get('item');const product=slug?table('products').find(x=>x.slug===slug):null;const id=slug?(product?.id||-1):options.productId;v=v.filter(x=>+x.productId===+id);}
         if(options.featured)v=v.filter(x=>x.isFeatured).slice(0,4);
-        if(kind==='products')v=v.map(x=>({...x,image:x.images?.[0]||x.image||'/images/academy-logo.jpg'}));
+        if(kind==='products')v=v.map(x=>({...x,image:x.images?.[0]||x.image||'/images/academy-logo.webp'}));
         if(kind==='settings')applyTheme(v);
         if(active)pair[1](v);
       };
@@ -538,7 +580,7 @@
       const refresh=()=>{
         const list=table('products'),home=/^\/(?:index\.html)?$/.test(location.pathname);
         const p=home ? showcaseApplied(list.filter(x=>x.isFeatured).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))))[index] : list.find(x=>x.id===initial.id);
-        if(active)pair[1](p?{...p,image:p.images?.[0]||p.image||'/images/academy-logo.jpg'}:{...initial,_hidden:true,stock:0});
+        if(active)pair[1](p?{...p,image:p.images?.[0]||p.image||'/images/academy-logo.webp'}:{...initial,_hidden:true,stock:0});
       };
       const off=subscribe(refresh);pull().then(refresh);return()=>{active=false;off();};
     },[initial.id,index,location.pathname]);
@@ -644,7 +686,7 @@
       script.onerror=()=>{clearTimeout(tm);script.remove();shopCodeFlight=null;reject(Error('فایل پنل فروشگاه دریافت نشد؛ صفحه را تازه کنید.'));};document.head.appendChild(script);
     });return shopCodeFlight;
   }
-  window.PC_SITE_CLOUD={loadShopOps,accessToken,signInAdmin,signOut,changePassword,authSession,authDialog,request:apiFetch,pull,flush,subscribe,settings,table,liveState,useTable,useProduct,useProductReviewMeta,useCard,brandShort,productHref,gateRevision,gateSessionValid,importLegacy,submitPublic,signupInbox,signupDelete,shopCategories,
+  window.PC_SITE_CLOUD={loadShopOps,accessToken,signInAdmin,signOut,changePassword,authSession,authDialog,request:apiFetch,pull,flush,subscribe,settings,table,liveState,useTable,useProduct,useProductReviewMeta,useCard,brandShort,productHref,webpImageUrl,gateRevision,gateSessionValid,importLegacy,submitPublic,signupInbox,signupDelete,shopCategories,
     status:()=>({phase,pending:Object.keys(queue),error:lastError,lastRead,lastAck,revision}),
     publish,normalizeSetting,normalizeRecord,keyFor,resolvePending,showcaseApplied};
 })();

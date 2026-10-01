@@ -843,8 +843,9 @@ function panelContact(){
       var host = $('#l3d-qr'); if (!host || typeof qrcode === 'undefined') return;
       var qr = qrcode(0, 'M'); qr.addData(c.qr || ('https://' + (Bnd().domain || 'puttclub.ir'))); qr.make();
       var img = document.createElement('img');
-      img.src = qr.createDataURL(5, 8); img.style.cssText = 'width:110px;height:110px;border-radius:10px';
-      host.appendChild(img);
+      img.style.cssText = 'width:110px;height:110px;border-radius:10px';
+      var qrImage = window.PC_QR ? window.PC_QR.toWebP(qr, 5, 8) : Promise.resolve(qr.createDataURL(5, 8));
+      qrImage.then(function(src){ img.src = src; host.appendChild(img); }).catch(function(){ img.src = qr.createDataURL(5, 8); host.appendChild(img); });
     }, 60);
   } catch(e){}
   return h;

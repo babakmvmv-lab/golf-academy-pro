@@ -85,7 +85,7 @@
   const host=document.createElement('div');host.id='pc-pay-gateways';host.dir='rtl';
   if(!methods.length){host.innerHTML='<div class="pc-pay-hint">در حال حاضر درگاه آنلاینی فعال نیست؛ گزینهٔ دیگری را انتخاب کنید یا با پشتیبانی تماس بگیرید.</div>';}
   else{
-   host.innerHTML='<div class="pc-pay-gw">'+methods.map((m,i)=>'<label><input type="radio" name="pc-pay-gw" value="'+esc(m.slug)+'" '+(i===0?'checked':'')+'><img src="'+esc(m.logo||'/images/academy-logo.jpg')+'" alt=""><span class="t"><b>'+esc(m.title)+'</b><small>'+esc(m.bank||'')+'</small></span></label>').join('')+'</div>';
+   host.innerHTML='<div class="pc-pay-gw">'+methods.map((m,i)=>'<label><input type="radio" name="pc-pay-gw" value="'+esc(m.slug)+'" '+(i===0?'checked':'')+'><img src="'+esc(m.logo||'/images/academy-logo.webp')+'" alt=""><span class="t"><b>'+esc(m.title)+'</b><small>'+esc(m.bank||'')+'</small></span></label>').join('')+'</div>';
    selectedGateway=methods[0]?methods[0].slug:'';
    host.addEventListener('change',e=>{if(e.target.name==='pc-pay-gw')selectedGateway=e.target.value;});
   }
@@ -131,7 +131,7 @@
   const {cards}=paymentSettings();
   const host=document.createElement('div');host.id='pc-pay-report';host.dir='rtl';host.className='pc-pay-report';
   host.innerHTML='<h3>ارسال رسید کارت به کارت — سفارش '+esc(code||'')+'</h3><p>مبلغ را به یکی از کارت‌های زیر واریز کنید و مشخصات واریز را ثبت کنید تا سریع‌تر تأیید شود. تکمیل همهٔ موارد اختیاری است؛ «کارت مقصد» را انتخاب کنید.</p>'+
-   '<div class="cards">'+cards.map((c,i)=>'<label><input type="radio" name="pc-pay-card" value="'+esc(c.id)+'" '+(i===0?'checked':'')+'><img src="'+esc(c.logo||'/images/academy-logo.jpg')+'" alt=""><span><b>'+esc(c.bank)+(c.title?' — '+esc(c.title):'')+'</b>'+(c.card_number?'<small>کارت: '+esc(c.card_number)+'</small>':'')+(c.iban?'<small>شبا: '+esc(c.iban)+'</small>':'')+(c.account_number?'<small>حساب: '+esc(c.account_number)+'</small>':'')+'</span></label>').join('')+'</div>'+
+   '<div class="cards">'+cards.map((c,i)=>'<label><input type="radio" name="pc-pay-card" value="'+esc(c.id)+'" '+(i===0?'checked':'')+'><img src="'+esc(c.logo||'/images/academy-logo.webp')+'" alt=""><span><b>'+esc(c.bank)+(c.title?' — '+esc(c.title):'')+'</b>'+(c.card_number?'<small>کارت: '+esc(c.card_number)+'</small>':'')+(c.iban?'<small>شبا: '+esc(c.iban)+'</small>':'')+(c.account_number?'<small>حساب: '+esc(c.account_number)+'</small>':'')+'</span></label>').join('')+'</div>'+
    '<div class="grid">'+
    '<span class="f">شماره کارتی که با آن واریز کردید<input data-r="from_card" inputmode="numeric" maxlength="19" placeholder="۶۰۳۷۹۹…"></span>'+
    '<span class="f">تاریخ واریز (شمسی)<input data-r="date" placeholder="۱۴۰۵/۰۷/۰۵"></span>'+

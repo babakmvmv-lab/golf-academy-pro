@@ -43,11 +43,11 @@
   }
   function logoUrl() {
     var b = get();
-    return b.logo || 'assets/puttclub_logo.png';
+    return b.logo || 'assets/puttclub_logo.webp';
   }
   function faviconUrl() {
     var b = get();
-    return b.favicon || b.logo || 'assets/puttclub_favicon.png';
+    return b.favicon || b.logo || 'assets/puttclub_favicon.webp';
   }
   function host() {
     return String(get().domain || '').replace(/^https?:\/\//i, '').replace(/\/.*$/, '');

@@ -352,7 +352,7 @@
         if (!Array.isArray(rows)) throw new Error('پاسخ دریافت داده معتبر نیست.');
         applying = true; // نگهبانِ محلی حین اعمال خاموش است
         try {
-          var d = jread(DIRTY_KEY, {}), ts = jread(TS_KEY, {}), L = ls(), applied = 0;
+          var d = jread(DIRTY_KEY, {}), ts = jread(TS_KEY, {}), L = ls(), applied = 0, resultsApplied = false;
           (rows || []).forEach(function (r) {
             if (!r || !r.k || SKIP[r.k]) return;
             var remoteNewer = !ts[r.k] || r.updated_at > ts[r.k];
@@ -361,9 +361,16 @@
             // ردیفِ نشان‌دارِ حذف (tombstone): کلید محلی هم پاک می‌شود
             if (r.v && typeof r.v === 'object' && r.v.__del) {
               if (remoteNewer) {
-                try { L.removeItem(r.k); } catch (e) {}
-                ts[r.k] = r.updated_at;
-                if (localDirty) delete d[r.k];
+                try {
+                  var hadValue = L.getItem(r.k) !== null;
+                  L.removeItem(r.k);
+                  ts[r.k] = r.updated_at;
+                  if (hadValue) {
+                    applied++;
+                    if (r.k === 'ga_results') resultsApplied = true;
+                  }
+                  if (localDirty) delete d[r.k];
+                } catch (e) {}
               }
               return;
             }
@@ -377,6 +384,7 @@
                    دفعهٔ بعد دوباره تلاش می‌شود و رکورد برای همیشه گم نمی‌شود. */
                 ts[r.k] = r.updated_at;
                 applied++;
+                if (r.k === 'ga_results') resultsApplied = true;
                 if (localDirty) delete d[r.k];
               } catch (e) {}
             }
@@ -394,7 +402,7 @@
           if (applied){
             toast(applied + ' کلید از ابر به‌روز شد', 'ok');
             /* رویداد برای صفحه‌ها: دیتا عوض شد — نمودارها/آرشیو خودشان را تازه کنند */
-            try { window.dispatchEvent(new CustomEvent('ga-cloud-applied', { detail: { count: applied } })); } catch (e) {}
+            try { window.dispatchEvent(new CustomEvent('ga-cloud-applied', { detail: { count: applied, resultsChanged: resultsApplied } })); } catch (e) {}
           }
         } finally { applying = false; }
         return true;

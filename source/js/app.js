@@ -128,10 +128,19 @@
       img.src = a;
     });
   });
-  async function publishToSite(rows){
-    if (!window.GA_SYNC || !GA_SYNC.public) { APP.toast('لایهٔ ابر بارگذاری نشده است.', 'orange'); return false; }
+  async function publishToSite(rows, options={}){
+    if (!window.GA_SYNC || !GA_SYNC.public) {
+      const e=new Error('لایهٔ ابر بارگذاری نشده است.');
+      if (typeof options.onError==='function') options.onError(e);
+      if (!options.quiet) APP.toast(e.message, 'orange');
+      return false;
+    }
     try { await GA_SYNC.public(rows); return true; }
-    catch (e) { APP.toast('انتشار در سایت انجام نشد: ' + (e && e.message || e), 'red'); return false; }
+    catch (e) {
+      if (typeof options.onError==='function') options.onError(e);
+      if (!options.quiet) APP.toast('انتشار در سایت انجام نشد: ' + (e && e.message || e), 'red');
+      return false;
+    }
   }
   const ringColor = rk => rk === 'Gold Elite' ? 'gold' : rk === 'Red' ? 'red' : rk === 'Blue' ? 'blue' : rk === 'Green' ? 'green' : 'dim';
   function rankPill(rk){
@@ -571,23 +580,24 @@
       }
       const pubP = $('#pub-podium');
       if (pubP) pubP.addEventListener('click', async () => {
-        const top3 = raceLB().LB.slice(0, 3);
-        const value = {
-          seasonYear: D.seasonYear,
-          matchesHeld: A.MATCHES_HELD,
-          playersActive: A.LB.length,
-          updatedAt: new Date().toISOString(),
-          top: await Promise.all(top3.map(async (r, k) => ({
-            rank: k + 1, name: r.name, pts: r.pts,
-            rankText: D.RANK_TEXT[r.color] || '',
-            rankColor: (D.RANK_DEF.find(x => x[0] === r.color) || [])[3] || '#8A93A6',
-            avatar: await siteAvatar(r.pid)
-          })))
-        };
-        pubP.disabled = true;
-        const ok = await publishToSite([{ k: 'web_setting_season_podium', v: value }]);
-        pubP.disabled = false;
-        if (ok) APP.toast('سکوی قهرمانی در سایت منتشر شد ✓', 'green');
+        if (podiumAutoTimer){ clearTimeout(podiumAutoTimer); podiumAutoTimer=null; }
+        const hadPending=podiumAutoPending || store.get(PODIUM_AUTO_PENDING_KEY)==='1';
+        podiumAutoPending=false;
+        pubP.disabled=true;
+        let result;
+        try { result=await publishSeasonPodium('manual',0); }
+        finally { pubP.disabled=false; }
+        if (result && result.ok){
+          if (podiumAutoPending) planPodiumAutoPublish(PODIUM_AUTO_DEBOUNCE_MS);
+          else store.remove(PODIUM_AUTO_PENDING_KEY);
+          podiumAutoAttempts=0;
+        }else if(hadPending || retryablePodiumError(result && result.error)){
+          setPodiumAutoPending(true);
+          if(retryablePodiumError(result && result.error)){
+            podiumAutoAttempts=1;
+            planPodiumAutoPublish(PODIUM_AUTO_RETRY_MS);
+          }
+        }
       });
       const sp = $('#st-podium');
       if (sp) sp.addEventListener('click', () => {
@@ -778,6 +788,103 @@
       .map((r, i) => { r.rank = i + 1; return r; });
     return { LB, yr };
   }
+
+  /* Result saves auto-publish a fresh podium snapshot to the public site's web_store.
+     Coalesce result edits and respect ga-sync's 15-second per-key rate limit. */
+  const PODIUM_AUTO_DEBOUNCE_MS=900, PODIUM_AUTO_MIN_INTERVAL_MS=16000;
+  const PODIUM_AUTO_RETRY_MS=16000, PODIUM_AUTO_MAX_RETRIES=3;
+  const PODIUM_AUTO_LAST_KEY='pc_site_podium_last_attempt_at_v1';
+  const PODIUM_AUTO_PENDING_KEY='pc_site_podium_auto_pending_v1';
+  let podiumAutoTimer=null, podiumAutoPending=store.get(PODIUM_AUTO_PENDING_KEY)==='1';
+  let podiumAutoAttempts=0, podiumPublishFlight=null;
+  let podiumLastAttemptAt=Number(store.get(PODIUM_AUTO_LAST_KEY)||0)||0;
+
+  function setPodiumAutoPending(value){
+    podiumAutoPending=!!value;
+    if(podiumAutoPending)store.set(PODIUM_AUTO_PENDING_KEY,'1');
+    else store.remove(PODIUM_AUTO_PENDING_KEY);
+  }
+  function planPodiumAutoPublish(delay){
+    if(!podiumAutoPending)return;
+    clearTimeout(podiumAutoTimer);
+    const cooldown=Math.max(0,PODIUM_AUTO_MIN_INTERVAL_MS-(Date.now()-podiumLastAttemptAt));
+    podiumAutoTimer=setTimeout(runPodiumAutoPublish,Math.max(0,Number(delay)||0,cooldown));
+  }
+  function queuePodiumAutoPublish(){
+    setPodiumAutoPending(true);
+    podiumAutoAttempts=0;
+    planPodiumAutoPublish(PODIUM_AUTO_DEBOUNCE_MS);
+  }
+  function podiumAutoAllowed(){
+    const root=$('#app');
+    return !!(root && root.classList.contains('on') && isAdmin(currentUser));
+  }
+  function retryablePodiumError(e){return !!(e && (e.status===429 || e.status>=500 || e.network===true));}
+  async function publishSeasonPodium(source,attempt){
+    if(podiumPublishFlight)return podiumPublishFlight;
+    const task=(async()=>{
+      let failure=null;
+      try{
+        reloadData();
+        const top3=raceLB().LB.slice(0,3);
+        const value={
+          seasonYear:D.seasonYear,
+          matchesHeld:A.MATCHES_HELD,
+          playersActive:A.LB.length,
+          updatedAt:new Date().toISOString(),
+          top:await Promise.all(top3.map(async(r,k)=>({
+            rank:k+1,name:r.name,pts:r.pts,
+            rankText:D.RANK_TEXT[r.color]||'',
+            rankColor:(D.RANK_DEF.find(x=>x[0]===r.color)||[])[3]||'#8A93A6',
+            avatar:await siteAvatar(r.pid)
+          })))
+        };
+        podiumLastAttemptAt=Date.now();
+        store.set(PODIUM_AUTO_LAST_KEY,String(podiumLastAttemptAt));
+        const ok=await publishToSite([{k:'web_setting_season_podium',v:value}],{
+          quiet:source==='auto' && attempt>0,
+          onError:e=>{failure=e;}
+        });
+        if(ok)APP.toast(source==='auto'?'سکوی سایت با نتایج جدید به‌روز شد ✓':'سکوی قهرمانی در سایت منتشر شد ✓','green');
+        return {ok,error:failure};
+      }catch(e){
+        failure=e;
+        if(!(source==='auto' && attempt>0))APP.toast('انتشار سکوی سایت انجام نشد: '+(e&&e.message||e),'red');
+        return {ok:false,error:failure};
+      }
+    })();
+    podiumPublishFlight=task;
+    try{return await task;}finally{if(podiumPublishFlight===task)podiumPublishFlight=null;}
+  }
+  async function runPodiumAutoPublish(){
+    podiumAutoTimer=null;
+    if(!podiumAutoPending || !podiumAutoAllowed())return;
+    const cooldown=Math.max(0,PODIUM_AUTO_MIN_INTERVAL_MS-(Date.now()-podiumLastAttemptAt));
+    if(cooldown){planPodiumAutoPublish(cooldown);return;}
+    if(podiumPublishFlight)return; /* the manual/previous request will reschedule pending work */
+    const attempt=podiumAutoAttempts;
+    podiumAutoPending=false; /* keep the persisted pending marker until an acknowledged success */
+    const result=await publishSeasonPodium('auto',attempt);
+    if(result.ok){
+      podiumAutoAttempts=0;
+      if(!podiumAutoPending)store.remove(PODIUM_AUTO_PENDING_KEY);
+      else planPodiumAutoPublish(PODIUM_AUTO_DEBOUNCE_MS);
+      return;
+    }
+    if(!podiumAutoPending)setPodiumAutoPending(true);
+    if(retryablePodiumError(result.error) && attempt<PODIUM_AUTO_MAX_RETRIES){
+      podiumAutoAttempts=attempt+1;
+      planPodiumAutoPublish(PODIUM_AUTO_RETRY_MS*podiumAutoAttempts);
+    }else podiumAutoAttempts=0;
+  }
+  window.addEventListener('ga-results-changed',queuePodiumAutoPublish);
+  window.addEventListener('storage',e=>{
+    if(e.key==='ga_results')queuePodiumAutoPublish();
+    if(e.key===PODIUM_AUTO_LAST_KEY)podiumLastAttemptAt=Number(e.newValue||0)||0;
+  });
+  window.addEventListener('online',()=>{if(podiumAutoPending)planPodiumAutoPublish(250);});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden && podiumAutoPending)planPodiumAutoPublish(250);});
+
   function pageRace(){
     const v = $('#view');
     if (!MGMT.getSettings().chRace){
@@ -3651,6 +3758,7 @@
     const _hp = (location.hash || '').slice(1);
     const _dp = PAGES[_hp] ? _hp : 'cmd';
     go(rec && rec.role === 'member' ? 'memberzone' : _dp);
+    if (podiumAutoPending && isAdmin(currentUser)) planPodiumAutoPublish(PODIUM_AUTO_DEBOUNCE_MS);
     tickClock();
     if (!enterApp._clk) enterApp._clk = setInterval(tickClock, 1000);
     msgGate(); /* پیام خوانده‌نشده؟ → گیت اجباری قبل از ورود به پنل */
@@ -3750,9 +3858,17 @@
     if (currentPage === 'player') go('player');
     msgGate();
   };
-  let __cloudT = null;
-  window.addEventListener('ga-cloud-applied', () => {
-    clearTimeout(__cloudT); __cloudT = setTimeout(__cloudApplied, 700); /* دبونسِ پول‌های پشت‌سرهم */
+  let __cloudT = null, __cloudResultsChanged = false;
+  window.addEventListener('ga-cloud-applied', e => {
+    if (e.detail && e.detail.resultsChanged) __cloudResultsChanged = true;
+    clearTimeout(__cloudT);
+    __cloudT = setTimeout(() => {
+      __cloudApplied(); /* دبونسِ پول‌های پشت‌سرهم */
+      if (__cloudResultsChanged) {
+        __cloudResultsChanged = false;
+        queuePodiumAutoPublish();
+      }
+    }, 700);
   });
 
   document.addEventListener('DOMContentLoaded', () => {

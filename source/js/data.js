@@ -341,7 +341,18 @@
   }
   function saveTourRules(r){ try { localStorage.setItem('ga_tour_rules', JSON.stringify(r)); } catch(e){} }
   function loadResults(){ try { return JSON.parse(localStorage.getItem('ga_results') || '{}'); } catch(e){ return {}; } }
-  function saveResults(r){ try { localStorage.setItem('ga_results', JSON.stringify(r)); } catch(e){} }
+  function saveResults(r){
+    let changed=false;
+    try {
+      const next=JSON.stringify(r), previous=localStorage.getItem('ga_results') || '{}';
+      localStorage.setItem('ga_results', next);
+      changed=previous!==next;
+    } catch(e){}
+    /* The academy app publishes the public podium after a real, saved results change. */
+    if(changed && typeof window!=='undefined'){
+      try { window.dispatchEvent(new Event('ga-results-changed')); } catch(e){}
+    }
+  }
   function loadPrograms(){ try { return JSON.parse(localStorage.getItem('ga_programs') || '[]'); } catch(e){ return []; } }
   function savePrograms(a){ try { localStorage.setItem('ga_programs', JSON.stringify(a)); } catch(e){} }
   function loadDelActs(){ try { return JSON.parse(localStorage.getItem('ga_del_acts') || '[]'); } catch(e){ return []; } }

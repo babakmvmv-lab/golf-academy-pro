@@ -25,7 +25,9 @@
   function saveShots(a) { write(LS_SHOTS, a); }
 
   var TYPES = ['Range', 'Putting', 'Chipping', 'Approach', 'On-Course'];
-  var TYPE_FA = { Range: 'رنج', Putting: 'پاتینگ', Chipping: 'چیپینگ', Approach: 'اپروچ', 'On-Course': 'روی زمین' };
+  /* GLF_TYPE_RENAMES_V1 — زیرنویس انگلیسی؛ کلیدهای داخلی برای سازگاری داده دست‌نخورده‌اند */
+  var TYPE_EN = { Range: 'Range', Putting: 'Putting', Chipping: 'Chipping', Approach: '3/4 Range', 'On-Course': 'Half Range' };
+  var TYPE_FA = { Range: 'رنج', Putting: 'پاتینگ', Chipping: 'چیپینگ', Approach: '۳/۴ رنج', 'On-Course': 'هالف رنج' };
   var CLUBS = {
     'Range':      ['Driver', '3 Wood', '5 Wood', 'Hybrid', 'Iron 3', 'Iron 4', 'Iron 5', 'Iron 6', 'Iron 7', 'Iron 8', 'Iron 9', 'Pitching Wedge', 'Gap Wedge', 'Sand Wedge', 'Lob Wedge'],
     'Putting':    ['Putter'],
@@ -142,7 +144,7 @@
         + '<div class="spk-row"><span class="spk-lbl">شماره جلسه</span><span class="spk-no">جلسه شماره ' + fa(no) + '</span><span class="spk-auto">خودکار</span></div>'
         + '<div class="spk-lbl" style="margin-top:12px">نوع تمرین</div>'
         + '<div class="spk-types">' + TYPES.map(function (t) {
-            return '<button type="button" class="spk-type' + (t === selType ? ' on' : '') + '" data-t="' + t + '">' + esc(TYPE_FA[t]) + '<small>' + esc(t) + '</small></button>';
+            return '<button type="button" class="spk-type' + (t === selType ? ' on' : '') + '" data-t="' + t + '">' + esc(TYPE_FA[t]) + '<small>' + esc(TYPE_EN[t] || t) + '</small></button>';
           }).join('') + '</div>'
         + '<div class="spk-row" style="margin-top:12px"><span class="spk-lbl">تاریخ تمرین</span>'
         + '<input class="input spk-date" id="spk-date" value="' + esc(selDate || tF) + '" inputmode="numeric" aria-label="تاریخ تمرین"></div>'

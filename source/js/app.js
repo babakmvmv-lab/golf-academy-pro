@@ -1218,7 +1218,7 @@ const sp = $('#st-podium');
   /* ═══════════ نقشه‌ها/ثابت‌های مشترک اسمارت‌پلی (بدون هاردکدِ تکراری) ═══════════ */
   const SP_RES_LABEL = { straight:'صاف', slice:'سمت راست', hook:'سمت چپ', miss:'ضربه خراب' };
   const SP_RES_COLOR = { straight:'#1EBB8A', slice:'#2E86DE', hook:'#E67E22', miss:'#E74C3C' };
-  const SP_TYPE_LBL  = { Range:'رنج', Putting:'پاتینگ', Chipping:'چیپینگ', Approach:'اپروچ', 'On-Course':'روی زمین' };
+  const SP_TYPE_LBL  = { Range:'رنج', Putting:'پاتینگ', Chipping:'چیپینگ', Approach:'۳/۴ رنج', 'On-Course':'هالف رنج' };
   const SP_MAX_BARS  = 20;  /* پنجرهٔ نمایش: تا ۲۰ همه — بیشتر شد ۲۰ تای آخر؛ تحلیل‌ها همیشه روی کل */
   const SP_HIST_PAGE = 10;  /* صفحه‌بندی آرشیو نمودار جلسات */
 
@@ -1778,7 +1778,7 @@ const sp = $('#st-podium');
       kind: 'آنالیز تمرین',
       title: '🧪 آنالیز تمرین‌های «' + esc(pname) + '»',
       sub: 'بازه: ' + rangeFa + ' (بر هر گروه جداگانه) • جلسات تمام‌شده',
-      meta: ['🎯 رنج/پاتینگ/چیپینگ/اپروچ/روی زمین — به‌ازای هر کلاب یک دونات'],
+      meta: ['🎯 رنج/پاتینگ/چیپینگ/۳/۴ رنج/هالف رنج — به‌ازای هر کلاب یک دونات'],
       kpis: [
         { v: D.fa(totSes), l: 'تمرین (جلسه)' },
         { v: D.fa(totSh), l: 'ضربهٔ ثبت‌شده' },
@@ -1840,7 +1840,7 @@ const sp = $('#st-podium');
     const SPARK = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path d="M12 3l1.9 5.2L19.2 10l-5.3 1.8L12 17l-1.9-5.2L4.8 10 12 3z"/><path d="M18.5 14.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z"/><path d="M6 15.5l.6 1.6 1.6.6-1.6.6L6 19.9l-.6-1.6-1.6-.6 1.6-.6.6-1.6z"/></svg>';
     const CHART_SVG = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>';
     const ARCHIVE_SVG = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>';
-    const SP_TYPE_FA = { Range:'رنج', Putting:'پاتینگ', Chipping:'چیپینگ', Approach:'اپروچ', 'On-Course':'روی زمین' };
+    const SP_TYPE_FA = { Range:'رنج', Putting:'پاتینگ', Chipping:'چیپینگ', Approach:'۳/۴ رنج', 'On-Course':'هالف رنج' };
     const SP_RES_FA = { straight:'صاف', slice:'سمت راست', hook:'سمت چپ', miss:'ضربه خراب' };
     /* نام بازیکن انتخاب‌شده در تولبار در این حالت هم معنادار است */
     const PLUS_SVG = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';

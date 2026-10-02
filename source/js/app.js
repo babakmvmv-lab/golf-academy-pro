@@ -831,21 +831,33 @@ const sp = $('#st-podium');
   }
   /* یک‌بار پس از ورود مدیر، دادهٔ فعلی را با آخرین نتایج ابری تطبیق بده؛
      اگر snapshot هنوز از این دستگاه منتشر نشده، خودش از مسیر عمومی موجود منتشر شود. */
+  /* ── مقایسهٔ امن اثرانگشت ──
+     store.get رشته برمی‌گرداند و cyrb53 عدد؛ مقایسهٔ مستقیم «===» همیشه
+     نابرابر می‌شد و باعث انتشار تکراری در هر دور تور ایمنی می‌شد. */
+  function podiumHashMatched(){
+    const saved = store.get(PODIUM_AUTO_RESULTS_HASH_KEY);
+    return !!saved && saved === String(podiumResultsHash());
+  }
+  function calendarHashMatched(){
+    const saved = store.get(CAL_HASH_KEY);
+    return !!saved && saved === String(calendarHash());
+  }
+
   function reconcilePodiumOnAdminEntry(){
     if(!isAdmin(currentUser))return;
     /* تقویم فصل هم مثل سکو خودش را با سایت هم‌گام می‌کند (بدون دکمه) */
-    try{ if(store.get(CAL_HASH_KEY)!==calendarHash()) planCalendarPublish(1500); }catch(e){}
+    try{ if(!calendarHashMatched()) planCalendarPublish(1500); }catch(e){}
     if(podiumAutoPending){planPodiumAutoPublish(PODIUM_AUTO_DEBOUNCE_MS);return;}
     /* قبلاً به‌محض وجود هر مقدار ذخیره‌شده برمی‌گشت؛ الان با اثرانگشت *فعلی*
        مقایسه می‌کند تا اگر داده روی سایت از دادهٔ پنل عقب افتاده باشد،
        همان لحظهٔ ورود مدیر خودش را تازه کند. */
-    if(podiumBootstrapFlight || store.get(PODIUM_AUTO_RESULTS_HASH_KEY)===podiumResultsHash())return;
+    if(podiumBootstrapFlight || podiumHashMatched())return;
     const cloud=window.GA_CLOUD;
     if(!cloud || typeof cloud.pull!=='function')return;
     let flight;
     flight=Promise.resolve().then(()=>cloud.pull()).then(ok=>{
       if(!ok || !podiumAutoAllowed())return;
-      if(podiumResultsHash() && store.get(PODIUM_AUTO_RESULTS_HASH_KEY)!==podiumResultsHash())queuePodiumAutoPublish();
+      if(!podiumHashMatched())queuePodiumAutoPublish();
     }).catch(()=>{}).finally(()=>{if(podiumBootstrapFlight===flight)podiumBootstrapFlight=null;});
     podiumBootstrapFlight=flight;
   }
@@ -1045,10 +1057,9 @@ const sp = $('#st-podium');
     try{
       if (!podiumAutoAllowed()) return;
       /* سکو: اگر دادهٔ محلی با آخرین انتشار اعلام‌شده تفاوت دارد → منتشر کن */
-      const h = podiumResultsHash();
-      if (h && store.get(PODIUM_AUTO_RESULTS_HASH_KEY) !== h) { queuePodiumAutoPublish(); }
+      if (!podiumHashMatched()) { queuePodiumAutoPublish(); }
       /* تقویم: همین منطق */
-      if (calendarHash() && store.get(CAL_HASH_KEY) !== calendarHash()) { planCalendarPublish(500); }
+      if (!calendarHashMatched()) { planCalendarPublish(500); }
     }catch(e){}
   }
   function startSafetyNet(){

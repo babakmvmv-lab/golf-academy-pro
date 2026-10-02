@@ -116,22 +116,27 @@
     let a = siteAsset(avatar(pid));
     if (!a || !/^data:/.test(a) || a.length < 20000) return a;
     return new Promise(res => {
+      let settled = false;
+      const done = v => { if (!settled) { settled = true; res(v); } };
+      /* مهلت ۴ ثانیه‌ای: اگر onload به هر دلیلی شلیک نشد (رفتار شناخته‌شدهٔ iOS)،
+         انتشار هرگز معلق نمی‌ماند — آواتار خالی می‌رود و بقیهٔ سکو منتشر می‌شود. */
+      const timer = setTimeout(() => done(''), 4000);
       const img = new Image();
       img.onload = () => {
         try {
-          const px = 80;                       /* ۹۶ → ۸۰ (سبک‌تر، روی صفحهٔ سایت تفاوتی دیده نمی‌شود) */
+          const px = 80;                       /* ۹۶ → ۸۰ (سبک‌تر) */
           const c = document.createElement('canvas'); c.width = px; c.height = px;
           const ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high';
           const m = Math.min(img.width || px, img.height || px);
           ctx.drawImage(img, ((img.width || px) - m) / 2, ((img.height || px) - m) / 2, m, m, 0, 0, px, px);
           let out = c.toDataURL('image/webp', 0.75);
-          /* تشخیص واقعی پشتیبانی WebP — نه حدس از روی user-agent:
-             اگر مرورگر WebP نساخت (iOS/Safari)، همین‌جا JPEG می‌گیریم. */
+          /* تشخیص واقعی WebP: سفاری نمی‌تواند WebP بسازد و بی‌صدا PNG می‌دهد. */
           if (!out || out.indexOf('data:image/webp') !== 0) out = c.toDataURL('image/jpeg', 0.75);
-          res(out && out.length < a.length ? out : '');
-        } catch (e) { res(''); }
+          clearTimeout(timer);
+          done(out && out.length < a.length ? out : '');
+        } catch (e) { clearTimeout(timer); done(''); }
       };
-      img.onerror = () => res('');
+      img.onerror = () => { clearTimeout(timer); done(''); };
       img.src = a;
     });
   });
@@ -490,7 +495,7 @@
     <div class="grid cols-4" id="cmd-stats"></div>
     <div class="grid cols-3" style="margin-top:18px">
       <div class="glass tilt" style="grid-column:span 2">
-        <div class="card-head"><span class="ic">🏆</span><h3>سکوی قهرمانی فصل</h3><span class="tag">FedEx Style</span>${storyBtn('st-podium')}</div>
+        <div class="card-head"><span class="ic">🏆</span><h3>سکوی قهرمانی فصل</h3><span class="tag">FedEx Style</span><span id="pub-state" style="font-size:10.5px;font-weight:700;margin-right:8px">⚪ در انتظار</span>${storyBtn('st-podium')}</div>
         <div class="podium">
           ${[1,0,2].map(k => {
             const r = top[k];
@@ -807,7 +812,9 @@ const sp = $('#st-podium');
     const root=$('#app');
     return !!(root && root.classList.contains('on') && isAdmin(currentUser));
   }
-  function retryablePodiumError(e){return !!(e && (e.status===429 || e.status>=500 || e.network===true));}
+  /* هر خطایی ارزش یک تلاش دوباره دارد؛ «no valid rows» (۴۰۰) هم قبلاً
+     بی‌صدا رها می‌شد و سکو تا ابد عقب می‌ماند. */
+  function retryablePodiumError(e){return !!e;}
   /* اثرانگشت همهٔ ورودی‌های سکو (نتایج، دوره‌ها، رویدادها، قوانین، مسابقات،
      کارت‌ها، اشتراک و سکه) — تا هم‌گام‌سازی هیچ تغییری را از دست ندهد. */
   function podiumResultsHash(){
@@ -867,6 +874,7 @@ const sp = $('#st-podium');
         if (JSON.stringify(value).length > 55000) {
           value.top.forEach(t => { t.avatar = ''; });
         }
+        try{ setPublishState('busy','در حال انتشار در سایت…'); }catch(e){}
         podiumLastAttemptAt=Date.now();
         store.set(PODIUM_AUTO_LAST_KEY,String(podiumLastAttemptAt));
         const ok=await publishToSite([{k:'web_setting_season_podium',v:value}],{
@@ -875,12 +883,14 @@ const sp = $('#st-podium');
         });
         if(ok){
           if(resultsHash)store.set(PODIUM_AUTO_RESULTS_HASH_KEY,resultsHash);
+          try{ setPublishState('ok','سایت به‌روز شد — ' + clockNow()); }catch(e){}
           APP.toast(source==='auto'?'سکوی سایت با نتایج جدید به‌روز شد ✓':'سکوی قهرمانی در سایت منتشر شد ✓','green');
         }
         return {ok,error:failure};
       }catch(e){
         failure=e;
         if(!(source==='auto' && attempt>0))APP.toast('انتشار سکوی سایت انجام نشد: '+(e&&e.message||e),'red');
+        try{ setPublishState('err','انتشار نشد: ' + String(failure && failure.message || failure || 'خطای نامشخص').slice(0,60)); }catch(e){}
         return {ok:false,error:failure};
       }
     })();
@@ -997,6 +1007,61 @@ const sp = $('#st-podium');
     calendarPublishTimer = setTimeout(() => publishSeasonCalendar(true), Math.max(0, Number(delay) || 0, cooldown));
   }
   window.addEventListener('ga-calendar-changed', () => planCalendarPublish(1200));
+
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     تور ایمنی خودترمیم — بیمهٔ نهایی انتشار سکو و تقویم فصل
+     ──────────────────────────────────────────────────────────────────────────
+     کد رویدادمحور درست است، ولی اگر رویدادی شلیک نشود (کش مرورگر، خطای
+     لحظه‌ای، بسته‌شدن ناگهانی تب) هیچ‌چیز منتشر نمی‌شود. این تور هر ۴۵ ثانیه
+     وضعیت را با دیتای فعلی مقایسه می‌کند و در صورت عقب‌بودن، خودش منتشر
+     می‌کند — بدون نیاز به هیچ رویداد یا کلیکی.
+     ══════════════════════════════════════════════════════════════════════════ */
+  const PODIUM_BUILD = 'podium-auto-v2';
+  try { window.GA_BUILD = PODIUM_BUILD; } catch(e){}
+
+  /* نشانگر وضعیت — روی کارت سکو در صفحهٔ فرماندهی */
+  function setPublishState(state, text){
+    try{
+      const el = $('#pub-state');
+      if (!el) return;
+      const map = { ok:['#1EBB8A','🟢'], busy:['#D4AF37','🟡'], err:['#E74C3C','🔴'], idle:['#8A93A6','⚪'] };
+      const pick = map[state] || map.idle;
+      el.textContent = pick[1] + ' ' + text;
+      el.style.color = pick[0];
+      el.title = text;
+    }catch(e){}
+  }
+  function clockNow(){
+    try{
+      const d = new Date();
+      return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    }catch(e){ return ''; }
+  }
+  try { window.GA_PUBLISH_STATE = setPublishState; } catch(e){}
+
+  let safetyTimer = null;
+  function safetyTick(){
+    try{
+      if (!podiumAutoAllowed()) return;
+      /* سکو: اگر دادهٔ محلی با آخرین انتشار اعلام‌شده تفاوت دارد → منتشر کن */
+      const h = podiumResultsHash();
+      if (h && store.get(PODIUM_AUTO_RESULTS_HASH_KEY) !== h) { queuePodiumAutoPublish(); }
+      /* تقویم: همین منطق */
+      if (calendarHash() && store.get(CAL_HASH_KEY) !== calendarHash()) { planCalendarPublish(500); }
+    }catch(e){}
+  }
+  function startSafetyNet(){
+    if (safetyTimer) return;
+    safetyTimer = setInterval(safetyTick, 45000);
+    setTimeout(safetyTick, 4000);   /* یک بررسی زودهنگام، چند ثانیه پس از ورود */
+  }
+  startSafetyNet();
+  window.addEventListener('ga-season-changed', function(){ setTimeout(safetyTick, 2500); });
+  window.addEventListener('ga-calendar-changed', function(){ setTimeout(safetyTick, 2500); });
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden) setTimeout(safetyTick, 1500);
+  });
 
   /* تغییر هر ورودی سکو (نه فقط نتایج) → انتشار خودکار سکو */
   window.addEventListener('ga-season-changed', queuePodiumAutoPublish);

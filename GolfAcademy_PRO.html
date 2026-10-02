@@ -18615,13 +18615,16 @@ const sp = $('#st-podium');
     /* تقویم فصل هم مثل سکو خودش را با سایت هم‌گام می‌کند (بدون دکمه) */
     try{ if(store.get(CAL_HASH_KEY)!==calendarHash()) planCalendarPublish(1500); }catch(e){}
     if(podiumAutoPending){planPodiumAutoPublish(PODIUM_AUTO_DEBOUNCE_MS);return;}
-    if(podiumBootstrapFlight || store.get(PODIUM_AUTO_RESULTS_HASH_KEY))return;
+    /* قبلاً به‌محض وجود هر مقدار ذخیره‌شده برمی‌گشت؛ الان با اثرانگشت *فعلی*
+       مقایسه می‌کند تا اگر داده روی سایت از دادهٔ پنل عقب افتاده باشد،
+       همان لحظهٔ ورود مدیر خودش را تازه کند. */
+    if(podiumBootstrapFlight || store.get(PODIUM_AUTO_RESULTS_HASH_KEY)===podiumResultsHash())return;
     const cloud=window.GA_CLOUD;
     if(!cloud || typeof cloud.pull!=='function')return;
     let flight;
     flight=Promise.resolve().then(()=>cloud.pull()).then(ok=>{
       if(!ok || !podiumAutoAllowed())return;
-      if(!store.get(PODIUM_AUTO_RESULTS_HASH_KEY) && podiumResultsHash())queuePodiumAutoPublish();
+      if(podiumResultsHash() && store.get(PODIUM_AUTO_RESULTS_HASH_KEY)!==podiumResultsHash())queuePodiumAutoPublish();
     }).catch(()=>{}).finally(()=>{if(podiumBootstrapFlight===flight)podiumBootstrapFlight=null;});
     podiumBootstrapFlight=flight;
   }

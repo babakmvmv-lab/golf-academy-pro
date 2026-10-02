@@ -108,7 +108,10 @@
   const avatar = pid => (window.Data && Data.photoOf) ? Data.photoOf(pid) : (pid % 2 ? 'assets/avatar_m.webp' : 'assets/avatar_f.webp');
   /* انتشار عمومی در سایت: مسیرهای نسبی باید مطلق شوند تا روی صفحهٔ سایت کار کنند */
   const siteAsset = u => /^(https?:|data:)/.test(u || '') ? u : '/' + String(u || '').replace(/^\/+/, '');
-  /* آواتار کوچک برای انتشار در سایت: عکس‌های سنگین پایه۶۴ به وب‌پی ۹۶ پیکسلی تبدیل می‌شوند تا بار انتشار سبک بماند. */
+  /* آواتار کوچک برای انتشار در سایت: عکس‌های سنگین پایه۶۴ به تصویر کوچک تبدیل می‌شوند.
+     ⚠️ نکتهٔ iOS: سفاری نمی‌تواند WebP بسازد و بی‌صدا PNG می‌دهد (~۲۳KB برای ۹۶px)؛
+     سه تا از آن‌ها سقف حجم تابع ga-sync را رد می‌کند و انتشار با «no valid rows»
+     می‌شکند. پس هم اندازه کوچک‌تر شد و هم fallback به JPEG اضافه شد. */
   const siteAvatar = pid => Promise.resolve().then(() => {
     let a = siteAsset(avatar(pid));
     if (!a || !/^data:/.test(a) || a.length < 20000) return a;
@@ -116,11 +119,15 @@
       const img = new Image();
       img.onload = () => {
         try {
-          const c = document.createElement('canvas'); c.width = 96; c.height = 96;
+          const px = 80;                       /* ۹۶ → ۸۰ (سبک‌تر، روی صفحهٔ سایت تفاوتی دیده نمی‌شود) */
+          const c = document.createElement('canvas'); c.width = px; c.height = px;
           const ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high';
-          const m = Math.min(img.width || 96, img.height || 96);
-          ctx.drawImage(img, ((img.width || 96) - m) / 2, ((img.height || 96) - m) / 2, m, m, 0, 0, 96, 96);
-          const out = c.toDataURL('image/webp', 0.8);
+          const m = Math.min(img.width || px, img.height || px);
+          ctx.drawImage(img, ((img.width || px) - m) / 2, ((img.height || px) - m) / 2, m, m, 0, 0, px, px);
+          let out = c.toDataURL('image/webp', 0.75);
+          /* تشخیص واقعی پشتیبانی WebP — نه حدس از روی user-agent:
+             اگر مرورگر WebP نساخت (iOS/Safari)، همین‌جا JPEG می‌گیریم. */
+          if (!out || out.indexOf('data:image/webp') !== 0) out = c.toDataURL('image/jpeg', 0.75);
           res(out && out.length < a.length ? out : '');
         } catch (e) { res(''); }
       };
@@ -483,7 +490,7 @@
     <div class="grid cols-4" id="cmd-stats"></div>
     <div class="grid cols-3" style="margin-top:18px">
       <div class="glass tilt" style="grid-column:span 2">
-        <div class="card-head"><span class="ic">🏆</span><h3>سکوی قهرمانی فصل</h3><span class="tag">FedEx Style</span>${storyBtn('st-podium')}<button class="btn sm ghost" id="pub-podium" title="نمایش همین سکو در پاپ‌آپ سایت" style="margin-right:auto">🌐 انتشار در سایت</button></div>
+        <div class="card-head"><span class="ic">🏆</span><h3>سکوی قهرمانی فصل</h3><span class="tag">FedEx Style</span>${storyBtn('st-podium')}</div>
         <div class="podium">
           ${[1,0,2].map(k => {
             const r = top[k];
@@ -578,28 +585,8 @@
       if (apply){
         apply.addEventListener('click', () => drawMonthlyChart());
       }
-      const pubP = $('#pub-podium');
-      if (pubP) pubP.addEventListener('click', async () => {
-        if (podiumAutoTimer){ clearTimeout(podiumAutoTimer); podiumAutoTimer=null; }
-        const hadPending=podiumAutoPending || store.get(PODIUM_AUTO_PENDING_KEY)==='1';
-        podiumAutoPending=false;
-        pubP.disabled=true;
-        let result;
-        try { result=await publishSeasonPodium('manual',0); }
-        finally { pubP.disabled=false; }
-        if (result && result.ok){
-          if (podiumAutoPending) planPodiumAutoPublish(PODIUM_AUTO_DEBOUNCE_MS);
-          else store.remove(PODIUM_AUTO_PENDING_KEY);
-          podiumAutoAttempts=0;
-        }else if(hadPending || retryablePodiumError(result && result.error)){
-          setPodiumAutoPending(true);
-          if(retryablePodiumError(result && result.error)){
-            podiumAutoAttempts=1;
-            planPodiumAutoPublish(PODIUM_AUTO_RETRY_MS);
-          }
-        }
-      });
-      const sp = $('#st-podium');
+            /* انتشار سکو خودکار است — دکمه‌ای وجود ندارد. */
+const sp = $('#st-podium');
       if (sp) sp.addEventListener('click', () => {
         const top3 = raceLB().LB.slice(0, 3);
         igStory(sp, 'استوری-سکوی-قهرمانی.png', ({ W, H, GOLD, GL, FG, MUT, rrect, txt, c }) => {
@@ -821,13 +808,26 @@
     return !!(root && root.classList.contains('on') && isAdmin(currentUser));
   }
   function retryablePodiumError(e){return !!(e && (e.status===429 || e.status>=500 || e.network===true));}
+  /* اثرانگشت همهٔ ورودی‌های سکو (نتایج، دوره‌ها، رویدادها، قوانین، مسابقات،
+     کارت‌ها، اشتراک و سکه) — تا هم‌گام‌سازی هیچ تغییری را از دست ندهد. */
   function podiumResultsHash(){
-    try{return cyrb53(JSON.stringify(D.loadResults()||{}));}catch(e){return '';}
+    try{
+      const ls = k => { try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } };
+      return cyrb53(JSON.stringify([
+        D.loadResults()||{},
+        (D.loadPrograms ? D.loadPrograms() : ls('ga_programs'))||[],
+        ls('ga_events'), ls('ga_tournaments'), ls('ga_tour_rules'),
+        ls('ga_tour_override'), ls('ga_tour_hidden'), ls('ga_custom_players'),
+        ls('ga_scorecards'), ls('ga_subscriptions'), ls('ga_coins')
+      ]));
+    }catch(e){ return ''; }
   }
   /* یک‌بار پس از ورود مدیر، دادهٔ فعلی را با آخرین نتایج ابری تطبیق بده؛
      اگر snapshot هنوز از این دستگاه منتشر نشده، خودش از مسیر عمومی موجود منتشر شود. */
   function reconcilePodiumOnAdminEntry(){
     if(!isAdmin(currentUser))return;
+    /* تقویم فصل هم مثل سکو خودش را با سایت هم‌گام می‌کند (بدون دکمه) */
+    try{ if(store.get(CAL_HASH_KEY)!==calendarHash()) planCalendarPublish(1500); }catch(e){}
     if(podiumAutoPending){planPodiumAutoPublish(PODIUM_AUTO_DEBOUNCE_MS);return;}
     if(podiumBootstrapFlight || store.get(PODIUM_AUTO_RESULTS_HASH_KEY))return;
     const cloud=window.GA_CLOUD;
@@ -859,6 +859,11 @@
             avatar:await siteAvatar(r.pid)
           })))
         };
+        /* تور نجات: سقف سرور برای این کلید محدود است. اگر بار از این بیشتر شد،
+           آواتارها کنار گذاشته می‌شوند تا انتشار حتماً موفق شود. */
+        if (JSON.stringify(value).length > 55000) {
+          value.top.forEach(t => { t.avatar = ''; });
+        }
         podiumLastAttemptAt=Date.now();
         store.set(PODIUM_AUTO_LAST_KEY,String(podiumLastAttemptAt));
         const ok=await publishToSite([{k:'web_setting_season_podium',v:value}],{
@@ -907,6 +912,91 @@
   });
   window.addEventListener('online',()=>{if(podiumAutoPending)planPodiumAutoPublish(250);});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden && podiumAutoPending)planPodiumAutoPublish(250);});
+
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     ساختار خودکار: سکو و تقویم فصل روی سایت بدون هیچ دکمه‌ای از دیتای پنل می‌آیند.
+     هر نوشتن روی دادهٔ مؤثر → هم‌گذاری (debounce) → انتشار → تأیید.
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  /* نگهبان عمومی نوشتن: مستقل از این‌که کدام پنل/صفحه داده را عوض کرده باشد */
+  (function watchSeasonWrites(){
+    const PODIUM_KEYS = ['ga_results','ga_programs','ga_events','ga_tournaments','ga_tour_rules',
+                         'ga_tour_override','ga_tour_hidden','ga_custom_players','ga_scorecards',
+                         'ga_subscriptions','ga_coins'];
+    const CAL_KEYS = ['ga_events','ga_programs','ga_tournaments'];
+    const fire = (evName, arr, k) => { if (arr.indexOf(k) >= 0){ try{ window.dispatchEvent(new Event(evName)); }catch(e){} } };
+    try{
+      const proto = window.Storage && Storage.prototype;
+      if (proto && !proto.__gaSeasonWrapped){
+        const origSet = proto.setItem, origDel = proto.removeItem;
+        proto.setItem = function(k, v){
+          const before = this.getItem(k);
+          origSet.call(this, k, v);
+          if (before !== String(v)){ fire('ga-season-changed', PODIUM_KEYS, k); fire('ga-calendar-changed', CAL_KEYS, k); }
+        };
+        proto.removeItem = function(k){
+          const had = this.getItem(k) !== null;
+          origDel.call(this, k);
+          if (had){ fire('ga-season-changed', PODIUM_KEYS, k); fire('ga-calendar-changed', CAL_KEYS, k); }
+        };
+        proto.__gaSeasonWrapped = true;
+      }
+    }catch(e){}
+  })();
+
+  /* ── انتشار خودکار تقویم فصل ── */
+  const CAL_HASH_KEY = 'pc_site_calendar_published_hash_v1';
+  const CAL_LAST_KEY = 'pc_site_calendar_last_attempt_at_v1';
+  let calendarPublishTimer = null, calendarPublishFlight = null;
+  let calendarLastAttemptAt = Number(store.get(CAL_LAST_KEY) || 0) || 0;
+
+  function calendarHash(){
+    try{ return cyrb53(JSON.stringify(seasonCalendarEvents().map(e => ({ d:+e.d, n:e.name, t:e.type, k:e.kind, x:e.extra })))); }
+    catch(e){ return ''; }
+  }
+  function calendarPublishAllowed(){
+    const root = $('#app');
+    return !!(root && root.classList.contains('on') && isAdmin(currentUser));
+  }
+  async function publishSeasonCalendar(quiet){
+    if (calendarPublishFlight) return calendarPublishFlight;
+    const task = (async () => {
+      try{
+        const rows = seasonCalendarEvents().filter(e => e.d && !isNaN(e.d)).map(e => {
+          const j = D.jalaliInfo(e.d);
+          return {
+            date: `${j.yy}/${String(j.mm).padStart(2,'0')}/${String(j.dd).padStart(2,'0')}`,
+            jd: j.dd, jm: j.mm,
+            icon: e.icon || '📌', name: e.name || 'رویداد', kind: e.kind || e.type || '',
+            extra: String(e.extra || '').replace(/<[^>]*>/g, '').slice(0, 80),
+            past: e.d < D.TODAY
+          };
+        });
+        const value = { seasonYear: D.seasonYear, updatedAt: new Date().toISOString(), events: rows };
+        calendarLastAttemptAt = Date.now();
+        store.set(CAL_LAST_KEY, String(calendarLastAttemptAt));
+        const ok = await publishToSite([{ k:'web_setting_season_calendar', v: value }], { quiet: !!quiet });
+        if (ok) store.set(CAL_HASH_KEY, calendarHash());
+        return ok;
+      }catch(e){
+        if (!quiet) APP.toast('انتشار تقویم فصل در سایت انجام نشد: ' + (e && e.message || e), 'red');
+        return false;
+      }
+    })();
+    calendarPublishFlight = task;
+    try{ return await task; } finally { if (calendarPublishFlight === task) calendarPublishFlight = null; }
+  }
+  function planCalendarPublish(delay){
+    if (!calendarPublishAllowed()) return;
+    clearTimeout(calendarPublishTimer);
+    const cooldown = Math.max(0, 16000 - (Date.now() - calendarLastAttemptAt));
+    calendarPublishTimer = setTimeout(() => publishSeasonCalendar(true), Math.max(0, Number(delay) || 0, cooldown));
+  }
+  window.addEventListener('ga-calendar-changed', () => planCalendarPublish(1200));
+
+  /* تغییر هر ورودی سکو (نه فقط نتایج) → انتشار خودکار سکو */
+  window.addEventListener('ga-season-changed', queuePodiumAutoPublish);
 
   function pageRace(){
     const v = $('#view');
@@ -2333,16 +2423,11 @@
       </div>`).join('');
   }
 
-  /* ═══════════ صفحه: تقویم ═══════════ */
-  function pageCal(){
-    const v = $('#view');
-    const MONTHS = D.MONTHS_FA;
-    const DAYS_IN = [31,31,31,31,31,31,30,30,30,30,30,29];
-    const WD = ['ش','ی','د','س','چ','پ','ج'];
+  /* ── منبع مشترک رویدادهای فصل: هم صفحهٔ تقویم، هم انتشار خودکار در سایت ──
+     قبلاً فقط داخل pageCal ساخته می‌شد و انتشار، دستی و جدا بود. */
+  function seasonCalendarEvents(){
     const TYPE_ICON = { 'مسابقه':'🏆', 'کلاس':'📚', 'تمرین':'🏌️', 'اردو':'🏕️' };
     const TYPES = ['مسابقه','کلاس','تمرین','اردو'];
-
-    // ── ساخت رویدادها (فقط: مسابقه، کلاس، تمرین، اردو) ──
     const events = [];
     let eid = 0;
     const ev = o => events.push(Object.assign({ id: ++eid }, o));
@@ -2352,8 +2437,6 @@
       ev({ d, end: d, name: t[1], type: 'مسابقه', col: t[2]===1?'gold':t[2]===2?'green':'blue',
            kind: 'مسابقه', icon: '🏆', extra: `${esc(D.COURSE_NAME[t[3]]||'—')} • ${D.fa(t[4])} حفره` });
     });
-    /* تمرین‌های خودکار پنجشنبه حذف شد — مدیر تمرین‌ها را دستی وارد می‌کند */
-    // دوره‌های آموزشی / تمرین / اردو (از پنل مدیریت)
     (window.Data.loadPrograms ? Data.loadPrograms() : []).forEach(p => {
       const d = D.dateFrom(p.start || p.date || '');
       if (!d || isNaN(d)) return;
@@ -2362,7 +2445,6 @@
       ev({ d, end, name: p.name || 'دوره', type, col: type==='تمرین'?'green':type==='اردو'?'orange':'purple', kind: type,
            icon: TYPE_ICON[type] || '📌', extra: p.info ? esc(String(p.info)) : 'دورهٔ فصل' });
     });
-    // رویدادهای سفارشی (فقط ۴ نوع مجاز — بقیه نمایش داده نمی‌شوند)
     (MGMT.customEvents()||[]).forEach(e => {
       const type = e.type || '';
       if (!TYPES.includes(type)) return;
@@ -2373,6 +2455,19 @@
            extra: 'رویداد سفارشی', schedule: e.schedule || null });
     });
     events.sort((a,b) => a.d - b.d);
+    return events;
+  }
+
+  /* ═══════════ صفحه: تقویم ═══════════ */
+  function pageCal(){
+    const v = $('#view');
+    const MONTHS = D.MONTHS_FA;
+    const DAYS_IN = [31,31,31,31,31,31,30,30,30,30,30,29];
+    const WD = ['ش','ی','د','س','چ','پ','ج'];
+    const TYPE_ICON = { 'مسابقه':'🏆', 'کلاس':'📚', 'تمرین':'🏌️', 'اردو':'🏕️' };
+    const TYPES = ['مسابقه','کلاس','تمرین','اردو'];
+
+    const events = seasonCalendarEvents();
 
     const nextIdx = Math.max(0, events.findIndex(e => e.d >= D.TODAY));
     let selIdx = nextIdx;
@@ -2412,7 +2507,7 @@
         <div style="font-size:16px;font-weight:800" class="gold-text">${D.fa(events.length)} رویداد</div>
       </div>
         <button class="btn sm" id="st-cal" style="background:linear-gradient(135deg,#d62976,#fa7e1e);color:#fff;font-weight:800">📱 استوری</button>
-        <button class="btn sm ghost" id="pub-cal" title="نمایش همین تقویم در پاپ‌آپ سایت">🌐 انتشار در سایت</button>
+        
         <button class="btn sm ghost" onclick="APP.go('mgmt')">⚙️ مدیریت ${esc(L('nav.cal','تقویم فصل'))}</button>
     </div>
 
@@ -2446,27 +2541,8 @@
       </div>
     </div>`;
 
-    const pubCal = $('#pub-cal');
-    if (pubCal) pubCal.addEventListener('click', async () => {
-      /* همان منابع رویداد پنل — بدون فیلتر ماه، برای کل فصل */
-      const rows = events.filter(e => e.d && !isNaN(e.d)).map(e => {
-        const j = D.jalaliInfo(e.d);
-        return {
-          date: `${j.yy}/${String(j.mm).padStart(2,'0')}/${String(j.dd).padStart(2,'0')}`,
-          jd: j.dd, jm: j.mm,
-          icon: e.icon || TYPE_ICON[e.type] || '📌',
-          name: e.name || 'رویداد', kind: e.kind || e.type || '',
-          extra: String(e.extra || '').replace(/<[^>]*>/g, '').slice(0, 80),
-          past: e.d < D.TODAY
-        };
-      });
-      const value = { seasonYear: D.seasonYear, updatedAt: new Date().toISOString(), events: rows };
-      pubCal.disabled = true;
-      const ok = await publishToSite([{ k: 'web_setting_season_calendar', v: value }]);
-      pubCal.disabled = false;
-      if (ok) APP.toast(`تقویم فصل با ${D.fa(rows.length)} رویداد در سایت منتشر شد ✓`, 'green');
-    });
-    const stCal = $('#st-cal');
+        /* انتشار تقویم خودکار است — دکمه‌ای وجود ندارد. */
+const stCal = $('#st-cal');
     if (stCal) stCal.addEventListener('click', () => {
       const nx = events[nextIdx];
       const days = Math.max(0, Math.ceil((nx.d - D.TODAY)/86400000));

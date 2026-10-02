@@ -1042,6 +1042,8 @@ const sp = $('#st-podium');
       el.textContent = pick[1] + ' ' + text;
       el.style.color = pick[0];
       el.title = text;
+      pubStateAt = Date.now();
+      pubStateLocked = (state === 'busy');
     }catch(e){}
   }
   function clockNow(){
@@ -1052,15 +1054,71 @@ const sp = $('#st-podium');
   }
   try { window.GA_PUBLISH_STATE = setPublishState; } catch(e){}
 
+  /* ══ تشخیص زنده ══
+     هر «نه» در مسیر انتشار باید دلیل داشته باشد؛ قبلاً safetyTick بی‌صدا
+     برمی‌گشت و نمی‌فهمیدیم کجا متوقف شده. */
+  function publishDiag(){
+    const out = { build: (window.GA_BUILD || '?') };
+    try{
+      const root = $('#app');
+      out.appOn = !!(root && root.classList.contains('on'));
+      out.user = currentUser;
+      let rec = null; try{ rec = userRec(currentUser); }catch(e){}
+      out.role = rec ? rec.role : null;
+      out.active = rec ? !!rec.active : null;
+      out.isAdmin = isAdmin(currentUser);
+      out.allowed = podiumAutoAllowed();
+      out.hasCloud = !!window.GA_CLOUD;
+      out.hasSync = !!(window.GA_SYNC && window.GA_SYNC.public);
+      try{ out.livePodiumHash = String(podiumResultsHash()); }catch(e){ out.livePodiumHash = 'err:' + e.message; }
+      try{ out.savedPodiumHash = String(store.get(PODIUM_AUTO_RESULTS_HASH_KEY)); }catch(e){}
+      try{ out.podiumMatched = podiumHashMatched(); }catch(e){ out.podiumMatched = 'err:' + e.message; }
+      try{ out.liveCalHash = String(calendarHash()); }catch(e){}
+      try{ out.savedCalHash = String(store.get(CAL_HASH_KEY)); }catch(e){}
+      try{ out.calMatched = calendarHashMatched(); }catch(e){}
+      out.pending = !!podiumAutoPending;
+      out.lastAttemptAt = store.get(PODIUM_AUTO_LAST_KEY);
+      try{ out.users = loadUsers().map(u => u.user + ':' + u.role + (u.active ? '' : '/غیرفعال')); }catch(e){ out.users = 'err'; }
+    }catch(e){ out.fatal = String(e && e.message || e); }
+    return out;
+  }
+  try { window.GA_PUB_DEBUG = publishDiag; } catch(e){}
+  try { window.GA_BUILD = 'podium-diag-v4'; } catch(e){}
+
+  let pubStateAt = 0, pubStateLocked = false;
+  function indicatorHeartbeat(){
+    try{
+      if (pubStateLocked) return;                     /* در حال انتشار — دست نزن */
+      if (Date.now() - pubStateAt < 90000) return;    /* نتیجهٔ تازه — دست نزن */
+      const d = publishDiag();
+      if (!d.appOn){ setPublishState('idle', 'در انتظار ورود به پنل'); return; }
+      if (!d.isAdmin){ setPublishState('err', 'دسترسی مدیر نیست — نقش: ' + (d.role || 'نامشخص')); return; }
+      if (!d.hasSync){ setPublishState('err', 'لایهٔ ابر بار نشده (GA_SYNC)'); return; }
+      if (!d.podiumMatched || !d.calMatched){
+        setPublishState('busy', (d.podiumMatched ? '' : 'سکو عقب است') + (!d.podiumMatched && !d.calMatched ? ' • ' : '') + (d.calMatched ? '' : 'تقویم عقب است'));
+        return;
+      }
+      setPublishState('ok', 'همگام با سایت — ' + clockNow());
+    }catch(e){}
+  }
+  setInterval(indicatorHeartbeat, 10000);
+  setTimeout(indicatorHeartbeat, 1200);
+
   let safetyTimer = null;
   function safetyTick(){
     try{
-      if (!podiumAutoAllowed()) return;
+      const d = publishDiag();
+      /* هر شرطی که مانع انتشار می‌شود، دلیلش روی نشانگر نوشته می‌شود. */
+      if (!d.appOn){ setPublishState('idle', 'در انتظار ورود به پنل'); return; }
+      if (!d.isAdmin){ setPublishState('err', 'دسترسی مدیر نیست — نقش: ' + (d.role || 'نامشخص')); return; }
+      if (!d.hasSync){ setPublishState('err', 'لایهٔ ابر بار نشده (GA_SYNC)'); return; }
       /* سکو: اگر دادهٔ محلی با آخرین انتشار اعلام‌شده تفاوت دارد → منتشر کن */
-      if (!podiumHashMatched()) { queuePodiumAutoPublish(); }
+      if (!d.podiumMatched) { queuePodiumAutoPublish(); }
       /* تقویم: همین منطق */
-      if (!calendarHashMatched()) { planCalendarPublish(500); }
-    }catch(e){}
+      if (!d.calMatched) { planCalendarPublish(500); }
+    }catch(e){
+      try{ setPublishState('err', 'خطای بررسی: ' + String(e && e.message || e).slice(0, 50)); }catch(_){}
+    }
   }
   function startSafetyNet(){
     if (safetyTimer) return;

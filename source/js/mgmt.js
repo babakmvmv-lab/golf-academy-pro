@@ -2342,7 +2342,7 @@
     const hidTours = D.loadHiddenTours().map(id => D.TOURNAMENTS.find(t => t[0] === id)).filter(Boolean);
     const hb = $('#mt-hidden');
     if (hb) hb.innerHTML = hidTours.length ? `<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);margin-top:10px;border-top:1px dashed var(--line-soft);padding-top:10px"><span>🗑 حذف‌شده از فصل:</span>${hidTours.map(t => `<span class="chip dim" style="display:inline-flex;align-items:center;gap:6px">${esc(t[1])}<button class="btn sm ghost" data-act="unhide" data-id="${t[0]}" style="padding:2px 8px;font-size:10px">↩ بازیابی</button></span>`).join('')}</div>` : '';
-    JDate.render($('#mt-start'), { value: D.todayISO(), onChange(){ renderTourSch(); } });
+    JDate.render($('#mt-start'), { value: D.todayISO(), mirror:'#mt-end', onChange(){ renderTourSch(); } });
     JDate.render($('#mt-end'),   { value: D.todayISO(), onChange(){ renderTourSch(); } });
     function tourDays(){
       try {
@@ -2682,7 +2682,7 @@
       <div class="card-head"><span class="ic">🎓</span><h3>دوره‌های آموزشی / تمرین / اردو</h3><span class="tag">${D.fa(D.loadPrograms().length)} دوره</span></div>
       <div id="pr-list" style="margin-top:8px"></div>
     </div>`;
-    JDate.render($('#pr-start'), { value: D.todayISO(), onChange(){} });
+    JDate.render($('#pr-start'), { value: D.todayISO(), mirror:'#pr-end', onChange(){} });
     JDate.render($('#pr-end'),   { value: D.todayISO(), onChange(){} });
     function renderList(){
       const lst = D.loadPrograms();
@@ -2828,7 +2828,7 @@
     `;
 
     const SCHED_OPTS = ['ورود','مسابقه','تمرین','کلاس','اهدای جام','تور','جلسه','مراسم','آزاد'];
-    JDate.render($('#me-start'), { value: D.todayISO(), onChange(){ renderSchedule(); } });
+    JDate.render($('#me-start'), { value: D.todayISO(), mirror:'#me-end', onChange(){ renderSchedule(); } });
     JDate.render($('#me-end'),   { value: D.todayISO(), onChange(){ renderSchedule(); } });
 
     function daysBetween(aIso, bIso){

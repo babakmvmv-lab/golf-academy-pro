@@ -1090,6 +1090,26 @@ tr.off-row{opacity:.5}
 .jdate-field .sel{width:100%;text-align:center;padding:7px 4px;font-size:12px}
 .jdate-actions{display:flex;align-items:center;gap:10px;margin-top:12px;justify-content:space-between}
 .jdate-result{font-size:12px;color:var(--green-l);font-weight:700}
+/* ═══ تقویم کلیکی شمسی داخل ورودی تاریخ (JDATE_CALENDAR_V1) ═══ */
+.jcal-wrap{margin-bottom:10px}
+.jcal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.jcal-title{font-size:13px;font-weight:800;color:var(--gold-l,var(--gold));text-align:center;flex:1}
+.jcal-nav{width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.3);border-radius:9px;
+  color:var(--gold-l,var(--gold));font-size:15px;line-height:1;transition:.15s;user-select:none}
+.jcal-nav:hover{background:rgba(212,175,55,.26)}
+.jcal-wd,.jcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.jcal-wd{margin-bottom:5px}
+.jcal-wd span{font-size:10px;font-weight:700;color:var(--muted);text-align:center;padding:2px 0}
+.jcal-d{height:32px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;
+  border-radius:9px;cursor:pointer;border:1px solid transparent;color:var(--white);
+  background:rgba(255,255,255,.035);transition:.12s}
+.jcal-d:hover{background:rgba(212,175,55,.22);border-color:rgba(212,175,55,.45)}
+.jcal-d.today{border-color:rgba(30,187,138,.55);color:var(--green-l)}
+.jcal-d.sel{background:linear-gradient(135deg,var(--gold),#b08a28);color:#1a1407;font-weight:900;border-color:transparent}
+.jcal-d.empty{background:transparent;cursor:default;pointer-events:none;border-color:transparent}
+.jcal-sep{display:flex;align-items:center;gap:8px;margin:11px 0 9px;color:var(--muted);font-size:10.5px}
+.jcal-sep::before,.jcal-sep::after{content:"";flex:1;height:1px;background:rgba(212,175,55,.18)}
 
 /* ═══════════════ تقویم فصل — نمای تعاملی دو ستونه ═══════════════ */
 .cal-main{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start}
@@ -7602,7 +7622,8 @@ window.addEventListener('ga:brand-changed', function(){
 });
 })();
 </script>
-    <script>/* ═══════════════════════════════════════════════════════════════════
+    <script>/* JDATE_CALENDAR_V1
+   ═══════════════════════════════════════════════════════════════════
    JDate — کامپوننت ورود تاریخ شمسی (حرفه‌ای)
    انتخاب سال ← ماه ← روز با دراپ‌داون + ورود دستی + تبدیل خودکار
    مقدار داخلی همیشه ISO میلادی است (سازگار با موتور)، نمایش شمسی است.
@@ -7623,6 +7644,16 @@ window.addEventListener('ga:brand-changed', function(){
         <div class="jdate-cal-btn" title="باز کردن تقویم">📅</div>
       </div>
       <div class="jdate-pop" hidden>
+        <div class="jcal-wrap">
+          <div class="jcal-head">
+            <div class="jcal-nav jcal-prev" title="ماه قبل" role="button" aria-label="ماه قبل">‹</div>
+            <div class="jcal-title"></div>
+            <div class="jcal-nav jcal-next" title="ماه بعد" role="button" aria-label="ماه بعد">›</div>
+          </div>
+          <div class="jcal-wd"></div>
+          <div class="jcal-grid"></div>
+        </div>
+        <div class="jcal-sep">یا انتخاب با دراپ‌داون / تایپ دستی</div>
         <div class="jdate-selects">
           <div class="jdate-field">
             <label>سال</label>
@@ -7670,6 +7701,23 @@ window.addEventListener('ga:brand-changed', function(){
       if (keep && cur >= 1 && cur <= n) sd.value = cur;
       else sd.value = n;
     }
+    /* ═══ هم‌گام‌سازی تاریخ دوم ═══
+       اگر این ورودی «تاریخ شروع» باشد و مقصدش (تاریخ پایان) را کاربر دستی
+       عوض نکرده باشد، مقصد خودکار روی همان روز انتخابی می‌رود؛ در صورت
+       نیاز کاربر می‌تواند دستی تغییرش دهد و از آن لحظه دیگر خودکار نمی‌شود. */
+    let touched = false;
+    let inMirror = false;
+    el._touched = () => touched;
+    function applyMirror(iso){
+      if (!opts.mirror || inMirror) return;
+      let t = null;
+      try{ t = typeof opts.mirror === 'string' ? document.querySelector(opts.mirror) : opts.mirror; }catch(e){}
+      if (!t || typeof t._set !== 'function') return;
+      if (typeof t._touched === 'function' && t._touched()) return;   /* کاربر عوضش کرده */
+      inMirror = true;
+      try{ t._set(iso); }finally{ inMirror = false; }
+    }
+
     function syncManual(){
       const jy = +sy.value, jm = +sm.value, jd = +sd.value;
       manual.value = jy + '/' + String(jm).padStart(2,'0') + '/' + String(jd).padStart(2,'0');
@@ -7680,6 +7728,7 @@ window.addEventListener('ga:brand-changed', function(){
     function emit(){
       const iso = syncManual();
       if (opts.onChange) opts.onChange(iso);
+      if (touched) applyMirror(iso);   /* فقط تغییرهای دستیِ کاربر آینه می‌شوند */
     }
 
     // مقدار خواندنی (ISO) و تنظیم — قبل از emit اولیه تعریف می‌شوند
@@ -7710,14 +7759,66 @@ window.addEventListener('ga:brand-changed', function(){
     if (jy===+sy.value && jm===+sm.value) sd.value = String(jd);
     emit();
 
-    sy.addEventListener('change', () => { setDayOptions(false); emit(); });
-    sm.addEventListener('change', () => { setDayOptions(true); emit(); });
-    sd.addEventListener('change', () => emit());
+    /* ═══ تقویم کلیکی شمسی — JDATE_CALENDAR_V1 ═══ */
+    const WD = ['ش','ی','د','س','چ','پ','ج'];
+    const grid  = el.querySelector('.jcal-grid');
+    const gtitle= el.querySelector('.jcal-title');
+    el.querySelector('.jcal-wd').innerHTML = WD.map(w => '<span>' + w + '</span>').join('');
+    let vy = +sy.value, vm = +sm.value;      /* ماهِ در حال نمایش (مستقل از انتخاب) */
+
+    function firstDow(jy, jm){
+      const d = D.dateFrom(D.shamsiToISO(jy, jm, 1));
+      return (d.getUTCDay() + 1) % 7;        /* شنبه = ۰ */
+    }
+    function syncView(){ vy = +sy.value; vm = +sm.value; }
+
+    function renderGrid(){
+      if (!grid) return;
+      const n = daysIn(vy, vm);
+      const sel = { y:+sy.value, m:+sm.value, d:+sd.value };
+      let t = null;
+      try{ t = D.jalaliInfo(); }catch(e){}
+      gtitle.textContent = MONTHS[vm-1] + ' ' + fa(vy);
+      let h = '';
+      const off = firstDow(vy, vm);
+      for (let i = 0; i < off; i++) h += '<div class="jcal-d empty"></div>';
+      for (let d = 1; d <= n; d++){
+        const isSel = (vy === sel.y && vm === sel.m && d === sel.d);
+        const isToday = !!(t && vy === t.yy && vm === t.mm && d === t.dd);
+        h += '<div class="jcal-d' + (isSel ? ' sel' : '') + (isToday ? ' today' : '') +
+             '" data-d="' + d + '" role="button" tabindex="0">' + fa(d) + '</div>';
+      }
+      grid.innerHTML = h;
+    }
+
+    /* کلیک روی روز → انتخاب فوری و بستن تقویم */
+    grid.addEventListener('click', e => {
+      const c = e.target.closest('.jcal-d');
+      if (!c || c.classList.contains('empty')) return;
+      touched = true;                        /* انتخاب دستی کاربر */
+      sy.value = String(vy); sm.value = String(vm);
+      setDayOptions(false); sd.value = String(c.dataset.d);
+      emit();
+      pop.hidden = true;
+      if (window.APP && APP.toast) APP.toast('تاریخ «' + manual.value + '» ثبت شد ✓', 'green');
+    });
+    el.querySelector('.jcal-prev').addEventListener('click', () => {
+      vm--; if (vm < 1){ vm = 12; vy--; } renderGrid();
+    });
+    el.querySelector('.jcal-next').addEventListener('click', () => {
+      vm++; if (vm > 12){ vm = 1; vy++; } renderGrid();
+    });
+
+    sy.addEventListener('change', () => { touched = true; setDayOptions(false); syncView(); renderGrid(); emit(); });
+    sm.addEventListener('change', () => { touched = true; setDayOptions(true); syncView(); renderGrid(); emit(); });
+    sd.addEventListener('change', () => { touched = true; renderGrid(); emit(); });
 
     el.querySelector('.jdate-cal-btn').addEventListener('click', e => {
       e.stopPropagation();
       pop.hidden = !pop.hidden;
       setDayOptions(true);
+      syncView();          /* تقویم روی ماهِ تاریخ فعلی باز می‌شود */
+      renderGrid();
     });
     el.querySelector('.jd-close').addEventListener('click', () => { pop.hidden = true; });
     // دکمهٔ ثبت تاریخ: مقدار انتخابی دراپ‌داون‌ها اعمال و تأیید می‌شود
@@ -7735,10 +7836,12 @@ window.addEventListener('ga:brand-changed', function(){
         const p = D.parseShamsi(manual.value);
         if (p){
           if (p[0] >= 1300 && p[0] <= 1412){
+            touched = true;
             sy.value = p[0]; sm.value = p[1];
             setDayOptions(false);
             if (p[2] <= +sd.options[sd.options.length-1].value) sd.value = String(p[2]);
             else sd.value = sd.options[sd.options.length-1].value;
+            syncView(); renderGrid();
             emit();
             pop.hidden = true;
             APP.toast('تاریخ «' + syncManual() + '» ثبت شد ✓', 'green');
@@ -12266,7 +12369,7 @@ window.addEventListener('ga:brand-changed', function(){
     const hidTours = D.loadHiddenTours().map(id => D.TOURNAMENTS.find(t => t[0] === id)).filter(Boolean);
     const hb = $('#mt-hidden');
     if (hb) hb.innerHTML = hidTours.length ? `<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);margin-top:10px;border-top:1px dashed var(--line-soft);padding-top:10px"><span>🗑 حذف‌شده از فصل:</span>${hidTours.map(t => `<span class="chip dim" style="display:inline-flex;align-items:center;gap:6px">${esc(t[1])}<button class="btn sm ghost" data-act="unhide" data-id="${t[0]}" style="padding:2px 8px;font-size:10px">↩ بازیابی</button></span>`).join('')}</div>` : '';
-    JDate.render($('#mt-start'), { value: D.todayISO(), onChange(){ renderTourSch(); } });
+    JDate.render($('#mt-start'), { value: D.todayISO(), mirror:'#mt-end', onChange(){ renderTourSch(); } });
     JDate.render($('#mt-end'),   { value: D.todayISO(), onChange(){ renderTourSch(); } });
     function tourDays(){
       try {
@@ -12606,7 +12709,7 @@ window.addEventListener('ga:brand-changed', function(){
       <div class="card-head"><span class="ic">🎓</span><h3>دوره‌های آموزشی / تمرین / اردو</h3><span class="tag">${D.fa(D.loadPrograms().length)} دوره</span></div>
       <div id="pr-list" style="margin-top:8px"></div>
     </div>`;
-    JDate.render($('#pr-start'), { value: D.todayISO(), onChange(){} });
+    JDate.render($('#pr-start'), { value: D.todayISO(), mirror:'#pr-end', onChange(){} });
     JDate.render($('#pr-end'),   { value: D.todayISO(), onChange(){} });
     function renderList(){
       const lst = D.loadPrograms();
@@ -12752,7 +12855,7 @@ window.addEventListener('ga:brand-changed', function(){
     `;
 
     const SCHED_OPTS = ['ورود','مسابقه','تمرین','کلاس','اهدای جام','تور','جلسه','مراسم','آزاد'];
-    JDate.render($('#me-start'), { value: D.todayISO(), onChange(){ renderSchedule(); } });
+    JDate.render($('#me-start'), { value: D.todayISO(), mirror:'#me-end', onChange(){ renderSchedule(); } });
     JDate.render($('#me-end'),   { value: D.todayISO(), onChange(){ renderSchedule(); } });
 
     function daysBetween(aIso, bIso){

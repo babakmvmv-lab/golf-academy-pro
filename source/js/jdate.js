@@ -1,4 +1,5 @@
-/* ═══════════════════════════════════════════════════════════════════
+/* JDATE_CALENDAR_V1
+   ═══════════════════════════════════════════════════════════════════
    JDate — کامپوننت ورود تاریخ شمسی (حرفه‌ای)
    انتخاب سال ← ماه ← روز با دراپ‌داون + ورود دستی + تبدیل خودکار
    مقدار داخلی همیشه ISO میلادی است (سازگار با موتور)، نمایش شمسی است.
@@ -19,6 +20,16 @@
         <div class="jdate-cal-btn" title="باز کردن تقویم">📅</div>
       </div>
       <div class="jdate-pop" hidden>
+        <div class="jcal-wrap">
+          <div class="jcal-head">
+            <div class="jcal-nav jcal-prev" title="ماه قبل" role="button" aria-label="ماه قبل">‹</div>
+            <div class="jcal-title"></div>
+            <div class="jcal-nav jcal-next" title="ماه بعد" role="button" aria-label="ماه بعد">›</div>
+          </div>
+          <div class="jcal-wd"></div>
+          <div class="jcal-grid"></div>
+        </div>
+        <div class="jcal-sep">یا انتخاب با دراپ‌داون / تایپ دستی</div>
         <div class="jdate-selects">
           <div class="jdate-field">
             <label>سال</label>
@@ -66,6 +77,23 @@
       if (keep && cur >= 1 && cur <= n) sd.value = cur;
       else sd.value = n;
     }
+    /* ═══ هم‌گام‌سازی تاریخ دوم ═══
+       اگر این ورودی «تاریخ شروع» باشد و مقصدش (تاریخ پایان) را کاربر دستی
+       عوض نکرده باشد، مقصد خودکار روی همان روز انتخابی می‌رود؛ در صورت
+       نیاز کاربر می‌تواند دستی تغییرش دهد و از آن لحظه دیگر خودکار نمی‌شود. */
+    let touched = false;
+    let inMirror = false;
+    el._touched = () => touched;
+    function applyMirror(iso){
+      if (!opts.mirror || inMirror) return;
+      let t = null;
+      try{ t = typeof opts.mirror === 'string' ? document.querySelector(opts.mirror) : opts.mirror; }catch(e){}
+      if (!t || typeof t._set !== 'function') return;
+      if (typeof t._touched === 'function' && t._touched()) return;   /* کاربر عوضش کرده */
+      inMirror = true;
+      try{ t._set(iso); }finally{ inMirror = false; }
+    }
+
     function syncManual(){
       const jy = +sy.value, jm = +sm.value, jd = +sd.value;
       manual.value = jy + '/' + String(jm).padStart(2,'0') + '/' + String(jd).padStart(2,'0');
@@ -76,6 +104,7 @@
     function emit(){
       const iso = syncManual();
       if (opts.onChange) opts.onChange(iso);
+      if (touched) applyMirror(iso);   /* فقط تغییرهای دستیِ کاربر آینه می‌شوند */
     }
 
     // مقدار خواندنی (ISO) و تنظیم — قبل از emit اولیه تعریف می‌شوند
@@ -106,14 +135,66 @@
     if (jy===+sy.value && jm===+sm.value) sd.value = String(jd);
     emit();
 
-    sy.addEventListener('change', () => { setDayOptions(false); emit(); });
-    sm.addEventListener('change', () => { setDayOptions(true); emit(); });
-    sd.addEventListener('change', () => emit());
+    /* ═══ تقویم کلیکی شمسی — JDATE_CALENDAR_V1 ═══ */
+    const WD = ['ش','ی','د','س','چ','پ','ج'];
+    const grid  = el.querySelector('.jcal-grid');
+    const gtitle= el.querySelector('.jcal-title');
+    el.querySelector('.jcal-wd').innerHTML = WD.map(w => '<span>' + w + '</span>').join('');
+    let vy = +sy.value, vm = +sm.value;      /* ماهِ در حال نمایش (مستقل از انتخاب) */
+
+    function firstDow(jy, jm){
+      const d = D.dateFrom(D.shamsiToISO(jy, jm, 1));
+      return (d.getUTCDay() + 1) % 7;        /* شنبه = ۰ */
+    }
+    function syncView(){ vy = +sy.value; vm = +sm.value; }
+
+    function renderGrid(){
+      if (!grid) return;
+      const n = daysIn(vy, vm);
+      const sel = { y:+sy.value, m:+sm.value, d:+sd.value };
+      let t = null;
+      try{ t = D.jalaliInfo(); }catch(e){}
+      gtitle.textContent = MONTHS[vm-1] + ' ' + fa(vy);
+      let h = '';
+      const off = firstDow(vy, vm);
+      for (let i = 0; i < off; i++) h += '<div class="jcal-d empty"></div>';
+      for (let d = 1; d <= n; d++){
+        const isSel = (vy === sel.y && vm === sel.m && d === sel.d);
+        const isToday = !!(t && vy === t.yy && vm === t.mm && d === t.dd);
+        h += '<div class="jcal-d' + (isSel ? ' sel' : '') + (isToday ? ' today' : '') +
+             '" data-d="' + d + '" role="button" tabindex="0">' + fa(d) + '</div>';
+      }
+      grid.innerHTML = h;
+    }
+
+    /* کلیک روی روز → انتخاب فوری و بستن تقویم */
+    grid.addEventListener('click', e => {
+      const c = e.target.closest('.jcal-d');
+      if (!c || c.classList.contains('empty')) return;
+      touched = true;                        /* انتخاب دستی کاربر */
+      sy.value = String(vy); sm.value = String(vm);
+      setDayOptions(false); sd.value = String(c.dataset.d);
+      emit();
+      pop.hidden = true;
+      if (window.APP && APP.toast) APP.toast('تاریخ «' + manual.value + '» ثبت شد ✓', 'green');
+    });
+    el.querySelector('.jcal-prev').addEventListener('click', () => {
+      vm--; if (vm < 1){ vm = 12; vy--; } renderGrid();
+    });
+    el.querySelector('.jcal-next').addEventListener('click', () => {
+      vm++; if (vm > 12){ vm = 1; vy++; } renderGrid();
+    });
+
+    sy.addEventListener('change', () => { touched = true; setDayOptions(false); syncView(); renderGrid(); emit(); });
+    sm.addEventListener('change', () => { touched = true; setDayOptions(true); syncView(); renderGrid(); emit(); });
+    sd.addEventListener('change', () => { touched = true; renderGrid(); emit(); });
 
     el.querySelector('.jdate-cal-btn').addEventListener('click', e => {
       e.stopPropagation();
       pop.hidden = !pop.hidden;
       setDayOptions(true);
+      syncView();          /* تقویم روی ماهِ تاریخ فعلی باز می‌شود */
+      renderGrid();
     });
     el.querySelector('.jd-close').addEventListener('click', () => { pop.hidden = true; });
     // دکمهٔ ثبت تاریخ: مقدار انتخابی دراپ‌داون‌ها اعمال و تأیید می‌شود
@@ -131,10 +212,12 @@
         const p = D.parseShamsi(manual.value);
         if (p){
           if (p[0] >= 1300 && p[0] <= 1412){
+            touched = true;
             sy.value = p[0]; sm.value = p[1];
             setDayOptions(false);
             if (p[2] <= +sd.options[sd.options.length-1].value) sd.value = String(p[2]);
             else sd.value = sd.options[sd.options.length-1].value;
+            syncView(); renderGrid();
             emit();
             pop.hidden = true;
             APP.toast('تاریخ «' + syncManual() + '» ثبت شد ✓', 'green');

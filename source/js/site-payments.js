@@ -134,7 +134,7 @@
    '<div class="cards">'+cards.map((c,i)=>'<label><input type="radio" name="pc-pay-card" value="'+esc(c.id)+'" '+(i===0?'checked':'')+'><img src="'+esc(c.logo||'/images/academy-logo.webp')+'" alt=""><span><b>'+esc(c.bank)+(c.title?' — '+esc(c.title):'')+'</b>'+(c.card_number?'<small>کارت: '+esc(c.card_number)+'</small>':'')+(c.iban?'<small>شبا: '+esc(c.iban)+'</small>':'')+(c.account_number?'<small>حساب: '+esc(c.account_number)+'</small>':'')+'</span></label>').join('')+'</div>'+
    '<div class="grid">'+
    '<span class="f">شماره کارتی که با آن واریز کردید<input data-r="from_card" inputmode="numeric" maxlength="19" placeholder="۶۰۳۷۹۹…"></span>'+
-   '<span class="f">تاریخ واریز (شمسی)<input data-r="date" placeholder="۱۴۰۵/۰۷/۰۵"></span>'+
+   '<span class="f">تاریخ واریز (شمسی)<input data-r="date" data-solarcal="1" placeholder="۱۴۰۵/۰۷/۰۵"></span>'+
    '<span class="f">ساعت واریز<input data-r="time" placeholder="۱۴:۳۵"></span>'+
    '<span class="f">شماره پیگیری / کد رهگیری واریز<input data-r="trace" placeholder="۱۲۳۴۵۶"></span>'+
    '<span class="f">شماره ارجاع (در صورت وجود)<input data-r="reference" placeholder="REF…"></span>'+
@@ -181,4 +181,21 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
  }
  window.PC_PAY={handleOrder,session,syncCart,call};
+})();
+
+/* CAL_EVERYWHERE_V1 — تقویم شمسی روی فیلدهای تاریخ سایت (نوع ورود دستی هم باقی است) */
+(function(){
+  function bindSiteDates(scope){
+    if(!window.SolarCal) return 0;
+    return SolarCal.attachAll(scope||document,'input[data-solarcal]');
+  }
+  function watchSiteDates(){
+    bindSiteDates(document);
+    if(typeof MutationObserver!=='function') return;
+    let t=null;
+    new MutationObserver(()=>{ if(t) return; t=setTimeout(()=>{ t=null; bindSiteDates(document); },50); })
+      .observe(document.body,{childList:true,subtree:true});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',watchSiteDates);
+  else watchSiteDates();
 })();

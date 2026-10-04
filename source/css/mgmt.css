@@ -515,3 +515,12 @@ tr.off-row{opacity:.5}
   .honor-requirements{padding:10px 11px 12px}
   .honor-req-fields .input{font-size:16px}
 }
+
+/* CAL_EVERYWHERE_V1 — پایان هفته: جمعه */
+.jcal-wd span.fri{color:#e8b083;background:rgba(232,176,131,.12);border-radius:6px}
+.jcal-d.fri{color:#e8b083;background:rgba(232,176,131,.07)}
+.jcal-d.fri.today{border-color:rgba(232,176,131,.55)}
+.jcal-d.fri.sel{color:#1a1407;background:linear-gradient(135deg,var(--gold),#b08a28)}
+.cal-wd.fri{color:#e8b083;background:rgba(232,176,131,.12);border-radius:6px}
+.cal-cell.fri{background:rgba(232,176,131,.06);border-radius:8px}
+.cal-cell.fri .cal-num{color:#e8b083}

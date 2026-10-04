@@ -1433,6 +1433,15 @@ tr.off-row{opacity:.5}
   .honor-requirements{padding:10px 11px 12px}
   .honor-req-fields .input{font-size:16px}
 }
+
+/* CAL_EVERYWHERE_V1 — پایان هفته: جمعه */
+.jcal-wd span.fri{color:#e8b083;background:rgba(232,176,131,.12);border-radius:6px}
+.jcal-d.fri{color:#e8b083;background:rgba(232,176,131,.07)}
+.jcal-d.fri.today{border-color:rgba(232,176,131,.55)}
+.jcal-d.fri.sel{color:#1a1407;background:linear-gradient(135deg,var(--gold),#b08a28)}
+.cal-wd.fri{color:#e8b083;background:rgba(232,176,131,.12);border-radius:6px}
+.cal-cell.fri{background:rgba(232,176,131,.06);border-radius:8px}
+.cal-cell.fri .cal-num{color:#e8b083}
 </style>
     <style>/* Rank guide — shared member catalogue / landscape A4 report. */
 .rg-icon{width:42px;height:42px;display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(212,175,55,.4);border-radius:12px;background:rgba(212,175,55,.09);color:var(--gold-l,#f3d779);cursor:pointer;flex:0 0 auto}
@@ -7763,7 +7772,7 @@ window.addEventListener('ga:brand-changed', function(){
     const WD = ['ش','ی','د','س','چ','پ','ج'];
     const grid  = el.querySelector('.jcal-grid');
     const gtitle= el.querySelector('.jcal-title');
-    el.querySelector('.jcal-wd').innerHTML = WD.map(w => '<span>' + w + '</span>').join('');
+    el.querySelector('.jcal-wd').innerHTML = WD.map((w, wi) => '<span' + (wi === 6 ? ' class="fri"' : '') + '>' + w + '</span>').join('');   /* CAL_EVERYWHERE_V1 */
     let vy = +sy.value, vm = +sm.value;      /* ماهِ در حال نمایش (مستقل از انتخاب) */
 
     function firstDow(jy, jm){
@@ -7785,7 +7794,8 @@ window.addEventListener('ga:brand-changed', function(){
       for (let d = 1; d <= n; d++){
         const isSel = (vy === sel.y && vm === sel.m && d === sel.d);
         const isToday = !!(t && vy === t.yy && vm === t.mm && d === t.dd);
-        h += '<div class="jcal-d' + (isSel ? ' sel' : '') + (isToday ? ' today' : '') +
+        const isFri = ((off + d - 1) % 7) === 6;   /* ستون جمعه — پایان هفته */
+        h += '<div class="jcal-d' + (isSel ? ' sel' : '') + (isToday ? ' today' : '') + (isFri ? ' fri' : '') +
              '" data-d="' + d + '" role="button" tabindex="0">' + fa(d) + '</div>';
       }
       grid.innerHTML = h;
@@ -20724,7 +20734,7 @@ const stCal = $('#st-cal');
       const first = jalMonthStart(mm);
       const dow = (first.getUTCDay() + 1) % 7;
       const daysInMonth = daysInJMonth(mm);
-      let html = `<div class="cal-grid-big-row">${WD.map(w=>`<div class="cal-wd">${w}</div>`).join('')}</div>`;
+      let html = `<div class="cal-grid-big-row">${WD.map((w,wi)=>`<div class="cal-wd${wi===6?' fri':''}">${w}</div>`).join('')}</div>`;  /* CAL_EVERYWHERE_V1 */
       html += '<div class="cal-grid-big-row">';
       for (let i=0;i<dow;i++) html += '<div class="cal-cell empty"></div>';
       for (let d=1; d<=daysInMonth; d++){
@@ -20755,7 +20765,7 @@ const stCal = $('#st-cal');
             mini = `<div class="cal-ev-mini">${dayEvs.slice(0,3).map(e=>`<span class="cal-mini-ev ${e.kind}"><span class="cal-mini-ic">${e.icon}</span><span class="cal-mini-nm">${esc(e.name)}</span></span>`).join('')}${dayEvs.length>3?'<span class="cal-mini-more">+'+D.fa(dayEvs.length-3)+'</span>':''}</div>`;
           }
         }
-        html += `<div class="cal-cell ${dayEvs.length?'has-ev':''} ${isSelDay?'sel':''} ${isToday?'today':''}" title="${esc(labels.join(' • '))}">
+        html += `<div class="cal-cell ${dayEvs.length?'has-ev':''} ${isSelDay?'sel':''} ${isToday?'today':''} ${((dow+d-1)%7===6)?'fri':''}" title="${esc(labels.join(' • '))}">
           <div class="cal-num">${D.fa(d)}</div>
           ${mini}
         </div>`;

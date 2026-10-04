@@ -139,7 +139,7 @@
     const WD = ['ش','ی','د','س','چ','پ','ج'];
     const grid  = el.querySelector('.jcal-grid');
     const gtitle= el.querySelector('.jcal-title');
-    el.querySelector('.jcal-wd').innerHTML = WD.map(w => '<span>' + w + '</span>').join('');
+    el.querySelector('.jcal-wd').innerHTML = WD.map((w, wi) => '<span' + (wi === 6 ? ' class="fri"' : '') + '>' + w + '</span>').join('');   /* CAL_EVERYWHERE_V1 */
     let vy = +sy.value, vm = +sm.value;      /* ماهِ در حال نمایش (مستقل از انتخاب) */
 
     function firstDow(jy, jm){
@@ -161,7 +161,8 @@
       for (let d = 1; d <= n; d++){
         const isSel = (vy === sel.y && vm === sel.m && d === sel.d);
         const isToday = !!(t && vy === t.yy && vm === t.mm && d === t.dd);
-        h += '<div class="jcal-d' + (isSel ? ' sel' : '') + (isToday ? ' today' : '') +
+        const isFri = ((off + d - 1) % 7) === 6;   /* ستون جمعه — پایان هفته */
+        h += '<div class="jcal-d' + (isSel ? ' sel' : '') + (isToday ? ' today' : '') + (isFri ? ' fri' : '') +
              '" data-d="' + d + '" role="button" tabindex="0">' + fa(d) + '</div>';
       }
       grid.innerHTML = h;

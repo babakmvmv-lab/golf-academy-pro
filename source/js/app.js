@@ -2833,7 +2833,7 @@ const stCal = $('#st-cal');
       const first = jalMonthStart(mm);
       const dow = (first.getUTCDay() + 1) % 7;
       const daysInMonth = daysInJMonth(mm);
-      let html = `<div class="cal-grid-big-row">${WD.map(w=>`<div class="cal-wd">${w}</div>`).join('')}</div>`;
+      let html = `<div class="cal-grid-big-row">${WD.map((w,wi)=>`<div class="cal-wd${wi===6?' fri':''}">${w}</div>`).join('')}</div>`;  /* CAL_EVERYWHERE_V1 */
       html += '<div class="cal-grid-big-row">';
       for (let i=0;i<dow;i++) html += '<div class="cal-cell empty"></div>';
       for (let d=1; d<=daysInMonth; d++){
@@ -2864,7 +2864,7 @@ const stCal = $('#st-cal');
             mini = `<div class="cal-ev-mini">${dayEvs.slice(0,3).map(e=>`<span class="cal-mini-ev ${e.kind}"><span class="cal-mini-ic">${e.icon}</span><span class="cal-mini-nm">${esc(e.name)}</span></span>`).join('')}${dayEvs.length>3?'<span class="cal-mini-more">+'+D.fa(dayEvs.length-3)+'</span>':''}</div>`;
           }
         }
-        html += `<div class="cal-cell ${dayEvs.length?'has-ev':''} ${isSelDay?'sel':''} ${isToday?'today':''}" title="${esc(labels.join(' • '))}">
+        html += `<div class="cal-cell ${dayEvs.length?'has-ev':''} ${isSelDay?'sel':''} ${isToday?'today':''} ${((dow+d-1)%7===6)?'fri':''}" title="${esc(labels.join(' • '))}">
           <div class="cal-num">${D.fa(d)}</div>
           ${mini}
         </div>`;

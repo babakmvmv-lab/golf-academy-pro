@@ -463,7 +463,8 @@
     $$('.countup').forEach(el => {
       const t = parseFloat(el.dataset.target);
       if (isNaN(t)) return;
-      Charts.countUp(el, t, { fmt: v => el.dataset.fmt === 'fa' ? D.faNum(v, 0) : v.toLocaleString('en-US') });
+      const f = el.dataset.fmt;
+      Charts.countUp(el, t, { fmt: v => f === 'fa' ? D.faNum(v, 0) : (f === 'num1' ? Number(v).toFixed(1) : v.toLocaleString('en-US')), dec: f === 'num1' ? 1 : 0 });
     });
   }
   function growBars(){ $$('.pbar > i').forEach(el => { el.style.width = el.dataset.w + '%'; }); }
@@ -560,12 +561,12 @@
     const cards = [
       { ic:'🏌️', lbl:'بازیکنان فعال', val: A.LB.length, sub:'عضو آکادمی', col:'var(--gold-l)', fmt:'fa' },
       { ic:'🏆', lbl:'مجموع امتیاز فصل', val: A.TOT_PTS, sub:'ماهها: ' + A.MONTHLY_TOT.join('، '), col:'var(--green-l)', fmt:'fa' },
-      { ic:'🥇', lbl:'مسابقات برگزار', val: A.MATCHES_HELD, sub:'در ' + D.COURSES.length + ' زمین', col:'var(--blue)', fmt:'fa' },
+      { ic:'🥇', lbl:'مسابقات برگزار', val: A.TOTAL_MATCHES, sub:'کل مسابقات ثبت‌شده', col:'var(--blue)', fmt:'fa' },
       { ic:'🎯', lbl:'جلسات تمرین', val: A.PRACTICE_DAYS, sub:'روز تمرین گروهی', col:'var(--purple)', fmt:'fa' },
-      { ic:'📚', lbl:'دورههای آموزشی', val: A.COURSE_DAYS, sub:'کلاس و کارگاه', col:'var(--orange)', fmt:'fa' },
-      { ic:'💎', lbl:'بازیکنان Gold Elite', val: g, sub:'بالای ' + D.fa(D.GOLD_ELITE) + ' امتیاز', col:'var(--gold)', fmt:'fa' },
-      { ic:'⭐', lbl:'قهرمان ماه', val: 0, sub: A.champM ? `${A.champM} — ${esc(A.champName)}` : '—', col:'var(--teal)', fmt:'fa' },
-      { ic:'🎖️', lbl:'میانگین هندیکپ', val: A.AVG_HCP, sub:'کل اعضا', col:'var(--red)', fmt:'num1' },
+      { ic:'📚', lbl:'دورههای آموزشی', val: A.COURSE_COUNT, sub:'کل دوره‌های ثبت‌شده', col:'var(--orange)', fmt:'fa' },
+      { ic:'💎', lbl:'بازیکنان Gold Elite', val: g, sub:'مجموع اعضا — بالای ' + D.fa(D.GOLD_ELITE) + ' امتیاز', col:'var(--gold)', fmt:'fa' },
+      { ic:'⭐', lbl:'قهرمان ماه', text: A.champM ? `${esc(A.champM)} — ${esc(A.champName)}` : '—', col:'var(--teal)' },
+      { ic:'🎖️', lbl:'میانگین هندیکپ', val: A.AVG_HCP, sub:'میانگین کل اعضا', col:'var(--red)', fmt:'num1' },
     ];
     if (!MGMT.getSettings().chCmd){ statsEl.innerHTML = `<div class="glass" style="grid-column:span 4;padding:14px;text-align:center;color:var(--muted)">نمودارهای ${esc(L('nav.cmd','فرماندهی'))} غیرفعال شده‌اند — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`; }
     else statsEl.innerHTML = cards.map((c,i) => `
@@ -575,8 +576,10 @@
           <span class="ic">${c.ic}</span>
           ${i===1 ? `<canvas id="sp-${i}" style="width:74px;height:30px"></canvas>` : ''}
         </div>
-        <div class="val"><span class="countup" data-target="${c.val}" data-fmt="${c.fmt}">0</span></div>
-        <div class="lbl">${c.lbl} — <span style="color:var(--dim)">${c.sub}</span></div>
+        ${c.text
+          ? `<div class="val" style="font-size:16px;font-weight:800;line-height:1.9">${c.text}</div>`
+          : `<div class="val"><span class="countup" data-target="${c.val}" data-fmt="${c.fmt}">0</span></div>`}
+        <div class="lbl">${c.lbl}${c.sub ? ` — <span style="color:var(--dim)">${c.sub}</span>` : ''}</div>
       </div>`).join('');
     setTimeout(() => {
       if (MGMT.getSettings().chMonthly){
@@ -3246,7 +3249,7 @@ const stCal = $('#st-cal');
     const remain = S.tournaments.filter(t => D.dateFrom(t[5]) >= D.TODAY).length + 6;
     const kpis = [
       ['👥','بازیکنان فعال', A.LB.length, 'var(--gold)'], ['🏌️','مسابقات برگزار', A.MATCHES_HELD, 'var(--green-l)'],
-      ['🎯','روزهای تمرین', A.PRACTICE_DAYS, 'var(--blue)'], ['📚','دورههای آموزشی', A.COURSE_DAYS, 'var(--purple)'],
+      ['🎯','روزهای تمرین', A.PRACTICE_DAYS, 'var(--blue)'], ['📚','دورههای آموزشی', A.COURSE_COUNT, 'var(--purple)'],
       ['🐦','کل پرندهها', A.TOTAL_BIRD, 'var(--green-l)'], ['📅','رویدادهای باقیمانده', remain, 'var(--orange)'],
       ['💎','بازیکنان Gold Elite', A.GOLD_COUNT, 'var(--gold-l)'], ['📈','میانگین هندیکپ', A.AVG_HCP, 'var(--teal)'],
     ];
@@ -3267,7 +3270,7 @@ const stCal = $('#st-cal');
       <div class="glass" style="grid-column:span 2">
         <div class="card-head"><span class="ic">🚀</span><h3>آکادمی در یک نگاه — پیام سرپرست</h3><span class="tag">Coach Desk</span></div>
         ${[
-          `✅ فصل ${D.fa(D.seasonYear)} با ${D.fa(A.MATCHES_HELD)} مسابقه، ${D.fa(A.COURSE_DAYS)} کلاس و اردو در جریان است.`,
+          `✅ فصل ${D.fa(D.seasonYear)} با ${D.fa(A.MATCHES_HELD)} مسابقه، ${D.fa(A.COURSE_COUNT)} دوره در جریان است.`,
           `🏆 سه بازیکن برتر در منطقه قهرمانی هستند و به جام بزرگ فصل راه دارند.`,
           `🐦 میانگین پرنده در هر دور بازیکنان برتر به عدد قابل توجهی رسیده است — روند صعودی.`,
           `📌 پیشنهاد: دو جلسه تمرین شورت گیم برای بازیکنان سطح ۳ اضافه شود.`,

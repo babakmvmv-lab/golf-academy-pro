@@ -395,11 +395,12 @@ const Charts = (() => {
   function countUp(el, target, opts={}){
     const dur = opts.dur || 1100;
     const fmt = opts.fmt || (v => v.toLocaleString('en-US'));
+    const dec = +opts.dec || 0;  /* CMD_STATS_T6_V1: رقم اعشار اختیاری (میانگین هندیکپ) */
     const t0 = performance.now();
     (function step(t){
       const p = Math.min(1, (t-t0)/dur);
       const e = 1 - Math.pow(1-p, 3);
-      el.textContent = fmt(Math.round(target * e));
+      el.textContent = fmt(dec ? (target * e).toFixed(dec) : Math.round(target * e));
       if (p < 1) requestAnimationFrame(step);
     })(t0);
   }

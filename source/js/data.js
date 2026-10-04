@@ -877,9 +877,15 @@
     });
     const TOT_PTS = Object.values(PTS).reduce((a,b)=>a+b,0);
     const MATCHES_HELD = scorecards.length ? [...new Set(scorecards.map(c=>c.tour))].length : 0;
-    const GOLD_COUNT = Object.values(PTS).filter(v => v >= GOLD_ELITE).length;
-    const activePlayers = players.filter(p => p[5]);
-    const AVG_HCP = activePlayers.length ? Math.round(activePlayers.reduce((a,p)=>a+p[3],0)/activePlayers.length*10)/10 : 0;
+    /* CMD_STATS_T6_V1 — کارت‌های «فرماندهی»:
+       • «کل تعداد مسابقات» = همهٔ مسابقات ثبت‌شده (نه فقط مسابقاتی که کارت امتیاز دارند)
+       • «تعداد کل دوره‌های آموزشی» = همهٔ دوره‌های ثبت‌شده (ga_programs)
+       • «مجموع بازیکنان Gold Elite» = شمارش روی همهٔ اعضا (فعال و غیرفعال)
+       • «میانگین هندیکپ» = میانگین همهٔ اعضا (نه فقط فعال‌ها) */
+    const TOTAL_MATCHES = tournaments.length;
+    const COURSE_COUNT = programs.length;
+    const GOLD_COUNT = players.filter(p => (PTS[p[0]] || 0) >= GOLD_ELITE).length;
+    const AVG_HCP = players.length ? Math.round(players.reduce((a,p)=>a+(+p[3]||0),0)/players.length*10)/10 : 0;
     const future = tournaments.filter(t => dateFrom(t[5]) >= TODAY).sort((a,b) => dateFrom(a[5]) - dateFrom(b[5]));
     const NEXT_T = future[0] || null;
     const COUNTDOWN = NEXT_T ? Math.ceil((dateFrom(NEXT_T[5]) - TODAY)/86400000) : 0;
@@ -893,6 +899,7 @@
       CAREER, PTS, CARDS, ST, LB, SKILLS, PHASE_PTS, PHASE_CHAMP, MONTH_PTS, MONTHLY_TOT,
       MONTHS_SEASON, champM, champName, BEST_ROUNDS, HOLE_DIFF, COURSE_STATS,
       PLAYER_COURSE, PAR_TYPE, TOT_PTS, MATCHES_HELD, GOLD_COUNT, AVG_HCP, NEXT_T,
+      TOTAL_MATCHES, COURSE_COUNT,
       COUNTDOWN, RANK_COUNT, TOTAL_BIRD: TOTAL_BIRDIES, PRACTICE_DAYS, COURSE_DAYS,
     };
   }

@@ -7,6 +7,11 @@
 (function(){
   const D = window.Data;
   function fa(s){ return D.fa(s); }
+  /* JDATE_POP_FIX_V1 — با اسکرول/تغییر اندازه، پاپ‌آپِ باز هم‌جای فیلدش می‌ماند */
+  let ACTIVE_POP = null;
+  function repositionActivePop(){ if (ACTIVE_POP) ACTIVE_POP(); }
+  window.addEventListener('scroll', repositionActivePop, true);
+  window.addEventListener('resize', repositionActivePop);
 
   /* رندر یک ورودی شمسی داخل el.
      opts: { value (ISO miladi), onChange(iso), allowEmpty=true }
@@ -53,6 +58,43 @@
 
     const manual = el.querySelector('.jdate-manual');
     const pop = el.querySelector('.jdate-pop');
+    const row = el.querySelector('.jdate-row');
+
+    /* ═══ JDATE_POP_FIX_V1 — پاپ‌آپ از کارتِ والد خارج می‌شود ═══
+       کارت‌های پنل (.glass) هم overflow:hidden دارند و هم backdrop-filter (زمینهٔ لایهٔ
+       جدا می‌سازند)؛ نتیجه: پاپ‌آپِ absolute برش می‌خورد و کارتِ بعدی رویش می‌افتد.
+       پس هنگام باز شدن به body منتقل و با position:fixed جای‌گذاری می‌شود. */
+    let portaled = false;
+    function placePop(){
+      if (pop.hidden || !pop.isConnected) return;
+      const r = (row || el).getBoundingClientRect();
+      const W = pop.offsetWidth || 288, H = pop.offsetHeight || 440;
+      const vw = window.innerWidth || 1280, vh = window.innerHeight || 800;
+      let top = r.bottom + 6;                       /* اولویت: زیر فیلد */
+      if (top + H > vh - 8) top = r.top - H - 6;    /* جا نبود: بالای فیلد */
+      top = Math.max(8, Math.min(top, Math.max(8, vh - H - 8)));
+      let right = vw - r.right;                     /* هم‌ترازِ راستِ فیلد (RTL) */
+      right = Math.max(8, Math.min(right, Math.max(8, vw - W - 8)));
+      pop.style.top = Math.round(top) + 'px';
+      pop.style.right = Math.round(right) + 'px';
+      pop.style.left = 'auto';
+    }
+    function openPop(){
+      if (!portaled){
+        document.body.appendChild(pop);             /* نه برش می‌خورد، نه زیر لایهٔ بعدی می‌رود */
+        pop.classList.add('jdate-portal');
+        portaled = true;
+      }
+      pop.hidden = false;
+      placePop();
+      if (window.requestAnimationFrame) window.requestAnimationFrame(placePop);
+      ACTIVE_POP = placePop;
+    }
+    function closePop(){
+      pop.hidden = true;
+      if (ACTIVE_POP === placePop) ACTIVE_POP = null;
+    }
+
     const sy = el.querySelector('.jd-y'), sm = el.querySelector('.jd-m'), sd = el.querySelector('.jd-d');
     const result = el.querySelector('.jdate-result');
 
@@ -166,6 +208,7 @@
              '" data-d="' + d + '" role="button" tabindex="0">' + fa(d) + '</div>';
       }
       grid.innerHTML = h;
+      placePop();   /* بعد از هر بازچینش، جای پاپ‌آپ اصلاح می‌شود */
     }
 
     /* کلیک روی روز → انتخاب فوری و بستن تقویم */
@@ -176,7 +219,7 @@
       sy.value = String(vy); sm.value = String(vm);
       setDayOptions(false); sd.value = String(c.dataset.d);
       emit();
-      pop.hidden = true;
+      closePop();
       if (window.APP && APP.toast) APP.toast('تاریخ «' + manual.value + '» ثبت شد ✓', 'green');
     });
     el.querySelector('.jcal-prev').addEventListener('click', () => {
@@ -192,15 +235,17 @@
 
     el.querySelector('.jdate-cal-btn').addEventListener('click', e => {
       e.stopPropagation();
-      pop.hidden = !pop.hidden;
-      setDayOptions(true);
-      syncView();          /* تقویم روی ماهِ تاریخ فعلی باز می‌شود */
-      renderGrid();
+      if (pop.hidden){
+        setDayOptions(true);
+        syncView();        /* تقویم روی ماهِ تاریخ فعلی باز می‌شود */
+        renderGrid();
+        openPop();
+      } else closePop();
     });
-    el.querySelector('.jd-close').addEventListener('click', () => { pop.hidden = true; });
+    el.querySelector('.jd-close').addEventListener('click', () => { closePop(); });
     // دکمهٔ ثبت تاریخ: مقدار انتخابی دراپ‌داون‌ها اعمال و تأیید می‌شود
     el.querySelector('.jd-ok').addEventListener('click', () => {
-      pop.hidden = true;
+      closePop();
       emit();
       if (opts.onConfirm) opts.onConfirm(syncManual());
       if (window.APP && APP.toast) APP.toast('تاریخ «' + syncManual() + '» ثبت شد ✓', 'green');
@@ -220,7 +265,7 @@
             else sd.value = sd.options[sd.options.length-1].value;
             syncView(); renderGrid();
             emit();
-            pop.hidden = true;
+            closePop();
             APP.toast('تاریخ «' + syncManual() + '» ثبت شد ✓', 'green');
           } else {
             APP.toast('سال باید بین ۱۳۰۰ تا ۱۴۱۲ باشد', 'red');
@@ -233,7 +278,7 @@
 
     // بستن با کلیک بیرون
     document.addEventListener('pointerdown', function closeOut(e){
-      if (!el.contains(e.target)) pop.hidden = true;
+      if (!el.contains(e.target) && !pop.contains(e.target)) closePop();   /* پاپ‌آپ در body است */
     });
 
   }

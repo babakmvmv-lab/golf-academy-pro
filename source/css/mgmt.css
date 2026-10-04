@@ -524,3 +524,13 @@ tr.off-row{opacity:.5}
 .cal-wd.fri{color:#e8b083;background:rgba(232,176,131,.12);border-radius:6px}
 .cal-cell.fri{background:rgba(232,176,131,.06);border-radius:8px}
 .cal-cell.fri .cal-num{color:#e8b083}
+
+/* JDATE_POP_FIX_V1 — پاپ‌آپ تقویم به body منتقل می‌شود: نه برش می‌خورد، نه زیر لایهٔ بعدی می‌رود */
+.jdate-pop.jdate-portal{
+  position:fixed;top:auto;right:auto;bottom:auto;left:auto;
+  z-index:2147483000;
+  max-height:calc(100vh - 16px);max-width:calc(100vw - 16px);
+  overflow-y:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.jdate-pop.jdate-portal .jcal-grid{overflow:visible}

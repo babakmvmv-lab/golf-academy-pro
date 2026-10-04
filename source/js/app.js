@@ -472,6 +472,7 @@
   /* ═══════════ صفحه: فرماندهی ═══════════ */
   function pageCmd(){
     const v = $('#view');
+    cmMonth = D.jalaliInfo(D.now()).monthFa;   /* CMD_MONTH_PHASE_V1 — پیش‌فرض همیشه ماه جاری */
     const g = A.GOLD_COUNT;
     const top = raceLB().LB.slice(0, 3); /* از دیتای جدول رقابت فصل (مسابقات امسال) */
     v.innerHTML = `
@@ -516,16 +517,27 @@
       </div>
       <div class="glass tilt">
         <div class="card-head"><span class="ic">⚡</span><h3>قهرمانان فازها</h3><span class="tag">Phase</span></div>
-        ${['بهار','تابستان'].map(ph => {
-          const c = A.PHASE_CHAMP[ph];
-          const maxP = Math.max(...Object.values(A.PHASE_PTS[ph]||{}), 1);
-          return `<div style="margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
-              <b>🌸 فاز ${ph}</b><span style="color:var(--gold-l)">${esc(c.name)} — ${D.faNum(c.pts,0)} امتیاز</span>
-            </div>
-            ${pbar(c.pts/maxP*100, 'gold')}
-          </div>`;
-        }).join('')}
+        ${(() => {
+          const curPh = D.jalaliInfo(D.now()).season;   /* فاز جاری فصل */
+          const maxT = Math.max(...A.PHASE_ORDER.map(p => A.PHASE_TOT[p] || 0), 1);
+          const PIC = { 'بهار':'🌸', 'تابستان':'☀️', 'پاییز':'🍂', 'زمستان':'❄️' };
+          return A.PHASE_ORDER.map(ph => {
+            const tot = A.PHASE_TOT[ph] || 0;
+            const c = A.PHASE_CHAMP[ph] || { pid:null, name:'—', pts:0 };
+            const isCur = ph === curPh;
+            return `<div style="margin-bottom:15px">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;margin-bottom:6px">
+                <b>${PIC[ph] || '⚡'} فاز ${ph}${isCur ? ' <span class="chip gold" style="font-size:9.5px;padding:2px 8px">فاز جاری</span>' : ''}</b>
+                <span style="color:var(--gold-l);font-weight:800">مجموع: ${D.faNum(tot,0)} امتیاز</span>
+              </div>
+              ${pbar(tot/maxT*100, isCur ? 'gold' : '')}
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--muted);margin-top:6px">
+                <span>👑 قهرمان فاز</span>
+                <span style="color:var(--white);font-weight:700">${c.pid ? esc(c.name) + ' — ' + D.faNum(c.pts,0) + ' امتیاز' : '—'}</span>
+              </div>
+            </div>`;
+          }).join('');
+        })()}
         <div style="margin-top:8px;display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted)">
           <span>🔥 فرم قهرمان:</span>${formChips((A.CARDS[A.LB[0].pid]||[]).slice(-5).map(c=>c.result))}
         </div>
@@ -535,13 +547,18 @@
       <div class="glass tilt">
         <div class="card-head"><span class="ic">📈</span><h3>امتیاز ماهانه فصل</h3><span class="tag">Monthly</span>
           <span style="margin-right:auto;display:flex;gap:6px;align-items:center">
-            <select class="sel" id="cm-month" style="width:auto;padding:5px 10px;font-size:12px">
-              ${['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'].map((m,i)=>`<option value="${i}">${m}</option>`).join('')}
-            </select>
-            <button class="btn sm ghost" id="cm-apply" style="padding:5px 12px">نمایش</button>
+            <button class="btn sm ghost" id="cm-pick" style="padding:5px 12px" aria-haspopup="dialog" aria-expanded="false">📅 <b id="cm-pick-lbl">${cmMonth}</b> <span style="opacity:.6">▾</span></button>
           </span>
         </div>
-        <div class="chart-box short" id="cm-chart"><canvas id="ch-cmd-line"></canvas></div>
+        <div class="chart-box short" id="cm-chart">
+          <canvas id="ch-cmd-line"></canvas>
+          <div class="cm-pop" id="cm-pop" hidden>
+            ${D.MONTHS_FA.map((m,i) => `<button class="cm-m" type="button" data-cm="${i}">${m}</button>`).join('')}
+            <div class="cm-legend"><i></i> ماه جاری — با یک کلیک انتخاب می‌شود</div>
+          </div>
+          <div class="cm-void" id="cm-void" hidden></div>
+        </div>
+        <div class="cm-foot" id="cm-foot"></div>
       </div>
       <div class="glass">
         <div class="card-head"><span class="ic">🏁</span><h3>رقابت زنده — ده نفر برتر</h3><span class="tag">Live</span></div>
@@ -583,16 +600,14 @@
       </div>`).join('');
     setTimeout(() => {
       if (MGMT.getSettings().chMonthly){
-        drawMonthlyChart();
+        cmdMonthInit();
       } else {
         const c = $('#cm-chart');
+        const pick = $('#cm-pick');
+        if (pick) pick.style.display = 'none';
         if (c) c.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12.5px">نمودار ماهانه غیرفعال است — از ${esc(L('nav.settings','تنظیمات نمایش'))} فعال کنید</div>`;
       }
       A.MONTHLY_TOT.forEach((v,i) => Charts.spark($(`#sp-1`), A.MONTHLY_TOT.slice(0,i+1), '#1EBB8A'));
-      const apply = $('#cm-apply');
-      if (apply){
-        apply.addEventListener('click', () => drawMonthlyChart());
-      }
             /* انتشار سکو خودکار است — دکمه‌ای وجود ندارد. */
 const sp = $('#st-podium');
       if (sp) sp.addEventListener('click', () => {
@@ -683,23 +698,86 @@ const sp = $('#st-podium');
     }, 60);
   }
 
-  function drawMonthlyChart(){
-    const cv = $('#ch-cmd-line');
-    if (!cv) return;
-    const mi = +($('#cm-month') ? $('#cm-month').value : 0);
-    const m = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'][mi];
-    const A2 = A;
-    // دادهٔ همان ماه از MONTH_PTS
-    const mp = A2.MONTH_PTS[m] || {};
-    const arr = Object.entries(mp).sort((a,b)=>b[1]-a[1]).slice(0,10);
-    const hasData = arr.length > 0;
-    if (!hasData){
-      cv.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12.5px">برای ماه ' + m + ' هنوز امتیازی ثبت نشده است.</div>';
-      return;
+  /* ═══ CMD_MONTH_PHASE_V1 — انتخاب ماه با پاپ‌آپ تک‌کلیکی + مجموع امتیاز هر بازیکن در آن ماه ═══ */
+  let cmMonth = '';
+  let cmOutside = null, cmKeysBound = false;
+  function cmNowMonth(){ return D.jalaliInfo(D.now()).monthFa; }
+  function cmClosePop(){
+    const p = $('#cm-pop'); if (p) p.hidden = true;
+    const b = $('#cm-pick'); if (b) b.setAttribute('aria-expanded', 'false');
+    if (cmOutside){ document.removeEventListener('pointerdown', cmOutside, true); cmOutside = null; }
+  }
+  function cmSyncPop(){
+    const pop = $('#cm-pop'); if (!pop) return;
+    const cur = cmNowMonth();
+    $$('.cm-m', pop).forEach((b, i) => {
+      const m = D.MONTHS_FA[i];
+      b.classList.toggle('on', m === cmMonth);
+      b.classList.toggle('now', m === cur);
+      b.title = (m === cur ? 'ماه جاری' : ('انتخاب ' + m)) + ' — با یک کلیک';
+    });
+  }
+  function cmOpenPop(){
+    const pop = $('#cm-pop'); if (!pop) return;
+    cmSyncPop(); pop.hidden = false;
+    const b = $('#cm-pick'); if (b) b.setAttribute('aria-expanded', 'true');
+    if (!cmOutside){
+      cmOutside = e => {
+        const t = e.target;
+        if (t && t.closest && (t.closest('#cm-pop') || t.closest('#cm-pick'))) return;
+        cmClosePop();
+      };
+      document.addEventListener('pointerdown', cmOutside, true);
     }
-    const labels = arr.map(([pid,v]) => (A2.LB.find(r=>r.pid===+pid)||{}).name || '—');
-    const vals = arr.map(([pid,v]) => v);
-    Charts.barsV(cv, labels, vals, { color:'#E9C766', fmt:v=>D.faNum(v,0), title:'امتیاز ' + m });
+    if (!cmKeysBound){
+      cmKeysBound = true;
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') cmClosePop(); });
+    }
+  }
+  /* کارت «امتیاز ماهانه فصل»: مجموع امتیاز هر بازیکن در ماه انتخاب‌شده */
+  function renderCmdMonth(){
+    const box = $('#cm-chart'); if (!box) return;
+    if (!cmMonth) cmMonth = cmNowMonth();
+    const lbl = $('#cm-pick-lbl'); if (lbl) lbl.textContent = cmMonth;
+    cmSyncPop();
+    const mp = A.MONTH_PTS[cmMonth] || {};
+    const arr = Object.entries(mp).filter(([, v]) => +v > 0).sort((a, b) => b[1] - a[1]);
+    const nameOf = pid => (A.LB.find(r => r.pid === +pid) || {}).name || '—';
+    const foot = $('#cm-foot'), vd = $('#cm-void'), old = $('#ch-cmd-line');
+    if (arr.length){
+      /* کانواس تازه ساخته می‌شود تا انیمیشن ماه قبل روی همین بوم ادامه پیدا نکند */
+      const cv = document.createElement('canvas'); cv.id = 'ch-cmd-line';
+      if (old) old.replaceWith(cv); else box.insertBefore(cv, box.firstChild);
+      if (vd) vd.hidden = true;
+      const names = arr.map(([pid]) => nameOf(pid));
+      Charts.barsV(cv, names, arr.map(([, v]) => v), { color:'#E9C766', showVal:true, fmt:v=>D.faNum(Math.round(v),0), valFmt:v=>D.faNum(Math.round(v),0) });
+      const tot = arr.reduce((a, [, v]) => a + v, 0);
+      const none = A.LB.map(r => r.name).filter(n => names.indexOf(n) < 0);
+      if (foot) foot.innerHTML = `<b style="color:var(--gold-l)">مجموع ${esc(cmMonth)}: ${D.faNum(tot,0)} امتیاز</b> — ${D.fa(names.length)} بازیکن امتیاز گرفتند` +
+        (none.length ? ` • بدون امتیاز در این ماه: <span style="color:var(--dim)">${none.map(esc).join('، ')}</span>` : '');
+    } else {
+      if (old) old.remove();
+      if (vd){ vd.hidden = false; vd.innerHTML = `برای ماه <b style="color:var(--white)">${esc(cmMonth)}</b> هنوز امتیازی ثبت نشده است — از پاپ‌آپ بالا ماه دیگری را انتخاب کنید`; }
+      if (foot) foot.innerHTML = '';
+    }
+  }
+  function cmdMonthInit(){
+    const btn = $('#cm-pick');
+    if (btn && !btn.dataset.bound){
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', e => { e.preventDefault(); const p = $('#cm-pop'); if (!p) return; if (p.hidden) cmOpenPop(); else cmClosePop(); });
+    }
+    const pop = $('#cm-pop');
+    if (pop && !pop.dataset.bound){
+      pop.dataset.bound = '1';
+      pop.addEventListener('click', e => {
+        const b = e.target && e.target.closest ? e.target.closest('[data-cm]') : null;
+        if (!b) return;
+        const m = D.MONTHS_FA[+b.dataset.cm];
+        if (m){ cmMonth = m; cmClosePop(); renderCmdMonth(); }
+      });
+    }
+    renderCmdMonth();
   }
 
   /* مجموعِ همهٔ امتیازهای سال شمسی جاری (نمایش تلویزیونی): مسابقات + دوره‌ها (کلاس/تمرین/اردو) + بتل + هر آیتم امتیازی — فقط اعضای ثبت‌نام‌شده با حداقل ۱ امتیاز */

@@ -790,17 +790,24 @@
         experience: norm(exA, false)[i],
       };
     });
-    const PHASES = { 'بهار': ['فروردین','اردیبهشت','خرداد'], 'تابستان': ['تیر','مرداد','شهریور'] };
-    const PHASE_PTS = {}; const PHASE_CHAMP = {};
+    /* CMD_MONTH_PHASE_V1 — چهار فاز فصل (قبلاً فقط بهار و تابستان بود و پاییز/زمستان نمایش داده نمی‌شد) */
+    const PHASES = { 'بهار': ['فروردین','اردیبهشت','خرداد'],
+                     'تابستان': ['تیر','مرداد','شهریور'],
+                     'پاییز': ['مهر','آبان','آذر'],
+                     'زمستان': ['دی','بهمن','اسفند'] };
+    const PHASE_PTS = {}; const PHASE_CHAMP = {}; const PHASE_TOT = {};
     Object.keys(PHASES).forEach(ph => {
       const acc = {};
       PHASES[ph].forEach(m => {
         Object.entries(MONTH_PTS[m] || {}).forEach(([pid, v]) => acc[pid] = (acc[pid]||0) + v);
       });
       PHASE_PTS[ph] = acc;
+      /* مجموع امتیاز کل بازیکنان در این فاز — همان عددی که کارت «قهرمانان فازها» نشان می‌دهد */
+      PHASE_TOT[ph] = Object.values(acc).reduce((a,b) => a + b, 0);
       const best = Object.entries(acc).sort((a,b) => b[1] - a[1])[0];
       PHASE_CHAMP[ph] = best ? { pid: +best[0], name: (players.find(x => x[0] === +best[0]) || [0,'—'])[1], pts: best[1] } : { pid: null, name: '—', pts: 0 };
     });
+    const PHASE_ORDER = Object.keys(PHASES);
     const MONTHS_SEASON = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور'];
     const MONTHLY_TOT = MONTHS_SEASON.map(m => Object.values(MONTH_PTS[m]||{}).reduce((a,b)=>a+b,0));
     let champM = null, champMpts = -1, champName = '—';
@@ -897,6 +904,7 @@
     const CAREER = careerStats(state, { results, programs, rules, battleBonus });
     return {
       CAREER, PTS, CARDS, ST, LB, SKILLS, PHASE_PTS, PHASE_CHAMP, MONTH_PTS, MONTHLY_TOT,
+      PHASE_TOT, PHASE_ORDER,
       MONTHS_SEASON, champM, champName, BEST_ROUNDS, HOLE_DIFF, COURSE_STATS,
       PLAYER_COURSE, PAR_TYPE, TOT_PTS, MATCHES_HELD, GOLD_COUNT, AVG_HCP, NEXT_T,
       TOTAL_MATCHES, COURSE_COUNT,

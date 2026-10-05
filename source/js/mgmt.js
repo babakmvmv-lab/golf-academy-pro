@@ -3971,7 +3971,14 @@
 
   /* ── 📧 ارسال یک‌طرفهٔ ایمیل از طریق EmailJS (رایگان ~۲۰۰/ماه — بدون سرور و DNS؛ اتصال به حساب Gmail هر ایمیلی) ── */
   const EMAIL_DEFAULTS = { key: 'olblhtePYhlS_a4Rv', svc: 'service_ewdayg4', tpl: 'template_k2dhpqd' };  /* EmailJS — از پنل مدیر اگر مقدار دیگری ذخیره شود اولویت می‌گیرد */
-  function emailCfg(){ try { return Object.assign({}, EMAIL_DEFAULTS, JSON.parse(localStorage.getItem('ga_email_cfg') || '{}')); } catch(e){ return EMAIL_DEFAULTS; } }
+  function emailCfg(){
+    let c = EMAIL_DEFAULTS;
+    try { c = Object.assign({}, EMAIL_DEFAULTS, JSON.parse(localStorage.getItem('ga_email_cfg') || '{}')); } catch(e){}
+    /* CSP_EMAILJS_V1 — شناسهٔ قالب EmailJS همیشه با «template_» شروع می‌شود؛ شکل جمعِ اشتباهی
+       («templates_») در ارسال خطای «template ID not found» می‌داد. اینجا خودترمیم می‌شود. */
+    if (typeof c.tpl === 'string' && /^templates_/.test(c.tpl)) c.tpl = c.tpl.replace(/^templates_/, 'template_');
+    return c;
+  }
   function saveEmailCfg(c){ try { localStorage.setItem('ga_email_cfg', JSON.stringify(c)); } catch(e){} }
   function playerEmailOf(u){
     /* S.players به‌صورت آرایه است [id,name,gender,hcp,join,active] — ایمیل در ویرایش‌های ga_players یا بازیکنان سفارشی ذخیره می‌شود */
@@ -4069,9 +4076,11 @@
       const r2 = await fetch(edge, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key, 'apikey': key },
         body: JSON.stringify({ to: toEmail, to_name: toName || '', subject, html: buildEmailHtml(subject, text), text }) });
       if (r2.ok) return true;
-      throw new Error('دالان ایمیل ' + r2.status + ': ' + (await r2.text().catch(() => '')).slice(0, 140));
+      /* CSP_EMAILJS_V1 — پاسخ واقعی سرور پنهان نشود (قبلاً همه‌چیز «خطای شبکه» گزارش می‌شد) */
+      throw new Error('دالان دوم (ga-mail) پاسخ ' + r2.status + ': ' + (await r2.text().catch(() => '')).slice(0, 140));
     } catch(e2){
-      throw new Error('شبکه: درخواست به سرور ایمیل (EmailJS و دالان دوم) نرسید. اگر فیلترشکن داری روشنش کن، یا شبکه (Wi-Fi/دیتا) را عوض کن.');
+      if (/^دالان دوم/.test(String(e2 && e2.message))) throw e2;
+      throw new Error('ارتباط با سرور ایمیل برقرار نشد (EmailJS و دالان دوم). شبکه را عوض کنید یا VPN روشن کنید — اگر باز هم نشد، پیام «محدودیت امنیتی صفحه (CSP)» نیست چون دامنهٔ EmailJS مجاز شده است.');
     }
   }
 

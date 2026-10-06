@@ -28,8 +28,8 @@ assert.equal(helper.zoomLockFromRecord({ maxLock:16 }), 16, 'old maxLock is pres
 assert.equal(helper.zoomLockFromRecord({}), 0, 'missing lock stays unlocked');
 console.log('PASS — lock values clamp, snap to thirds, and migrate legacy maxLock safely');
 
-assert.match(earthmap, /minZoom,\s*maxZoom:MAP_MAX_ZOOM,\s*zoomSnap:MAP_ZOOM_STEP,\s*zoomDelta:MAP_ZOOM_STEP/,
-  'Leaflet uses fractional snap/delta and a per-course minZoom');
+assert.match(earthmap, /minZoom,\s*maxZoom:MAP_MAX_ZOOM,\s*zoomSnap:MAP_ZOOM_STEP,\s*zoomDelta:MAP_ZOOM_STEP,[\s\S]{0,180}bounceAtZoomLimits:false/,
+  'Leaflet uses a per-course zoom-out floor, fractional steps, and no touch-pinch overshoot at bounds');
 assert.match(earthmap, /map\.setMinZoom\(\(!on && appliedMinZoomLock\) \? appliedMinZoomLock : MAP_MIN_ZOOM\)/,
   'the restriction is a zoom-out floor and the editor can temporarily inspect freely');
 assert.match(earthmap, /state: function\(\)\{ return map \? \{ zoom: map\.getZoom\(\), minZoom: map\.getMinZoom\(\), maxZoom: map\.getMaxZoom\(\), lock: appliedMinZoomLock \|\| 0 \} : null; \}/,

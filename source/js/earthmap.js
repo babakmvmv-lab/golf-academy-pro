@@ -693,7 +693,9 @@
     const minZoom = appliedMinZoomLock || MAP_MIN_ZOOM;
     map = L.map(el, {
       zoomControl:false, attributionControl:false, tap:true,
-      minZoom, maxZoom:MAP_MAX_ZOOM, zoomSnap:MAP_ZOOM_STEP, zoomDelta:MAP_ZOOM_STEP
+      minZoom, maxZoom:MAP_MAX_ZOOM, zoomSnap:MAP_ZOOM_STEP, zoomDelta:MAP_ZOOM_STEP,
+      /* Clamp touch pinches at the floor immediately; Leaflet otherwise rubber-bands below it. */
+      bounceAtZoomLimits:false
     }).setView([center.lat, center.lng], Math.max(16, minZoom));
     map.on('zoomend', function(){ try { zoomCbs.forEach(function(f){ f(map.getZoom()); }); } catch (e) {} });
     applyBg();

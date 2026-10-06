@@ -476,6 +476,9 @@ tr.off-row{opacity:.5}
 .ew-note{width:100%;min-height:90px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,22,.75);color:inherit;font:inherit;padding:10px;resize:vertical;box-sizing:border-box}
 .ew-main-acts{margin:0 0 8px}
 #ew-add,#ew-lock{width:auto;padding:5px 12px;font-size:12px;font-weight:700}
+.ew-distance-card{display:inline-flex;flex:none;align-items:center;justify-content:center;gap:9px;min-height:32px;box-sizing:border-box;padding:5px 12px;border:1px solid rgba(212,175,55,.36);border-radius:10px;background:rgba(212,175,55,.08);line-height:1;white-space:nowrap}
+.ew-distance-card span{font-size:10px;font-weight:800;letter-spacing:.2px;color:var(--muted)}
+.ew-distance-card b{font-size:13px;font-weight:900;color:var(--gold-l);font-variant-numeric:tabular-nums;direction:ltr;line-height:1}
 .ew-hbtn.done{border-color:rgba(30,187,138,.55);background:rgba(30,187,138,.14);color:#8fe3c4}
 .ew-done{margin-top:14px;display:flex;flex-direction:column;gap:8px}
 .ew-acc{border:1px solid rgba(212,175,55,.28);border-radius:12px;background:rgba(255,255,255,.03);overflow:hidden}

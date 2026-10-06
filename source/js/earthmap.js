@@ -508,7 +508,12 @@
         return `<option value="${n}">میدان ${n}${hh&&hh.par?(' • پار '+hh.par):''}${ix?(' • Index '+ix):''}${yd?(' • '+yd+' yd'):''}</option>`;
       }).join('');
       hole.value = holeSel;
-      hole.onchange = function(){ holeSel = hole.value; clubDraw=null; mode='pan'; drawCourse(); syncModeBtns(); };
+      hole.onchange = function(){
+        holeSel = hole.value;
+        if (holeSel === 'all' && wizStep === 'ready') wizStep = 'hole';
+        else if (holeSel !== 'all' && wizStep === 'hole'){ wizStep = 'ready'; wizEdit = -1; }
+        clubDraw=null; mode='pan'; drawCourse(); syncModeBtns(); renderWiz(); renderHist();
+      };
     }
     const club = document.getElementById('earth-club');
     if (club && !club.options.length){
@@ -627,8 +632,9 @@
       holeSel = String(n);
       const sel = document.getElementById('earth-hole');
       if (sel) sel.value = holeSel;
+      if (wizStep === 'hole'){ wizStep = 'ready'; wizEdit = -1; }
       clubDraw=null; mode='pan';
-      drawCourse();
+      drawCourse(); renderWiz(); renderHist();
     };
   }
 
@@ -746,6 +752,24 @@
         + '<div class="ew-actions"><button type="button" class="btn sm ghost" data-ew-hole="'+n+'">ویرایش این میدان</button></div></details>';
     }).join('')+'</div>';
   }
+  function courseHoleDistance(hole){
+    const n = Number(hole);
+    if (!Number.isSafeInteger(n) || n < 1) return null;
+    const D = window.Data;
+    if (!D || typeof D.distancesOf !== 'function') return null;
+    const distances = D.distancesOf(courseKey());
+    const raw = Array.isArray(distances) ? distances[n - 1] : null;
+    if (raw == null || String(raw).trim() === '') return null;
+    const value = Number(raw);
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  }
+  function holeDistanceCard(hole){
+    const n = Number(hole);
+    const valid = Number.isSafeInteger(n) && n > 0;
+    const value = valid ? courseHoleDistance(n) : null;
+    const holeAttr = valid ? ' data-ew-distance-hole="' + n + '"' : '';
+    return '<div class="ew-distance-card" role="status" aria-live="polite"' + holeAttr + '><span>Distance</span><b>' + (value == null ? '—' : fa(value)) + '</b></div>';
+  }
   function vsStrokeColor(vs){
     if (window.Data && Data.scaleVsPar) return Data.scaleVsPar(vs);
     if (vs == null || !isFinite(vs)) return 'var(--muted)';
@@ -837,7 +861,7 @@
     } else if (wizStep === 'ready'){
       const arr = holePlan();
       h = wizBack('hole','تغییر میدان')+'<div class="ew-head"><b>میدان '+holeSel+'</b><span>'+arr.length+' ضربه</span></div>'
-        + '<div class="ew-actions ew-main-acts"><button type="button" class="btn sm" id="ew-add">＋ افزودن ضربه</button><button type="button" class="btn sm" id="ew-lock">ثبت میدان</button></div>'
+        + '<div class="ew-actions ew-main-acts"><button type="button" class="btn sm" id="ew-add">＋ افزودن ضربه</button><button type="button" class="btn sm" id="ew-lock">ثبت میدان</button>'+holeDistanceCard(holeSel)+'</div>'
         + '<div class="ew-shots">'+(arr.length ? arr.map(function(sh,i){ return shotArticle(sh,i); }).join('') : '<div class="ew-empty">هنوز ضربه‌ای ثبت نشده.</div>')+'</div>'
         + '<div class="ew-actions"><button type="button" class="btn sm ghost" id="ew-rep-one">گزارش این میدان</button><button type="button" class="btn sm" id="ew-rep-all">گزارش کامل</button></div>';
     } else if (wizStep === 'club'){
@@ -860,7 +884,7 @@
     box.querySelectorAll('[data-ew-back]').forEach(function(b){
       b.onclick = function(){
         const s = b.getAttribute('data-ew-back');
-        if (s==='hole'){ holeSel='all'; clubDraw=null; mode='pan'; drawCourse(); }
+        if (s==='hole'){ holeSel='all'; const sel=document.getElementById('earth-hole'); if(sel) sel.value='all'; clubDraw=null; mode='pan'; drawCourse(); }
         if (s==='ready'){ clubDraw=null; mode='pan'; clearPreview(); }
         if (s==='draw'){
           clubDraw = { club: wizDraft.club, color: wizDraft.color, pts: (wizDraft.pts||[]).slice() };
@@ -872,6 +896,7 @@
     box.querySelectorAll('[data-ew-hole]').forEach(function(b){
       b.onclick = function(){
         holeSel = b.getAttribute('data-ew-hole');
+        const sel = document.getElementById('earth-hole'); if (sel) sel.value = holeSel;
         wizStep = 'ready'; wizEdit = -1;
         clubDraw=null; mode='pan';
         drawCourse(); renderWiz();
@@ -888,7 +913,8 @@
         if (window.APP && APP.toast) APP.toast('اول حداقل یک ضربه ثبت کنید', 'orange');
         return;
       }
-      holeSel = 'all'; clubDraw = null; mode = 'pan'; wizEdit = -1; wizStep = 'hole';
+      holeSel = 'all'; const sel = document.getElementById('earth-hole'); if (sel) sel.value = 'all';
+      clubDraw = null; mode = 'pan'; wizEdit = -1; wizStep = 'hole';
       drawCourse(); renderWiz();
     };
     box.querySelectorAll('[data-ew-club]').forEach(function(b){
@@ -940,7 +966,7 @@
     box.querySelectorAll('[data-ew-edit]').forEach(function(b){
       b.onclick = function(){
         const hn = b.getAttribute('data-ew-hn');
-        if (hn){ holeSel = String(hn); }
+        if (hn){ holeSel = String(hn); const sel=document.getElementById('earth-hole'); if(sel) sel.value=holeSel; }
         const i = +b.getAttribute('data-ew-edit'); const sh = holePlan()[i]; if (!sh) return;
         wizEdit=i; wizDraft={ club:sh.club||'', color:sh.color||'#D4AF37', pts:(sh.pts||[]).slice(), note:sh.note||'' };
         wizStep='club'; drawCourse(); renderWiz();

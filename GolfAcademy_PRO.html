@@ -489,7 +489,7 @@ canvas.glow-canvas{filter:drop-shadow(0 0 6px rgba(212,175,55,.25))}
   .podium{transform:scale(.82);transform-origin:top center}
   .toolbar{flex-wrap:wrap;gap:8px}
   .toolbar .input,.toolbar .sel{min-width:0!important;width:100%!important}
-  .hp-par-head,.hp-par{grid-template-columns:minmax(3.6rem,1fr) 3.6rem 3.6rem 1.8rem;gap:6px;padding:6px 8px}
+  .hp-par-head,.hp-par{grid-template-columns:minmax(3rem,1fr) 3rem 3rem 3.5rem 1.75rem;gap:5px;padding:6px 6px}
   .hp-par-n{font-size:12px}
   .field-grid{grid-template-columns:1fr 1fr;gap:10px}
   .field-grid .span2{grid-column:span 2}
@@ -861,7 +861,7 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   font-variant-numeric:tabular-nums;direction:ltr;text-align:center;
 }
 
-/* پار + Index — اسکورکارت دو ستون (۱–۹ | ۱۰–۱۸) */
+/* پار + Index + Distance — ویرایش جزئیات هر میدان */
 .hp-par-wrap{margin-top:14px}
 .hp-par-board{
   display:grid;
@@ -885,10 +885,10 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 .hp-par-head,
 .hp-par{
   display:grid;
-  grid-template-columns:minmax(4.6rem,1.15fr) 4.6rem 4.6rem 2.1rem;
-  gap:8px;
+  grid-template-columns:minmax(3.6rem,1.15fr) 3.6rem 3.6rem 4rem 1.9rem;
+  gap:6px;
   align-items:center;
-  padding:7px 12px;
+  padding:7px 8px;
 }
 .hp-par-head{
   font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.3px;
@@ -900,13 +900,15 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 }
 .hp-par-n{font-size:12.5px;font-weight:800;color:var(--muted);white-space:nowrap}
 .hp-par .pe-par,
-.hp-par .pe-idx{
+.hp-par .pe-idx,
+.hp-par .pe-distance{
   width:100%;min-width:0;max-width:100%;
   text-align:center;direction:ltr;
   padding:7px 4px;font-weight:800;font-size:14px;
   box-sizing:border-box;
 }
 .hp-par .pe-idx{color:var(--gold-l);border-color:rgba(212,175,55,.35)}
+.hp-par .pe-distance{color:#7adbb4;border-color:rgba(61,220,151,.35)}
 .hp-par .pe-del{
   width:28px;height:28px;padding:0;border-radius:8px;
   font-size:15px;line-height:1;opacity:.55;justify-self:center;
@@ -1037,6 +1039,72 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 .field-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
 .field-grid label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
 .field-grid .span2{grid-column:span 2}
+
+/* ── گزارش حرفه‌ای واردکردن KML و مراحل دریافت تصویر زمین ── */
+.mc-kml-report{display:flex;align-items:flex-start;gap:11px;margin-top:10px;padding:13px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:linear-gradient(135deg,rgba(17,27,38,.88),rgba(10,16,24,.78));box-shadow:inset 0 1px rgba(255,255,255,.025);color:var(--text)}
+.mc-kml-report.is-ready{display:block}
+.mc-kml-guide-icon{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:11px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.24);color:var(--gold-l);font-size:9px;font-weight:900;letter-spacing:.3px;direction:ltr}
+.mc-kml-guide-copy,.mc-kml-error-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.mc-kml-guide-copy>b,.mc-kml-error-copy>b{font-size:12.5px;font-weight:850;color:var(--gold-l)}
+.mc-kml-guide-copy>span,.mc-kml-error-copy>span{font-size:11px;line-height:1.8;color:var(--muted)}
+.mc-kml-format{margin-top:3px;font-size:10.5px;color:var(--muted)}
+.mc-kml-format summary{cursor:pointer;color:var(--gold-l);font-weight:700;outline:none}
+.mc-kml-format>span{display:block;margin-top:5px;line-height:1.9}
+.mc-kml-report-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.mc-kml-report-title{display:flex;align-items:center;gap:9px;min-width:0}
+.mc-kml-report-mark,.mc-kml-stat-mark,.mc-kml-error-mark{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:50%;font-size:14px;font-weight:900}
+.mc-kml-report-mark,.mc-kml-stat.is-ok .mc-kml-stat-mark{color:#71e0b2;background:rgba(30,187,138,.13);border:1px solid rgba(30,187,138,.42)}
+.mc-kml-report-title>span:last-child{display:flex;flex-direction:column;gap:2px}
+.mc-kml-report-title b{font-size:12.5px;font-weight:850;color:var(--text)}
+.mc-kml-report-title small{font-size:10.5px;color:var(--muted)}
+.mc-kml-read-badge{display:inline-flex;align-items:center;gap:5px;flex:none;padding:5px 9px;border-radius:99px;border:1px solid rgba(30,187,138,.28);background:rgba(30,187,138,.08);color:#71e0b2;font-size:10px;font-weight:800;white-space:nowrap}
+.mc-kml-read-badge i{font-style:normal;font-size:12px}
+.mc-kml-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:7px}
+.mc-kml-stat{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 9px;border:1px solid rgba(255,255,255,.075);border-radius:11px;background:rgba(255,255,255,.025)}
+.mc-kml-stat-mark{width:23px;height:23px;font-size:12px}
+.mc-kml-stat.is-missing .mc-kml-stat-mark{color:#f5c86b;background:rgba(244,196,48,.1);border:1px solid rgba(244,196,48,.3)}
+.mc-kml-stat-copy{display:flex;flex-direction:column;gap:1px;min-width:0}
+.mc-kml-stat-copy b{font-size:14px;font-weight:900;line-height:1.15;color:var(--text);font-variant-numeric:tabular-nums}
+.mc-kml-stat-copy small{font-size:9.5px;line-height:1.35;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-kml-notices{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.mc-kml-notice{display:flex;gap:6px;padding:7px 9px;border:1px solid rgba(244,196,48,.2);border-radius:9px;background:rgba(244,196,48,.055);color:#f5c86b;font-size:10.5px;line-height:1.7}
+.mc-kml-notice span{color:var(--muted)}
+.mc-kml-capture-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:13px 1px 8px}
+.mc-kml-capture-heading b{font-size:11.5px;font-weight:850;color:var(--gold-l)}
+.mc-kml-capture-heading span{font-size:9.5px;color:var(--muted)}
+.mc-kml-captures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mc-kml-capture{min-width:0;padding:10px;border:1px solid rgba(255,255,255,.075);border-radius:12px;background:rgba(6,12,18,.38);transition:border-color .2s,background .2s}
+.mc-kml-capture-head{display:flex;align-items:center;gap:8px;min-width:0}
+.mc-kml-capture-icon{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.045);font-size:15px}
+.mc-kml-capture-title{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.mc-kml-capture-title b{font-size:11px;font-weight:850;color:var(--text)}
+.mc-kml-capture-title small{font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-kml-stage-chip{display:inline-flex;align-items:center;gap:4px;flex:none;padding:4px 7px;border:1px solid rgba(255,255,255,.09);border-radius:99px;background:rgba(255,255,255,.035);color:var(--muted);font-size:9px;font-weight:800;white-space:nowrap}
+.mc-kml-stage-chip i{font-style:normal;font-size:12px;line-height:1}
+.mc-kml-capture.is-running .mc-kml-stage-chip{border-color:rgba(212,175,55,.28);background:rgba(212,175,55,.07);color:var(--gold-l)}
+.mc-kml-capture.is-done{border-color:rgba(30,187,138,.3);background:rgba(30,187,138,.035)}
+.mc-kml-capture.is-done .mc-kml-stage-chip{border-color:rgba(30,187,138,.3);background:rgba(30,187,138,.09);color:#71e0b2}
+.mc-kml-capture.is-error{border-color:rgba(231,76,60,.24)}
+.mc-kml-capture.is-error .mc-kml-stage-chip{border-color:rgba(231,76,60,.24);background:rgba(231,76,60,.06);color:#f08a7f}
+.mc-kml-capture.is-unavailable{border-color:rgba(244,196,48,.22)}
+.mc-kml-capture.is-unavailable .mc-kml-stage-chip{border-color:rgba(244,196,48,.26);background:rgba(244,196,48,.06);color:#f5c86b}
+.mc-kml-progress{height:5px;margin:9px 0 6px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.075)}
+.mc-kml-progress>span{display:block;width:0;height:100%;border-radius:inherit;background:#82909a;transition:width .28s ease}
+.mc-kml-capture.is-running .mc-kml-progress>span{background:linear-gradient(90deg,#c3972e,#e9c766,#1EBB8A);background-size:180% 100%;animation:mc-kml-shimmer 2s linear infinite}
+.mc-kml-capture.is-done .mc-kml-progress>span{background:linear-gradient(90deg,#168d67,#3ddc97)}
+.mc-kml-capture.is-error .mc-kml-progress>span{background:#c95e56}
+.mc-kml-capture.is-unavailable .mc-kml-progress>span{background:#d6ad4f}
+.mc-kml-capture-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.mc-kml-capture-foot>span{min-width:0;font-size:9.5px;line-height:1.6;color:var(--muted)}
+.mc-kml-capture-foot>b{flex:none;font-size:10px;font-weight:900;color:var(--gold-l);direction:ltr;font-variant-numeric:tabular-nums}
+.mc-kml-capture.is-done .mc-kml-capture-foot>b{color:#71e0b2}
+.mc-kml-capture.is-error .mc-kml-capture-foot>b{color:#f08a7f}
+.mc-kml-capture.is-unavailable .mc-kml-capture-foot>b{color:#f5c86b}
+.mc-kml-report.is-error{align-items:center;border-color:rgba(231,76,60,.25);background:rgba(231,76,60,.045)}
+.mc-kml-error-mark{color:#f08a7f;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.28)}
+.mc-kml-error-copy b{color:#f08a7f}
+@keyframes mc-kml-shimmer{to{background-position:-180% 0}}
+@media(max-width:560px){.mc-kml-report{padding:10px}.mc-kml-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.mc-kml-captures{grid-template-columns:1fr}.mc-kml-capture-heading{align-items:flex-start;flex-direction:column;gap:2px}.mc-kml-read-badge{font-size:9px;padding:4px 7px}}
 .photo-upload{display:flex;gap:14px;align-items:center}
 .photo-upload .ph-prev{
   width:88px;height:88px;border-radius:16px;object-fit:cover;border:2px solid rgba(212,175,55,.4);
@@ -1418,6 +1486,9 @@ tr.off-row{opacity:.5}
 .ew-note{width:100%;min-height:90px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,22,.75);color:inherit;font:inherit;padding:10px;resize:vertical;box-sizing:border-box}
 .ew-main-acts{margin:0 0 8px}
 #ew-add,#ew-lock{width:auto;padding:5px 12px;font-size:12px;font-weight:700}
+.ew-distance-card{display:inline-flex;flex:none;align-items:center;justify-content:center;gap:9px;min-height:32px;box-sizing:border-box;padding:5px 12px;border:1px solid rgba(212,175,55,.36);border-radius:10px;background:rgba(212,175,55,.08);line-height:1;white-space:nowrap}
+.ew-distance-card span{font-size:10px;font-weight:800;letter-spacing:.2px;color:var(--muted)}
+.ew-distance-card b{font-size:13px;font-weight:900;color:var(--gold-l);font-variant-numeric:tabular-nums;direction:ltr;line-height:1}
 .ew-hbtn.done{border-color:rgba(30,187,138,.55);background:rgba(30,187,138,.14);color:#8fe3c4}
 .ew-done{margin-top:14px;display:flex;flex-direction:column;gap:8px}
 .ew-acc{border:1px solid rgba(212,175,55,.28);border-radius:12px;background:rgba(255,255,255,.03);overflow:hidden}
@@ -3574,6 +3645,48 @@ svg.leaflet-image-layer.leaflet-interactive path {
      خطای یک کلید مانع ثبت کلیدهای سالم نیست. مسیر REST نوشتن fallback نیست:
      خطای اصلی ga-sync نباید با خطای مجوز جدول پوشانده یا موفق تلقی شود. */
   var SP_MERGE = { ga_sp_sessions: 1, ga_sp_shots: 1, ga_sp_tomb: 1 };
+  /* زمین‌ها یک کلید آرایه‌ای‌اند، اما merge باید بر اساس courseId انجام شود؛
+     LWW کل آرایه می‌تواند افزودن/بایگانی هم‌زمان دستگاه دیگر را پاک کند. */
+  var COURSE_MERGE = { ga_courses: 1 };
+  function courseRows(raw){
+    try {
+      var value = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw;
+      return Array.isArray(value) ? value : [];
+    } catch(e){ return []; }
+  }
+  function courseVersion(c){
+    var updated = Date.parse(c && c.updatedAt || '') || 0;
+    var deleted = Date.parse(c && c.deletedAt || '') || 0;
+    return Math.max(updated, deleted);
+  }
+  function normalizeCourseRows(raw){
+    var rows = courseRows(raw), used = {}, next = 1000 + rows.length, out = [];
+    rows.forEach(function (item, index) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+      var c = Object.assign({}, item), id = Number(c.courseId);
+      if (!Number.isSafeInteger(id) || id < 1000 || used[id]) {
+        var legacy = 1000 + index;
+        if (!used[legacy]) id = legacy;
+        else { while (used[next]) next++; id = next++; }
+      }
+      c.courseId = id;
+      used[id] = true;
+      if (!c.updatedAt) c.updatedAt = c.deletedAt || '1970-01-01T00:00:00.000Z';
+      out.push(c);
+    });
+    return out;
+  }
+  function mergeCourseRows(localRaw, remoteRaw){
+    var merged = {};
+    normalizeCourseRows(remoteRaw).forEach(function (c) { merged[c.courseId] = c; });
+    normalizeCourseRows(localRaw).forEach(function (c) {
+      var old = merged[c.courseId];
+      /* equal timestamp: local version wins; a later restore wins over an older archive. */
+      if (!old || courseVersion(c) >= courseVersion(old)) merged[c.courseId] = c;
+    });
+    return JSON.stringify(Object.keys(merged).map(function (id) { return merged[id]; })
+      .sort(function (a, b) { return a.courseId - b.courseId; }));
+  }
   function push(reason, options) {
     if (pushFlight) return pushFlight;
     if (pullFlight) return pullFlight.then(function () { return push(reason, options); });
@@ -3583,7 +3696,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     if (keepalive) {
       // ادغام تمرین‌ها نیازمند GET است؛ هنگام خروج، بدون ادغام آن‌ها را بازنویسی نکن.
       keys = keys.filter(function (k) {
-        return !SP_MERGE[k] && byteLength(L.getItem(k) || 'null') < KEEPALIVE_BYTES - 1024;
+        return !SP_MERGE[k] && !COURSE_MERGE[k] && byteLength(L.getItem(k) || 'null') < KEEPALIVE_BYTES - 1024;
       }).slice(0, 1);
     }
     if (!keys.length) {
@@ -3601,14 +3714,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
     state.errors = errors.slice();
     setPhase('pushing', keys.length + ' بخش در صف؛ در حال ارسال…');
 
-    function remotePractice() {
+    function remoteMerge() {
       if (!remoteFlight) {
-        var wanted = keys.filter(function (k) { return SP_MERGE[k]; });
-        if (wanted.indexOf('ga_sp_tomb') < 0) wanted.unshift('ga_sp_tomb');
+        var wanted = keys.filter(function (k) { return SP_MERGE[k] || COURSE_MERGE[k]; });
+        if (wanted.some(function (k) { return SP_MERGE[k]; }) && wanted.indexOf('ga_sp_tomb') < 0) wanted.unshift('ga_sp_tomb');
         remoteFlight = rest('ga_store?select=k,v&k=in.(' + wanted.join(',') + ')').then(function (rows) {
-          if (!Array.isArray(rows)) throw new Error('پاسخ ادغام تمرین‌ها معتبر نیست؛ ارسال متوقف شد.');
+          if (!Array.isArray(rows)) throw new Error('پاسخ ادغام داده‌های ساختاری معتبر نیست؛ ارسال متوقف شد.');
           var out = {};
-          rows.forEach(function (row) { if (row && SP_MERGE[row.k]) out[row.k] = row.v; });
+          rows.forEach(function (row) { if (row && (SP_MERGE[row.k] || COURSE_MERGE[row.k])) out[row.k] = row.v; });
           return out;
         });
       }
@@ -3618,7 +3731,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     function sendKey(k) {
       if (stopped) return Promise.resolve();
       var stamp, raw, row, bytes = 0;
-      return (SP_MERGE[k] ? remotePractice() : Promise.resolve(null)).then(function (remote) {
+      return ((SP_MERGE[k] || COURSE_MERGE[k]) ? remoteMerge() : Promise.resolve(null)).then(function (remote) {
         var dirty = jread(DIRTY_KEY, {});
         if (!dirty[k]) return;
         stamp = dirty[k];
@@ -3628,9 +3741,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
         raw = L.getItem(k);
         row = { k: k, v: raw === null ? { __del: 1 } : encode(raw), updated_at: stamp };
         if (remote && raw !== null) {
-          var tomb = mixTombObj(remote.ga_sp_tomb, readSpTomb());
-          if (k === 'ga_sp_tomb') row.v = tomb;
-          else row.v = encode(mergeSpKey(k, raw, decode(remote[k] || (k === 'ga_sp_shots' ? [] : {})), tomb));
+          if (SP_MERGE[k]) {
+            var tomb = mixTombObj(remote.ga_sp_tomb, readSpTomb());
+            if (k === 'ga_sp_tomb') row.v = tomb;
+            else row.v = encode(mergeSpKey(k, raw, decode(remote[k] || (k === 'ga_sp_shots' ? [] : {})), tomb));
+          } else if (COURSE_MERGE[k]) {
+            var remoteCourses = remote[k] === undefined ? '[]' : decode(remote[k]);
+            row.v = encode(mergeCourseRows(raw, remoteCourses));
+          }
         }
         var payload = JSON.stringify({ action: 'kv', rows: [row] });
         bytes = byteLength(payload);
@@ -3647,7 +3765,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
           jwrite(TS_KEY, ts);
           // ویرایشِ حین درخواست هرگز با پاسخ نسخهٔ قدیمی از صف حذف نمی‌شود.
           if (d2[k] === stamp && L.getItem(k) === raw) {
-            if (SP_MERGE[k] && raw !== null) {
+            if ((SP_MERGE[k] || COURSE_MERGE[k]) && raw !== null) {
               applying = true;
               try { L.setItem(k, decode(row.v)); } finally { applying = false; }
             }
@@ -4560,6 +4678,15 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     }
     return defaultIndex(n);
   }
+  /* Distance دستی هر میدان؛ مقدار خالی با null ذخیره می‌شود و فعلاً هیچ محاسبه‌ای از آن نمی‌سازد. */
+  function distancesOf(id){
+    const cid = Number(id);
+    if (!Number.isSafeInteger(cid)) return [];
+    const ov = loadCourseOverride()[cid];
+    if (ov && Array.isArray(ov.distances)) return ov.distances.slice();
+    const course = courseById(cid);
+    return course && Array.isArray(course.distances) ? course.distances.slice() : [];
+  }
   /* مقیاس استاندارد سایت: سبز تیره → سبز روشن → زرد → نارنجی → قرمز روشن → قرمز تیره */
   const SCALE = ['#146C43', '#3DDC97', '#F4C430', '#E67E22', '#E85D4C', '#8B1A1A'];
   function scaleStep(i){ return SCALE[Math.max(0, Math.min(5, i | 0))]; }
@@ -4584,6 +4711,129 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   function loadTourOverride(){
     try { const o = JSON.parse(localStorage.getItem('ga_tour_override') || '{}'); return o && typeof o === 'object' ? o : {}; } catch(e){ return {}; }
   }
+
+  /* ── رجیستری زمین‌ها: شناسهٔ پایدار + بایگانی نرم ─────────────────────
+     قبلاً شناسهٔ زمین سفارشی از جایگاه آرایه (1000+i) ساخته می‌شد و حذف با
+     splice شناسهٔ همهٔ زمین‌های بعدی را جابه‌جا می‌کرد. از این نسخه، courseId
+     یک‌بار از شناسهٔ قدیمی همان رکورد مهاجرت می‌شود و هیچ‌وقت با حذف عوض نمی‌شود.
+     deletedAt زمین را از فهرست فعال کنار می‌گذارد، اما رکورد/پار/نقشه را برای
+     مسابقه‌ها و کارت‌های تاریخی نگه می‌دارد و امکان بازیابی می‌دهد. */
+  const COURSE_STORE_KEY = 'ga_courses';
+  const COURSE_ID_START = 1000;
+  function courseIdOf(course, index){
+    const id = Number(course && course.courseId);
+    return Number.isSafeInteger(id) && id >= COURSE_ID_START
+      ? id : COURSE_ID_START + Math.max(0, Number(index) || 0);
+  }
+  function isArchivedCourse(course){ return !!(course && course.deletedAt); }
+  function rawCourseRecords(){
+    try {
+      const rows = JSON.parse(localStorage.getItem(COURSE_STORE_KEY) || '[]');
+      return Array.isArray(rows) ? rows : [];
+    } catch(e){ return []; }
+  }
+  function persistCourseRecords(rows){
+    if (!Array.isArray(rows)) throw new TypeError('فهرست زمین‌ها معتبر نیست');
+    const raw = JSON.stringify(rows);
+    localStorage.setItem(COURSE_STORE_KEY, raw);
+    if (localStorage.getItem(COURSE_STORE_KEY) !== raw) throw new Error('ذخیرهٔ زمین‌ها تأیید نشد');
+    return true;
+  }
+  function normalizeCourseRecords(rows){
+    let changed = false;
+    const used = new Set();
+    let next = COURSE_ID_START + rows.length;
+    rows.forEach((course, index) => {
+      if (!course || typeof course !== 'object' || Array.isArray(course)) return;
+      let id = Number(course.courseId);
+      if (!Number.isSafeInteger(id) || id < COURSE_ID_START || used.has(id)){
+        const legacyId = COURSE_ID_START + index;
+        if (!used.has(legacyId)) id = legacyId;
+        else {
+          while (used.has(next)) next++;
+          id = next++;
+        }
+        course.courseId = id;
+        changed = true;
+      }
+      used.add(id);
+      if (!course.updatedAt){
+        course.updatedAt = course.deletedAt || '1970-01-01T00:00:00.000Z';
+        changed = true;
+      }
+    });
+    /* مهاجرت ذخیره‌سازی شکست بخورد هم شناسه‌ها در همین نشست deterministic می‌مانند؛
+       اما هر عملیات نوشتن بعدی خطا را به رابط نشان می‌دهد، نه موفقیت کاذب. */
+    if (changed){
+      try { persistCourseRecords(rows); }
+      catch(e){ try { console.warn('course registry migration was not persisted:', e); } catch(_){} }
+    }
+    return rows;
+  }
+  function loadCourseRecords(){ return normalizeCourseRecords(rawCourseRecords()); }
+  function courseRecords(options){
+    const includeArchived = !options || options.includeArchived !== false;
+    const rows = loadCourseRecords().filter(c => c && typeof c === 'object' && !Array.isArray(c));
+    return includeArchived ? rows : rows.filter(c => !isArchivedCourse(c));
+  }
+  function courseById(courseId){
+    const id = Number(courseId);
+    if (!Number.isSafeInteger(id)) return null;
+    return loadCourseRecords().find((course, index) => course && typeof course === 'object' && !Array.isArray(course) && courseIdOf(course, index) === id) || null;
+  }
+  function nextCourseId(rows){
+    let max = COURSE_ID_START - 1;
+    rows.forEach((course, index) => {
+      if (course && typeof course === 'object' && !Array.isArray(course)) max = Math.max(max, courseIdOf(course, index));
+    });
+    return max + 1;
+  }
+  function createCourse(record){
+    if (!record || typeof record !== 'object' || Array.isArray(record)) throw new TypeError('مشخصات زمین معتبر نیست');
+    const rows = loadCourseRecords();
+    const stamp = new Date().toISOString();
+    const course = Object.assign({}, record, { courseId: nextCourseId(rows), createdAt: stamp, updatedAt: stamp });
+    delete course.deletedAt;
+    rows.push(course);
+    persistCourseRecords(rows);
+    return course;
+  }
+  function updateCourse(courseId, patch){
+    if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new TypeError('ویرایش زمین معتبر نیست');
+    const rows = loadCourseRecords();
+    const course = rows.find((item, index) => item && typeof item === 'object' && courseIdOf(item, index) === Number(courseId));
+    if (!course) throw new Error('زمین پیدا نشد؛ فهرست را تازه کنید');
+    if (isArchivedCourse(course)) throw new Error('زمین بایگانی شده است؛ ابتدا آن را بازیابی کنید');
+    const safePatch = Object.assign({}, patch);
+    delete safePatch.courseId;
+    delete safePatch.deletedAt;
+    Object.assign(course, safePatch, { updatedAt: new Date().toISOString() });
+    persistCourseRecords(rows);
+    return course;
+  }
+  function archiveCourse(courseId){
+    const rows = loadCourseRecords();
+    const course = rows.find((item, index) => item && typeof item === 'object' && courseIdOf(item, index) === Number(courseId));
+    if (!course) throw new Error('زمین پیدا نشد؛ فهرست را تازه کنید');
+    if (!isArchivedCourse(course)){
+      course.deletedAt = new Date().toISOString();
+      course.updatedAt = course.deletedAt;
+      persistCourseRecords(rows);
+    }
+    return course;
+  }
+  function restoreCourse(courseId){
+    const rows = loadCourseRecords();
+    const course = rows.find((item, index) => item && typeof item === 'object' && courseIdOf(item, index) === Number(courseId));
+    if (!course) throw new Error('زمین بایگانی‌شده پیدا نشد؛ فهرست را تازه کنید');
+    if (isArchivedCourse(course)){
+      delete course.deletedAt;
+      course.updatedAt = new Date().toISOString();
+      persistCourseRecords(rows);
+    }
+    return course;
+  }
+
   function applyCourseOverrides(){
     Object.keys(COURSE_PARS).forEach(k => { PAR_MAP[k] = COURSE_PARS[k].slice(); });
     Object.keys(COURSE_INDEX).forEach(k => { INDEX_MAP[k] = COURSE_INDEX[k].slice(); });
@@ -5236,17 +5486,18 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
   /* ── State با ذخیره localStorage (ابزار طراح) ── */
   function loadState(){
     let extra = { courses: [], tournaments: [], scorecards: [] };
+    extra.courses = loadCourseRecords();
     try {
-      extra.courses = JSON.parse(localStorage.getItem('ga_courses') || '[]');
       extra.tournaments = loadExtraTours();
       extra.scorecards = JSON.parse(localStorage.getItem('ga_scorecards') || '[]');
     } catch(e) {}
     const cov = applyCourseOverrides();
     extra.courses.forEach((c, i) => {
-      const cid = 1000 + i;
-      if (c && Array.isArray(c.pars) && c.pars.length) PAR_MAP[cid] = c.pars;
-      if (c && Array.isArray(c.index) && c.index.length) INDEX_MAP[cid] = c.index;
-      if (c && c.name) COURSE_NAME[cid] = c.name;
+      if (!c || typeof c !== 'object' || Array.isArray(c)) return;
+      const cid = courseIdOf(c, i);
+      if (Array.isArray(c.pars) && c.pars.length) PAR_MAP[cid] = c.pars;
+      if (Array.isArray(c.index) && c.index.length) INDEX_MAP[cid] = c.index;
+      if (c.name) COURSE_NAME[cid] = c.name;
     });
     const players = loadPlayers().concat(loadCustomPlayers().map((p, i) => [9000+i, (p.name + ' ' + (p.family||'')).trim(), p.gender, +p.hcp, p.join || '2026-01-01', p.active === false ? 0 : 1]));
     // اطمینان: پلیرهای سفارشی که کاربر یوزر/پسورد برایشان ساخته، در USERS معتبرند (در app.js خوانده میشود)
@@ -5259,7 +5510,10 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
         if (!o) return c;
         const holes = (o.pars && o.pars.length) ? o.pars.length : (o.holes || c[3]);
         return [c[0], o.name || c[1], o.loc || c[2], holes];
-      }).concat(extra.courses.map((c, i) => [1000+i, c.name, c.loc, (c.pars && c.pars.length) ? c.pars.length : c.holes])),
+      }).concat(extra.courses.map((c, i) => {
+        if (!c || typeof c !== 'object' || Array.isArray(c) || isArchivedCourse(c)) return null;
+        return [courseIdOf(c, i), c.name, c.loc, (c.pars && c.pars.length) ? c.pars.length : c.holes];
+      }).filter(Boolean)),
       tournaments: visibleTours().map(t => {
         const ov = loadTourOverride()[t[0]];
         if (!ov) return t;
@@ -5366,7 +5620,8 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
-    parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
+    parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, distancesOf, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
+    courseIdOf, isArchivedCourse, courseRecords, courseById, createCourse, updateCourse, archiveCourse, restoreCourse,
     compute, careerStats, nationalPlaces, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason,
@@ -10148,6 +10403,12 @@ window.addEventListener('ga:brand-changed', function(){
     return (window.APP && window.APP.state) ? window.APP.state() : { S:null, A:null };
   }
 
+  /* اتصال به مودال تأیید سراسری (تعریف در app.js). اگر app.js بار نشده باشد، برگرد به confirm بومی */
+  function confirmPop(options){
+    if (window.APP && typeof window.APP.confirmPop === 'function') return window.APP.confirmPop(options);
+    return Promise.resolve(window.confirm(((options && options.body) || '') + '\n\n' + ((options && options.itemName) || '')));
+  }
+
   /* 🌐 ارقام فارسی/عربی (۰۱۲۳…) در همهٔ ورودی‌های عددی فوراً به لاتین تبدیل می‌شوند — جلوی NaN/صفرِ صامت در فرمول‌ها (چکِ ممیزی: ۳۴ فیلد بدون تبدیل) */
   document.addEventListener('input', e => {
     const t = e.target;
@@ -10756,6 +11017,108 @@ window.addEventListener('ga:brand-changed', function(){
   /* ═══════════════ صفحه: پلن مدیریت (تب‌ها) ═══════════════ */
   let mgmtTab = 'players';
   let kmlDraft = null; /* سطح ماژول: رندر دوبارهٔ تب، پیش‌نویس KML را نمی‌پاکد */
+  let kmlReportState = null;
+  let kmlCaptureGeneration = 0;
+  let kmlEditCaptureGeneration = 0;
+  const KML_CAPTURE_INFO = {
+    sat: { icon:'🛰', title:'تصویر ماهواره‌ای', subtitle:'نمای واقعی زمین از بالا' },
+    topo: { icon:'⛰', title:'تصویر توپوگرافی', subtitle:'پستی‌وبلندی و عوارض زمین' }
+  };
+  function kmlCount(value){
+    const n = Math.max(0, Math.floor(Number(value) || 0));
+    return D && D.fa ? D.fa(n) : String(n);
+  }
+  function kmlPercent(value){
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 0;
+  }
+  function createKmlReportState(summary, hasBounds, canCapture){
+    const notices = [];
+    if (!summary.teesM) notices.push('تی‌باکس آقایان در فایل پیدا نشد؛ می‌توانید آن را بعداً در ویرایش زمین اضافه کنید.');
+    if (!hasBounds) notices.push('محدودهٔ جغرافیایی برای ساخت تصویر ماهواره‌ای و توپوگرافی شناسایی نشد.');
+    else if (!canCapture) notices.push('ابزار آماده‌سازی تصویر بارگذاری نشده است؛ تصویرها در این مرحله دریافت نمی‌شوند.');
+    const unavailable = !hasBounds ? 'محدودهٔ لازم برای دریافت تصویر در فایل پیدا نشد.' : 'ابزار دریافت تصویر در دسترس نیست.';
+    return {
+      summary, notices,
+      captures: {
+        sat: { status:canCapture?'running':'unavailable', progress:0, message:canCapture?'در حال آماده‌سازی درخواست تصویر…':unavailable },
+        topo: { status:canCapture?'pending':'unavailable', progress:0, message:canCapture?'پس از تصویر ماهواره‌ای شروع می‌شود.':unavailable }
+      }
+    };
+  }
+  function kmlStatMarkup(key, label, value){
+    const n = Math.max(0, Math.floor(Number(value) || 0));
+    const present = n > 0;
+    return `<div class="mc-kml-stat ${present?'is-ok':'is-missing'}" data-kml-stat="${key}">
+      <span class="mc-kml-stat-mark" aria-hidden="true">${present?'✓':'!'}</span>
+      <span class="mc-kml-stat-copy"><b>${kmlCount(n)}</b><small>${label}</small></span>
+    </div>`;
+  }
+  function kmlCaptureMarkup(mode, capture){
+    const info = KML_CAPTURE_INFO[mode];
+    const state = capture || { status:'pending', progress:0 };
+    const kind = ['pending','running','done','error','unavailable'].indexOf(state.status) >= 0 ? state.status : 'pending';
+    const labels = { pending:'در انتظار', running:'در حال دریافت', done:'تکمیل شد', error:'ناموفق', unavailable:'نامشخص' };
+    const marks = { pending:'…', running:'↻', done:'✓', error:'!', unavailable:'—' };
+    const defaultMessages = {
+      pending: mode === 'sat' ? 'آمادهٔ شروع است.' : 'پس از تصویر ماهواره‌ای شروع می‌شود.',
+      running: 'در حال دریافت و ترکیب کاشی‌های نقشه…',
+      done: 'تصویر با موفقیت دریافت شد.',
+      error: 'دریافت تصویر کامل نشد؛ فایل را دوباره انتخاب یا اتصال را بررسی کنید.',
+      unavailable: 'محدودهٔ لازم برای دریافت تصویر در دسترس نیست.'
+    };
+    const pct = kind === 'done' ? 100 : kmlPercent(state.progress);
+    const fill = kind === 'unavailable' ? 0 : pct;
+    const percentText = kind === 'unavailable' ? '—' : kmlCount(pct) + '٪';
+    const message = esc(state.message || defaultMessages[kind]);
+    return `<article class="mc-kml-capture is-${kind}" data-kml-capture="${mode}" data-status="${kind}">
+      <div class="mc-kml-capture-head">
+        <span class="mc-kml-capture-icon" aria-hidden="true">${info.icon}</span>
+        <span class="mc-kml-capture-title"><b>${info.title}</b><small>${info.subtitle}</small></span>
+        <span class="mc-kml-stage-chip"><i aria-hidden="true">${marks[kind]}</i>${labels[kind]}</span>
+      </div>
+      <div class="mc-kml-progress" role="progressbar" aria-label="${info.title}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${fill}" aria-valuetext="${percentText}"><span style="width:${fill}%"></span></div>
+      <div class="mc-kml-capture-foot"><span>${message}</span><b>${percentText}</b></div>
+    </article>`;
+  }
+  function renderKmlReportElement(el, state, showGuide){
+    if (!el) return;
+    el.className = 'mc-kml-report';
+    if (!state){
+      if (!showGuide){ el.innerHTML = ''; return; }
+      el.innerHTML = `<div class="mc-kml-guide-icon" aria-hidden="true">KML</div>
+        <div class="mc-kml-guide-copy"><b>گزارش و آماده‌سازی خودکار زمین</b>
+          <span>پس از انتخاب فایل، شمار میدان‌ها و تی‌باکس‌ها تأیید می‌شود و تصاویر ماهواره‌ای و توپوگرافی به‌ترتیب آماده خواهند شد.</span>
+          <details class="mc-kml-format"><summary>الگوی تشخیص اجزای فایل</summary><span><b dir="ltr">T.12 -260Y -Par4 -W</b> بانوان · <b dir="ltr">T.12 -260Y -Par4 -M</b> آقایان · <b dir="ltr">Hole 12</b> · <b dir="ltr">fairway 12</b>. تی بدون پسوند جنسیت، بانوان در نظر گرفته می‌شود.</span></details>
+        </div>`;
+      el.classList.add('is-guide');
+      return;
+    }
+    if (state.error){
+      el.innerHTML = `<div class="mc-kml-error-mark" aria-hidden="true">!</div><div class="mc-kml-error-copy"><b>خواندن فایل انجام نشد</b><span>${esc(state.message || 'فرمت و سلامت فایل را بررسی و دوباره انتخاب کنید.')}</span></div>`;
+      el.classList.add('is-error');
+      return;
+    }
+    const sm = state.summary || {};
+    const notices = (state.notices || []).map(text => `<div class="mc-kml-notice">⚠ <span>${esc(text)}</span></div>`).join('');
+    const captures = state.captures || {};
+    el.innerHTML = `<div class="mc-kml-report-head">
+        <div class="mc-kml-report-title"><span class="mc-kml-report-mark" aria-hidden="true">✓</span><span><b>گزارش فایل گوگل‌ارث</b><small>ساختار فایل با موفقیت خوانده شد</small></span></div>
+        <span class="mc-kml-read-badge"><i aria-hidden="true">✓</i> فایل بررسی شد</span>
+      </div>
+      <div class="mc-kml-stats" aria-label="خلاصهٔ اجزای شناسایی‌شده">
+        ${kmlStatMarkup('holes','میدان‌ها',sm.holes)}
+        ${kmlStatMarkup('tees-f','تی‌باکس بانوان',sm.teesF)}
+        ${kmlStatMarkup('tees-m','تی‌باکس آقایان',sm.teesM)}
+        ${kmlStatMarkup('greens','حفره‌ها',sm.greens)}
+        ${kmlStatMarkup('fairways','فروی‌ها',sm.fairways)}
+      </div>
+      ${notices ? `<div class="mc-kml-notices">${notices}</div>` : ''}
+      <div class="mc-kml-capture-heading"><b>آماده‌سازی تصاویر زمین</b><span>هر مرحله پس از تکمیل با تیک سبز مشخص می‌شود.</span></div>
+      <div class="mc-kml-captures">${kmlCaptureMarkup('sat',captures.sat)}${kmlCaptureMarkup('topo',captures.topo)}</div>`;
+    el.classList.add('is-ready');
+  }
+  function renderCourseKmlReport(){ renderKmlReportElement($('#mc-kml-rep'), kmlReportState, true); }
   function pageMgmt(){
     const v = $('#view');
     const tabs = [
@@ -10782,9 +11145,9 @@ window.addEventListener('ga:brand-changed', function(){
     if (reseed) reseed.addEventListener('click', () => {
       const _jy = (window.Data && D.jalaliInfo ? D.jalaliInfo(new Date()).yy : D.seasonYear);
       const _warn = (_jy !== D.seasonYear) ? '⚠️ توجه: سال جلالی جاری ' + D.fa(_jy) + ' است ولی دادهٔ بذر برای فصل ' + D.fa(D.seasonYear) + ' است — بازنشانی سایت را به محتوای فصل ' + D.fa(D.seasonYear) + ' برمی‌گرداند!\n\n' : '';
-      if (!confirm(_warn + 'همهٔ دادهٔ فعلی (نتایج، دوره‌ها، زمین‌ها، بازیکنان سفارشی و…) حذف و دادهٔ استاندارد فصل ۱۴۰۵ دوباره بارگذاری می‌شود. ادامه می‌دهید؟')) return;
-      try { D.seedSeason(true); APP.reloadData(); APP.go('mgmt'); mgmtTab = 'players'; APP.toast('دادهٔ فصل ۱۴۰۵ بازنشانی شد ✓', 'green'); }
-      catch(e){ APP.toast('خطا در بازنشانی: ' + e.message, 'red'); }
+      const doReset = () => { try { D.seedSeason(true); APP.reloadData(); APP.go('mgmt'); mgmtTab = 'players'; APP.toast('دادهٔ فصل ۱۴۰۵ بازنشانی شد ✓', 'green'); }
+        catch(e){ APP.toast('خطا در بازنشانی: ' + e.message, 'red'); } };
+      confirmPop({ title:'بازنشانی کل فصل', itemName:'فصل ۱۴۰۵ — همهٔ داده', body: _warn + 'همهٔ دادهٔ فعلی (نتایج، دوره‌ها، زمین‌ها، بازیکنان سفارشی و…) حذف و دادهٔ استاندارد فصل ۱۴۰۵ دوباره بارگذاری می‌شود.', confirmLabel:'بله، بازنشانی شود', onYes: doReset });
     });
     renderMgmtTab();
   }
@@ -10964,10 +11327,8 @@ window.addEventListener('ga:brand-changed', function(){
       APP.toast('پوسته ذخیره شد. اگر دستگاه دیگری کش قدیمی دارد، هاردریفرش کنید.', 'gold');
     });
     $('#ac-reset').addEventListener('click', () => {
-      if (!confirm('بازگشت به هویت پیش‌فرض پات‌کلاب؟ لوگو و نام سفارشی پاک می‌شود.')) return;
-      GA_BRAND.reset();
-      mgmtAcademy(body);
-      APP.toast('پوسته به پات‌کلاب برگشت', 'gold');
+      const doReset = () => { GA_BRAND.reset(); mgmtAcademy(body); APP.toast('پوسته به پات‌کلاب برگشت', 'gold'); };
+      confirmPop({ title:'بازنشانی برند', itemName:'هویت پیش‌فرض پات‌کلاب', body:'لوگو و نام سفارشی پاک می‌شود.', danger:false, confirmLabel:'بله، برگرد', onYes: doReset });
     });
   }
 
@@ -11047,8 +11408,8 @@ window.addEventListener('ga:brand-changed', function(){
       }).join('') : '<div style="color:var(--muted);font-size:12px;padding:8px">تیمی ساخته نشده است.</div>';
       box.querySelectorAll('[data-btteam]').forEach(b => b.addEventListener('click', () => battleTeamModal(b.dataset.btteam)));
       box.querySelectorAll('[data-btdel]').forEach(b => b.addEventListener('click', () => {
-        if (!confirm('تیم حذف شود؟ جدال‌های وابسته هم حذف می‌شوند.')) return;
-        B.deleteTeam(b.dataset.btdel); B.refresh(); refreshBattle();
+        const doDelete = () => { B.deleteTeam(b.dataset.btdel); B.refresh(); refreshBattle(); };
+        confirmPop({ title:'حذف تیم', itemName: t.name, body:'جدال‌های وابسته هم حذف می‌شوند.', confirmLabel:'بله، حذف شود', onYes: doDelete });
       }));
     }
     function renderMatchList(){
@@ -11191,8 +11552,8 @@ window.addEventListener('ga:brand-changed', function(){
       B.refresh(); refreshBattle(); APP.toast('تنظیمات نبرد ذخیره شد ✓', 'green');
     });
     $('#bt-reset').addEventListener('click', () => {
-      if (!confirm('تیم‌ها و جدال‌ها به نمونهٔ پیش‌فرض بازنشانی شود؟')) return;
-      B.reset(); B.refresh(); refreshBattle(); APP.toast('نمونهٔ تیم‌ها بازنشانی شد ✓', 'green');
+      const doReset = () => { B.reset(); B.refresh(); refreshBattle(); APP.toast('نمونهٔ تیم‌ها بازنشانی شد ✓', 'green'); };
+      confirmPop({ title:'بازنشانی تیم‌ها و جدال‌ها', itemName:'نمونهٔ پیش‌فرض', body:'تیم‌ها و جدال‌های سفارشی حذف و نمونهٔ پیش‌فرض بارگذاری می‌شود.', confirmLabel:'بله، بازنشانی شود', onYes: doReset });
     });
     $('#bt-add-team').addEventListener('click', () => battleTeamModal(null));
     $('#bt-add-match').addEventListener('click', () => {
@@ -11407,9 +11768,8 @@ window.addEventListener('ga:brand-changed', function(){
       APP.toast('نام‌ها ذخیره شد و در همهٔ بخش‌های سایت اعمال شد ✓', 'green');
     });
     $('#lbl-reset-all', body).addEventListener('click', () => {
-      if (!confirm('همهٔ نام‌های سفارشی به حالت پیش‌فرض برگردند؟')) return;
-      api.resetAll();
-      APP.toast('همهٔ نام‌ها به حالت پیش‌فرض برگشت', 'orange');
+      const doReset = () => { api.resetAll(); APP.toast('همهٔ نام‌ها به حالت پیش‌فرض برگشت', 'orange'); };
+      confirmPop({ title:'بازنشانی نام‌ها', itemName:'نام‌های سفارشی', body:'همهٔ نام‌های سفارشی به حالت پیش‌فرض برمی‌گردد.', danger:false, confirmLabel:'بله، بازنشانی شود', onYes: doReset });
     });
     function copyText(text){
       if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
@@ -11684,12 +12044,16 @@ window.addEventListener('ga:brand-changed', function(){
       }
       if (act === 'del'){
         if (isCustom){
-          const lst = customPlayers().filter(x => x.id !== pid - 9000);
-          saveCustomPlayers(lst);
-          const pu = playerUsers(); delete pu[pid]; savePlayerUsers(pu);
-          removeUserOfPlayer(pid);
-          APP.reloadData(); APP.go('mgmt');
-          APP.toast('بازیکن حذف شد 🗑', 'orange');
+          const playerName = (D.nameOf ? D.nameOf(pid) : '') || ('بازیکن #' + pid);
+          const doDelete = () => {
+            const lst = customPlayers().filter(x => x.id !== pid - 9000);
+            saveCustomPlayers(lst);
+            const pu = playerUsers(); delete pu[pid]; savePlayerUsers(pu);
+            removeUserOfPlayer(pid);
+            APP.reloadData(); APP.go('mgmt');
+            APP.toast('بازیکن حذف شد 🗑', 'orange');
+          };
+          confirmPop({ title:'حذف بازیکن سفارشی', itemName: playerName, body:'بازیکن، یوزر و همهٔ امتیازهایش حذف می‌شود. بازیکنان پایه فقط غیرفعال می‌شوند.', confirmLabel:'بله، حذف شود', onYes: doDelete });
         } else {
           APP.toast('بازیکنان پایه حذف نمی‌شوند — می‌توانید غیرفعال کنید', 'gold');
         }
@@ -11947,6 +12311,32 @@ window.addEventListener('ga:brand-changed', function(){
   }
 
   /* ── تب زمین‌ها ── */
+  const COURSE_ZOOM_LOCK_MIN = 14, COURSE_ZOOM_LOCK_MAX = 20, COURSE_ZOOM_LOCK_STEP = 1/3;
+  function normalizeCourseZoomLock(value){
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return Math.max(COURSE_ZOOM_LOCK_MIN, Math.min(COURSE_ZOOM_LOCK_MAX, Math.round(n * 3) / 3));
+  }
+  function courseZoomLockOf(rec){
+    if (!rec || typeof rec !== 'object') return null;
+    /* مقدار maxLock نسخه‌های قبلی را به‌عنوان مرز زوم‌اوت حفظ می‌کنیم. */
+    const raw = rec.minZoomLock != null ? rec.minZoomLock : rec.maxLock;
+    return normalizeCourseZoomLock(raw);
+  }
+  function courseZoomText(value){
+    const n = normalizeCourseZoomLock(value);
+    if (n == null) return '';
+    let text = String(Math.round(n * 100) / 100);
+    if (text.indexOf('.') >= 0) text = text.replace(/0+$/,'').replace(/\.$/,'');
+    return D.fa(text.replace('.', '٫'));
+  }
+  function saveCourseZoomLock(rec, value){
+    const n = normalizeCourseZoomLock(value);
+    if (n == null) return;
+    rec.minZoomLock = n;
+    delete rec.maxLock;
+  }
+
   function mgmtCourses(body){
     const S = gstate().S;
     const extra = extraCourses();
@@ -11955,9 +12345,16 @@ window.addEventListener('ga:brand-changed', function(){
       const o = ov[c[0]] || {};
       const pars = (o.pars && o.pars.length) ? o.pars : (D.parsOf(c[0]) || D.COURSE_PARS[c[0]] || []);
       const index = (o.index && o.index.length) ? o.index : ((D.indexOf && D.indexOf(c[0])) || []);
+      const distances = Array.isArray(o.distances) ? o.distances : [];
       const isMis = c[0] === 1 || String(c[1]).indexOf('مسجدسلیمان') >= 0;
-      return { id:c[0], name: o.name || c[1], loc: o.loc || c[2], holes: pars.length || c[3], pars, index, base:true, lat: o.lat != null ? o.lat : (isMis ? 31.90494 : 24.7136), lng: o.lng != null ? o.lng : (isMis ? 49.31398 : 46.6753) };
-    }).concat(extra.map((c,i) => ({ id:1000+i, name:c.name, loc:c.loc||'ریاض', holes:(c.pars&&c.pars.length)?c.pars.length:c.holes, pars:c.pars, index:c.index||[], base:false, idx:i, lat:c.lat, lng:c.lng })));
+      return { id:c[0], name: o.name || c[1], loc: o.loc || c[2], holes: pars.length || c[3], pars, index, distances, base:true, lat: o.lat != null ? o.lat : (isMis ? 31.90494 : 24.7136), lng: o.lng != null ? o.lng : (isMis ? 49.31398 : 46.6753) };
+    });
+    extra.forEach((c,i) => {
+      if (!c || (D.isArchivedCourse && D.isArchivedCourse(c))) return;
+      const id = D.courseIdOf ? D.courseIdOf(c, i) : (1000 + i);
+      rows.push({ id, name:c.name, loc:c.loc||'ریاض', holes:(c.pars&&c.pars.length)?c.pars.length:c.holes, pars:c.pars||[], index:c.index||[], distances:Array.isArray(c.distances)?c.distances:[], base:false, idx:i, geoId:c.geoId, lat:c.lat, lng:c.lng });
+    });
+    const archived = extra.filter(c => c && D.isArchivedCourse && D.isArchivedCourse(c));
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">➕</span><h3>طراح زمین — ثبت زمین جدید</h3><span class="tag">افزودن / حذف میدان</span></div>
@@ -11975,61 +12372,120 @@ window.addEventListener('ga:brand-changed', function(){
       <div style="margin-top:12px">
         <label>فایل گوگل‌ارث (KML)</label>
         <input class="input" type="file" id="mc-kml" accept=".kml,.xml,application/vnd.google-earth.kml+xml" style="width:100%">
-        <div id="mc-kml-rep" style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.7">نام تی: <b dir="ltr">T.12 -260Y -Par4 -W</b> خانم‌ها · <b dir="ltr">T.12 -260Y -Par4 -M</b> آقایان · <b dir="ltr">Hole 12</b> · <b dir="ltr">fairway 12</b>. بدون پسوند جنسیت = تی خانم.</div>
+        <div id="mc-kml-rep" class="mc-kml-report"></div>
         <div id="mc-kml-map" style="display:none;height:280px;margin-top:10px;border-radius:14px;overflow:hidden;border:1px solid var(--line-soft)"></div>
       </div>
       <div id="mc-pars" class="hp-par-wrap"></div>
       <button class="btn sm" id="mc-add" style="margin-top:14px">+ ثبت زمین</button>
     </div>
     <div class="glass">
-      <div class="card-head"><span class="ic">🗺️</span><h3>زمین‌های آکادمی</h3><span class="tag">${D.fa(S.courses.length)} زمین</span></div>
+      <div class="card-head"><span class="ic">🗺️</span><h3>زمین‌های آکادمی</h3><span class="tag">${D.fa(S.courses.length)} زمین فعال</span></div>
       <div style="overflow-x:auto"><table class="tbl"><thead><tr>
-        <th>#</th><th>نام</th><th>محل</th><th>میدان</th><th>پار کل</th><th>موقعیت</th><th>عملیات</th>
+        <th>شناسه</th><th>نام</th><th>محل</th><th>میدان</th><th>پار کل</th><th>موقعیت</th><th>عملیات</th>
       </tr></thead><tbody id="mc-rows"></tbody></table></div>
+    </div>
+    <div class="glass" style="margin-top:14px">
+      <div class="card-head"><span class="ic">♻️</span><h3>زمین‌های بایگانی‌شده</h3><span class="tag">قابل‌بازیابی</span></div>
+      <div id="mc-archived"></div>
     </div>`;
+    renderCourseKmlReport();
     let parVals = Array.from({length:18}, () => 4);
     let idxVals = Array.from({length:18}, (_,i) => i + 1);
-    bindParEditor($('#mc-pars'), parVals, idxVals);
+    let distanceVals = Array.from({length:18}, () => '');
+    bindParEditor($('#mc-pars'), parVals, idxVals, distanceVals);
     const kmlInp = $('#mc-kml');
     if (kmlInp) kmlInp.addEventListener('change', function(){
       const f = kmlInp.files && kmlInp.files[0];
-      if (!f){ kmlDraft = null; return; }
-      if (!window.CourseGeo){ APP.toast('ماژول زمین بار نشده', 'red'); return; }
+      const generation = ++kmlCaptureGeneration;
+      const mapEl = $('#mc-kml-map');
+      if (mapEl){ mapEl.style.display = 'none'; mapEl.innerHTML = ''; }
+      if (!f){ kmlDraft = null; kmlReportState = null; renderCourseKmlReport(); return; }
+      kmlDraft = null; kmlReportState = null; renderCourseKmlReport();
+      if (!window.CourseGeo){
+        kmlReportState = { error:true, message:'ابزار خواندن فایل زمین بارگذاری نشده است؛ صفحه را تازه‌سازی و دوباره تلاش کنید.' };
+        renderCourseKmlReport(); APP.toast('ماژول زمین بار نشده', 'red'); return;
+      }
       const reader = new FileReader();
       reader.onload = function(){
+        if (generation !== kmlCaptureGeneration) return;
         try {
           const g = CourseGeo.parseKml(String(reader.result || ''));
           const sm = CourseGeo.summary(g);
+          const hasBounds = !!(g.bounds && isFinite(g.bounds.south) && isFinite(g.bounds.north) && isFinite(g.bounds.west) && isFinite(g.bounds.east));
+          const hasCapture = !!(hasBounds && window.EarthShot && typeof EarthShot.captureFor === 'function');
+          kmlReportState = createKmlReportState(sm, hasBounds, hasCapture);
           kmlDraft = g;
+          renderCourseKmlReport();
           /* عکس‌های زمین (ماهواره + توپوگرافی، ۴ برابر محدوده) همان‌جا گرفته می‌شوند */
-          if (g.bounds && window.EarthShot){
-            kmlDraft._shots = EarthShot.captureFor('pending', g.bounds, (mode, p) => {
-              const repEl = $('#mc-kml-rep'); /* هر بار تازه — صفحه ممکن است دوباره رندر شده باشد */
-              if (!repEl) return;
-              if (!repEl.dataset.base) repEl.dataset.base = repEl.innerHTML;
-              repEl.innerHTML = repEl.dataset.base + '<br>' + (mode === 'sat'
-                ? ('🛰 تصویر ماهواره‌ای: ' + D.fa(p) + '٪')
-                : ('⛰ تصویر توپوگرافی: ' + D.fa(p) + '٪'));
-            }).catch(() => null);
+          if (hasCapture){
+            const updateCapture = (mode, p, meta) => {
+              if (generation !== kmlCaptureGeneration || !kmlReportState || !kmlReportState.captures[mode]) return;
+              const capture = kmlReportState.captures[mode];
+              if (meta && typeof meta === 'object' && meta.complete){
+                capture.status = meta.ok ? 'done' : 'error';
+                capture.progress = meta.ok ? 100 : kmlPercent(p);
+                capture.message = meta.ok ? 'تصویر با موفقیت دریافت شد.' : 'دریافت تصویر کامل نشد؛ اتصال نقشه را بررسی و دوباره فایل را انتخاب کنید.';
+              } else {
+                capture.status = 'running';
+                capture.progress = kmlPercent(p);
+                capture.message = 'در حال دریافت کاشی‌های نقشه…';
+              }
+              renderCourseKmlReport();
+            };
+            kmlDraft._shots = EarthShot.captureFor('pending', g.bounds, updateCapture).then(shots => {
+              if (generation === kmlCaptureGeneration && kmlReportState){
+                ['sat','topo'].forEach(mode => {
+                  const capture = kmlReportState.captures[mode];
+                  const ready = !!(shots && shots[mode] && shots[mode].blob);
+                  capture.status = ready ? 'done' : 'error';
+                  if (ready) capture.progress = 100;
+                  if (!ready && !capture.message) capture.message = 'دریافت تصویر کامل نشد؛ اتصال نقشه را بررسی و دوباره فایل را انتخاب کنید.';
+                });
+                renderCourseKmlReport();
+              }
+              return shots;
+            }).catch(() => {
+              if (generation === kmlCaptureGeneration && kmlReportState){
+                ['sat','topo'].forEach(mode => {
+                  const capture = kmlReportState.captures[mode];
+                  if (capture.status !== 'done'){
+                    capture.status = 'error';
+                    capture.message = 'دریافت تصویر کامل نشد؛ اتصال نقشه را بررسی و دوباره فایل را انتخاب کنید.';
+                  }
+                });
+                renderCourseKmlReport();
+              }
+              return null;
+            });
           }
           if (sm.pars && sm.pars.length){
             parVals = sm.pars.slice();
             while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
             idxVals.length = parVals.length;
-            bindParEditor($('#mc-pars'), parVals, idxVals);
+            while (distanceVals.length < parVals.length) distanceVals.push('');
+            distanceVals.length = parVals.length;
+            bindParEditor($('#mc-pars'), parVals, idxVals, distanceVals);
           }
           if (g.center){
             $('#mc-lat').value = g.center.lat.toFixed(6);
             $('#mc-lng').value = g.center.lng.toFixed(6);
           }
           if (!($('#mc-name').value || '').trim() && f.name) $('#mc-name').value = f.name.replace(/\.kml$/i,'');
-          $('#mc-kml-rep').innerHTML = `خوانده شد: ${D.fa(sm.holes)} میدان · تی خانم ${D.fa(sm.teesF)} · تی آقا ${D.fa(sm.teesM)} · حفره ${D.fa(sm.greens)} · فروی ${D.fa(sm.fairways)}` + (sm.teesM ? '' : ' — تی آقایان در فایل نیست (بعداً با -M یا ویرایش نقشه).');
           previewKmlMap($('#mc-kml-map'), g);
         } catch(err){
           try { console.error('mc-kml parse:', err); } catch(e){}
           kmlDraft = null;
+          kmlReportState = { error:true, message:'ساختار فایل KML خوانده نشد. قالب و سلامت فایل را بررسی و دوباره انتخاب کنید.' };
+          renderCourseKmlReport();
           APP.toast('خواندن KML ناموفق بود', 'red');
         }
+      };
+      reader.onerror = function(){
+        if (generation !== kmlCaptureGeneration) return;
+        kmlDraft = null;
+        kmlReportState = { error:true, message:'فایل خوانده نشد؛ دوباره انتخابش کنید یا از سالم‌بودن فایل مطمئن شوید.' };
+        renderCourseKmlReport();
+        APP.toast('خواندن فایل ناموفق بود', 'red');
       };
       reader.readAsText(f);
     });
@@ -12043,7 +12499,7 @@ window.addEventListener('ga:brand-changed', function(){
       if (!name){ APP.toast('نام زمین را وارد کنید', 'red'); return; }
       const pars = parVals.slice();
       if (!pars.length){ APP.toast('حداقل یک میدان لازم است', 'red'); return; }
-      const rec = { name, loc: $('#mc-loc').value.trim() || 'ریاض', holes: pars.length, pars, index: idxVals.slice(0, pars.length), lat:+$('#mc-lat').value, lng:+$('#mc-lng').value };
+      const rec = { name, loc: $('#mc-loc').value.trim() || 'ریاض', holes: pars.length, pars, index: idxVals.slice(0, pars.length), distances: normalizeHoleDistances(distanceVals, pars.length), lat:+$('#mc-lat').value, lng:+$('#mc-lng').value };
       if (kmlDraft && window.CourseGeo){
         rec.geoId = 'c' + Date.now();
         kmlDraft.name = name;
@@ -12077,31 +12533,64 @@ window.addEventListener('ga:brand-changed', function(){
           }).catch(() => {});
         }
       }
-      extra.push(rec);
-      saveCourses(extra); APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
+      try {
+        if (D.createCourse) D.createCourse(rec);
+        else {
+          const latest = extraCourses(); latest.push(rec); saveCourses(latest);
+        }
+      } catch(err){
+        APP.toast('ذخیرهٔ زمین ناموفق بود؛ فهرست تغییر نکرد. فضای دستگاه را بررسی کنید.', 'red');
+        return;
+      }
+      APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
       APP.toast('زمین «' + name + '» ثبت شد ✓', 'green');
     });
-    const geoLocks = (() => { try { const all = JSON.parse(localStorage.getItem('ga_course_geo') || '{}'); const m = {}; Object.keys(all).forEach(k => { if (all[k] && all[k].maxLock) m[k] = all[k].maxLock; }); return m; } catch (e) { return {}; } })();
+    const geoLocks = (() => { try { const all = JSON.parse(localStorage.getItem('ga_course_geo') || '{}'); const m = {}; Object.keys(all).forEach(k => { const z = courseZoomLockOf(all[k]); if (z != null) m[k] = z; }); return m; } catch (e) { return {}; } })();
     const lockChip = r => {
-      const gid = r.base ? (String(r.id) === '1' ? '1' : null) : ((extra[r.idx] || {}).geoId);
-      return (gid && geoLocks[gid]) ? ` <span class="chip dim" title="حداکثر زوم قفل‌شده">🔒 z${D.fa(geoLocks[gid])}</span>` : '';
+      const course = !r.base && D.courseById ? D.courseById(r.id) : null;
+      const gid = r.base ? (String(r.id) === '1' ? '1' : null) : (course && course.geoId) || r.geoId;
+      return (gid && geoLocks[gid] != null) ? ` <span class="chip dim" title="مرز زوم‌اوت قفل‌شده">🔒 z${courseZoomText(geoLocks[gid])}</span>` : '';
     };
-    $('#mc-rows').innerHTML = rows.map(r => `<tr class="${r.base?'':'custom-row'}">
+    $('#mc-rows').innerHTML = rows.map((r,i) => `<tr class="${r.base?'':'custom-row'}">
       <td class="num">${D.fa(r.id)}</td><td><b>${esc(r.name)}</b> ${r.base?'<span class="chip dim">پایه</span>':'<span class="chip purple">سفارشی</span>'}${lockChip(r)}</td>
       <td>${esc(r.loc)}</td><td class="num">${D.fa(r.holes)}</td>
       <td class="num" style="color:var(--gold-l)">${D.fa(r.pars.reduce((a,b)=>a+b,0))}</td>
-      <td><button class="btn sm ghost" data-act="sat" data-idx="${rows.indexOf(r)}">🛰 نقشه</button></td>
+      <td><button class="btn sm ghost" data-act="sat" data-idx="${i}">🛰 نقشه</button></td>
       <td><div class="row-actions">
-        <button class="btn sm ghost" data-act="editc" data-idx="${rows.indexOf(r)}">✏️ ویرایش</button>
-        ${r.base ? '' : `<button class="btn sm danger" data-act="delc" data-idx="${r.idx}">🗑 حذف</button>`}
+        <button class="btn sm ghost" data-act="editc" data-idx="${i}">✏️ ویرایش</button>
+        ${r.base ? '' : `<button class="btn sm danger" data-act="delc" data-course-id="${r.id}">🗑 بایگانی</button>`}
       </div></td></tr>`).join('');
+    const archivedWrap = $('#mc-archived');
+    if (archivedWrap){
+      archivedWrap.innerHTML = archived.length ? `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>شناسه</th><th>نام</th><th>محل</th><th>عملیات</th></tr></thead><tbody>
+        ${archived.map(c => `<tr><td class="num">${D.fa(D.courseIdOf ? D.courseIdOf(c, 0) : c.courseId)}</td><td><b>${esc(c.name||'زمین بدون نام')}</b></td><td>${esc(c.loc||'—')}</td><td><button class="btn sm ghost" data-act="restorec" data-course-id="${D.courseIdOf ? D.courseIdOf(c, 0) : c.courseId}">↩ بازیابی</button></td></tr>`).join('')}
+      </tbody></table></div>` : `<div style="padding:12px;color:var(--muted);font-size:12px">زمین بایگانی‌شده‌ای وجود ندارد.</div>`;
+    }
     body.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
-      const act = b.dataset.act, idx = +b.dataset.idx;
-      const r = rows[idx];
-      if (act === 'sat') showSatelliteModal(r, r.holes);
+      const act = b.dataset.act;
       if (act === 'delc'){
-        const lst = extraCourses(); lst.splice(r.idx,1); saveCourses(lst); APP.reloadData(); APP.go('mgmt'); mgmtTab='courses'; APP.toast('زمین حذف شد 🗑','orange');
+        const courseId = +b.dataset.courseId;
+        const course = D.courseById ? D.courseById(courseId) : null;
+        if (!course || (D.isArchivedCourse && D.isArchivedCourse(course))){ APP.toast('این زمین دیگر فعال نیست؛ فهرست را تازه کنید.', 'orange'); return; }
+        if (!confirm('زمین «' + (course.name || 'بدون نام') + '» بایگانی شود؟ اطلاعات نقشه و سوابق حذف نمی‌شوند و امکان بازیابی دارید.')) return;
+        try {
+          if (D.archiveCourse) D.archiveCourse(courseId);
+          else throw new Error('API بایگانی زمین موجود نیست');
+        } catch(err){ APP.toast('بایگانی انجام نشد؛ داده‌ها تغییر نکردند.', 'red'); return; }
+        APP.reloadData(); APP.go('mgmt'); mgmtTab='courses'; APP.toast('زمین بایگانی شد؛ شناسه و سابقه ثابت ماندند ♻️','orange');
+        return;
       }
+      if (act === 'restorec'){
+        const courseId = +b.dataset.courseId;
+        try { if (D.restoreCourse) D.restoreCourse(courseId); else throw new Error('API بازیابی زمین موجود نیست'); }
+        catch(err){ APP.toast('بازیابی انجام نشد؛ داده‌ها تغییر نکردند.', 'red'); return; }
+        APP.reloadData(); APP.go('mgmt'); mgmtTab='courses'; APP.toast('زمین بازیابی شد ✓','green');
+        return;
+      }
+      const idx = +b.dataset.idx;
+      const r = rows[idx];
+      if (!r) return;
+      if (act === 'sat') showSatelliteModal(r, r.holes);
       if (act === 'editc') editCourseModal(r);
     }));
   }
@@ -12208,7 +12697,7 @@ window.addEventListener('ga:brand-changed', function(){
         <button class="btn sm ghost" id="ec-pick">📍 انتخاب روی نقشه</button>
         <label class="btn sm ghost" style="cursor:pointer">📥 جایگزینی KML<input type="file" id="ec-kml" accept=".kml,.xml" style="display:none"></label>
       </div>
-      <div id="ec-kml-rep" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+      <div id="ec-kml-rep" class="mc-kml-report"></div>
       <div style="margin-top:12px">
         <div class="earth-stage" dir="ltr" style="height:300px;border-radius:14px;overflow:hidden;border:1px solid var(--line-soft)">
           <div id="ec-geo-map" class="earth-map" dir="ltr"></div>
@@ -12227,14 +12716,14 @@ window.addEventListener('ga:brand-changed', function(){
           <span id="earth-geo-hint" style="font-size:12px;color:var(--muted);line-height:1.5"></span>
         </div>
         <div id="ec-zoomlock" style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;font-size:12.5px">
-          <span style="color:var(--muted)">🔒 حداکثر زوم نمایش:</span>
+          <span style="color:var(--muted)">🔒 مرز زوم‌اوت این زمین:</span>
           <b id="ec-zl-val">آزاد (پیش‌فرض)</b>
           <span id="ec-zl-cur" style="color:var(--muted)"></span>
-          <button type="button" class="btn sm ghost" id="ec-zl-lock">🔒 قفل روی زوم فعلی</button>
-          <button type="button" class="btn sm ghost" id="ec-zl-minus" style="display:none;padding:2px 10px">−</button>
-          <button type="button" class="btn sm ghost" id="ec-zl-plus" style="display:none;padding:2px 10px">＋</button>
+          <button type="button" class="btn sm ghost" id="ec-zl-lock" title="قفل زوم‌اوت روی همین اندازه">🔒 قفل زوم‌اوت فعلی</button>
+          <button type="button" class="btn sm ghost" id="ec-zl-minus" aria-label="اجازهٔ زوم‌اوت بیشتر" title="اجازهٔ زوم‌اوت بیشتر" style="display:none;padding:2px 10px">−</button>
+          <button type="button" class="btn sm ghost" id="ec-zl-plus" aria-label="محدودکردن زوم‌اوت" title="محدودکردن زوم‌اوت" style="display:none;padding:2px 10px">＋</button>
           <button type="button" class="btn sm ghost" id="ec-zl-open" style="display:none">🔓 حذف قفل</button>
-          <span style="color:var(--muted);flex-basis:100%;line-height:1.7">قفل یعنی بیننده (پنل و هوش زمین) نمی‌تواند از این زوم جلوتر برود؛ کم‌کردن زوم همیشه آزاد است. بی‌درنگ ذخیره و با ابر برای همهٔ دستگاه‌ها همگام می‌شود.</span>
+          <span style="color:var(--muted);flex-basis:100%;line-height:1.7">پس از قفل، بیننده نمی‌تواند دورتر زوم‌اوت کند؛ زوم‌این آزاد می‌ماند. قفل برای هر زمین جداست. دکمه‌های نقشه هر بار یک‌سوم زوم کامل جابه‌جا می‌شوند.</span>
         </div>
       </div>
             <div id="ec-pars" class="hp-par-wrap"></div>
@@ -12244,11 +12733,16 @@ window.addEventListener('ga:brand-changed', function(){
       </div>
     </div>`;
     m.style.display = 'flex';
+    ++kmlEditCaptureGeneration;
+    let editKmlState = null;
+    renderKmlReportElement($('#ec-kml-rep'), null, true);
     const parVals = (r.pars && r.pars.length) ? r.pars.slice() : Array.from({length: r.holes || 18}, () => 4);
     const idxVals = (r.index && r.index.length) ? r.index.slice() : ((D.indexOf && r.id != null) ? D.indexOf(r.id).slice() : Array.from({length: parVals.length}, (_,i) => i + 1));
+    const distanceVals = Array.isArray(r.distances) ? r.distances.slice(0, parVals.length).map(v => v == null ? '' : String(v)) : [];
     while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
     idxVals.length = parVals.length;
-    bindParEditor($('#ec-pars'), parVals, idxVals);
+    while (distanceVals.length < parVals.length) distanceVals.push('');
+    bindParEditor($('#ec-pars'), parVals, idxVals, distanceVals);
     let geoGender = 'F';
     function mountGeoEdit(){
       if (!window.EarthMap) return;
@@ -12267,19 +12761,26 @@ window.addEventListener('ga:brand-changed', function(){
       if (b) b.classList.add('on');
     }
     function closeEditModal(){
+      ++kmlEditCaptureGeneration;
       try { if (window.EarthMap) EarthMap.destroy(); } catch(e){}
       m.style.display = 'none';
     }
     /* ── قفل حداکثر زوم زمین: مدیر روی نقشه زوم می‌کند، سطح مناسب را قفل می‌کند ── */
-    function zlGeoId(){ return r.base ? String(r.id) : ((extraCourses()[r.idx] || {}).geoId) || ('c'+Date.now()); }
+    function zlGeoId(){
+      const course = !r.base && D.courseById ? D.courseById(r.id) : null;
+      return r.base ? String(r.id) : ((course && course.geoId) || r.geoId || ('c'+r.id));
+    }
     function zlRec(){ try { return (JSON.parse(localStorage.getItem('ga_course_geo') || '{}'))[zlGeoId()] || null; } catch(e){ return null; } }
     const zlVal = () => $('#ec-zl-val'), zlCur = () => $('#ec-zl-cur');
     function zlPaint(){
-      const v = zlRec() && zlRec().maxLock;
+      const v = courseZoomLockOf(zlRec());
       const el = zlVal(); if (!el) return;
-      el.textContent = v ? ('z' + D.fa(v) + ' (قفل)') : 'آزاد (پیش‌فرض)';
-      const show = v ? '' : 'none';
+      el.textContent = v != null ? ('زوم‌اوت تا z' + courseZoomText(v) + ' قفل است') : 'آزاد (پیش‌فرض)';
+      const show = v != null ? '' : 'none';
       ['#ec-zl-minus','#ec-zl-plus','#ec-zl-open'].forEach(id => { const b = $(id); if (b) b.style.display = show; });
+      const minus = $('#ec-zl-minus'), plus = $('#ec-zl-plus');
+      if (minus) minus.disabled = v != null && v <= COURSE_ZOOM_LOCK_MIN + 1e-6;
+      if (plus) plus.disabled = v != null && v >= COURSE_ZOOM_LOCK_MAX - 1e-6;
     }
     function zlSave(fn){
       const gid = zlGeoId();
@@ -12289,22 +12790,28 @@ window.addEventListener('ga:brand-changed', function(){
       if (window.CourseGeo) CourseGeo.set(gid, all[gid]);
       zlPaint();
     }
+    function zlAdjustLock(delta){
+      const current = courseZoomLockOf(zlRec());
+      const base = current != null ? current : normalizeCourseZoomLock((window.EarthMap && EarthMap.zoom()) || 16);
+      if (base == null) return;
+      zlSave(rec => saveCourseZoomLock(rec, base + delta * COURSE_ZOOM_LOCK_STEP));
+    }
     (function zlBind(){
       if (!window.EarthMap || !EarthMap.onZoom) return;
-      try { EarthMap.onZoom(z => { const c = zlCur(); if (c) c.textContent = 'زوم فعلی: z' + D.fa(z); }); } catch(e){}
+      try { EarthMap.onZoom(z => { const c = zlCur(); if (c) c.textContent = 'زوم فعلی: z' + courseZoomText(z); }); } catch(e){}
       const lb = $('#ec-zl-lock');
       if (lb) lb.addEventListener('click', () => {
-        const z = window.EarthMap && EarthMap.zoom();
-        if (!z) return;
-        zlSave(rec => { rec.maxLock = z; });
-        APP.toast('حداکثر زوم این زمین روی z' + D.fa(z) + ' قفل شد 🔒', 'green');
+        const z = normalizeCourseZoomLock(window.EarthMap && EarthMap.zoom());
+        if (z == null) return;
+        zlSave(rec => saveCourseZoomLock(rec, z));
+        APP.toast('مرز زوم‌اوت این زمین روی z' + courseZoomText(z) + ' قفل شد 🔒', 'green');
       });
       const pm = $('#ec-zl-minus');
-      if (pm) pm.addEventListener('click', () => { zlSave(rec => { rec.maxLock = Math.max(12, (+rec.maxLock || 16) - 1); }); });
+      if (pm) pm.addEventListener('click', () => zlAdjustLock(-1));
       const pp = $('#ec-zl-plus');
-      if (pp) pp.addEventListener('click', () => { zlSave(rec => { rec.maxLock = Math.min(20, (+rec.maxLock || 16) + 1); }); });
+      if (pp) pp.addEventListener('click', () => zlAdjustLock(1));
       const po = $('#ec-zl-open');
-      if (po) po.addEventListener('click', () => { zlSave(rec => { delete rec.maxLock; }); APP.toast('قفل زوم برداشته شد — نمایش آزاد 🔓', 'orange'); });
+      if (po) po.addEventListener('click', () => { zlSave(rec => { delete rec.minZoomLock; delete rec.maxLock; }); APP.toast('قفل زوم‌اوت برداشته شد — نمایش آزاد 🔓', 'orange'); });
       zlPaint();
     })();
     mountGeoEdit();
@@ -12319,57 +12826,121 @@ window.addEventListener('ga:brand-changed', function(){
     const ecKml = $('#ec-kml');
     if (ecKml) ecKml.addEventListener('change', function(){
       const f = ecKml.files && ecKml.files[0];
-      if (!f || !window.CourseGeo) return;
+      const generation = ++kmlEditCaptureGeneration;
+      if (!f){ editKmlState = null; renderKmlReportElement($('#ec-kml-rep'), editKmlState, true); return; }
+      editKmlState = null; renderKmlReportElement($('#ec-kml-rep'), editKmlState, true);
+      if (!window.CourseGeo){
+        editKmlState = { error:true, message:'ابزار خواندن فایل زمین بارگذاری نشده است؛ صفحه را تازه‌سازی و دوباره تلاش کنید.' };
+        renderKmlReportElement($('#ec-kml-rep'), editKmlState, true); APP.toast('ماژول زمین بار نشده', 'red'); return;
+      }
       const reader = new FileReader();
       reader.onload = function(){
+        if (generation !== kmlEditCaptureGeneration) return;
         try {
           const g = CourseGeo.parseKml(String(reader.result || ''));
           const sm = CourseGeo.summary(g);
-          const geoId = r.base ? String(r.id) : (extraCourses()[r.idx] && extraCourses()[r.idx].geoId) || ('c'+Date.now());
+          const hasBounds = !!(g.bounds && isFinite(g.bounds.south) && isFinite(g.bounds.north) && isFinite(g.bounds.west) && isFinite(g.bounds.east));
+          const canCapture = !!(hasBounds && window.EarthShot && typeof EarthShot.captureFor === 'function');
+          editKmlState = createKmlReportState(sm, hasBounds, canCapture);
+          renderKmlReportElement($('#ec-kml-rep'), editKmlState, true);
+          const course = !r.base && D.courseById ? D.courseById(r.id) : null;
+          const geoId = r.base ? String(r.id) : ((course && course.geoId) || r.geoId || ('c'+r.id));
           g.name = ($('#ec-name').value || '').trim() || g.name;
-          /* عکس‌های ۳برابر خودکار: متا همان لحظه، عکس‌ها در پس‌زمینه + نسخهٔ فشردهٔ دائمی داخل رکورد.
-             عکس‌های دائمی قبلی هرگز پاک نمی‌شوند مگر نسخهٔ تازه واقعاً کامل شود (شبکهٔ بسته). */
+          /* عکس‌های قبلی فقط تا زمانی حفظ می‌شوند که تصویر تازه واقعاً جایگزین شود. */
           let oldSat = null;
           try { const allGeo = JSON.parse(localStorage.getItem('ga_course_geo') || '{}'); oldSat = (allGeo[geoId] && allGeo[geoId].sat) || null; } catch(e){}
-          if (g.bounds && window.EarthShot){
+          if (hasBounds && window.EarthShot){
             const ext = EarthShot.expand(g.bounds);
             if (ext) g.sat = Object.assign({ img: oldSat && oldSat.img, imgTopo: oldSat && oldSat.imgTopo }, ext, { src: 'earthshot' });
           } else if (oldSat){ g.sat = oldSat; }
           CourseGeo.set(geoId, g);
-          if (g.bounds && window.EarthShot){
-            const repEl = $('#ec-kml-rep');
-            const baseRep = 'KML ذخیره شد ✓';
-            EarthShot.captureFor(geoId, g.bounds, (mode, p) => {
-              if (repEl) repEl.textContent = baseRep + ' — ' + (mode === 'sat' ? '🛰 ماهواره ' : '⛰ توپوگرافی ') + p + '٪';
-            }).then(async (shots) => {
+          if (canCapture){
+            const updateCapture = (mode, p, meta) => {
+              if (generation !== kmlEditCaptureGeneration || !editKmlState || !editKmlState.captures[mode]) return;
+              const capture = editKmlState.captures[mode];
+              if (meta && typeof meta === 'object' && meta.complete){
+                capture.status = meta.ok ? 'done' : 'error';
+                capture.progress = meta.ok ? 100 : kmlPercent(p);
+                capture.message = meta.ok ? 'تصویر با موفقیت دریافت شد.' : 'دریافت تصویر کامل نشد؛ اتصال نقشه را بررسی و دوباره فایل را انتخاب کنید.';
+              } else {
+                capture.status = 'running';
+                capture.progress = kmlPercent(p);
+                capture.message = 'در حال دریافت کاشی‌های نقشه…';
+              }
+              renderKmlReportElement($('#ec-kml-rep'), editKmlState, true);
+            };
+            EarthShot.captureFor(geoId, g.bounds, updateCapture).then(async shots => {
+              const compacted = { sat:false, topo:false };
               if (shots && EarthShot.toCompact){
                 const cap = 360000;
-                const all = JSON.parse(localStorage.getItem('ga_course_geo') || '{}');
-                const rec = all[geoId];
-                if (rec){
-                  if (shots.sat && shots.sat.blob){ const img = await EarthShot.toCompact(shots.sat.blob, cap); if (img) rec.sat = Object.assign({}, rec.sat, { img }); }
-                  if (shots.topo && shots.topo.blob){ const imgT = await EarthShot.toCompact(shots.topo.blob, cap); if (imgT) rec.sat = Object.assign({}, rec.sat, { imgTopo: imgT }); }
-                  CourseGeo.set(geoId, rec);
-                }
+                try {
+                  const all = JSON.parse(localStorage.getItem('ga_course_geo') || '{}');
+                  const rec = all[geoId];
+                  if (rec){
+                    if (shots.sat && shots.sat.blob){ const img = await EarthShot.toCompact(shots.sat.blob, cap); if (img){ rec.sat = Object.assign({}, rec.sat, { img }); compacted.sat = true; } }
+                    if (shots.topo && shots.topo.blob){ const imgTopo = await EarthShot.toCompact(shots.topo.blob, cap); if (imgTopo){ rec.sat = Object.assign({}, rec.sat, { imgTopo }); compacted.topo = true; } }
+                    CourseGeo.set(geoId, rec);
+                  }
+                } catch(e){}
               }
-              if (repEl) repEl.textContent = baseRep + ' — 🛰 ماهواره ✓ ⛰ توپوگرافی ✓ (دائمی در رکورد ذخیره شد)';
-            }).catch(() => {});
+              if (generation === kmlEditCaptureGeneration && editKmlState){
+                ['sat','topo'].forEach(mode => {
+                  const capture = editKmlState.captures[mode];
+                  const ready = !!(shots && shots[mode] && shots[mode].blob);
+                  capture.status = ready ? 'done' : 'error';
+                  if (ready) capture.progress = 100;
+                  capture.message = ready ? (compacted[mode] ? 'تصویر دریافت و در رکورد زمین ذخیره شد.' : 'تصویر با موفقیت دریافت شد.') : 'دریافت تصویر کامل نشد؛ اتصال نقشه را بررسی و دوباره فایل را انتخاب کنید.';
+                });
+                renderKmlReportElement($('#ec-kml-rep'), editKmlState, true);
+              }
+              return shots;
+            }).catch(() => {
+              if (generation === kmlEditCaptureGeneration && editKmlState){
+                ['sat','topo'].forEach(mode => {
+                  const capture = editKmlState.captures[mode];
+                  if (capture.status !== 'done'){
+                    capture.status = 'error';
+                    capture.message = 'دریافت تصویر کامل نشد؛ اتصال نقشه را بررسی و دوباره فایل را انتخاب کنید.';
+                  }
+                });
+                renderKmlReportElement($('#ec-kml-rep'), editKmlState, true);
+              }
+            });
           }
           if (!r.base){
-            const lst = extraCourses();
-            if (lst[r.idx]) lst[r.idx].geoId = geoId;
-            saveCourses(lst);
+            try {
+              if (D.updateCourse) D.updateCourse(r.id, { geoId });
+              else {
+                const lst = extraCourses();
+                const item = lst.find((c,i) => c && (D.courseIdOf ? D.courseIdOf(c,i) : 1000+i) === r.id);
+                if (!item) throw new Error('زمین پیدا نشد');
+                item.geoId = geoId; saveCourses(lst);
+              }
+              r.geoId = geoId;
+            } catch(err){ APP.toast('نقشه ثبت شد، اما پیوند آن به زمین ذخیره نشد؛ دوباره ذخیره کنید.', 'red'); }
           }
           if (sm.pars && sm.pars.length){
             parVals.splice(0, parVals.length, ...sm.pars);
             while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
             idxVals.length = parVals.length;
-            bindParEditor($('#ec-pars'), parVals, idxVals);
+            while (distanceVals.length < parVals.length) distanceVals.push('');
+            distanceVals.length = parVals.length;
+            bindParEditor($('#ec-pars'), parVals, idxVals, distanceVals);
           }
           if (g.center){ $('#ec-lat').value = g.center.lat.toFixed(6); $('#ec-lng').value = g.center.lng.toFixed(6); }
-          $('#ec-kml-rep').textContent = `KML ذخیره شد: ${sm.holes} میدان · تی خانم ${sm.teesF} · تی آقا ${sm.teesM}`;
           APP.toast('نقشهٔ زمین از KML به‌روز شد ✓', 'green');
-        } catch(e){ APP.toast('خواندن KML ناموفق بود', 'red'); }
+        } catch(e){
+          try { console.error('ec-kml parse:', e); } catch(_){}
+          editKmlState = { error:true, message:'ساختار فایل KML خوانده نشد. قالب و سلامت فایل را بررسی و دوباره انتخاب کنید.' };
+          renderKmlReportElement($('#ec-kml-rep'), editKmlState, true);
+          APP.toast('خواندن KML ناموفق بود', 'red');
+        }
+      };
+      reader.onerror = function(){
+        if (generation !== kmlEditCaptureGeneration) return;
+        editKmlState = { error:true, message:'فایل خوانده نشد؛ دوباره انتخابش کنید یا از سالم‌بودن فایل مطمئن شوید.' };
+        renderKmlReportElement($('#ec-kml-rep'), editKmlState, true);
+        APP.toast('خواندن فایل ناموفق بود', 'red');
       };
       reader.readAsText(f);
     });
@@ -12380,27 +12951,43 @@ window.addEventListener('ga:brand-changed', function(){
       const pars = parVals.map(v => Math.max(3, Math.min(6, +v || 4)));
       if (!pars.length){ APP.toast('حداقل یک میدان لازم است','red'); return; }
       const lat = +$('#ec-lat').value || 24.7136, lng = +$('#ec-lng').value || 46.6753;
-      /* ایندکس سختی میدان‌ها هم مثل پار باید ذخیره شود؛ قبلاً جا افتاده بود و ویرایش ایندکس پس از «ذخیره» بی‌اثر می‌شد. */
+      /* ایندکس سختی و Distance هر میدان همراه پار ذخیره می‌شوند؛ Distance اختیاری و دستی است. */
       const idxSave = idxVals.slice(0, pars.length).map((v,i) => Math.max(1, Math.min(pars.length, +v || (i + 1))));
+      const distanceSave = normalizeHoleDistances(distanceVals, pars.length);
       if (r.base){
         let ov = {};
         try { ov = JSON.parse(localStorage.getItem('ga_course_override') || '{}'); } catch(e){}
-        ov[r.id] = Object.assign({}, ov[r.id], { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave });
+        ov[r.id] = Object.assign({}, ov[r.id], { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave, distances: distanceSave });
         localStorage.setItem('ga_course_override', JSON.stringify(ov));
         if (D.PAR_MAP) D.PAR_MAP[r.id] = pars.slice();
         if (D.INDEX_MAP) D.INDEX_MAP[r.id] = idxSave.slice();
         if (D.COURSE_NAME) D.COURSE_NAME[r.id] = name;
       } else {
-        const lst = extraCourses();
-        const c = lst[r.idx];
-        if (c){ c.name = name; c.loc = $('#ec-loc').value.trim(); c.pars = pars; c.holes = pars.length; c.lat = lat; c.lng = lng; c.index = idxSave; }
-        saveCourses(lst);
+        try {
+          if (D.updateCourse) D.updateCourse(r.id, { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave, distances: distanceSave });
+          else {
+            const lst = extraCourses();
+            const c = lst.find((item,i) => item && (D.courseIdOf ? D.courseIdOf(item,i) : 1000+i) === r.id);
+            if (!c) throw new Error('زمین پیدا نشد');
+            Object.assign(c, { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave, distances: distanceSave });
+            saveCourses(lst);
+          }
+        } catch(err){ APP.toast('ذخیرهٔ زمین ناموفق بود؛ اطلاعات قبلی حفظ شد.', 'red'); return; }
       }
       APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
       try { if (window.EarthMap) EarthMap.destroy(); } catch(err){}
       m.style.display = 'none';
       APP.toast('زمین ذخیره شد ✓', 'green');
     });
+  }
+
+  function courseSelectOptions(courses, selectedId){
+    const list = Array.isArray(courses) ? courses : [];
+    const selected = selectedId == null ? null : Number(selectedId);
+    const isActive = selected != null && list.some(c => Number(c[0]) === selected);
+    const archived = !isActive && selected != null && D.COURSE_NAME[selected]
+      ? `<option value="${selected}" selected>${esc(D.COURSE_NAME[selected])} — بایگانی‌شده (برای حفظ سابقه)</option>` : '';
+    return archived + list.map(c => `<option value="${c[0]}" ${selected != null && Number(c[0]) === selected ? 'selected' : ''}>${esc(c[1])}</option>`).join('');
   }
 
   /* ── تب مسابقات ── */
@@ -12431,7 +13018,7 @@ window.addEventListener('ga:brand-changed', function(){
           <option value="normal" selected>قانون عادی — همهٔ ضربه‌ها محاسبه می‌شود</option>
           <option value="full">قانون فول — سقف ضربهٔ هر حفره: پار۳ حداکثر ۷ • پار۴ حداکثر ۹ • پار۵ حداکثر ۱۱</option>
         </select></div>
-        <div class="span2"><label>زمین</label><select class="sel" id="mt-crs" style="width:100%">${S.courses.map(c=>`<option value="${c[0]}">${esc(c[1])}</option>`).join('')}</select></div>
+        <div class="span2"><label>زمین</label><select class="sel" id="mt-crs" style="width:100%">${courseSelectOptions(S.courses)}</select></div>
         <div><label>🏆 امتیاز نفر اول</label><input class="input" id="mt-p1" type="number" min="0" value="20" style="width:100%"></div>
         <div><label>🥈 امتیاز نفر دوم</label><input class="input" id="mt-p2" type="number" min="0" value="15" style="width:100%"></div>
         <div><label>🥉 امتیاز نفر سوم</label><input class="input" id="mt-p3" type="number" min="0" value="10" style="width:100%"></div>
@@ -12587,7 +13174,7 @@ window.addEventListener('ga:brand-changed', function(){
         <div class="span2"><label>نام</label><input class="input" id="et-name" style="width:100%" value="${esc(t[1])}"></div>
         <div class="span2"><label>تاریخ</label><div class="jdate" id="et-date" data-iso="${t[5]}"></div></div>
         <div><label>سطح</label><select class="sel" id="et-lvl" style="width:100%"><option value="1" ${t[2]===1?'selected':''}>سطح ۱</option><option value="2" ${t[2]===2?'selected':''}>سطح ۲</option><option value="3" ${t[2]===3?'selected':''}>سطح ۳</option></select></div>
-        <div class="span2"><label>زمین</label><select class="sel" id="et-crs" style="width:100%">${S.courses.map(c=>`<option value="${c[0]}" ${c[0]===t[3]?'selected':''}>${esc(c[1])}</option>`).join('')}</select></div>
+        <div class="span2"><label>زمین</label><select class="sel" id="et-crs" style="width:100%">${courseSelectOptions(S.courses, t[3])}</select></div>
         <div class="span2"><label>⚖️ قانون مسابقه</label><select class="sel" id="et-rule" style="width:100%" ${base?'disabled title="فقط برای مسابقات سفارشی"':''}>
           ${(() => { const cr = base ? 'normal' : ((extraTours()[idx] && extraTours()[idx].rule) || 'normal');
             return `<option value="normal" ${cr==='normal'?'selected':''}>قانون عادی — همهٔ ضربه‌ها محاسبه</option><option value="full" ${cr==='full'?'selected':''}>قانون فول — سقف ضربهٔ حفره (پار۳≤۷ • پار۴≤۹ • پار۵≤۱۱)</option>`; })()}
@@ -13733,12 +14320,13 @@ window.addEventListener('ga:brand-changed', function(){
       }));
       $$('#tour-report [data-rem]').forEach(b => b.addEventListener('click', () => {
         const pid = b.dataset.rem.startsWith('free:') ? b.dataset.rem : +b.dataset.rem;
-        if (!confirm(`حذف «${nameOf(pid)}» از این مسابقه؟\nکارت او پاک و رتبه‌ها و امتیازها به‌روز می‌شوند.`)) return;
-        scRemovePlayer(t, pid);
-        APP.reloadData();
-        APP.toast(`🗑 «${nameOf(pid)}» از مسابقه حذف شد`, 'orange');
-        if (onChange) onChange();
-        render();
+        confirmPop({ title:'حذف شرکت‌کننده از مسابقه', itemName: nameOf(pid), body:'کارت او پاک و رتبه‌ها و امتیازها به‌روز می‌شوند.', confirmLabel:'بله، حذف شود', onYes: () => {
+          scRemovePlayer(t, pid);
+          APP.reloadData();
+          APP.toast(`🗑 «${nameOf(pid)}» از مسابقه حذف شد`, 'orange');
+          if (onChange) onChange();
+          render();
+        } });
       }));
       const pb = $('#tr-pdf');
       /* 📄 خروجی PDF برنددار: یک برگهٔ A4 — سربرگ آکادمی + سکوی افتخار + جدول نهایی */
@@ -13939,8 +14527,8 @@ window.addEventListener('ga:brand-changed', function(){
           scFinalize(t, state.pid);
           APP.toast(`کارت «${esc((playersOf().find(x => x.pid === state.pid) || {}).name || '')}» ثبت نهایی شد ✅`, 'green');
           const ended = scAutoFinalize(t); /* همهٔ کارت‌ها نهایی شد → مسابقه پایان یافته */
-          if (confirm('ثبت نهایی شد ✔ گزارش مسابقه را ببینید؟')) tourReport(t, () => render());
-          else render();
+          const doShow = () => tourReport(t, () => render());
+          confirmPop({ title:'گزارش مسابقه', itemName: t[1] || 'این مسابقه', body:'می‌خواهید گزارش کامل مسابقه را ببینید؟', danger:false, confirmLabel:'بله، نمایش بده', onYes: doShow, onNo: () => render() });
         });
       } else {
         const toEN = s => String(s || '').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[^\d]/g, '');
@@ -14798,11 +15386,13 @@ window.addEventListener('ga:brand-changed', function(){
         const id = +b.dataset.del;
         const a = U.list(); const u = a.find(x => x.id === id);
         if (!u || u.main) return;
-        if (!confirm('یوزر «' + u.name + '» حذف شود؟')) return;
-        U.save(a.filter(x => x.id !== id));
-        if (u.pid){ const pu = playerUsers(); delete pu[u.pid]; savePlayerUsers(pu); }
-        render();
-        APP.toast('یوزر «' + u.name + '» حذف شد 🗑', 'orange');
+        const doDelete = () => {
+          U.save(a.filter(x => x.id !== id));
+          if (u.pid){ const pu = playerUsers(); delete pu[u.pid]; savePlayerUsers(pu); }
+          render();
+          APP.toast('یوزر «' + u.name + '» حذف شد 🗑', 'orange');
+        };
+        confirmPop({ title:'حذف یوزر', itemName: u.name, body:'این حساب و دسترسی‌اش برداشته می‌شود.', confirmLabel:'بله، حذف شود', onYes: doDelete });
       }));
     }
     function subModal(uname){
@@ -15119,12 +15709,12 @@ window.addEventListener('ga:brand-changed', function(){
     $$('[data-del]', body).forEach(b => b.addEventListener('click', () => { AV.deleteReq(b.dataset.del); renderMgmtTab(); }));
     $$('[data-zero]', body).forEach(b => b.addEventListener('click', () => {
       const u = b.dataset.zero;
-      if (!confirm('موجودی سکهٔ «' + u + '» صفر شود؟')) return;
-      const d = AV.coinData();
-      d[u] = { total: 0, log: [] };
-      try { localStorage.setItem('ga_coins', JSON.stringify(d)); } catch(e){}
-      APP.toast('کیف‌پول صفر شد', 'orange');
-      renderMgmtTab();
+      const doZero = () => { const d = AV.coinData();
+        d[u] = { total: 0, log: [] };
+        try { localStorage.setItem('ga_coins', JSON.stringify(d)); } catch(e){}
+        APP.toast('کیف‌پول صفر شد', 'orange');
+        renderMgmtTab(); };
+      confirmPop({ title:'صفر کردن موجودی سکه', itemName: u, body:'موجودی سکهٔ این کاربر صفر می‌شود.', danger:false, confirmLabel:'بله، صفر شود', onYes: doZero });
     }));
     const cl = $('#cr-clear', body);
     if (cl) cl.addEventListener('click', () => { AV.clearDecided(); renderMgmtTab(); });
@@ -15316,17 +15906,17 @@ window.addEventListener('ga:brand-changed', function(){
     if (sv) sv.addEventListener('click', () => { if (!refreshPreview(true)) return; APP.toast('پیش‌نیازها و ظاهر رنک «' + AV.rankOf(honorLv).en + '» ذخیره شد ✓', 'green'); renderMgmtTab(); });
     const cle = $('#hr-clear', body);
     if (cle) cle.addEventListener('click', () => {
-      if (!confirm('پیش‌نیازها (شامل امتیاز) و ظاهر این رنک به پیش‌فرض برگردد؟')) return;
-      const st = JSON.parse(localStorage.getItem('ga_rank_skin') || '{}');
-      delete st[String(honorLv)];
-      localStorage.setItem('ga_rank_skin', JSON.stringify(st));
-      APP.toast('پیش‌نیازها و ظاهر این رنک به حالت پیش‌فرض برگشت', 'orange');
-      renderMgmtTab();
+      const doReset = () => { const st = JSON.parse(localStorage.getItem('ga_rank_skin') || '{}');
+        delete st[String(honorLv)];
+        localStorage.setItem('ga_rank_skin', JSON.stringify(st));
+        APP.toast('پیش‌نیازها و ظاهر این رنک به حالت پیش‌فرض برگشت', 'orange');
+        renderMgmtTab(); };
+      confirmPop({ title:'بازنشانی این رنک', itemName:'ظاهر و پیش‌نیاز', body:'پیش‌نیازها (شامل امتیاز) و ظاهر این رنک به پیش‌فرض برمی‌گردد.', danger:false, confirmLabel:'بله، بازنشانی شود', onYes: doReset });
     });
     const rst = $('#hr-reset', body);
     if (rst) rst.addEventListener('click', () => {
-      if (!confirm('پیش‌نیازها (شامل امتیازها) و ظاهر همهٔ ۱۵ رنک به پیش‌فرض برگردد؟')) return;
-      AV.resetRanks(); APP.toast('همهٔ رنک‌ها بازنشانی شدند', 'orange'); renderMgmtTab();
+      const doReset = () => { AV.resetRanks(); APP.toast('همهٔ رنک‌ها بازنشانی شدند', 'orange'); renderMgmtTab(); };
+      confirmPop({ title:'بازنشانی همهٔ رنک‌ها', itemName:'ظاهر و پیش‌نیاز همهٔ ۱۵ رنک', body:'پیش‌نیازها و ظاهر همهٔ رنک‌ها به پیش‌فرض برمی‌گردد.', danger:false, confirmLabel:'بله، بازنشانی شود', onYes: doReset });
     });
     const tu = $('#hr-testup', body);
     if (tu) tu.addEventListener('click', () => AV.playRankUp($('#hr-prev', body), Math.max(1, honorLv - 1), honorLv));
@@ -15377,7 +15967,7 @@ window.addEventListener('ga:brand-changed', function(){
       APP.toast('منطق ارتقاء ذخیره شد؛ رنک‌ها با قواعد جدید محاسبه می‌شوند ✓','green');reopen();
     };
     $('#rr-reset',body).onclick=() => {
-      if(!confirm('فقط ضرایب و توضیح منطق به پیش‌فرض برگردند؟ امتیازها و پیش‌نیازهای رنک‌ها تغییر نمی‌کنند.')) return;
+      confirmPop({ title:'بازنشانی توضیح منطق رنک', itemName:'ضرایب و توضیح منطق', body:'فقط ضرایب و توضیح منطق به پیش‌فرض برمی‌گردد؛ امتیازها و پیش‌نیازهای رنک‌ها تغییر نمی‌کنند.', danger:false, confirmLabel:'بله، بازنشانی شود', onYes: () => { doReset(); } }); return;
       if(AV.saveRankRules(AV.DEFAULT_RANK_RULES)) reopen();
     };
   }
@@ -15457,15 +16047,15 @@ window.addEventListener('ga:brand-changed', function(){
       renderMgmtTab();
     }));
     $$('[data-idel]', body).forEach(b => b.addEventListener('click', () => {
-      if (!confirm('این آیتم حذف شود؟')) return;
-      AV.removeShopItem(b.dataset.idel);
-      APP.toast('آیتم حذف شد', 'orange');
-      renderMgmtTab();
+      const doDelete = () => { AV.removeShopItem(b.dataset.idel);
+        APP.toast('آیتم حذف شد', 'orange');
+        renderMgmtTab(); };
+      confirmPop({ title:'حذف آیتم فروشگاه', itemName: it ? (it.n || 'آیتم') : 'این آیتم', body:'از فهرست خرید قابل‌دسترس حذف می‌شود.', confirmLabel:'بله، حذف شود', onYes: doDelete });
     }));
     const rs = $('#sp-reset', body);
     if (rs) rs.addEventListener('click', () => {
-      if (!confirm('همهٔ ویرایش‌ها و آیتم‌های سفارشی فروشگاه پاک شود؟')) return;
-      AV.resetShop(); APP.toast('فروشگاه بازنشانی شد', 'orange'); renderMgmtTab();
+      const doReset = () => { AV.resetShop(); APP.toast('فروشگاه بازنشانی شد', 'orange'); renderMgmtTab(); };
+      confirmPop({ title:'بازنشانی فروشگاه', itemName:'همهٔ آیتم‌های سفارشی', body:'همهٔ ویرایش‌ها و آیتم‌های سفارشی فروشگاه پاک می‌شود.', confirmLabel:'بله، بازنشانی شود', onYes: doReset });
     });
     const add = $('#sp-add', body);
     if (add) add.addEventListener('click', () => {
@@ -15489,7 +16079,13 @@ window.addEventListener('ga:brand-changed', function(){
   }
 
   /* ── ابزارهای مشترک ── */
-  function extraCourses(){ try{ return JSON.parse(localStorage.getItem('ga_courses')||'[]'); }catch(e){ return []; } }
+  function extraCourses(){
+    try {
+      if (D.courseRecords) return D.courseRecords({ includeArchived:true });
+      const rows = JSON.parse(localStorage.getItem('ga_courses') || '[]');
+      return Array.isArray(rows) ? rows : [];
+    } catch(e){ return []; }
+  }
   /* بازگشایی رکوردهای «رپشده» (اثر باگ قدیمی push روی آرایهٔ نمایشی) */
   function unwrapTour(x){
     if (x && typeof x === 'object' && Array.isArray(x.t) && x.name === undefined)
@@ -15545,7 +16141,15 @@ window.addEventListener('ga:brand-changed', function(){
     }));
     return () => selectedHoleIds(box);
   }
-  function parEditorHtml(pars, idxs){
+  function normalizeHoleDistances(values, count){
+    return Array.from({length:count}, (_,i) => {
+      const raw = values && values[i];
+      if (raw == null || String(raw).trim() === '') return null;
+      const value = Number(raw);
+      return Number.isFinite(value) && value >= 0 ? value : null;
+    });
+  }
+  function parEditorHtml(pars, idxs, distances){
     const n = (pars || []).length;
     const mid = n > 9 ? 9 : n;
     function nine(from, to, title){
@@ -15553,16 +16157,18 @@ window.addEventListener('ga:brand-changed', function(){
       for (let i = from; i < to; i++){
         const p = pars[i] != null ? pars[i] : 4;
         const ix = (idxs && idxs[i]) || (i + 1);
+        const distance = distances && distances[i] != null ? String(distances[i]) : '';
         rows += `<div class="hp-par" data-i="${i}">
           <span class="hp-par-n">${esc(holeName(i + 1))}</span>
           <input class="input pe-par" type="number" min="3" max="6" value="${p}" data-i="${i}" inputmode="numeric" aria-label="پار ${i+1}">
           <input class="input pe-idx" type="number" min="1" max="${n}" value="${ix}" data-i="${i}" inputmode="numeric" aria-label="Index ${i+1}" title="۱ سخت‌ترین — ${n} آسان‌ترین">
+          <input class="input pe-distance" type="number" min="0" step="any" value="${esc(distance)}" placeholder="—" data-i="${i}" inputmode="decimal" aria-label="Distance ${i+1}">
           <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" aria-label="حذف">×</button>
         </div>`;
       }
       return `<section class="hp-par-nine">
         <div class="hp-par-nine-h">${title}</div>
-        <div class="hp-par-head"><span>میدان</span><span>پار</span><span>Index</span><span></span></div>
+        <div class="hp-par-head"><span>میدان</span><span>پار</span><span>Index</span><span>Distance</span><span></span></div>
         ${rows}
       </section>`;
     }
@@ -15573,12 +16179,24 @@ window.addEventListener('ga:brand-changed', function(){
         <button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
               </div>`;
   }
-  function bindParEditor(box, parVals, idxVals, onDraw){
-    if (typeof idxVals === 'function'){ onDraw = idxVals; idxVals = null; }
+  function bindParEditor(box, parVals, idxVals, distanceVals, onDraw){
+    if (typeof idxVals === 'function'){ onDraw = idxVals; idxVals = null; distanceVals = null; }
+    if (typeof distanceVals === 'function'){ onDraw = distanceVals; distanceVals = null; }
     if (!idxVals) idxVals = [];
+    if (!distanceVals) distanceVals = [];
     function ensureIdx(){
       while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
       idxVals.length = parVals.length;
+    }
+    function ensureDistances(){
+      while (distanceVals.length < parVals.length) distanceVals.push('');
+      distanceVals.length = parVals.length;
+    }
+    function readDistance(inp){
+      const raw = String(inp.value == null ? '' : inp.value).trim();
+      if (raw === '') return '';
+      const value = Number(raw);
+      return Number.isFinite(value) && value >= 0 ? value : '';
     }
     function sync(){
       $$('.pe-par', box).forEach(inp => { parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4)); });
@@ -15587,23 +16205,27 @@ window.addEventListener('ga:brand-changed', function(){
         const n = parVals.length;
         idxVals[+inp.dataset.i] = Math.max(1, Math.min(n, +inp.value || ( +inp.dataset.i + 1)));
       });
+      ensureDistances();
+      $$('.pe-distance', box).forEach(inp => { distanceVals[+inp.dataset.i] = readDistance(inp); });
     }
     function draw(){
       ensureIdx();
-      box.innerHTML = parEditorHtml(parVals, idxVals);
+      ensureDistances();
+      box.innerHTML = parEditorHtml(parVals, idxVals, distanceVals);
       $$('.pe-par', box).forEach(inp => inp.addEventListener('input', () => { parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4)); }));
       $$('.pe-idx', box).forEach(inp => inp.addEventListener('input', () => {
         const n = parVals.length;
         idxVals[+inp.dataset.i] = Math.max(1, Math.min(n, +inp.value || 1));
       }));
+      $$('.pe-distance', box).forEach(inp => inp.addEventListener('input', () => { distanceVals[+inp.dataset.i] = readDistance(inp); }));
       $$('.pe-del', box).forEach(b => b.addEventListener('click', () => {
         sync();
         if (parVals.length <= 1){ APP.toast('حداقل یک میدان لازم است', 'red'); return; }
         const i = +b.dataset.i;
-        parVals.splice(i, 1); idxVals.splice(i, 1); draw();
+        parVals.splice(i, 1); idxVals.splice(i, 1); distanceVals.splice(i, 1); draw();
       }));
       const add = box.querySelector('#pe-add');
-      if (add) add.addEventListener('click', () => { sync(); parVals.push(4); idxVals.push(parVals.length); draw(); });
+      if (add) add.addEventListener('click', () => { sync(); parVals.push(4); idxVals.push(parVals.length); distanceVals.push(''); draw(); });
       if (onDraw) onDraw();
     }
     draw();
@@ -16426,8 +17048,13 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
     const id = +courseId;
     if (id >= 1000){
       try {
+        const c = window.Data && window.Data.courseById ? window.Data.courseById(id) : null;
+        if (c && c.geoId) return String(c.geoId);
+      } catch(e){}
+      /* سازگاری با باندل/رکوردهای پیش از مهاجرت؛ فقط fallback است، نه منبع هویت */
+      try {
         const extra = JSON.parse(localStorage.getItem('ga_courses') || '[]');
-        const c = extra[id - 1000];
+        const c = Array.isArray(extra) ? extra.find((item, i) => item && (+item.courseId === id || (!item.courseId && 1000+i === id))) : null;
         if (c && c.geoId) return String(c.geoId);
       } catch(e){}
       return String(id);
@@ -16803,13 +17430,19 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
     var b = expand(bounds);
     if (!b) return Promise.reject(Error('bounds missing'));
     var out = { sat: null, topo: null };
+    function reportComplete(mode, image){
+      if (typeof onProgress !== 'function') return;
+      try { onProgress(mode, image ? 100 : 0, { complete: true, ok: !!image }); } catch (e) {}
+    }
     return render('sat', b, onProgress).catch(function(){ return null; }).then(function(sat){
       out.sat = sat;
+      reportComplete('sat', sat);
       return sat ? idb('put', keyOf(key, 'sat'), { blob: sat.blob, meta: sat.meta }).catch(function(){}) : null;
     }).then(function(){
       return render('topo', b, onProgress).catch(function(){ return null; });
     }).then(function(topo){
       out.topo = topo;
+      reportComplete('topo', topo);
       return topo ? idb('put', keyOf(key, 'topo'), { blob: topo.blob, meta: topo.meta }).catch(function(){}) : null;
     }).then(function(){
       if (out.sat) urls.set(keyOf(key, 'sat'), URL.createObjectURL(out.sat.blob));
@@ -16887,6 +17520,18 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
   const CLUBS = ['Driver','3 Wood','5 Wood','Hybrid','Iron 3','Iron 4','Iron 5','Iron 6','Iron 7','Iron 8','Iron 9','Pitching Wedge','Gap Wedge','Sand Wedge','Lob Wedge','Putter'];
   const CLUB_COLORS = ['#D4AF37','#E67E22','#1EBB8A','#9B59B6','#2E86DE','#E74C3C','#1abc9c','#f39c12','#16a085','#c0392b'];
   const YD = 0.9144;
+  const MAP_MIN_ZOOM = 14, MAP_MAX_ZOOM = 20, MAP_ZOOM_STEP = 1/3;
+  function normalizeZoomLock(value){
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return Math.max(MAP_MIN_ZOOM, Math.min(MAP_MAX_ZOOM, Math.round(n * 3) / 3));
+  }
+  function zoomLockFromRecord(rec){
+    if (!rec || typeof rec !== 'object') return 0;
+    /* maxLock is a legacy value; reinterpret it as the intended zoom-out floor. */
+    const raw = rec.minZoomLock != null ? rec.minZoomLock : rec.maxLock;
+    return normalizeZoomLock(raw);
+  }
 
   let map = null, measurePts = [], measureLine = null, measureMarks = [], mode = 'pan';
   let unit = 'yd', holeSel = 'all', showTee = true, showGreen = true, showFw = true, showDash = true;
@@ -17390,7 +18035,12 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
         return `<option value="${n}">میدان ${n}${hh&&hh.par?(' • پار '+hh.par):''}${ix?(' • Index '+ix):''}${yd?(' • '+yd+' yd'):''}</option>`;
       }).join('');
       hole.value = holeSel;
-      hole.onchange = function(){ holeSel = hole.value; clubDraw=null; mode='pan'; drawCourse(); syncModeBtns(); };
+      hole.onchange = function(){
+        holeSel = hole.value;
+        if (holeSel === 'all' && wizStep === 'ready') wizStep = 'hole';
+        else if (holeSel !== 'all' && wizStep === 'hole'){ wizStep = 'ready'; wizEdit = -1; }
+        clubDraw=null; mode='pan'; drawCourse(); syncModeBtns(); renderWiz(); renderHist();
+      };
     }
     const club = document.getElementById('earth-club');
     if (club && !club.options.length){
@@ -17509,8 +18159,9 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
       holeSel = String(n);
       const sel = document.getElementById('earth-hole');
       if (sel) sel.value = holeSel;
+      if (wizStep === 'hole'){ wizStep = 'ready'; wizEdit = -1; }
       clubDraw=null; mode='pan';
-      drawCourse();
+      drawCourse(); renderWiz(); renderHist();
     };
   }
 
@@ -17527,8 +18178,8 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
   }
 
   let mountCenter = null;
-  let appliedLock = 0;   /* قفل حداکثر زوم زمین (۰ = آزاد) — توسط مدیر در ویرایش زمین تعیین می‌شود */
-  const zoomCbs = [];    /* نوار «قفل زوم» پنل، زوم فعلی را زنده می‌خواند */
+  let appliedMinZoomLock = 0; /* کمترین زوم مجاز؛ جلوی زوم‌اوت دورتر از قاب تصویر را می‌گیرد */
+  const zoomCbs = [];    /* نوار قفل زوم پنل، زوم فعلی را زنده می‌خواند */
   function mount(el, opts){
     destroy();
     if (!el) return;
@@ -17545,17 +18196,20 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
     }
 
     mountCenter = { lat: center.lat, lng: center.lng };
-    /* قفل حداکثر زومِ زمین (اگر مدیر تعیین کرده) — در همهٔ نمایش‌های این زمین اعمال می‌شود */
-    appliedLock = 0;
+    /* قفل زوم‌اوتِ زمین: در نمایش عادی، حداقل زوم هر زمین جداگانه اعمال می‌شود. */
+    appliedMinZoomLock = 0;
     try {
       if (window.CourseGeo && CourseGeo.keyOf){
         var gk = CourseGeo.keyOf(courseKey());
         var grec = (JSON.parse(localStorage.getItem('ga_course_geo') || '{}') || {})[gk];
-        if (grec && isFinite(+grec.maxLock)) appliedLock = Math.max(12, Math.min(20, Math.round(+grec.maxLock)));
+        appliedMinZoomLock = zoomLockFromRecord(grec);
       }
     } catch (e) {}
-    map = L.map(el, { zoomControl:false, attributionControl:false, tap:true, minZoom:14, maxZoom: appliedLock || 20 })
-          .setView([center.lat, center.lng], appliedLock ? Math.min(16, appliedLock) : 16);
+    const minZoom = appliedMinZoomLock || MAP_MIN_ZOOM;
+    map = L.map(el, {
+      zoomControl:false, attributionControl:false, tap:true,
+      minZoom, maxZoom:MAP_MAX_ZOOM, zoomSnap:MAP_ZOOM_STEP, zoomDelta:MAP_ZOOM_STEP
+    }).setView([center.lat, center.lng], Math.max(16, minZoom));
     map.on('zoomend', function(){ try { zoomCbs.forEach(function(f){ f(map.getZoom()); }); } catch (e) {} });
     applyBg();
     if (!satInfo() || !satInfo().url){
@@ -17627,6 +18281,24 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
         + '<div class="ew-shots">'+arr.map(function(sh,i){ return shotArticle(sh,i,n); }).join('')+'</div>'
         + '<div class="ew-actions"><button type="button" class="btn sm ghost" data-ew-hole="'+n+'">ویرایش این میدان</button></div></details>';
     }).join('')+'</div>';
+  }
+  function courseHoleDistance(hole){
+    const n = Number(hole);
+    if (!Number.isSafeInteger(n) || n < 1) return null;
+    const D = window.Data;
+    if (!D || typeof D.distancesOf !== 'function') return null;
+    const distances = D.distancesOf(courseKey());
+    const raw = Array.isArray(distances) ? distances[n - 1] : null;
+    if (raw == null || String(raw).trim() === '') return null;
+    const value = Number(raw);
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  }
+  function holeDistanceCard(hole){
+    const n = Number(hole);
+    const valid = Number.isSafeInteger(n) && n > 0;
+    const value = valid ? courseHoleDistance(n) : null;
+    const holeAttr = valid ? ' data-ew-distance-hole="' + n + '"' : '';
+    return '<div class="ew-distance-card" role="status" aria-live="polite"' + holeAttr + '><span>Distance</span><b>' + (value == null ? '—' : fa(value)) + '</b></div>';
   }
   function vsStrokeColor(vs){
     if (window.Data && Data.scaleVsPar) return Data.scaleVsPar(vs);
@@ -17719,7 +18391,7 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
     } else if (wizStep === 'ready'){
       const arr = holePlan();
       h = wizBack('hole','تغییر میدان')+'<div class="ew-head"><b>میدان '+holeSel+'</b><span>'+arr.length+' ضربه</span></div>'
-        + '<div class="ew-actions ew-main-acts"><button type="button" class="btn sm" id="ew-add">＋ افزودن ضربه</button><button type="button" class="btn sm" id="ew-lock">ثبت میدان</button></div>'
+        + '<div class="ew-actions ew-main-acts"><button type="button" class="btn sm" id="ew-add">＋ افزودن ضربه</button><button type="button" class="btn sm" id="ew-lock">ثبت میدان</button>'+holeDistanceCard(holeSel)+'</div>'
         + '<div class="ew-shots">'+(arr.length ? arr.map(function(sh,i){ return shotArticle(sh,i); }).join('') : '<div class="ew-empty">هنوز ضربه‌ای ثبت نشده.</div>')+'</div>'
         + '<div class="ew-actions"><button type="button" class="btn sm ghost" id="ew-rep-one">گزارش این میدان</button><button type="button" class="btn sm" id="ew-rep-all">گزارش کامل</button></div>';
     } else if (wizStep === 'club'){
@@ -17742,7 +18414,7 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
     box.querySelectorAll('[data-ew-back]').forEach(function(b){
       b.onclick = function(){
         const s = b.getAttribute('data-ew-back');
-        if (s==='hole'){ holeSel='all'; clubDraw=null; mode='pan'; drawCourse(); }
+        if (s==='hole'){ holeSel='all'; const sel=document.getElementById('earth-hole'); if(sel) sel.value='all'; clubDraw=null; mode='pan'; drawCourse(); }
         if (s==='ready'){ clubDraw=null; mode='pan'; clearPreview(); }
         if (s==='draw'){
           clubDraw = { club: wizDraft.club, color: wizDraft.color, pts: (wizDraft.pts||[]).slice() };
@@ -17754,6 +18426,7 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
     box.querySelectorAll('[data-ew-hole]').forEach(function(b){
       b.onclick = function(){
         holeSel = b.getAttribute('data-ew-hole');
+        const sel = document.getElementById('earth-hole'); if (sel) sel.value = holeSel;
         wizStep = 'ready'; wizEdit = -1;
         clubDraw=null; mode='pan';
         drawCourse(); renderWiz();
@@ -17770,7 +18443,8 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
         if (window.APP && APP.toast) APP.toast('اول حداقل یک ضربه ثبت کنید', 'orange');
         return;
       }
-      holeSel = 'all'; clubDraw = null; mode = 'pan'; wizEdit = -1; wizStep = 'hole';
+      holeSel = 'all'; const sel = document.getElementById('earth-hole'); if (sel) sel.value = 'all';
+      clubDraw = null; mode = 'pan'; wizEdit = -1; wizStep = 'hole';
       drawCourse(); renderWiz();
     };
     box.querySelectorAll('[data-ew-club]').forEach(function(b){
@@ -17822,7 +18496,7 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
     box.querySelectorAll('[data-ew-edit]').forEach(function(b){
       b.onclick = function(){
         const hn = b.getAttribute('data-ew-hn');
-        if (hn){ holeSel = String(hn); }
+        if (hn){ holeSel = String(hn); const sel=document.getElementById('earth-hole'); if(sel) sel.value=holeSel; }
         const i = +b.getAttribute('data-ew-edit'); const sh = holePlan()[i]; if (!sh) return;
         wizEdit=i; wizDraft={ club:sh.club||'', color:sh.color||'#D4AF37', pts:(sh.pts||[]).slice(), note:sh.note||'' };
         wizStep='club'; drawCourse(); renderWiz();
@@ -17993,12 +18667,17 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
     mount, destroy,
     setEdit: function(on){
       editOn = !!on;
-      /* ویرایش‌گر آزادانه زوم می‌کند تا سطح درست را بسنجد؛ نمایش‌ها قفل را می‌گیرند */
-      try { if (map) map.setMaxZoom((!on && appliedLock) ? appliedLock : 20); } catch (e) {}
+      /* مدیر هنگام تنظیم آزادانه زوم می‌کند؛ نمایش عادی فقط از زوم‌اوتِ قفل‌شده عبور نمی‌کند. */
+      try {
+        if (map){
+          map.setMinZoom((!on && appliedMinZoomLock) ? appliedMinZoomLock : MAP_MIN_ZOOM);
+          map.setMaxZoom(MAP_MAX_ZOOM);
+        }
+      } catch (e) {}
       drawCourse();
     },
     zoom: function(){ return map ? map.getZoom() : null; },
-    state: function(){ return map ? { zoom: map.getZoom(), maxZoom: map.getMaxZoom(), lock: appliedLock || 0 } : null; },
+    state: function(){ return map ? { zoom: map.getZoom(), minZoom: map.getMinZoom(), maxZoom: map.getMaxZoom(), lock: appliedMinZoomLock || 0 } : null; },
     onZoom: function(fn){ if (typeof fn !== 'function') return; zoomCbs.push(fn); if (map){ try { fn(map.getZoom()); } catch (e) {} } }
   };
 })();
@@ -18009,6 +18688,55 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
   const $ = (s, r=document) => r.querySelector(s);
   const $$ = (s, r=document) => [...r.querySelectorAll(s)];
   const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+  /* مودال تأیید مشترک — به جای confirm() برای همهٔ حذف‌های مهم
+     نام آیتم به رنگ قرمز، بولد، بزرگ نمایش داده می‌شود.
+     options: { title, itemName (نام آیتم), body (توضیح اختیاری), danger (پیش‌فرض true), confirmLabel, cancelLabel, onYes } */
+  let __confirmPopEl = null;
+  function confirmPop(options){
+    const o = Object.assign({ title:'تأیید', itemName:'', body:'', danger:true, confirmLabel:'بله، حذف شود', cancelLabel:'انصراف' }, options || {});
+    if (!__confirmPopEl){
+      __confirmPopEl = document.createElement('div');
+      __confirmPopEl.id = 'ga-confirm-pop';
+      __confirmPopEl.setAttribute('dir','rtl');
+      __confirmPopEl.style.cssText = 'position:fixed;inset:0;z-index:9990;display:none;align-items:center;justify-content:center;background:rgba(4,8,14,.78);backdrop-filter:blur(6px);padding:14px;box-sizing:border-box';
+      document.body.appendChild(__confirmPopEl);
+    }
+    const m = __confirmPopEl;
+    const nameHtml = o.itemName
+      ? `<div style="margin:8px 0 14px;padding:12px 14px;background:rgba(229,80,80,.08);border:1px solid rgba(229,80,80,.35);border-radius:12px;font-size:18px;font-weight:900;color:#e74c3c;line-height:1.6;text-align:center;letter-spacing:.2px;word-break:break-word">${esc(o.itemName)}</div>`
+      : '';
+    const bodyHtml = o.body ? `<p style="margin:0 0 8px;color:#cfd6dd;font-size:13.5px;line-height:1.9">${esc(o.body)}</p>` : '';
+    m.innerHTML = `
+      <div role="alertdialog" aria-modal="true" aria-labelledby="ga-cp-title" style="background:linear-gradient(180deg,#0d1b2a 0%,#0a1421 100%);border:1px solid rgba(229,80,80,.45);border-radius:18px;padding:22px 22px 18px;max-width:min(460px,92vw);width:100%;box-shadow:0 18px 60px rgba(0,0,0,.6);color:#e6edf3;font-family:inherit">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <span aria-hidden="true" style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:rgba(229,80,80,.18);color:#e74c3c;font-size:20px">⚠</span>
+          <h3 id="ga-cp-title" style="margin:0;font-size:16px;font-weight:900">${esc(o.title)}</h3>
+        </div>
+        ${bodyHtml}${nameHtml}
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap">
+          <button type="button" id="ga-cp-no" style="flex:1;min-height:44px;padding:8px 14px;border-radius:10px;border:1px solid #b5994a55;background:transparent;color:#e6edf3;font:inherit;font-weight:700;cursor:pointer">${esc(o.cancelLabel)}</button>
+          <button type="button" id="ga-cp-yes" style="flex:1;min-height:44px;padding:8px 14px;border-radius:10px;border:0;background:linear-gradient(180deg,#e85d4c 0%,#c0392b 100%);color:#fff;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 6px 18px rgba(192,57,43,.35)">${esc(o.confirmLabel)}</button>
+        </div>
+      </div>`;
+    return new Promise(resolve => {
+      const yes = () => { teardown(); try { if (typeof o.onYes === 'function') o.onYes(); } catch(e){ console.error('confirmPop onYes:',e); } resolve(true); };
+      const no  = () => { teardown(); resolve(false); };
+      function teardown(){
+        m.style.display = 'none';
+        m.querySelector('#ga-cp-yes').removeEventListener('click', yes);
+        m.querySelector('#ga-cp-no').removeEventListener('click', no);
+        document.removeEventListener('keydown', onKey, true);
+      }
+      function onKey(e){ if (m.style.display === 'none') return; if (e.key === 'Escape'){ e.preventDefault(); no(); } else if (e.key === 'Enter'){ e.preventDefault(); yes(); } }
+      m.style.display = 'flex';
+      m.querySelector('#ga-cp-yes').addEventListener('click', yes);
+      m.querySelector('#ga-cp-no').addEventListener('click', no);
+      document.addEventListener('keydown', onKey, true);
+      /* دکمهٔ پیش‌فرض فوکوس: انصراف — برای جلوگیری از حذف تصادفی با Enter */
+      const noBtn = m.querySelector('#ga-cp-no'); if (noBtn) try { noBtn.focus(); } catch(e){}
+    });
+  }
   const L = (id, fallback) => window.UI_LABELS ? UI_LABELS.t(id, fallback) : fallback;
   const Bnd = () => {
     try { if (window.GA_BRAND) return GA_BRAND.get(); } catch(e){}
@@ -20018,25 +20746,31 @@ const sp = $('#st-podium');
         const kind = b.dataset.spdel, sid = b.dataset.sid, pid = +b.dataset.pid;
         const club = b.dataset.club || '', t = b.dataset.t;
         const pname = (D.nameOf ? D.nameOf(pid) : '') || ('بازیکن ' + pid);
-        if (kind === 'session'){
-          if (!confirm('جلسهٔ کامل با همهٔ ضربه‌های همهٔ بازیکن‌ها برای همیشه حذف شود؟ این کار برگشت‌ناپذیر است.')) return;
-          spDeleteSession(sid);
-          toast('جلسه حذف شد 🗑', 'ok');
-        } else if (kind === 'player'){
-          if (!confirm('همهٔ ضربه‌های «' + pname + '» در این جلسه حذف شود؟')) return;
-          const n = spDeleteWhere(x => String(x.sid) === String(sid) && +x.pid === pid);
-          toast(n ? (D.fa(n) + ' ضربهٔ «' + pname + '» حذف شد ✓') : 'چیزی برای حذف نبود', n ? 'ok' : 'orange');
-        } else if (kind === 'club'){
-          if (!confirm('همهٔ ضربه‌های «' + club + '» متعلق به «' + pname + '» در این جلسه حذف شود؟')) return;
-          const n = spDeleteWhere(x => String(x.sid) === String(sid) && +x.pid === pid && x.club === club);
-          toast(n ? (D.fa(n) + ' ضربهٔ ' + club + ' حذف شد ✓') : 'چیزی برای حذف نبود', n ? 'ok' : 'orange');
-        } else if (kind === 'shot'){
-          if (!confirm('این ضربه حذف شود؟')) return;
-          const n = spDeleteOneShot(sid, pid, club, t);
-          toast(n ? 'ضربه حذف شد ✓' : 'ضربه پیدا نشد', n ? 'ok' : 'orange');
-        } else return;
-        renderSmartHist();
-        try { renderSmartNotes(); } catch (err){}
+        const doDelete = () => {
+          if (kind === 'session'){
+            spDeleteSession(sid);
+            toast('جلسه حذف شد 🗑', 'ok');
+          } else if (kind === 'player'){
+            const n = spDeleteWhere(x => String(x.sid) === String(sid) && +x.pid === pid);
+            toast(n ? (D.fa(n) + ' ضربهٔ «' + pname + '» حذف شد ✓') : 'چیزی برای حذف نبود', n ? 'ok' : 'orange');
+          } else if (kind === 'club'){
+            const n = spDeleteWhere(x => String(x.sid) === String(sid) && +x.pid === pid && x.club === club);
+            toast(n ? (D.fa(n) + ' ضربهٔ ' + club + ' حذف شد ✓') : 'چیزی برای حذف نبود', n ? 'ok' : 'orange');
+          } else if (kind === 'shot'){
+            const n = spDeleteOneShot(sid, pid, club, t);
+            toast(n ? 'ضربه حذف شد ✓' : 'ضربه پیدا نشد', n ? 'ok' : 'orange');
+          } else return;
+          renderSmartHist();
+          try { renderSmartNotes(); } catch (err){}
+        };
+        const pop = (kind === 'session')
+          ? { title:'حذف جلسهٔ تمرین', itemName:'جلسهٔ شماره ' + sid.slice(-4), body:'همهٔ ضربه‌های همهٔ بازیکن‌ها برای همیشه حذف می‌شود. این کار برگشت‌ناپذیر است.', confirmLabel:'بله، جلسه حذف شود' }
+          : (kind === 'player')
+            ? { title:'حذف ضربه‌های بازیکن', itemName:pname, body:'همهٔ ضربه‌های این بازیکن در این جلسه حذف می‌شود.', confirmLabel:'بله، حذف شود' }
+            : (kind === 'club')
+              ? { title:'حذف ضربه‌های کلوپ', itemName:club + ' — ' + pname, body:'همهٔ ضربه‌های این بازیکن با این کلوپ در این جلسه حذف می‌شود.', confirmLabel:'بله، حذف شود' }
+              : { title:'حذف ضربه', itemName:'ضربهٔ ' + club + ' — ' + pname, body:'این ضربه از جلسه حذف می‌شود.', confirmLabel:'بله، حذف شود' };
+        confirmPop(Object.assign(pop, { onYes: doDelete }));
       });
     }
     const pidS = $('#sph-player'), typS = $('#sph-type'), clbS = $('#sph-club');
@@ -20544,7 +21278,7 @@ const sp = $('#st-podium');
       (S.courses || []).forEach(c => {
         let lat, lng;
         if (c[0] >= 1000){
-          const x = extras[c[0] - 1000];
+          const x = (D.courseById && D.courseById(c[0])) || extras[c[0] - 1000];
           if (x && isFinite(+x.lat) && isFinite(+x.lng)) { lat = +x.lat; lng = +x.lng; }
         }
         if (lat == null){
@@ -21756,7 +22490,13 @@ const stCal = $('#st-cal');
   }
 
   /* ═══════════ ابزار طراح ═══════════ */
-  function extraCourses(){ try{ return JSON.parse(store.get('ga_courses')||'[]'); }catch(e){ return []; } }
+  function extraCourses(){
+    try {
+      if (D.courseRecords) return D.courseRecords({ includeArchived:true });
+      const rows = JSON.parse(store.get('ga_courses') || '[]');
+      return Array.isArray(rows) ? rows : [];
+    } catch(e){ return []; }
+  }
   function extraTours(){ try{ const a = JSON.parse(store.get('ga_tournaments')||'[]'); return Array.isArray(a) ? a.map(x => (x && typeof x === 'object' && Array.isArray(x.t) && x.name === undefined) ? { name:x.t[1]||'', lvl:+x.t[2]||2, course:+x.t[3]||0, holes:+x.t[4]||18, date:x.t[5]||'', end:x.end||'', time:x.time||'', rule:x.rule||'normal', p1:x.p1, p2:x.p2, p3:x.p3, entry:x.entry, schedule:Array.isArray(x.schedule)?x.schedule:[], holeIds:x.holeIds } : x) : []; }catch(e){ return []; } }
   function extraCards(){ try{ return JSON.parse(store.get('ga_scorecards')||'[]'); }catch(e){ return []; } }
   function saveCourses(a){ try{ store.set('ga_courses', JSON.stringify(a)); }catch(e){} }
@@ -21780,7 +22520,8 @@ const stCal = $('#st-cal');
     <div class="glass">
       <div class="card-head"><span class="ic">🗺️</span><h3>زمینهای موجود</h3><span class="tag">${D.fa(S.courses.length)} زمین</span></div>
       <div id="ac-list"></div>
-    </div>`;
+    </div>
+    <div id="ac-archived"></div>`;
     let parVals = [];
     let idxVals = [];
     function drawPars(){
@@ -21811,9 +22552,17 @@ const stCal = $('#st-cal');
       const holes = +$('#ac-holes').value;
       const pars = parVals.slice(0, holes).map(v => Math.max(3, Math.min(6, v)));
       const index = idxVals.slice(0, holes).map((v,i) => Math.max(1, Math.min(holes, +v || (i+1))));
-      const lst = extraCourses();
-      lst.push({ name, loc, holes, pars, index });
-      saveCourses(lst);
+      try {
+        if (D.createCourse) D.createCourse({ name, loc, holes, pars, index });
+        else {
+          const lst = extraCourses();
+          lst.push({ name, loc, holes, pars, index });
+          saveCourses(lst);
+        }
+      } catch(err){
+        toast('ذخیرهٔ زمین ناموفق بود؛ فهرست تغییر نکرد. فضای دستگاه را بررسی کنید.', 'red');
+        return;
+      }
       reloadData(); go('acourses');
       toast('زمین «' + name + '» ثبت شد ✓', 'green');
     });
@@ -21822,8 +22571,12 @@ const stCal = $('#st-cal');
   function renderCourseList(){
     const wrap = $('#ac-list'); if (!wrap) return;
     const rows = [];
-    D.COURSES.forEach((c,i) => rows.push({ type:'پایه', name:c[1], loc:c[2], holes:c[3], pars:D.COURSE_PARS[c[0]], del:null }));
-    extraCourses().forEach((c,i) => rows.push({ type:'سفارشی', name:c.name, loc:c.loc, holes:c.holes, pars:c.pars, del:i }));
+    D.COURSES.forEach((c,i) => rows.push({ type:'پایه', courseId:c[0], name:c[1], loc:c[2], holes:c[3], pars:D.COURSE_PARS[c[0]], del:null }));
+    extraCourses().forEach((c,i) => {
+      if (!c || (D.isArchivedCourse && D.isArchivedCourse(c))) return;
+      const courseId = D.courseIdOf ? D.courseIdOf(c, i) : (1000 + i);
+      rows.push({ type:'سفارشی', courseId, name:c.name, loc:c.loc, holes:c.holes, pars:c.pars || [], del:courseId });
+    });
     wrap.innerHTML = `
     <table class="tbl"><thead><tr><th>#</th><th>نام</th><th>محل</th><th>میدان</th><th>پار هر میدان</th><th>پار کل</th><th></th></tr></thead><tbody>
     ${rows.map((r,i) => `<tr>
@@ -21834,8 +22587,45 @@ const stCal = $('#st-cal');
       <td>${r.del !== null ? `<button class="btn ghost sm" data-del="${r.del}">حذف</button>` : ''}</td>
     </tr>`).join('')}</tbody></table>`;
     $$('#ac-list [data-del]').forEach(b => b.addEventListener('click', () => {
-      const lst = extraCourses(); lst.splice(+b.dataset.del, 1); saveCourses(lst); reloadData(); go('acourses'); toast('زمین حذف شد', 'orange');
+      const courseId = +b.dataset.del;
+      const course = D.courseById ? D.courseById(courseId) : null;
+      const name = course && course.name ? course.name : 'این زمین';
+      if (!course || (D.isArchivedCourse && D.isArchivedCourse(course))){
+        toast('این ردیف دیگر فعال نیست؛ فهرست را تازه کنید.', 'orange');
+        return;
+      }
+      const go = () => { try {
+        if (D.archiveCourse) D.archiveCourse(courseId);
+        else {
+          const lst = extraCourses();
+          const ix = lst.findIndex((c,i) => c && (D.courseIdOf ? D.courseIdOf(c,i) : 1000+i) === courseId);
+          if (ix < 0) throw new Error('زمین پیدا نشد');
+          lst[ix].deletedAt = new Date().toISOString();
+          saveCourses(lst);
+        }
+      } catch(err){ toast('بایگانی انجام نشد؛ داده‌ها تغییر نکردند.', 'red'); return; }
+        reloadData(); go('acourses'); toast('زمین بایگانی شد؛ می‌توانید آن را بازیابی کنید.', 'orange'); };
+      confirmPop({ title:'بایگانی زمین', itemName: name, body:'اطلاعات و تاریخچه پاک نمی‌شود و بعداً قابل‌بازیابی است.', confirmLabel:'بله، بایگانی شود', onYes: go });
     }));
+    const archived = extraCourses().filter(c => c && D.isArchivedCourse && D.isArchivedCourse(c));
+    const archivedWrap = $('#ac-archived', $('#view'));
+    if (archivedWrap){
+      archivedWrap.innerHTML = archived.length ? `
+        <div class="glass" style="margin-top:14px">
+          <div class="card-head"><span class="ic">♻️</span><h3>زمین‌های بایگانی‌شده</h3><span class="tag">قابل‌بازیابی</span></div>
+          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>نام</th><th>محل</th><th>شناسهٔ پایدار</th><th></th></tr></thead><tbody>
+            ${archived.map(c => `<tr><td><b>${esc(c.name||'زمین بدون نام')}</b></td><td>${esc(c.loc||'—')}</td><td class="num">${D.fa(c.courseId)}</td><td><button class="btn sm ghost" data-restore-course="${c.courseId}">↩ بازیابی</button></td></tr>`).join('')}
+          </tbody></table></div>
+        </div>` : '';
+      archivedWrap.querySelectorAll('[data-restore-course]').forEach(b => b.addEventListener('click', () => {
+        const courseId = +b.dataset.restoreCourse;
+        try {
+          if (D.restoreCourse) D.restoreCourse(courseId);
+          else throw new Error('بازیابی زمین پشتیبانی نمی‌شود');
+        } catch(err){ toast('بازیابی زمین ناموفق بود؛ داده‌ها تغییر نکردند.', 'red'); return; }
+        reloadData(); go('acourses'); toast('زمین بازیابی شد ✓', 'green');
+      }));
+    }
   }
 
   function pageATours(){
@@ -22249,7 +23039,7 @@ const stCal = $('#st-cal');
   });
 
   window.APP = {
-    go, reloadData, recompute, refreshLabels, state: () => ({ S, A }), toast,
+    go, reloadData, recompute, refreshLabels, state: () => ({ S, A }), toast, confirmPop,
     openCourse: (id) => { courseSel = +id; go('course'); },
     currentUser: () => currentUser,
     isMain: () => isMain(currentUser),

@@ -5,6 +5,18 @@
   const CLUBS = ['Driver','3 Wood','5 Wood','Hybrid','Iron 3','Iron 4','Iron 5','Iron 6','Iron 7','Iron 8','Iron 9','Pitching Wedge','Gap Wedge','Sand Wedge','Lob Wedge','Putter'];
   const CLUB_COLORS = ['#D4AF37','#E67E22','#1EBB8A','#9B59B6','#2E86DE','#E74C3C','#1abc9c','#f39c12','#16a085','#c0392b'];
   const YD = 0.9144;
+  const MAP_MIN_ZOOM = 14, MAP_MAX_ZOOM = 20, MAP_ZOOM_STEP = 1/3;
+  function normalizeZoomLock(value){
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return Math.max(MAP_MIN_ZOOM, Math.min(MAP_MAX_ZOOM, Math.round(n * 3) / 3));
+  }
+  function zoomLockFromRecord(rec){
+    if (!rec || typeof rec !== 'object') return 0;
+    /* maxLock is a legacy value; reinterpret it as the intended zoom-out floor. */
+    const raw = rec.minZoomLock != null ? rec.minZoomLock : rec.maxLock;
+    return normalizeZoomLock(raw);
+  }
 
   let map = null, measurePts = [], measureLine = null, measureMarks = [], mode = 'pan';
   let unit = 'yd', holeSel = 'all', showTee = true, showGreen = true, showFw = true, showDash = true;
@@ -651,8 +663,8 @@
   }
 
   let mountCenter = null;
-  let appliedLock = 0;   /* قفل حداکثر زوم زمین (۰ = آزاد) — توسط مدیر در ویرایش زمین تعیین می‌شود */
-  const zoomCbs = [];    /* نوار «قفل زوم» پنل، زوم فعلی را زنده می‌خواند */
+  let appliedMinZoomLock = 0; /* کمترین زوم مجاز؛ جلوی زوم‌اوت دورتر از قاب تصویر را می‌گیرد */
+  const zoomCbs = [];    /* نوار قفل زوم پنل، زوم فعلی را زنده می‌خواند */
   function mount(el, opts){
     destroy();
     if (!el) return;
@@ -669,17 +681,20 @@
     }
 
     mountCenter = { lat: center.lat, lng: center.lng };
-    /* قفل حداکثر زومِ زمین (اگر مدیر تعیین کرده) — در همهٔ نمایش‌های این زمین اعمال می‌شود */
-    appliedLock = 0;
+    /* قفل زوم‌اوتِ زمین: در نمایش عادی، حداقل زوم هر زمین جداگانه اعمال می‌شود. */
+    appliedMinZoomLock = 0;
     try {
       if (window.CourseGeo && CourseGeo.keyOf){
         var gk = CourseGeo.keyOf(courseKey());
         var grec = (JSON.parse(localStorage.getItem('ga_course_geo') || '{}') || {})[gk];
-        if (grec && isFinite(+grec.maxLock)) appliedLock = Math.max(12, Math.min(20, Math.round(+grec.maxLock)));
+        appliedMinZoomLock = zoomLockFromRecord(grec);
       }
     } catch (e) {}
-    map = L.map(el, { zoomControl:false, attributionControl:false, tap:true, minZoom:14, maxZoom: appliedLock || 20 })
-          .setView([center.lat, center.lng], appliedLock ? Math.min(16, appliedLock) : 16);
+    const minZoom = appliedMinZoomLock || MAP_MIN_ZOOM;
+    map = L.map(el, {
+      zoomControl:false, attributionControl:false, tap:true,
+      minZoom, maxZoom:MAP_MAX_ZOOM, zoomSnap:MAP_ZOOM_STEP, zoomDelta:MAP_ZOOM_STEP
+    }).setView([center.lat, center.lng], Math.max(16, minZoom));
     map.on('zoomend', function(){ try { zoomCbs.forEach(function(f){ f(map.getZoom()); }); } catch (e) {} });
     applyBg();
     if (!satInfo() || !satInfo().url){
@@ -1137,12 +1152,17 @@
     mount, destroy,
     setEdit: function(on){
       editOn = !!on;
-      /* ویرایش‌گر آزادانه زوم می‌کند تا سطح درست را بسنجد؛ نمایش‌ها قفل را می‌گیرند */
-      try { if (map) map.setMaxZoom((!on && appliedLock) ? appliedLock : 20); } catch (e) {}
+      /* مدیر هنگام تنظیم آزادانه زوم می‌کند؛ نمایش عادی فقط از زوم‌اوتِ قفل‌شده عبور نمی‌کند. */
+      try {
+        if (map){
+          map.setMinZoom((!on && appliedMinZoomLock) ? appliedMinZoomLock : MAP_MIN_ZOOM);
+          map.setMaxZoom(MAP_MAX_ZOOM);
+        }
+      } catch (e) {}
       drawCourse();
     },
     zoom: function(){ return map ? map.getZoom() : null; },
-    state: function(){ return map ? { zoom: map.getZoom(), maxZoom: map.getMaxZoom(), lock: appliedLock || 0 } : null; },
+    state: function(){ return map ? { zoom: map.getZoom(), minZoom: map.getMinZoom(), maxZoom: map.getMaxZoom(), lock: appliedMinZoomLock || 0 } : null; },
     onZoom: function(fn){ if (typeof fn !== 'function') return; zoomCbs.push(fn); if (map){ try { fn(map.getZoom()); } catch (e) {} } }
   };
 })();

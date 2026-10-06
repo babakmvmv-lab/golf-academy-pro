@@ -1924,6 +1924,32 @@
   }
 
   /* ── تب زمین‌ها ── */
+  const COURSE_ZOOM_LOCK_MIN = 14, COURSE_ZOOM_LOCK_MAX = 20, COURSE_ZOOM_LOCK_STEP = 1/3;
+  function normalizeCourseZoomLock(value){
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return Math.max(COURSE_ZOOM_LOCK_MIN, Math.min(COURSE_ZOOM_LOCK_MAX, Math.round(n * 3) / 3));
+  }
+  function courseZoomLockOf(rec){
+    if (!rec || typeof rec !== 'object') return null;
+    /* مقدار maxLock نسخه‌های قبلی را به‌عنوان مرز زوم‌اوت حفظ می‌کنیم. */
+    const raw = rec.minZoomLock != null ? rec.minZoomLock : rec.maxLock;
+    return normalizeCourseZoomLock(raw);
+  }
+  function courseZoomText(value){
+    const n = normalizeCourseZoomLock(value);
+    if (n == null) return '';
+    let text = String(Math.round(n * 100) / 100);
+    if (text.indexOf('.') >= 0) text = text.replace(/0+$/,'').replace(/\.$/,'');
+    return D.fa(text.replace('.', '٫'));
+  }
+  function saveCourseZoomLock(rec, value){
+    const n = normalizeCourseZoomLock(value);
+    if (n == null) return;
+    rec.minZoomLock = n;
+    delete rec.maxLock;
+  }
+
   function mgmtCourses(body){
     const S = gstate().S;
     const extra = extraCourses();
@@ -2132,11 +2158,11 @@
       APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
       APP.toast('زمین «' + name + '» ثبت شد ✓', 'green');
     });
-    const geoLocks = (() => { try { const all = JSON.parse(localStorage.getItem('ga_course_geo') || '{}'); const m = {}; Object.keys(all).forEach(k => { if (all[k] && all[k].maxLock) m[k] = all[k].maxLock; }); return m; } catch (e) { return {}; } })();
+    const geoLocks = (() => { try { const all = JSON.parse(localStorage.getItem('ga_course_geo') || '{}'); const m = {}; Object.keys(all).forEach(k => { const z = courseZoomLockOf(all[k]); if (z != null) m[k] = z; }); return m; } catch (e) { return {}; } })();
     const lockChip = r => {
       const course = !r.base && D.courseById ? D.courseById(r.id) : null;
       const gid = r.base ? (String(r.id) === '1' ? '1' : null) : (course && course.geoId) || r.geoId;
-      return (gid && geoLocks[gid]) ? ` <span class="chip dim" title="حداکثر زوم قفل‌شده">🔒 z${D.fa(geoLocks[gid])}</span>` : '';
+      return (gid && geoLocks[gid] != null) ? ` <span class="chip dim" title="مرز زوم‌اوت قفل‌شده">🔒 z${courseZoomText(geoLocks[gid])}</span>` : '';
     };
     $('#mc-rows').innerHTML = rows.map((r,i) => `<tr class="${r.base?'':'custom-row'}">
       <td class="num">${D.fa(r.id)}</td><td><b>${esc(r.name)}</b> ${r.base?'<span class="chip dim">پایه</span>':'<span class="chip purple">سفارشی</span>'}${lockChip(r)}</td>
@@ -2303,14 +2329,14 @@
           <span id="earth-geo-hint" style="font-size:12px;color:var(--muted);line-height:1.5"></span>
         </div>
         <div id="ec-zoomlock" style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;font-size:12.5px">
-          <span style="color:var(--muted)">🔒 حداکثر زوم نمایش:</span>
+          <span style="color:var(--muted)">🔒 مرز زوم‌اوت این زمین:</span>
           <b id="ec-zl-val">آزاد (پیش‌فرض)</b>
           <span id="ec-zl-cur" style="color:var(--muted)"></span>
-          <button type="button" class="btn sm ghost" id="ec-zl-lock">🔒 قفل روی زوم فعلی</button>
-          <button type="button" class="btn sm ghost" id="ec-zl-minus" style="display:none;padding:2px 10px">−</button>
-          <button type="button" class="btn sm ghost" id="ec-zl-plus" style="display:none;padding:2px 10px">＋</button>
+          <button type="button" class="btn sm ghost" id="ec-zl-lock" title="قفل زوم‌اوت روی همین اندازه">🔒 قفل زوم‌اوت فعلی</button>
+          <button type="button" class="btn sm ghost" id="ec-zl-minus" aria-label="اجازهٔ زوم‌اوت بیشتر" title="اجازهٔ زوم‌اوت بیشتر" style="display:none;padding:2px 10px">−</button>
+          <button type="button" class="btn sm ghost" id="ec-zl-plus" aria-label="محدودکردن زوم‌اوت" title="محدودکردن زوم‌اوت" style="display:none;padding:2px 10px">＋</button>
           <button type="button" class="btn sm ghost" id="ec-zl-open" style="display:none">🔓 حذف قفل</button>
-          <span style="color:var(--muted);flex-basis:100%;line-height:1.7">قفل یعنی بیننده (پنل و هوش زمین) نمی‌تواند از این زوم جلوتر برود؛ کم‌کردن زوم همیشه آزاد است. بی‌درنگ ذخیره و با ابر برای همهٔ دستگاه‌ها همگام می‌شود.</span>
+          <span style="color:var(--muted);flex-basis:100%;line-height:1.7">پس از قفل، بیننده نمی‌تواند دورتر زوم‌اوت کند؛ زوم‌این آزاد می‌ماند. قفل برای هر زمین جداست. دکمه‌های نقشه هر بار یک‌سوم زوم کامل جابه‌جا می‌شوند.</span>
         </div>
       </div>
             <div id="ec-pars" class="hp-par-wrap"></div>
@@ -2360,11 +2386,14 @@
     function zlRec(){ try { return (JSON.parse(localStorage.getItem('ga_course_geo') || '{}'))[zlGeoId()] || null; } catch(e){ return null; } }
     const zlVal = () => $('#ec-zl-val'), zlCur = () => $('#ec-zl-cur');
     function zlPaint(){
-      const v = zlRec() && zlRec().maxLock;
+      const v = courseZoomLockOf(zlRec());
       const el = zlVal(); if (!el) return;
-      el.textContent = v ? ('z' + D.fa(v) + ' (قفل)') : 'آزاد (پیش‌فرض)';
-      const show = v ? '' : 'none';
+      el.textContent = v != null ? ('زوم‌اوت تا z' + courseZoomText(v) + ' قفل است') : 'آزاد (پیش‌فرض)';
+      const show = v != null ? '' : 'none';
       ['#ec-zl-minus','#ec-zl-plus','#ec-zl-open'].forEach(id => { const b = $(id); if (b) b.style.display = show; });
+      const minus = $('#ec-zl-minus'), plus = $('#ec-zl-plus');
+      if (minus) minus.disabled = v != null && v <= COURSE_ZOOM_LOCK_MIN + 1e-6;
+      if (plus) plus.disabled = v != null && v >= COURSE_ZOOM_LOCK_MAX - 1e-6;
     }
     function zlSave(fn){
       const gid = zlGeoId();
@@ -2374,22 +2403,28 @@
       if (window.CourseGeo) CourseGeo.set(gid, all[gid]);
       zlPaint();
     }
+    function zlAdjustLock(delta){
+      const current = courseZoomLockOf(zlRec());
+      const base = current != null ? current : normalizeCourseZoomLock((window.EarthMap && EarthMap.zoom()) || 16);
+      if (base == null) return;
+      zlSave(rec => saveCourseZoomLock(rec, base + delta * COURSE_ZOOM_LOCK_STEP));
+    }
     (function zlBind(){
       if (!window.EarthMap || !EarthMap.onZoom) return;
-      try { EarthMap.onZoom(z => { const c = zlCur(); if (c) c.textContent = 'زوم فعلی: z' + D.fa(z); }); } catch(e){}
+      try { EarthMap.onZoom(z => { const c = zlCur(); if (c) c.textContent = 'زوم فعلی: z' + courseZoomText(z); }); } catch(e){}
       const lb = $('#ec-zl-lock');
       if (lb) lb.addEventListener('click', () => {
-        const z = window.EarthMap && EarthMap.zoom();
-        if (!z) return;
-        zlSave(rec => { rec.maxLock = z; });
-        APP.toast('حداکثر زوم این زمین روی z' + D.fa(z) + ' قفل شد 🔒', 'green');
+        const z = normalizeCourseZoomLock(window.EarthMap && EarthMap.zoom());
+        if (z == null) return;
+        zlSave(rec => saveCourseZoomLock(rec, z));
+        APP.toast('مرز زوم‌اوت این زمین روی z' + courseZoomText(z) + ' قفل شد 🔒', 'green');
       });
       const pm = $('#ec-zl-minus');
-      if (pm) pm.addEventListener('click', () => { zlSave(rec => { rec.maxLock = Math.max(12, (+rec.maxLock || 16) - 1); }); });
+      if (pm) pm.addEventListener('click', () => zlAdjustLock(-1));
       const pp = $('#ec-zl-plus');
-      if (pp) pp.addEventListener('click', () => { zlSave(rec => { rec.maxLock = Math.min(20, (+rec.maxLock || 16) + 1); }); });
+      if (pp) pp.addEventListener('click', () => zlAdjustLock(1));
       const po = $('#ec-zl-open');
-      if (po) po.addEventListener('click', () => { zlSave(rec => { delete rec.maxLock; }); APP.toast('قفل زوم برداشته شد — نمایش آزاد 🔓', 'orange'); });
+      if (po) po.addEventListener('click', () => { zlSave(rec => { delete rec.minZoomLock; delete rec.maxLock; }); APP.toast('قفل زوم‌اوت برداشته شد — نمایش آزاد 🔓', 'orange'); });
       zlPaint();
     })();
     mountGeoEdit();

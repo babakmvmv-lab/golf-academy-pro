@@ -95,6 +95,72 @@
 .field-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
 .field-grid label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
 .field-grid .span2{grid-column:span 2}
+
+/* ── گزارش حرفه‌ای واردکردن KML و مراحل دریافت تصویر زمین ── */
+.mc-kml-report{display:flex;align-items:flex-start;gap:11px;margin-top:10px;padding:13px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:linear-gradient(135deg,rgba(17,27,38,.88),rgba(10,16,24,.78));box-shadow:inset 0 1px rgba(255,255,255,.025);color:var(--text)}
+.mc-kml-report.is-ready{display:block}
+.mc-kml-guide-icon{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:11px;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.24);color:var(--gold-l);font-size:9px;font-weight:900;letter-spacing:.3px;direction:ltr}
+.mc-kml-guide-copy,.mc-kml-error-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.mc-kml-guide-copy>b,.mc-kml-error-copy>b{font-size:12.5px;font-weight:850;color:var(--gold-l)}
+.mc-kml-guide-copy>span,.mc-kml-error-copy>span{font-size:11px;line-height:1.8;color:var(--muted)}
+.mc-kml-format{margin-top:3px;font-size:10.5px;color:var(--muted)}
+.mc-kml-format summary{cursor:pointer;color:var(--gold-l);font-weight:700;outline:none}
+.mc-kml-format>span{display:block;margin-top:5px;line-height:1.9}
+.mc-kml-report-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.mc-kml-report-title{display:flex;align-items:center;gap:9px;min-width:0}
+.mc-kml-report-mark,.mc-kml-stat-mark,.mc-kml-error-mark{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:50%;font-size:14px;font-weight:900}
+.mc-kml-report-mark,.mc-kml-stat.is-ok .mc-kml-stat-mark{color:#71e0b2;background:rgba(30,187,138,.13);border:1px solid rgba(30,187,138,.42)}
+.mc-kml-report-title>span:last-child{display:flex;flex-direction:column;gap:2px}
+.mc-kml-report-title b{font-size:12.5px;font-weight:850;color:var(--text)}
+.mc-kml-report-title small{font-size:10.5px;color:var(--muted)}
+.mc-kml-read-badge{display:inline-flex;align-items:center;gap:5px;flex:none;padding:5px 9px;border-radius:99px;border:1px solid rgba(30,187,138,.28);background:rgba(30,187,138,.08);color:#71e0b2;font-size:10px;font-weight:800;white-space:nowrap}
+.mc-kml-read-badge i{font-style:normal;font-size:12px}
+.mc-kml-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:7px}
+.mc-kml-stat{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 9px;border:1px solid rgba(255,255,255,.075);border-radius:11px;background:rgba(255,255,255,.025)}
+.mc-kml-stat-mark{width:23px;height:23px;font-size:12px}
+.mc-kml-stat.is-missing .mc-kml-stat-mark{color:#f5c86b;background:rgba(244,196,48,.1);border:1px solid rgba(244,196,48,.3)}
+.mc-kml-stat-copy{display:flex;flex-direction:column;gap:1px;min-width:0}
+.mc-kml-stat-copy b{font-size:14px;font-weight:900;line-height:1.15;color:var(--text);font-variant-numeric:tabular-nums}
+.mc-kml-stat-copy small{font-size:9.5px;line-height:1.35;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-kml-notices{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.mc-kml-notice{display:flex;gap:6px;padding:7px 9px;border:1px solid rgba(244,196,48,.2);border-radius:9px;background:rgba(244,196,48,.055);color:#f5c86b;font-size:10.5px;line-height:1.7}
+.mc-kml-notice span{color:var(--muted)}
+.mc-kml-capture-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:13px 1px 8px}
+.mc-kml-capture-heading b{font-size:11.5px;font-weight:850;color:var(--gold-l)}
+.mc-kml-capture-heading span{font-size:9.5px;color:var(--muted)}
+.mc-kml-captures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mc-kml-capture{min-width:0;padding:10px;border:1px solid rgba(255,255,255,.075);border-radius:12px;background:rgba(6,12,18,.38);transition:border-color .2s,background .2s}
+.mc-kml-capture-head{display:flex;align-items:center;gap:8px;min-width:0}
+.mc-kml-capture-icon{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.045);font-size:15px}
+.mc-kml-capture-title{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.mc-kml-capture-title b{font-size:11px;font-weight:850;color:var(--text)}
+.mc-kml-capture-title small{font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-kml-stage-chip{display:inline-flex;align-items:center;gap:4px;flex:none;padding:4px 7px;border:1px solid rgba(255,255,255,.09);border-radius:99px;background:rgba(255,255,255,.035);color:var(--muted);font-size:9px;font-weight:800;white-space:nowrap}
+.mc-kml-stage-chip i{font-style:normal;font-size:12px;line-height:1}
+.mc-kml-capture.is-running .mc-kml-stage-chip{border-color:rgba(212,175,55,.28);background:rgba(212,175,55,.07);color:var(--gold-l)}
+.mc-kml-capture.is-done{border-color:rgba(30,187,138,.3);background:rgba(30,187,138,.035)}
+.mc-kml-capture.is-done .mc-kml-stage-chip{border-color:rgba(30,187,138,.3);background:rgba(30,187,138,.09);color:#71e0b2}
+.mc-kml-capture.is-error{border-color:rgba(231,76,60,.24)}
+.mc-kml-capture.is-error .mc-kml-stage-chip{border-color:rgba(231,76,60,.24);background:rgba(231,76,60,.06);color:#f08a7f}
+.mc-kml-capture.is-unavailable{border-color:rgba(244,196,48,.22)}
+.mc-kml-capture.is-unavailable .mc-kml-stage-chip{border-color:rgba(244,196,48,.26);background:rgba(244,196,48,.06);color:#f5c86b}
+.mc-kml-progress{height:5px;margin:9px 0 6px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.075)}
+.mc-kml-progress>span{display:block;width:0;height:100%;border-radius:inherit;background:#82909a;transition:width .28s ease}
+.mc-kml-capture.is-running .mc-kml-progress>span{background:linear-gradient(90deg,#c3972e,#e9c766,#1EBB8A);background-size:180% 100%;animation:mc-kml-shimmer 2s linear infinite}
+.mc-kml-capture.is-done .mc-kml-progress>span{background:linear-gradient(90deg,#168d67,#3ddc97)}
+.mc-kml-capture.is-error .mc-kml-progress>span{background:#c95e56}
+.mc-kml-capture.is-unavailable .mc-kml-progress>span{background:#d6ad4f}
+.mc-kml-capture-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.mc-kml-capture-foot>span{min-width:0;font-size:9.5px;line-height:1.6;color:var(--muted)}
+.mc-kml-capture-foot>b{flex:none;font-size:10px;font-weight:900;color:var(--gold-l);direction:ltr;font-variant-numeric:tabular-nums}
+.mc-kml-capture.is-done .mc-kml-capture-foot>b{color:#71e0b2}
+.mc-kml-capture.is-error .mc-kml-capture-foot>b{color:#f08a7f}
+.mc-kml-capture.is-unavailable .mc-kml-capture-foot>b{color:#f5c86b}
+.mc-kml-report.is-error{align-items:center;border-color:rgba(231,76,60,.25);background:rgba(231,76,60,.045)}
+.mc-kml-error-mark{color:#f08a7f;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.28)}
+.mc-kml-error-copy b{color:#f08a7f}
+@keyframes mc-kml-shimmer{to{background-position:-180% 0}}
+@media(max-width:560px){.mc-kml-report{padding:10px}.mc-kml-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.mc-kml-captures{grid-template-columns:1fr}.mc-kml-capture-heading{align-items:flex-start;flex-direction:column;gap:2px}.mc-kml-read-badge{font-size:9px;padding:4px 7px}}
 .photo-upload{display:flex;gap:14px;align-items:center}
 .photo-upload .ph-prev{
   width:88px;height:88px;border-radius:16px;object-fit:cover;border:2px solid rgba(212,175,55,.4);

@@ -197,13 +197,19 @@
     var b = expand(bounds);
     if (!b) return Promise.reject(Error('bounds missing'));
     var out = { sat: null, topo: null };
+    function reportComplete(mode, image){
+      if (typeof onProgress !== 'function') return;
+      try { onProgress(mode, image ? 100 : 0, { complete: true, ok: !!image }); } catch (e) {}
+    }
     return render('sat', b, onProgress).catch(function(){ return null; }).then(function(sat){
       out.sat = sat;
+      reportComplete('sat', sat);
       return sat ? idb('put', keyOf(key, 'sat'), { blob: sat.blob, meta: sat.meta }).catch(function(){}) : null;
     }).then(function(){
       return render('topo', b, onProgress).catch(function(){ return null; });
     }).then(function(topo){
       out.topo = topo;
+      reportComplete('topo', topo);
       return topo ? idb('put', keyOf(key, 'topo'), { blob: topo.blob, meta: topo.meta }).catch(function(){}) : null;
     }).then(function(){
       if (out.sat) urls.set(keyOf(key, 'sat'), URL.createObjectURL(out.sat.blob));

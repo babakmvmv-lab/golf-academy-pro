@@ -57,12 +57,24 @@ try {
     () => document.querySelector('#mc-kml-rep') && document.querySelector('#mc-kml-rep').textContent.includes('خوانده شد'),
     null, { timeout: 20000 }).then(() => true).catch(() => false));
 
-  /* both images captured automatically — wait for topo (last) to reach 100% */
-  const shotDone = await page.waitForFunction(
-    () => { const t = document.querySelector('#mc-kml-rep'); return !!(t && t.textContent.includes('توپوگرافی: ۱۰۰٪')); },
-    null, { timeout: 180000 }).then(() => true).catch(() => false);
-  const repText = await page.evaluate(() => document.querySelector('#mc-kml-rep').textContent);
-  ok('auto capture ran (sat + topo progress visible)', shotDone, repText.slice(0, 90));
+  /* each image gets its own green completion state and 100% only after capture finishes */
+  const shotDone = await page.waitForFunction(() => {
+    const sat = document.querySelector('#mc-kml-rep [data-kml-capture="sat"]');
+    const topo = document.querySelector('#mc-kml-rep [data-kml-capture="topo"]');
+    return !!(sat && topo && sat.dataset.status === 'done' && topo.dataset.status === 'done');
+  }, null, { timeout: 180000 }).then(() => true).catch(() => false);
+  const repState = await page.evaluate(() => {
+    const root = document.querySelector('#mc-kml-rep');
+    const stages = ['sat','topo'].map(mode => {
+      const el = root && root.querySelector('[data-kml-capture="' + mode + '"]');
+      return el ? { status: el.dataset.status, percent: el.querySelector('.mc-kml-capture-foot b')?.textContent } : null;
+    });
+    return { text: root ? root.textContent : '', greenStats: root ? root.querySelectorAll('.mc-kml-stat.is-ok').length : 0, stages };
+  });
+  ok('KML summary renders checked items for the parsed fields', repState.greenStats === 5, 'green checks=' + repState.greenStats);
+  ok('satellite and topo capture each finish with a green check and 100%', shotDone && repState.stages.every(s => s && s.status === 'done' && s.percent === '۱۰۰٪'),
+     repState.stages.map(s => s ? s.status + ' / ' + s.percent : 'missing').join(' · '));
+  ok('polished KML report shows parsed summary', /گزارش فایل گوگل‌ارث/.test(repState.text));
 
   /* register the ground */
   await page.fill('#mc-name', 'زمین تست ایثار');

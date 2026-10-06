@@ -2539,7 +2539,7 @@ const sp = $('#st-podium');
       (S.courses || []).forEach(c => {
         let lat, lng;
         if (c[0] >= 1000){
-          const x = extras[c[0] - 1000];
+          const x = (D.courseById && D.courseById(c[0])) || extras[c[0] - 1000];
           if (x && isFinite(+x.lat) && isFinite(+x.lng)) { lat = +x.lat; lng = +x.lng; }
         }
         if (lat == null){
@@ -3751,7 +3751,13 @@ const stCal = $('#st-cal');
   }
 
   /* ═══════════ ابزار طراح ═══════════ */
-  function extraCourses(){ try{ return JSON.parse(store.get('ga_courses')||'[]'); }catch(e){ return []; } }
+  function extraCourses(){
+    try {
+      if (D.courseRecords) return D.courseRecords({ includeArchived:true });
+      const rows = JSON.parse(store.get('ga_courses') || '[]');
+      return Array.isArray(rows) ? rows : [];
+    } catch(e){ return []; }
+  }
   function extraTours(){ try{ const a = JSON.parse(store.get('ga_tournaments')||'[]'); return Array.isArray(a) ? a.map(x => (x && typeof x === 'object' && Array.isArray(x.t) && x.name === undefined) ? { name:x.t[1]||'', lvl:+x.t[2]||2, course:+x.t[3]||0, holes:+x.t[4]||18, date:x.t[5]||'', end:x.end||'', time:x.time||'', rule:x.rule||'normal', p1:x.p1, p2:x.p2, p3:x.p3, entry:x.entry, schedule:Array.isArray(x.schedule)?x.schedule:[], holeIds:x.holeIds } : x) : []; }catch(e){ return []; } }
   function extraCards(){ try{ return JSON.parse(store.get('ga_scorecards')||'[]'); }catch(e){ return []; } }
   function saveCourses(a){ try{ store.set('ga_courses', JSON.stringify(a)); }catch(e){} }
@@ -3775,7 +3781,8 @@ const stCal = $('#st-cal');
     <div class="glass">
       <div class="card-head"><span class="ic">🗺️</span><h3>زمینهای موجود</h3><span class="tag">${D.fa(S.courses.length)} زمین</span></div>
       <div id="ac-list"></div>
-    </div>`;
+    </div>
+    <div id="ac-archived"></div>`;
     let parVals = [];
     let idxVals = [];
     function drawPars(){
@@ -3806,9 +3813,17 @@ const stCal = $('#st-cal');
       const holes = +$('#ac-holes').value;
       const pars = parVals.slice(0, holes).map(v => Math.max(3, Math.min(6, v)));
       const index = idxVals.slice(0, holes).map((v,i) => Math.max(1, Math.min(holes, +v || (i+1))));
-      const lst = extraCourses();
-      lst.push({ name, loc, holes, pars, index });
-      saveCourses(lst);
+      try {
+        if (D.createCourse) D.createCourse({ name, loc, holes, pars, index });
+        else {
+          const lst = extraCourses();
+          lst.push({ name, loc, holes, pars, index });
+          saveCourses(lst);
+        }
+      } catch(err){
+        toast('ذخیرهٔ زمین ناموفق بود؛ فهرست تغییر نکرد. فضای دستگاه را بررسی کنید.', 'red');
+        return;
+      }
       reloadData(); go('acourses');
       toast('زمین «' + name + '» ثبت شد ✓', 'green');
     });
@@ -3817,8 +3832,12 @@ const stCal = $('#st-cal');
   function renderCourseList(){
     const wrap = $('#ac-list'); if (!wrap) return;
     const rows = [];
-    D.COURSES.forEach((c,i) => rows.push({ type:'پایه', name:c[1], loc:c[2], holes:c[3], pars:D.COURSE_PARS[c[0]], del:null }));
-    extraCourses().forEach((c,i) => rows.push({ type:'سفارشی', name:c.name, loc:c.loc, holes:c.holes, pars:c.pars, del:i }));
+    D.COURSES.forEach((c,i) => rows.push({ type:'پایه', courseId:c[0], name:c[1], loc:c[2], holes:c[3], pars:D.COURSE_PARS[c[0]], del:null }));
+    extraCourses().forEach((c,i) => {
+      if (!c || (D.isArchivedCourse && D.isArchivedCourse(c))) return;
+      const courseId = D.courseIdOf ? D.courseIdOf(c, i) : (1000 + i);
+      rows.push({ type:'سفارشی', courseId, name:c.name, loc:c.loc, holes:c.holes, pars:c.pars || [], del:courseId });
+    });
     wrap.innerHTML = `
     <table class="tbl"><thead><tr><th>#</th><th>نام</th><th>محل</th><th>میدان</th><th>پار هر میدان</th><th>پار کل</th><th></th></tr></thead><tbody>
     ${rows.map((r,i) => `<tr>
@@ -3829,8 +3848,45 @@ const stCal = $('#st-cal');
       <td>${r.del !== null ? `<button class="btn ghost sm" data-del="${r.del}">حذف</button>` : ''}</td>
     </tr>`).join('')}</tbody></table>`;
     $$('#ac-list [data-del]').forEach(b => b.addEventListener('click', () => {
-      const lst = extraCourses(); lst.splice(+b.dataset.del, 1); saveCourses(lst); reloadData(); go('acourses'); toast('زمین حذف شد', 'orange');
+      const courseId = +b.dataset.del;
+      const course = D.courseById ? D.courseById(courseId) : null;
+      const name = course && course.name ? course.name : 'این زمین';
+      if (!course || (D.isArchivedCourse && D.isArchivedCourse(course))){
+        toast('این ردیف دیگر فعال نیست؛ فهرست را تازه کنید.', 'orange');
+        return;
+      }
+      if (!confirm('زمین «' + name + '» بایگانی شود؟ اطلاعات و تاریخچه پاک نمی‌شود و بعداً قابل‌بازیابی است.')) return;
+      try {
+        if (D.archiveCourse) D.archiveCourse(courseId);
+        else {
+          const lst = extraCourses();
+          const ix = lst.findIndex((c,i) => c && (D.courseIdOf ? D.courseIdOf(c,i) : 1000+i) === courseId);
+          if (ix < 0) throw new Error('زمین پیدا نشد');
+          lst[ix].deletedAt = new Date().toISOString();
+          saveCourses(lst);
+        }
+      } catch(err){ toast('بایگانی انجام نشد؛ داده‌ها تغییر نکردند.', 'red'); return; }
+      reloadData(); go('acourses'); toast('زمین بایگانی شد؛ می‌توانید آن را بازیابی کنید.', 'orange');
     }));
+    const archived = extraCourses().filter(c => c && D.isArchivedCourse && D.isArchivedCourse(c));
+    const archivedWrap = $('#ac-archived', $('#view'));
+    if (archivedWrap){
+      archivedWrap.innerHTML = archived.length ? `
+        <div class="glass" style="margin-top:14px">
+          <div class="card-head"><span class="ic">♻️</span><h3>زمین‌های بایگانی‌شده</h3><span class="tag">قابل‌بازیابی</span></div>
+          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>نام</th><th>محل</th><th>شناسهٔ پایدار</th><th></th></tr></thead><tbody>
+            ${archived.map(c => `<tr><td><b>${esc(c.name||'زمین بدون نام')}</b></td><td>${esc(c.loc||'—')}</td><td class="num">${D.fa(c.courseId)}</td><td><button class="btn sm ghost" data-restore-course="${c.courseId}">↩ بازیابی</button></td></tr>`).join('')}
+          </tbody></table></div>
+        </div>` : '';
+      archivedWrap.querySelectorAll('[data-restore-course]').forEach(b => b.addEventListener('click', () => {
+        const courseId = +b.dataset.restoreCourse;
+        try {
+          if (D.restoreCourse) D.restoreCourse(courseId);
+          else throw new Error('بازیابی زمین پشتیبانی نمی‌شود');
+        } catch(err){ toast('بازیابی زمین ناموفق بود؛ داده‌ها تغییر نکردند.', 'red'); return; }
+        reloadData(); go('acourses'); toast('زمین بازیابی شد ✓', 'green');
+      }));
+    }
   }
 
   function pageATours(){

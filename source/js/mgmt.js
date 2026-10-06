@@ -1825,7 +1825,13 @@
       const index = (o.index && o.index.length) ? o.index : ((D.indexOf && D.indexOf(c[0])) || []);
       const isMis = c[0] === 1 || String(c[1]).indexOf('مسجدسلیمان') >= 0;
       return { id:c[0], name: o.name || c[1], loc: o.loc || c[2], holes: pars.length || c[3], pars, index, base:true, lat: o.lat != null ? o.lat : (isMis ? 31.90494 : 24.7136), lng: o.lng != null ? o.lng : (isMis ? 49.31398 : 46.6753) };
-    }).concat(extra.map((c,i) => ({ id:1000+i, name:c.name, loc:c.loc||'ریاض', holes:(c.pars&&c.pars.length)?c.pars.length:c.holes, pars:c.pars, index:c.index||[], base:false, idx:i, lat:c.lat, lng:c.lng })));
+    });
+    extra.forEach((c,i) => {
+      if (!c || (D.isArchivedCourse && D.isArchivedCourse(c))) return;
+      const id = D.courseIdOf ? D.courseIdOf(c, i) : (1000 + i);
+      rows.push({ id, name:c.name, loc:c.loc||'ریاض', holes:(c.pars&&c.pars.length)?c.pars.length:c.holes, pars:c.pars||[], index:c.index||[], base:false, idx:i, geoId:c.geoId, lat:c.lat, lng:c.lng });
+    });
+    const archived = extra.filter(c => c && D.isArchivedCourse && D.isArchivedCourse(c));
     body.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">➕</span><h3>طراح زمین — ثبت زمین جدید</h3><span class="tag">افزودن / حذف میدان</span></div>
@@ -1850,10 +1856,14 @@
       <button class="btn sm" id="mc-add" style="margin-top:14px">+ ثبت زمین</button>
     </div>
     <div class="glass">
-      <div class="card-head"><span class="ic">🗺️</span><h3>زمین‌های آکادمی</h3><span class="tag">${D.fa(S.courses.length)} زمین</span></div>
+      <div class="card-head"><span class="ic">🗺️</span><h3>زمین‌های آکادمی</h3><span class="tag">${D.fa(S.courses.length)} زمین فعال</span></div>
       <div style="overflow-x:auto"><table class="tbl"><thead><tr>
-        <th>#</th><th>نام</th><th>محل</th><th>میدان</th><th>پار کل</th><th>موقعیت</th><th>عملیات</th>
+        <th>شناسه</th><th>نام</th><th>محل</th><th>میدان</th><th>پار کل</th><th>موقعیت</th><th>عملیات</th>
       </tr></thead><tbody id="mc-rows"></tbody></table></div>
+    </div>
+    <div class="glass" style="margin-top:14px">
+      <div class="card-head"><span class="ic">♻️</span><h3>زمین‌های بایگانی‌شده</h3><span class="tag">قابل‌بازیابی</span></div>
+      <div id="mc-archived"></div>
     </div>`;
     let parVals = Array.from({length:18}, () => 4);
     let idxVals = Array.from({length:18}, (_,i) => i + 1);
@@ -1945,31 +1955,64 @@
           }).catch(() => {});
         }
       }
-      extra.push(rec);
-      saveCourses(extra); APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
+      try {
+        if (D.createCourse) D.createCourse(rec);
+        else {
+          const latest = extraCourses(); latest.push(rec); saveCourses(latest);
+        }
+      } catch(err){
+        APP.toast('ذخیرهٔ زمین ناموفق بود؛ فهرست تغییر نکرد. فضای دستگاه را بررسی کنید.', 'red');
+        return;
+      }
+      APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
       APP.toast('زمین «' + name + '» ثبت شد ✓', 'green');
     });
     const geoLocks = (() => { try { const all = JSON.parse(localStorage.getItem('ga_course_geo') || '{}'); const m = {}; Object.keys(all).forEach(k => { if (all[k] && all[k].maxLock) m[k] = all[k].maxLock; }); return m; } catch (e) { return {}; } })();
     const lockChip = r => {
-      const gid = r.base ? (String(r.id) === '1' ? '1' : null) : ((extra[r.idx] || {}).geoId);
+      const course = !r.base && D.courseById ? D.courseById(r.id) : null;
+      const gid = r.base ? (String(r.id) === '1' ? '1' : null) : (course && course.geoId) || r.geoId;
       return (gid && geoLocks[gid]) ? ` <span class="chip dim" title="حداکثر زوم قفل‌شده">🔒 z${D.fa(geoLocks[gid])}</span>` : '';
     };
-    $('#mc-rows').innerHTML = rows.map(r => `<tr class="${r.base?'':'custom-row'}">
+    $('#mc-rows').innerHTML = rows.map((r,i) => `<tr class="${r.base?'':'custom-row'}">
       <td class="num">${D.fa(r.id)}</td><td><b>${esc(r.name)}</b> ${r.base?'<span class="chip dim">پایه</span>':'<span class="chip purple">سفارشی</span>'}${lockChip(r)}</td>
       <td>${esc(r.loc)}</td><td class="num">${D.fa(r.holes)}</td>
       <td class="num" style="color:var(--gold-l)">${D.fa(r.pars.reduce((a,b)=>a+b,0))}</td>
-      <td><button class="btn sm ghost" data-act="sat" data-idx="${rows.indexOf(r)}">🛰 نقشه</button></td>
+      <td><button class="btn sm ghost" data-act="sat" data-idx="${i}">🛰 نقشه</button></td>
       <td><div class="row-actions">
-        <button class="btn sm ghost" data-act="editc" data-idx="${rows.indexOf(r)}">✏️ ویرایش</button>
-        ${r.base ? '' : `<button class="btn sm danger" data-act="delc" data-idx="${r.idx}">🗑 حذف</button>`}
+        <button class="btn sm ghost" data-act="editc" data-idx="${i}">✏️ ویرایش</button>
+        ${r.base ? '' : `<button class="btn sm danger" data-act="delc" data-course-id="${r.id}">🗑 بایگانی</button>`}
       </div></td></tr>`).join('');
+    const archivedWrap = $('#mc-archived');
+    if (archivedWrap){
+      archivedWrap.innerHTML = archived.length ? `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>شناسه</th><th>نام</th><th>محل</th><th>عملیات</th></tr></thead><tbody>
+        ${archived.map(c => `<tr><td class="num">${D.fa(D.courseIdOf ? D.courseIdOf(c, 0) : c.courseId)}</td><td><b>${esc(c.name||'زمین بدون نام')}</b></td><td>${esc(c.loc||'—')}</td><td><button class="btn sm ghost" data-act="restorec" data-course-id="${D.courseIdOf ? D.courseIdOf(c, 0) : c.courseId}">↩ بازیابی</button></td></tr>`).join('')}
+      </tbody></table></div>` : `<div style="padding:12px;color:var(--muted);font-size:12px">زمین بایگانی‌شده‌ای وجود ندارد.</div>`;
+    }
     body.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
-      const act = b.dataset.act, idx = +b.dataset.idx;
-      const r = rows[idx];
-      if (act === 'sat') showSatelliteModal(r, r.holes);
+      const act = b.dataset.act;
       if (act === 'delc'){
-        const lst = extraCourses(); lst.splice(r.idx,1); saveCourses(lst); APP.reloadData(); APP.go('mgmt'); mgmtTab='courses'; APP.toast('زمین حذف شد 🗑','orange');
+        const courseId = +b.dataset.courseId;
+        const course = D.courseById ? D.courseById(courseId) : null;
+        if (!course || (D.isArchivedCourse && D.isArchivedCourse(course))){ APP.toast('این زمین دیگر فعال نیست؛ فهرست را تازه کنید.', 'orange'); return; }
+        if (!confirm('زمین «' + (course.name || 'بدون نام') + '» بایگانی شود؟ اطلاعات نقشه و سوابق حذف نمی‌شوند و امکان بازیابی دارید.')) return;
+        try {
+          if (D.archiveCourse) D.archiveCourse(courseId);
+          else throw new Error('API بایگانی زمین موجود نیست');
+        } catch(err){ APP.toast('بایگانی انجام نشد؛ داده‌ها تغییر نکردند.', 'red'); return; }
+        APP.reloadData(); APP.go('mgmt'); mgmtTab='courses'; APP.toast('زمین بایگانی شد؛ شناسه و سابقه ثابت ماندند ♻️','orange');
+        return;
       }
+      if (act === 'restorec'){
+        const courseId = +b.dataset.courseId;
+        try { if (D.restoreCourse) D.restoreCourse(courseId); else throw new Error('API بازیابی زمین موجود نیست'); }
+        catch(err){ APP.toast('بازیابی انجام نشد؛ داده‌ها تغییر نکردند.', 'red'); return; }
+        APP.reloadData(); APP.go('mgmt'); mgmtTab='courses'; APP.toast('زمین بازیابی شد ✓','green');
+        return;
+      }
+      const idx = +b.dataset.idx;
+      const r = rows[idx];
+      if (!r) return;
+      if (act === 'sat') showSatelliteModal(r, r.holes);
       if (act === 'editc') editCourseModal(r);
     }));
   }
@@ -2139,7 +2182,10 @@
       m.style.display = 'none';
     }
     /* ── قفل حداکثر زوم زمین: مدیر روی نقشه زوم می‌کند، سطح مناسب را قفل می‌کند ── */
-    function zlGeoId(){ return r.base ? String(r.id) : ((extraCourses()[r.idx] || {}).geoId) || ('c'+Date.now()); }
+    function zlGeoId(){
+      const course = !r.base && D.courseById ? D.courseById(r.id) : null;
+      return r.base ? String(r.id) : ((course && course.geoId) || r.geoId || ('c'+r.id));
+    }
     function zlRec(){ try { return (JSON.parse(localStorage.getItem('ga_course_geo') || '{}'))[zlGeoId()] || null; } catch(e){ return null; } }
     const zlVal = () => $('#ec-zl-val'), zlCur = () => $('#ec-zl-cur');
     function zlPaint(){
@@ -2193,7 +2239,8 @@
         try {
           const g = CourseGeo.parseKml(String(reader.result || ''));
           const sm = CourseGeo.summary(g);
-          const geoId = r.base ? String(r.id) : (extraCourses()[r.idx] && extraCourses()[r.idx].geoId) || ('c'+Date.now());
+          const course = !r.base && D.courseById ? D.courseById(r.id) : null;
+          const geoId = r.base ? String(r.id) : ((course && course.geoId) || r.geoId || ('c'+r.id));
           g.name = ($('#ec-name').value || '').trim() || g.name;
           /* عکس‌های ۳برابر خودکار: متا همان لحظه، عکس‌ها در پس‌زمینه + نسخهٔ فشردهٔ دائمی داخل رکورد.
              عکس‌های دائمی قبلی هرگز پاک نمی‌شوند مگر نسخهٔ تازه واقعاً کامل شود (شبکهٔ بسته). */
@@ -2224,9 +2271,16 @@
             }).catch(() => {});
           }
           if (!r.base){
-            const lst = extraCourses();
-            if (lst[r.idx]) lst[r.idx].geoId = geoId;
-            saveCourses(lst);
+            try {
+              if (D.updateCourse) D.updateCourse(r.id, { geoId });
+              else {
+                const lst = extraCourses();
+                const item = lst.find((c,i) => c && (D.courseIdOf ? D.courseIdOf(c,i) : 1000+i) === r.id);
+                if (!item) throw new Error('زمین پیدا نشد');
+                item.geoId = geoId; saveCourses(lst);
+              }
+              r.geoId = geoId;
+            } catch(err){ APP.toast('نقشه ثبت شد، اما پیوند آن به زمین ذخیره نشد؛ دوباره ذخیره کنید.', 'red'); }
           }
           if (sm.pars && sm.pars.length){
             parVals.splice(0, parVals.length, ...sm.pars);
@@ -2259,16 +2313,31 @@
         if (D.INDEX_MAP) D.INDEX_MAP[r.id] = idxSave.slice();
         if (D.COURSE_NAME) D.COURSE_NAME[r.id] = name;
       } else {
-        const lst = extraCourses();
-        const c = lst[r.idx];
-        if (c){ c.name = name; c.loc = $('#ec-loc').value.trim(); c.pars = pars; c.holes = pars.length; c.lat = lat; c.lng = lng; c.index = idxSave; }
-        saveCourses(lst);
+        try {
+          if (D.updateCourse) D.updateCourse(r.id, { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave });
+          else {
+            const lst = extraCourses();
+            const c = lst.find((item,i) => item && (D.courseIdOf ? D.courseIdOf(item,i) : 1000+i) === r.id);
+            if (!c) throw new Error('زمین پیدا نشد');
+            Object.assign(c, { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave });
+            saveCourses(lst);
+          }
+        } catch(err){ APP.toast('ذخیرهٔ زمین ناموفق بود؛ اطلاعات قبلی حفظ شد.', 'red'); return; }
       }
       APP.reloadData(); APP.go('mgmt'); mgmtTab='courses';
       try { if (window.EarthMap) EarthMap.destroy(); } catch(err){}
       m.style.display = 'none';
       APP.toast('زمین ذخیره شد ✓', 'green');
     });
+  }
+
+  function courseSelectOptions(courses, selectedId){
+    const list = Array.isArray(courses) ? courses : [];
+    const selected = selectedId == null ? null : Number(selectedId);
+    const isActive = selected != null && list.some(c => Number(c[0]) === selected);
+    const archived = !isActive && selected != null && D.COURSE_NAME[selected]
+      ? `<option value="${selected}" selected>${esc(D.COURSE_NAME[selected])} — بایگانی‌شده (برای حفظ سابقه)</option>` : '';
+    return archived + list.map(c => `<option value="${c[0]}" ${selected != null && Number(c[0]) === selected ? 'selected' : ''}>${esc(c[1])}</option>`).join('');
   }
 
   /* ── تب مسابقات ── */
@@ -2299,7 +2368,7 @@
           <option value="normal" selected>قانون عادی — همهٔ ضربه‌ها محاسبه می‌شود</option>
           <option value="full">قانون فول — سقف ضربهٔ هر حفره: پار۳ حداکثر ۷ • پار۴ حداکثر ۹ • پار۵ حداکثر ۱۱</option>
         </select></div>
-        <div class="span2"><label>زمین</label><select class="sel" id="mt-crs" style="width:100%">${S.courses.map(c=>`<option value="${c[0]}">${esc(c[1])}</option>`).join('')}</select></div>
+        <div class="span2"><label>زمین</label><select class="sel" id="mt-crs" style="width:100%">${courseSelectOptions(S.courses)}</select></div>
         <div><label>🏆 امتیاز نفر اول</label><input class="input" id="mt-p1" type="number" min="0" value="20" style="width:100%"></div>
         <div><label>🥈 امتیاز نفر دوم</label><input class="input" id="mt-p2" type="number" min="0" value="15" style="width:100%"></div>
         <div><label>🥉 امتیاز نفر سوم</label><input class="input" id="mt-p3" type="number" min="0" value="10" style="width:100%"></div>
@@ -2455,7 +2524,7 @@
         <div class="span2"><label>نام</label><input class="input" id="et-name" style="width:100%" value="${esc(t[1])}"></div>
         <div class="span2"><label>تاریخ</label><div class="jdate" id="et-date" data-iso="${t[5]}"></div></div>
         <div><label>سطح</label><select class="sel" id="et-lvl" style="width:100%"><option value="1" ${t[2]===1?'selected':''}>سطح ۱</option><option value="2" ${t[2]===2?'selected':''}>سطح ۲</option><option value="3" ${t[2]===3?'selected':''}>سطح ۳</option></select></div>
-        <div class="span2"><label>زمین</label><select class="sel" id="et-crs" style="width:100%">${S.courses.map(c=>`<option value="${c[0]}" ${c[0]===t[3]?'selected':''}>${esc(c[1])}</option>`).join('')}</select></div>
+        <div class="span2"><label>زمین</label><select class="sel" id="et-crs" style="width:100%">${courseSelectOptions(S.courses, t[3])}</select></div>
         <div class="span2"><label>⚖️ قانون مسابقه</label><select class="sel" id="et-rule" style="width:100%" ${base?'disabled title="فقط برای مسابقات سفارشی"':''}>
           ${(() => { const cr = base ? 'normal' : ((extraTours()[idx] && extraTours()[idx].rule) || 'normal');
             return `<option value="normal" ${cr==='normal'?'selected':''}>قانون عادی — همهٔ ضربه‌ها محاسبه</option><option value="full" ${cr==='full'?'selected':''}>قانون فول — سقف ضربهٔ حفره (پار۳≤۷ • پار۴≤۹ • پار۵≤۱۱)</option>`; })()}
@@ -5357,7 +5426,13 @@
   }
 
   /* ── ابزارهای مشترک ── */
-  function extraCourses(){ try{ return JSON.parse(localStorage.getItem('ga_courses')||'[]'); }catch(e){ return []; } }
+  function extraCourses(){
+    try {
+      if (D.courseRecords) return D.courseRecords({ includeArchived:true });
+      const rows = JSON.parse(localStorage.getItem('ga_courses') || '[]');
+      return Array.isArray(rows) ? rows : [];
+    } catch(e){ return []; }
+  }
   /* بازگشایی رکوردهای «رپشده» (اثر باگ قدیمی push روی آرایهٔ نمایشی) */
   function unwrapTour(x){
     if (x && typeof x === 'object' && Array.isArray(x.t) && x.name === undefined)

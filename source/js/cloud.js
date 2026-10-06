@@ -420,6 +420,48 @@
      خطای یک کلید مانع ثبت کلیدهای سالم نیست. مسیر REST نوشتن fallback نیست:
      خطای اصلی ga-sync نباید با خطای مجوز جدول پوشانده یا موفق تلقی شود. */
   var SP_MERGE = { ga_sp_sessions: 1, ga_sp_shots: 1, ga_sp_tomb: 1 };
+  /* زمین‌ها یک کلید آرایه‌ای‌اند، اما merge باید بر اساس courseId انجام شود؛
+     LWW کل آرایه می‌تواند افزودن/بایگانی هم‌زمان دستگاه دیگر را پاک کند. */
+  var COURSE_MERGE = { ga_courses: 1 };
+  function courseRows(raw){
+    try {
+      var value = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw;
+      return Array.isArray(value) ? value : [];
+    } catch(e){ return []; }
+  }
+  function courseVersion(c){
+    var updated = Date.parse(c && c.updatedAt || '') || 0;
+    var deleted = Date.parse(c && c.deletedAt || '') || 0;
+    return Math.max(updated, deleted);
+  }
+  function normalizeCourseRows(raw){
+    var rows = courseRows(raw), used = {}, next = 1000 + rows.length, out = [];
+    rows.forEach(function (item, index) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+      var c = Object.assign({}, item), id = Number(c.courseId);
+      if (!Number.isSafeInteger(id) || id < 1000 || used[id]) {
+        var legacy = 1000 + index;
+        if (!used[legacy]) id = legacy;
+        else { while (used[next]) next++; id = next++; }
+      }
+      c.courseId = id;
+      used[id] = true;
+      if (!c.updatedAt) c.updatedAt = c.deletedAt || '1970-01-01T00:00:00.000Z';
+      out.push(c);
+    });
+    return out;
+  }
+  function mergeCourseRows(localRaw, remoteRaw){
+    var merged = {};
+    normalizeCourseRows(remoteRaw).forEach(function (c) { merged[c.courseId] = c; });
+    normalizeCourseRows(localRaw).forEach(function (c) {
+      var old = merged[c.courseId];
+      /* equal timestamp: local version wins; a later restore wins over an older archive. */
+      if (!old || courseVersion(c) >= courseVersion(old)) merged[c.courseId] = c;
+    });
+    return JSON.stringify(Object.keys(merged).map(function (id) { return merged[id]; })
+      .sort(function (a, b) { return a.courseId - b.courseId; }));
+  }
   function push(reason, options) {
     if (pushFlight) return pushFlight;
     if (pullFlight) return pullFlight.then(function () { return push(reason, options); });
@@ -429,7 +471,7 @@
     if (keepalive) {
       // ادغام تمرین‌ها نیازمند GET است؛ هنگام خروج، بدون ادغام آن‌ها را بازنویسی نکن.
       keys = keys.filter(function (k) {
-        return !SP_MERGE[k] && byteLength(L.getItem(k) || 'null') < KEEPALIVE_BYTES - 1024;
+        return !SP_MERGE[k] && !COURSE_MERGE[k] && byteLength(L.getItem(k) || 'null') < KEEPALIVE_BYTES - 1024;
       }).slice(0, 1);
     }
     if (!keys.length) {
@@ -447,14 +489,14 @@
     state.errors = errors.slice();
     setPhase('pushing', keys.length + ' بخش در صف؛ در حال ارسال…');
 
-    function remotePractice() {
+    function remoteMerge() {
       if (!remoteFlight) {
-        var wanted = keys.filter(function (k) { return SP_MERGE[k]; });
-        if (wanted.indexOf('ga_sp_tomb') < 0) wanted.unshift('ga_sp_tomb');
+        var wanted = keys.filter(function (k) { return SP_MERGE[k] || COURSE_MERGE[k]; });
+        if (wanted.some(function (k) { return SP_MERGE[k]; }) && wanted.indexOf('ga_sp_tomb') < 0) wanted.unshift('ga_sp_tomb');
         remoteFlight = rest('ga_store?select=k,v&k=in.(' + wanted.join(',') + ')').then(function (rows) {
-          if (!Array.isArray(rows)) throw new Error('پاسخ ادغام تمرین‌ها معتبر نیست؛ ارسال متوقف شد.');
+          if (!Array.isArray(rows)) throw new Error('پاسخ ادغام داده‌های ساختاری معتبر نیست؛ ارسال متوقف شد.');
           var out = {};
-          rows.forEach(function (row) { if (row && SP_MERGE[row.k]) out[row.k] = row.v; });
+          rows.forEach(function (row) { if (row && (SP_MERGE[row.k] || COURSE_MERGE[row.k])) out[row.k] = row.v; });
           return out;
         });
       }
@@ -464,7 +506,7 @@
     function sendKey(k) {
       if (stopped) return Promise.resolve();
       var stamp, raw, row, bytes = 0;
-      return (SP_MERGE[k] ? remotePractice() : Promise.resolve(null)).then(function (remote) {
+      return ((SP_MERGE[k] || COURSE_MERGE[k]) ? remoteMerge() : Promise.resolve(null)).then(function (remote) {
         var dirty = jread(DIRTY_KEY, {});
         if (!dirty[k]) return;
         stamp = dirty[k];
@@ -474,9 +516,14 @@
         raw = L.getItem(k);
         row = { k: k, v: raw === null ? { __del: 1 } : encode(raw), updated_at: stamp };
         if (remote && raw !== null) {
-          var tomb = mixTombObj(remote.ga_sp_tomb, readSpTomb());
-          if (k === 'ga_sp_tomb') row.v = tomb;
-          else row.v = encode(mergeSpKey(k, raw, decode(remote[k] || (k === 'ga_sp_shots' ? [] : {})), tomb));
+          if (SP_MERGE[k]) {
+            var tomb = mixTombObj(remote.ga_sp_tomb, readSpTomb());
+            if (k === 'ga_sp_tomb') row.v = tomb;
+            else row.v = encode(mergeSpKey(k, raw, decode(remote[k] || (k === 'ga_sp_shots' ? [] : {})), tomb));
+          } else if (COURSE_MERGE[k]) {
+            var remoteCourses = remote[k] === undefined ? '[]' : decode(remote[k]);
+            row.v = encode(mergeCourseRows(raw, remoteCourses));
+          }
         }
         var payload = JSON.stringify({ action: 'kv', rows: [row] });
         bytes = byteLength(payload);
@@ -493,7 +540,7 @@
           jwrite(TS_KEY, ts);
           // ویرایشِ حین درخواست هرگز با پاسخ نسخهٔ قدیمی از صف حذف نمی‌شود.
           if (d2[k] === stamp && L.getItem(k) === raw) {
-            if (SP_MERGE[k] && raw !== null) {
+            if ((SP_MERGE[k] || COURSE_MERGE[k]) && raw !== null) {
               applying = true;
               try { L.setItem(k, decode(row.v)); } finally { applying = false; }
             }

@@ -263,6 +263,129 @@
   function loadTourOverride(){
     try { const o = JSON.parse(localStorage.getItem('ga_tour_override') || '{}'); return o && typeof o === 'object' ? o : {}; } catch(e){ return {}; }
   }
+
+  /* ── رجیستری زمین‌ها: شناسهٔ پایدار + بایگانی نرم ─────────────────────
+     قبلاً شناسهٔ زمین سفارشی از جایگاه آرایه (1000+i) ساخته می‌شد و حذف با
+     splice شناسهٔ همهٔ زمین‌های بعدی را جابه‌جا می‌کرد. از این نسخه، courseId
+     یک‌بار از شناسهٔ قدیمی همان رکورد مهاجرت می‌شود و هیچ‌وقت با حذف عوض نمی‌شود.
+     deletedAt زمین را از فهرست فعال کنار می‌گذارد، اما رکورد/پار/نقشه را برای
+     مسابقه‌ها و کارت‌های تاریخی نگه می‌دارد و امکان بازیابی می‌دهد. */
+  const COURSE_STORE_KEY = 'ga_courses';
+  const COURSE_ID_START = 1000;
+  function courseIdOf(course, index){
+    const id = Number(course && course.courseId);
+    return Number.isSafeInteger(id) && id >= COURSE_ID_START
+      ? id : COURSE_ID_START + Math.max(0, Number(index) || 0);
+  }
+  function isArchivedCourse(course){ return !!(course && course.deletedAt); }
+  function rawCourseRecords(){
+    try {
+      const rows = JSON.parse(localStorage.getItem(COURSE_STORE_KEY) || '[]');
+      return Array.isArray(rows) ? rows : [];
+    } catch(e){ return []; }
+  }
+  function persistCourseRecords(rows){
+    if (!Array.isArray(rows)) throw new TypeError('فهرست زمین‌ها معتبر نیست');
+    const raw = JSON.stringify(rows);
+    localStorage.setItem(COURSE_STORE_KEY, raw);
+    if (localStorage.getItem(COURSE_STORE_KEY) !== raw) throw new Error('ذخیرهٔ زمین‌ها تأیید نشد');
+    return true;
+  }
+  function normalizeCourseRecords(rows){
+    let changed = false;
+    const used = new Set();
+    let next = COURSE_ID_START + rows.length;
+    rows.forEach((course, index) => {
+      if (!course || typeof course !== 'object' || Array.isArray(course)) return;
+      let id = Number(course.courseId);
+      if (!Number.isSafeInteger(id) || id < COURSE_ID_START || used.has(id)){
+        const legacyId = COURSE_ID_START + index;
+        if (!used.has(legacyId)) id = legacyId;
+        else {
+          while (used.has(next)) next++;
+          id = next++;
+        }
+        course.courseId = id;
+        changed = true;
+      }
+      used.add(id);
+      if (!course.updatedAt){
+        course.updatedAt = course.deletedAt || '1970-01-01T00:00:00.000Z';
+        changed = true;
+      }
+    });
+    /* مهاجرت ذخیره‌سازی شکست بخورد هم شناسه‌ها در همین نشست deterministic می‌مانند؛
+       اما هر عملیات نوشتن بعدی خطا را به رابط نشان می‌دهد، نه موفقیت کاذب. */
+    if (changed){
+      try { persistCourseRecords(rows); }
+      catch(e){ try { console.warn('course registry migration was not persisted:', e); } catch(_){} }
+    }
+    return rows;
+  }
+  function loadCourseRecords(){ return normalizeCourseRecords(rawCourseRecords()); }
+  function courseRecords(options){
+    const includeArchived = !options || options.includeArchived !== false;
+    const rows = loadCourseRecords().filter(c => c && typeof c === 'object' && !Array.isArray(c));
+    return includeArchived ? rows : rows.filter(c => !isArchivedCourse(c));
+  }
+  function courseById(courseId){
+    const id = Number(courseId);
+    if (!Number.isSafeInteger(id)) return null;
+    return loadCourseRecords().find((course, index) => course && typeof course === 'object' && !Array.isArray(course) && courseIdOf(course, index) === id) || null;
+  }
+  function nextCourseId(rows){
+    let max = COURSE_ID_START - 1;
+    rows.forEach((course, index) => {
+      if (course && typeof course === 'object' && !Array.isArray(course)) max = Math.max(max, courseIdOf(course, index));
+    });
+    return max + 1;
+  }
+  function createCourse(record){
+    if (!record || typeof record !== 'object' || Array.isArray(record)) throw new TypeError('مشخصات زمین معتبر نیست');
+    const rows = loadCourseRecords();
+    const stamp = new Date().toISOString();
+    const course = Object.assign({}, record, { courseId: nextCourseId(rows), createdAt: stamp, updatedAt: stamp });
+    delete course.deletedAt;
+    rows.push(course);
+    persistCourseRecords(rows);
+    return course;
+  }
+  function updateCourse(courseId, patch){
+    if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new TypeError('ویرایش زمین معتبر نیست');
+    const rows = loadCourseRecords();
+    const course = rows.find((item, index) => item && typeof item === 'object' && courseIdOf(item, index) === Number(courseId));
+    if (!course) throw new Error('زمین پیدا نشد؛ فهرست را تازه کنید');
+    if (isArchivedCourse(course)) throw new Error('زمین بایگانی شده است؛ ابتدا آن را بازیابی کنید');
+    const safePatch = Object.assign({}, patch);
+    delete safePatch.courseId;
+    delete safePatch.deletedAt;
+    Object.assign(course, safePatch, { updatedAt: new Date().toISOString() });
+    persistCourseRecords(rows);
+    return course;
+  }
+  function archiveCourse(courseId){
+    const rows = loadCourseRecords();
+    const course = rows.find((item, index) => item && typeof item === 'object' && courseIdOf(item, index) === Number(courseId));
+    if (!course) throw new Error('زمین پیدا نشد؛ فهرست را تازه کنید');
+    if (!isArchivedCourse(course)){
+      course.deletedAt = new Date().toISOString();
+      course.updatedAt = course.deletedAt;
+      persistCourseRecords(rows);
+    }
+    return course;
+  }
+  function restoreCourse(courseId){
+    const rows = loadCourseRecords();
+    const course = rows.find((item, index) => item && typeof item === 'object' && courseIdOf(item, index) === Number(courseId));
+    if (!course) throw new Error('زمین بایگانی‌شده پیدا نشد؛ فهرست را تازه کنید');
+    if (isArchivedCourse(course)){
+      delete course.deletedAt;
+      course.updatedAt = new Date().toISOString();
+      persistCourseRecords(rows);
+    }
+    return course;
+  }
+
   function applyCourseOverrides(){
     Object.keys(COURSE_PARS).forEach(k => { PAR_MAP[k] = COURSE_PARS[k].slice(); });
     Object.keys(COURSE_INDEX).forEach(k => { INDEX_MAP[k] = COURSE_INDEX[k].slice(); });
@@ -915,17 +1038,18 @@
   /* ── State با ذخیره localStorage (ابزار طراح) ── */
   function loadState(){
     let extra = { courses: [], tournaments: [], scorecards: [] };
+    extra.courses = loadCourseRecords();
     try {
-      extra.courses = JSON.parse(localStorage.getItem('ga_courses') || '[]');
       extra.tournaments = loadExtraTours();
       extra.scorecards = JSON.parse(localStorage.getItem('ga_scorecards') || '[]');
     } catch(e) {}
     const cov = applyCourseOverrides();
     extra.courses.forEach((c, i) => {
-      const cid = 1000 + i;
-      if (c && Array.isArray(c.pars) && c.pars.length) PAR_MAP[cid] = c.pars;
-      if (c && Array.isArray(c.index) && c.index.length) INDEX_MAP[cid] = c.index;
-      if (c && c.name) COURSE_NAME[cid] = c.name;
+      if (!c || typeof c !== 'object' || Array.isArray(c)) return;
+      const cid = courseIdOf(c, i);
+      if (Array.isArray(c.pars) && c.pars.length) PAR_MAP[cid] = c.pars;
+      if (Array.isArray(c.index) && c.index.length) INDEX_MAP[cid] = c.index;
+      if (c.name) COURSE_NAME[cid] = c.name;
     });
     const players = loadPlayers().concat(loadCustomPlayers().map((p, i) => [9000+i, (p.name + ' ' + (p.family||'')).trim(), p.gender, +p.hcp, p.join || '2026-01-01', p.active === false ? 0 : 1]));
     // اطمینان: پلیرهای سفارشی که کاربر یوزر/پسورد برایشان ساخته، در USERS معتبرند (در app.js خوانده میشود)
@@ -938,7 +1062,10 @@
         if (!o) return c;
         const holes = (o.pars && o.pars.length) ? o.pars.length : (o.holes || c[3]);
         return [c[0], o.name || c[1], o.loc || c[2], holes];
-      }).concat(extra.courses.map((c, i) => [1000+i, c.name, c.loc, (c.pars && c.pars.length) ? c.pars.length : c.holes])),
+      }).concat(extra.courses.map((c, i) => {
+        if (!c || typeof c !== 'object' || Array.isArray(c) || isArchivedCourse(c)) return null;
+        return [courseIdOf(c, i), c.name, c.loc, (c.pars && c.pars.length) ? c.pars.length : c.holes];
+      }).filter(Boolean)),
       tournaments: visibleTours().map(t => {
         const ov = loadTourOverride()[t[0]];
         if (!ov) return t;
@@ -1046,6 +1173,7 @@
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
     parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
+    courseIdOf, isArchivedCourse, courseRecords, courseById, createCourse, updateCourse, archiveCourse, restoreCourse,
     compute, careerStats, nationalPlaces, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason,

@@ -109,8 +109,13 @@
     const id = +courseId;
     if (id >= 1000){
       try {
+        const c = window.Data && window.Data.courseById ? window.Data.courseById(id) : null;
+        if (c && c.geoId) return String(c.geoId);
+      } catch(e){}
+      /* سازگاری با باندل/رکوردهای پیش از مهاجرت؛ فقط fallback است، نه منبع هویت */
+      try {
         const extra = JSON.parse(localStorage.getItem('ga_courses') || '[]');
-        const c = extra[id - 1000];
+        const c = Array.isArray(extra) ? extra.find((item, i) => item && (+item.courseId === id || (!item.courseId && 1000+i === id))) : null;
         if (c && c.geoId) return String(c.geoId);
       } catch(e){}
       return String(id);

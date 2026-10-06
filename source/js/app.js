@@ -4,6 +4,55 @@
   const $ = (s, r=document) => r.querySelector(s);
   const $$ = (s, r=document) => [...r.querySelectorAll(s)];
   const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+  /* مودال تأیید مشترک — به جای confirm() برای همهٔ حذف‌های مهم
+     نام آیتم به رنگ قرمز، بولد، بزرگ نمایش داده می‌شود.
+     options: { title, itemName (نام آیتم), body (توضیح اختیاری), danger (پیش‌فرض true), confirmLabel, cancelLabel, onYes } */
+  let __confirmPopEl = null;
+  function confirmPop(options){
+    const o = Object.assign({ title:'تأیید', itemName:'', body:'', danger:true, confirmLabel:'بله، حذف شود', cancelLabel:'انصراف' }, options || {});
+    if (!__confirmPopEl){
+      __confirmPopEl = document.createElement('div');
+      __confirmPopEl.id = 'ga-confirm-pop';
+      __confirmPopEl.setAttribute('dir','rtl');
+      __confirmPopEl.style.cssText = 'position:fixed;inset:0;z-index:9990;display:none;align-items:center;justify-content:center;background:rgba(4,8,14,.78);backdrop-filter:blur(6px);padding:14px;box-sizing:border-box';
+      document.body.appendChild(__confirmPopEl);
+    }
+    const m = __confirmPopEl;
+    const nameHtml = o.itemName
+      ? `<div style="margin:8px 0 14px;padding:12px 14px;background:rgba(229,80,80,.08);border:1px solid rgba(229,80,80,.35);border-radius:12px;font-size:18px;font-weight:900;color:#e74c3c;line-height:1.6;text-align:center;letter-spacing:.2px;word-break:break-word">${esc(o.itemName)}</div>`
+      : '';
+    const bodyHtml = o.body ? `<p style="margin:0 0 8px;color:#cfd6dd;font-size:13.5px;line-height:1.9">${esc(o.body)}</p>` : '';
+    m.innerHTML = `
+      <div role="alertdialog" aria-modal="true" aria-labelledby="ga-cp-title" style="background:linear-gradient(180deg,#0d1b2a 0%,#0a1421 100%);border:1px solid rgba(229,80,80,.45);border-radius:18px;padding:22px 22px 18px;max-width:min(460px,92vw);width:100%;box-shadow:0 18px 60px rgba(0,0,0,.6);color:#e6edf3;font-family:inherit">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <span aria-hidden="true" style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:rgba(229,80,80,.18);color:#e74c3c;font-size:20px">⚠</span>
+          <h3 id="ga-cp-title" style="margin:0;font-size:16px;font-weight:900">${esc(o.title)}</h3>
+        </div>
+        ${bodyHtml}${nameHtml}
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap">
+          <button type="button" id="ga-cp-no" style="flex:1;min-height:44px;padding:8px 14px;border-radius:10px;border:1px solid #b5994a55;background:transparent;color:#e6edf3;font:inherit;font-weight:700;cursor:pointer">${esc(o.cancelLabel)}</button>
+          <button type="button" id="ga-cp-yes" style="flex:1;min-height:44px;padding:8px 14px;border-radius:10px;border:0;background:linear-gradient(180deg,#e85d4c 0%,#c0392b 100%);color:#fff;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 6px 18px rgba(192,57,43,.35)">${esc(o.confirmLabel)}</button>
+        </div>
+      </div>`;
+    return new Promise(resolve => {
+      const yes = () => { teardown(); try { if (typeof o.onYes === 'function') o.onYes(); } catch(e){ console.error('confirmPop onYes:',e); } resolve(true); };
+      const no  = () => { teardown(); resolve(false); };
+      function teardown(){
+        m.style.display = 'none';
+        m.querySelector('#ga-cp-yes').removeEventListener('click', yes);
+        m.querySelector('#ga-cp-no').removeEventListener('click', no);
+        document.removeEventListener('keydown', onKey, true);
+      }
+      function onKey(e){ if (m.style.display === 'none') return; if (e.key === 'Escape'){ e.preventDefault(); no(); } else if (e.key === 'Enter'){ e.preventDefault(); yes(); } }
+      m.style.display = 'flex';
+      m.querySelector('#ga-cp-yes').addEventListener('click', yes);
+      m.querySelector('#ga-cp-no').addEventListener('click', no);
+      document.addEventListener('keydown', onKey, true);
+      /* دکمهٔ پیش‌فرض فوکوس: انصراف — برای جلوگیری از حذف تصادفی با Enter */
+      const noBtn = m.querySelector('#ga-cp-no'); if (noBtn) try { noBtn.focus(); } catch(e){}
+    });
+  }
   const L = (id, fallback) => window.UI_LABELS ? UI_LABELS.t(id, fallback) : fallback;
   const Bnd = () => {
     try { if (window.GA_BRAND) return GA_BRAND.get(); } catch(e){}
@@ -2013,25 +2062,31 @@ const sp = $('#st-podium');
         const kind = b.dataset.spdel, sid = b.dataset.sid, pid = +b.dataset.pid;
         const club = b.dataset.club || '', t = b.dataset.t;
         const pname = (D.nameOf ? D.nameOf(pid) : '') || ('بازیکن ' + pid);
-        if (kind === 'session'){
-          if (!confirm('جلسهٔ کامل با همهٔ ضربه‌های همهٔ بازیکن‌ها برای همیشه حذف شود؟ این کار برگشت‌ناپذیر است.')) return;
-          spDeleteSession(sid);
-          toast('جلسه حذف شد 🗑', 'ok');
-        } else if (kind === 'player'){
-          if (!confirm('همهٔ ضربه‌های «' + pname + '» در این جلسه حذف شود؟')) return;
-          const n = spDeleteWhere(x => String(x.sid) === String(sid) && +x.pid === pid);
-          toast(n ? (D.fa(n) + ' ضربهٔ «' + pname + '» حذف شد ✓') : 'چیزی برای حذف نبود', n ? 'ok' : 'orange');
-        } else if (kind === 'club'){
-          if (!confirm('همهٔ ضربه‌های «' + club + '» متعلق به «' + pname + '» در این جلسه حذف شود؟')) return;
-          const n = spDeleteWhere(x => String(x.sid) === String(sid) && +x.pid === pid && x.club === club);
-          toast(n ? (D.fa(n) + ' ضربهٔ ' + club + ' حذف شد ✓') : 'چیزی برای حذف نبود', n ? 'ok' : 'orange');
-        } else if (kind === 'shot'){
-          if (!confirm('این ضربه حذف شود؟')) return;
-          const n = spDeleteOneShot(sid, pid, club, t);
-          toast(n ? 'ضربه حذف شد ✓' : 'ضربه پیدا نشد', n ? 'ok' : 'orange');
-        } else return;
-        renderSmartHist();
-        try { renderSmartNotes(); } catch (err){}
+        const doDelete = () => {
+          if (kind === 'session'){
+            spDeleteSession(sid);
+            toast('جلسه حذف شد 🗑', 'ok');
+          } else if (kind === 'player'){
+            const n = spDeleteWhere(x => String(x.sid) === String(sid) && +x.pid === pid);
+            toast(n ? (D.fa(n) + ' ضربهٔ «' + pname + '» حذف شد ✓') : 'چیزی برای حذف نبود', n ? 'ok' : 'orange');
+          } else if (kind === 'club'){
+            const n = spDeleteWhere(x => String(x.sid) === String(sid) && +x.pid === pid && x.club === club);
+            toast(n ? (D.fa(n) + ' ضربهٔ ' + club + ' حذف شد ✓') : 'چیزی برای حذف نبود', n ? 'ok' : 'orange');
+          } else if (kind === 'shot'){
+            const n = spDeleteOneShot(sid, pid, club, t);
+            toast(n ? 'ضربه حذف شد ✓' : 'ضربه پیدا نشد', n ? 'ok' : 'orange');
+          } else return;
+          renderSmartHist();
+          try { renderSmartNotes(); } catch (err){}
+        };
+        const pop = (kind === 'session')
+          ? { title:'حذف جلسهٔ تمرین', itemName:'جلسهٔ شماره ' + sid.slice(-4), body:'همهٔ ضربه‌های همهٔ بازیکن‌ها برای همیشه حذف می‌شود. این کار برگشت‌ناپذیر است.', confirmLabel:'بله، جلسه حذف شود' }
+          : (kind === 'player')
+            ? { title:'حذف ضربه‌های بازیکن', itemName:pname, body:'همهٔ ضربه‌های این بازیکن در این جلسه حذف می‌شود.', confirmLabel:'بله، حذف شود' }
+            : (kind === 'club')
+              ? { title:'حذف ضربه‌های کلوپ', itemName:club + ' — ' + pname, body:'همهٔ ضربه‌های این بازیکن با این کلوپ در این جلسه حذف می‌شود.', confirmLabel:'بله، حذف شود' }
+              : { title:'حذف ضربه', itemName:'ضربهٔ ' + club + ' — ' + pname, body:'این ضربه از جلسه حذف می‌شود.', confirmLabel:'بله، حذف شود' };
+        confirmPop(Object.assign(pop, { onYes: doDelete }));
       });
     }
     const pidS = $('#sph-player'), typS = $('#sph-type'), clbS = $('#sph-club');
@@ -3855,8 +3910,7 @@ const stCal = $('#st-cal');
         toast('این ردیف دیگر فعال نیست؛ فهرست را تازه کنید.', 'orange');
         return;
       }
-      if (!confirm('زمین «' + name + '» بایگانی شود؟ اطلاعات و تاریخچه پاک نمی‌شود و بعداً قابل‌بازیابی است.')) return;
-      try {
+      const go = () => { try {
         if (D.archiveCourse) D.archiveCourse(courseId);
         else {
           const lst = extraCourses();
@@ -3866,7 +3920,8 @@ const stCal = $('#st-cal');
           saveCourses(lst);
         }
       } catch(err){ toast('بایگانی انجام نشد؛ داده‌ها تغییر نکردند.', 'red'); return; }
-      reloadData(); go('acourses'); toast('زمین بایگانی شد؛ می‌توانید آن را بازیابی کنید.', 'orange');
+        reloadData(); go('acourses'); toast('زمین بایگانی شد؛ می‌توانید آن را بازیابی کنید.', 'orange'); };
+      confirmPop({ title:'بایگانی زمین', itemName: name, body:'اطلاعات و تاریخچه پاک نمی‌شود و بعداً قابل‌بازیابی است.', confirmLabel:'بله، بایگانی شود', onYes: go });
     }));
     const archived = extraCourses().filter(c => c && D.isArchivedCourse && D.isArchivedCourse(c));
     const archivedWrap = $('#ac-archived', $('#view'));
@@ -4300,7 +4355,7 @@ const stCal = $('#st-cal');
   });
 
   window.APP = {
-    go, reloadData, recompute, refreshLabels, state: () => ({ S, A }), toast,
+    go, reloadData, recompute, refreshLabels, state: () => ({ S, A }), toast, confirmPop,
     openCourse: (id) => { courseSel = +id; go('course'); },
     currentUser: () => currentUser,
     isMain: () => isMain(currentUser),

@@ -16,6 +16,12 @@
     return (window.APP && window.APP.state) ? window.APP.state() : { S:null, A:null };
   }
 
+  /* اتصال به مودال تأیید سراسری (تعریف در app.js). اگر app.js بار نشده باشد، برگرد به confirm بومی */
+  function confirmPop(options){
+    if (window.APP && typeof window.APP.confirmPop === 'function') return window.APP.confirmPop(options);
+    return Promise.resolve(window.confirm(((options && options.body) || '') + '\n\n' + ((options && options.itemName) || '')));
+  }
+
   /* 🌐 ارقام فارسی/عربی (۰۱۲۳…) در همهٔ ورودی‌های عددی فوراً به لاتین تبدیل می‌شوند — جلوی NaN/صفرِ صامت در فرمول‌ها (چکِ ممیزی: ۳۴ فیلد بدون تبدیل) */
   document.addEventListener('input', e => {
     const t = e.target;
@@ -650,9 +656,9 @@
     if (reseed) reseed.addEventListener('click', () => {
       const _jy = (window.Data && D.jalaliInfo ? D.jalaliInfo(new Date()).yy : D.seasonYear);
       const _warn = (_jy !== D.seasonYear) ? '⚠️ توجه: سال جلالی جاری ' + D.fa(_jy) + ' است ولی دادهٔ بذر برای فصل ' + D.fa(D.seasonYear) + ' است — بازنشانی سایت را به محتوای فصل ' + D.fa(D.seasonYear) + ' برمی‌گرداند!\n\n' : '';
-      if (!confirm(_warn + 'همهٔ دادهٔ فعلی (نتایج، دوره‌ها، زمین‌ها، بازیکنان سفارشی و…) حذف و دادهٔ استاندارد فصل ۱۴۰۵ دوباره بارگذاری می‌شود. ادامه می‌دهید؟')) return;
-      try { D.seedSeason(true); APP.reloadData(); APP.go('mgmt'); mgmtTab = 'players'; APP.toast('دادهٔ فصل ۱۴۰۵ بازنشانی شد ✓', 'green'); }
-      catch(e){ APP.toast('خطا در بازنشانی: ' + e.message, 'red'); }
+      const doReset = () => { try { D.seedSeason(true); APP.reloadData(); APP.go('mgmt'); mgmtTab = 'players'; APP.toast('دادهٔ فصل ۱۴۰۵ بازنشانی شد ✓', 'green'); }
+        catch(e){ APP.toast('خطا در بازنشانی: ' + e.message, 'red'); } };
+      confirmPop({ title:'بازنشانی کل فصل', itemName:'فصل ۱۴۰۵ — همهٔ داده', body: _warn + 'همهٔ دادهٔ فعلی (نتایج، دوره‌ها، زمین‌ها، بازیکنان سفارشی و…) حذف و دادهٔ استاندارد فصل ۱۴۰۵ دوباره بارگذاری می‌شود.', confirmLabel:'بله، بازنشانی شود', onYes: doReset });
     });
     renderMgmtTab();
   }
@@ -832,10 +838,8 @@
       APP.toast('پوسته ذخیره شد. اگر دستگاه دیگری کش قدیمی دارد، هاردریفرش کنید.', 'gold');
     });
     $('#ac-reset').addEventListener('click', () => {
-      if (!confirm('بازگشت به هویت پیش‌فرض پات‌کلاب؟ لوگو و نام سفارشی پاک می‌شود.')) return;
-      GA_BRAND.reset();
-      mgmtAcademy(body);
-      APP.toast('پوسته به پات‌کلاب برگشت', 'gold');
+      const doReset = () => { GA_BRAND.reset(); mgmtAcademy(body); APP.toast('پوسته به پات‌کلاب برگشت', 'gold'); };
+      confirmPop({ title:'بازنشانی برند', itemName:'هویت پیش‌فرض پات‌کلاب', body:'لوگو و نام سفارشی پاک می‌شود.', danger:false, confirmLabel:'بله، برگرد', onYes: doReset });
     });
   }
 
@@ -915,8 +919,8 @@
       }).join('') : '<div style="color:var(--muted);font-size:12px;padding:8px">تیمی ساخته نشده است.</div>';
       box.querySelectorAll('[data-btteam]').forEach(b => b.addEventListener('click', () => battleTeamModal(b.dataset.btteam)));
       box.querySelectorAll('[data-btdel]').forEach(b => b.addEventListener('click', () => {
-        if (!confirm('تیم حذف شود؟ جدال‌های وابسته هم حذف می‌شوند.')) return;
-        B.deleteTeam(b.dataset.btdel); B.refresh(); refreshBattle();
+        const doDelete = () => { B.deleteTeam(b.dataset.btdel); B.refresh(); refreshBattle(); };
+        confirmPop({ title:'حذف تیم', itemName: t.name, body:'جدال‌های وابسته هم حذف می‌شوند.', confirmLabel:'بله، حذف شود', onYes: doDelete });
       }));
     }
     function renderMatchList(){
@@ -1059,8 +1063,8 @@
       B.refresh(); refreshBattle(); APP.toast('تنظیمات نبرد ذخیره شد ✓', 'green');
     });
     $('#bt-reset').addEventListener('click', () => {
-      if (!confirm('تیم‌ها و جدال‌ها به نمونهٔ پیش‌فرض بازنشانی شود؟')) return;
-      B.reset(); B.refresh(); refreshBattle(); APP.toast('نمونهٔ تیم‌ها بازنشانی شد ✓', 'green');
+      const doReset = () => { B.reset(); B.refresh(); refreshBattle(); APP.toast('نمونهٔ تیم‌ها بازنشانی شد ✓', 'green'); };
+      confirmPop({ title:'بازنشانی تیم‌ها و جدال‌ها', itemName:'نمونهٔ پیش‌فرض', body:'تیم‌ها و جدال‌های سفارشی حذف و نمونهٔ پیش‌فرض بارگذاری می‌شود.', confirmLabel:'بله، بازنشانی شود', onYes: doReset });
     });
     $('#bt-add-team').addEventListener('click', () => battleTeamModal(null));
     $('#bt-add-match').addEventListener('click', () => {
@@ -1275,9 +1279,8 @@
       APP.toast('نام‌ها ذخیره شد و در همهٔ بخش‌های سایت اعمال شد ✓', 'green');
     });
     $('#lbl-reset-all', body).addEventListener('click', () => {
-      if (!confirm('همهٔ نام‌های سفارشی به حالت پیش‌فرض برگردند؟')) return;
-      api.resetAll();
-      APP.toast('همهٔ نام‌ها به حالت پیش‌فرض برگشت', 'orange');
+      const doReset = () => { api.resetAll(); APP.toast('همهٔ نام‌ها به حالت پیش‌فرض برگشت', 'orange'); };
+      confirmPop({ title:'بازنشانی نام‌ها', itemName:'نام‌های سفارشی', body:'همهٔ نام‌های سفارشی به حالت پیش‌فرض برمی‌گردد.', danger:false, confirmLabel:'بله، بازنشانی شود', onYes: doReset });
     });
     function copyText(text){
       if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
@@ -1552,12 +1555,16 @@
       }
       if (act === 'del'){
         if (isCustom){
-          const lst = customPlayers().filter(x => x.id !== pid - 9000);
-          saveCustomPlayers(lst);
-          const pu = playerUsers(); delete pu[pid]; savePlayerUsers(pu);
-          removeUserOfPlayer(pid);
-          APP.reloadData(); APP.go('mgmt');
-          APP.toast('بازیکن حذف شد 🗑', 'orange');
+          const playerName = (D.nameOf ? D.nameOf(pid) : '') || ('بازیکن #' + pid);
+          const doDelete = () => {
+            const lst = customPlayers().filter(x => x.id !== pid - 9000);
+            saveCustomPlayers(lst);
+            const pu = playerUsers(); delete pu[pid]; savePlayerUsers(pu);
+            removeUserOfPlayer(pid);
+            APP.reloadData(); APP.go('mgmt');
+            APP.toast('بازیکن حذف شد 🗑', 'orange');
+          };
+          confirmPop({ title:'حذف بازیکن سفارشی', itemName: playerName, body:'بازیکن، یوزر و همهٔ امتیازهایش حذف می‌شود. بازیکنان پایه فقط غیرفعال می‌شوند.', confirmLabel:'بله، حذف شود', onYes: doDelete });
         } else {
           APP.toast('بازیکنان پایه حذف نمی‌شوند — می‌توانید غیرفعال کنید', 'gold');
         }
@@ -3670,12 +3677,13 @@
       }));
       $$('#tour-report [data-rem]').forEach(b => b.addEventListener('click', () => {
         const pid = b.dataset.rem.startsWith('free:') ? b.dataset.rem : +b.dataset.rem;
-        if (!confirm(`حذف «${nameOf(pid)}» از این مسابقه؟\nکارت او پاک و رتبه‌ها و امتیازها به‌روز می‌شوند.`)) return;
-        scRemovePlayer(t, pid);
-        APP.reloadData();
-        APP.toast(`🗑 «${nameOf(pid)}» از مسابقه حذف شد`, 'orange');
-        if (onChange) onChange();
-        render();
+        confirmPop({ title:'حذف شرکت‌کننده از مسابقه', itemName: nameOf(pid), body:'کارت او پاک و رتبه‌ها و امتیازها به‌روز می‌شوند.', confirmLabel:'بله، حذف شود', onYes: () => {
+          scRemovePlayer(t, pid);
+          APP.reloadData();
+          APP.toast(`🗑 «${nameOf(pid)}» از مسابقه حذف شد`, 'orange');
+          if (onChange) onChange();
+          render();
+        } });
       }));
       const pb = $('#tr-pdf');
       /* 📄 خروجی PDF برنددار: یک برگهٔ A4 — سربرگ آکادمی + سکوی افتخار + جدول نهایی */
@@ -3876,8 +3884,8 @@
           scFinalize(t, state.pid);
           APP.toast(`کارت «${esc((playersOf().find(x => x.pid === state.pid) || {}).name || '')}» ثبت نهایی شد ✅`, 'green');
           const ended = scAutoFinalize(t); /* همهٔ کارت‌ها نهایی شد → مسابقه پایان یافته */
-          if (confirm('ثبت نهایی شد ✔ گزارش مسابقه را ببینید؟')) tourReport(t, () => render());
-          else render();
+          const doShow = () => tourReport(t, () => render());
+          confirmPop({ title:'گزارش مسابقه', itemName: t[1] || 'این مسابقه', body:'می‌خواهید گزارش کامل مسابقه را ببینید؟', danger:false, confirmLabel:'بله، نمایش بده', onYes: doShow, onNo: () => render() });
         });
       } else {
         const toEN = s => String(s || '').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[^\d]/g, '');
@@ -4735,11 +4743,13 @@
         const id = +b.dataset.del;
         const a = U.list(); const u = a.find(x => x.id === id);
         if (!u || u.main) return;
-        if (!confirm('یوزر «' + u.name + '» حذف شود؟')) return;
-        U.save(a.filter(x => x.id !== id));
-        if (u.pid){ const pu = playerUsers(); delete pu[u.pid]; savePlayerUsers(pu); }
-        render();
-        APP.toast('یوزر «' + u.name + '» حذف شد 🗑', 'orange');
+        const doDelete = () => {
+          U.save(a.filter(x => x.id !== id));
+          if (u.pid){ const pu = playerUsers(); delete pu[u.pid]; savePlayerUsers(pu); }
+          render();
+          APP.toast('یوزر «' + u.name + '» حذف شد 🗑', 'orange');
+        };
+        confirmPop({ title:'حذف یوزر', itemName: u.name, body:'این حساب و دسترسی‌اش برداشته می‌شود.', confirmLabel:'بله، حذف شود', onYes: doDelete });
       }));
     }
     function subModal(uname){
@@ -5056,12 +5066,12 @@
     $$('[data-del]', body).forEach(b => b.addEventListener('click', () => { AV.deleteReq(b.dataset.del); renderMgmtTab(); }));
     $$('[data-zero]', body).forEach(b => b.addEventListener('click', () => {
       const u = b.dataset.zero;
-      if (!confirm('موجودی سکهٔ «' + u + '» صفر شود؟')) return;
-      const d = AV.coinData();
-      d[u] = { total: 0, log: [] };
-      try { localStorage.setItem('ga_coins', JSON.stringify(d)); } catch(e){}
-      APP.toast('کیف‌پول صفر شد', 'orange');
-      renderMgmtTab();
+      const doZero = () => { const d = AV.coinData();
+        d[u] = { total: 0, log: [] };
+        try { localStorage.setItem('ga_coins', JSON.stringify(d)); } catch(e){}
+        APP.toast('کیف‌پول صفر شد', 'orange');
+        renderMgmtTab(); };
+      confirmPop({ title:'صفر کردن موجودی سکه', itemName: u, body:'موجودی سکهٔ این کاربر صفر می‌شود.', danger:false, confirmLabel:'بله، صفر شود', onYes: doZero });
     }));
     const cl = $('#cr-clear', body);
     if (cl) cl.addEventListener('click', () => { AV.clearDecided(); renderMgmtTab(); });
@@ -5253,17 +5263,17 @@
     if (sv) sv.addEventListener('click', () => { if (!refreshPreview(true)) return; APP.toast('پیش‌نیازها و ظاهر رنک «' + AV.rankOf(honorLv).en + '» ذخیره شد ✓', 'green'); renderMgmtTab(); });
     const cle = $('#hr-clear', body);
     if (cle) cle.addEventListener('click', () => {
-      if (!confirm('پیش‌نیازها (شامل امتیاز) و ظاهر این رنک به پیش‌فرض برگردد؟')) return;
-      const st = JSON.parse(localStorage.getItem('ga_rank_skin') || '{}');
-      delete st[String(honorLv)];
-      localStorage.setItem('ga_rank_skin', JSON.stringify(st));
-      APP.toast('پیش‌نیازها و ظاهر این رنک به حالت پیش‌فرض برگشت', 'orange');
-      renderMgmtTab();
+      const doReset = () => { const st = JSON.parse(localStorage.getItem('ga_rank_skin') || '{}');
+        delete st[String(honorLv)];
+        localStorage.setItem('ga_rank_skin', JSON.stringify(st));
+        APP.toast('پیش‌نیازها و ظاهر این رنک به حالت پیش‌فرض برگشت', 'orange');
+        renderMgmtTab(); };
+      confirmPop({ title:'بازنشانی این رنک', itemName:'ظاهر و پیش‌نیاز', body:'پیش‌نیازها (شامل امتیاز) و ظاهر این رنک به پیش‌فرض برمی‌گردد.', danger:false, confirmLabel:'بله، بازنشانی شود', onYes: doReset });
     });
     const rst = $('#hr-reset', body);
     if (rst) rst.addEventListener('click', () => {
-      if (!confirm('پیش‌نیازها (شامل امتیازها) و ظاهر همهٔ ۱۵ رنک به پیش‌فرض برگردد؟')) return;
-      AV.resetRanks(); APP.toast('همهٔ رنک‌ها بازنشانی شدند', 'orange'); renderMgmtTab();
+      const doReset = () => { AV.resetRanks(); APP.toast('همهٔ رنک‌ها بازنشانی شدند', 'orange'); renderMgmtTab(); };
+      confirmPop({ title:'بازنشانی همهٔ رنک‌ها', itemName:'ظاهر و پیش‌نیاز همهٔ ۱۵ رنک', body:'پیش‌نیازها و ظاهر همهٔ رنک‌ها به پیش‌فرض برمی‌گردد.', danger:false, confirmLabel:'بله، بازنشانی شود', onYes: doReset });
     });
     const tu = $('#hr-testup', body);
     if (tu) tu.addEventListener('click', () => AV.playRankUp($('#hr-prev', body), Math.max(1, honorLv - 1), honorLv));
@@ -5314,7 +5324,7 @@
       APP.toast('منطق ارتقاء ذخیره شد؛ رنک‌ها با قواعد جدید محاسبه می‌شوند ✓','green');reopen();
     };
     $('#rr-reset',body).onclick=() => {
-      if(!confirm('فقط ضرایب و توضیح منطق به پیش‌فرض برگردند؟ امتیازها و پیش‌نیازهای رنک‌ها تغییر نمی‌کنند.')) return;
+      confirmPop({ title:'بازنشانی توضیح منطق رنک', itemName:'ضرایب و توضیح منطق', body:'فقط ضرایب و توضیح منطق به پیش‌فرض برمی‌گردد؛ امتیازها و پیش‌نیازهای رنک‌ها تغییر نمی‌کنند.', danger:false, confirmLabel:'بله، بازنشانی شود', onYes: () => { doReset(); } }); return;
       if(AV.saveRankRules(AV.DEFAULT_RANK_RULES)) reopen();
     };
   }
@@ -5394,15 +5404,15 @@
       renderMgmtTab();
     }));
     $$('[data-idel]', body).forEach(b => b.addEventListener('click', () => {
-      if (!confirm('این آیتم حذف شود؟')) return;
-      AV.removeShopItem(b.dataset.idel);
-      APP.toast('آیتم حذف شد', 'orange');
-      renderMgmtTab();
+      const doDelete = () => { AV.removeShopItem(b.dataset.idel);
+        APP.toast('آیتم حذف شد', 'orange');
+        renderMgmtTab(); };
+      confirmPop({ title:'حذف آیتم فروشگاه', itemName: it ? (it.n || 'آیتم') : 'این آیتم', body:'از فهرست خرید قابل‌دسترس حذف می‌شود.', confirmLabel:'بله، حذف شود', onYes: doDelete });
     }));
     const rs = $('#sp-reset', body);
     if (rs) rs.addEventListener('click', () => {
-      if (!confirm('همهٔ ویرایش‌ها و آیتم‌های سفارشی فروشگاه پاک شود؟')) return;
-      AV.resetShop(); APP.toast('فروشگاه بازنشانی شد', 'orange'); renderMgmtTab();
+      const doReset = () => { AV.resetShop(); APP.toast('فروشگاه بازنشانی شد', 'orange'); renderMgmtTab(); };
+      confirmPop({ title:'بازنشانی فروشگاه', itemName:'همهٔ آیتم‌های سفارشی', body:'همهٔ ویرایش‌ها و آیتم‌های سفارشی فروشگاه پاک می‌شود.', confirmLabel:'بله، بازنشانی شود', onYes: doReset });
     });
     const add = $('#sp-add', body);
     if (add) add.addEventListener('click', () => {

@@ -357,4 +357,62 @@ await test('The size limit counts UTF-8 bytes, including multibyte Persian conte
   assert.match(d.GA.status().errors[0].message, /2048 KB/);
 });
 
+await test('Custom-course geometry merges by geoId on pull, repairs the server key, and reaches a second device', async () => {
+  const api = server();
+  const remoteGeo = {
+    '1': { minZoomLock: 16, updatedAt: '2026-10-06T15:00:00.000Z' },
+    cAhvaz: { name: 'پات کلاب اهواز', holes: { '1': { green: { lat: 1, lng: 2 } } }, updatedAt: '2026-10-06T15:00:00.000Z' },
+    cConflict: { name: 'نسخهٔ تازهٔ ابر', updatedAt: '2026-10-06T16:00:00.000Z' },
+  };
+  const course = { courseId: 1001, name: 'باشگاه انقلاب تهران', loc: 'تهران', holes: 18,
+    pars: [5,4,4,4,5,3,3,4,4,4,3,4,4,5,3,3,4,4], geoId: 'c1791301672938',
+    updatedAt: '2026-10-06T15:47:52.942Z' };
+  api.rows.set('ga_course_geo', { k: 'ga_course_geo', v: remoteGeo, updated_at: '2026-10-06T16:50:01.099Z' });
+  api.rows.set('ga_courses', { k: 'ga_courses', v: [course], updated_at: '2026-10-06T16:49:11.285Z' });
+  const localGeo = {
+    c1791301672938: { name: 'باشگاه انقلاب تهران', updatedAt: '2026-10-06T15:47:52.942Z', holes: {
+      '1': { n: 1, teeF: { lat: 35.78, lng: 51.39 }, green: { lat: 35.781, lng: 51.391 }, fairways: [] },
+      '2': { n: 2, teeF: { lat: 35.782, lng: 51.392 }, green: { lat: 35.783, lng: 51.393 }, fairways: [] },
+    } },
+    cConflict: { name: 'نسخهٔ قدیمی محلی', updatedAt: '2026-01-01T00:00:00.000Z' },
+  };
+  const d = await device(api, {
+    ga_courses: JSON.stringify([course]),
+    ga_course_geo: JSON.stringify(localGeo),
+    ga_cloud_ts: JSON.stringify({ ga_courses: '2026-10-06T16:49:11.285Z', ga_course_geo: '2026-10-06T16:50:01.099Z' }),
+  });
+  const laptopGeo = JSON.parse(d.values.get('ga_course_geo'));
+  assert.ok(laptopGeo.c1791301672938?.holes?.['1']?.teeF, 'the laptop-only Tehran holes survive pull');
+  assert.ok(laptopGeo.cAhvaz, 'the remote Ahvaz course is retained');
+  assert.equal(laptopGeo.cConflict.name, 'نسخهٔ تازهٔ ابر', 'a newer same-course cloud record wins');
+  assert.ok(d.GA.dirty().includes('ga_course_geo'), 'the merged map is queued to repair cloud');
+  assert.equal(await d.GA.push('manual'), true);
+  assert.ok(api.rows.get('ga_course_geo').v.c1791301672938?.holes?.['2']?.green, 'the remote key now contains Tehran geometry');
+  assert.ok(api.rows.get('ga_course_geo').v.cAhvaz, 'repair does not delete other remote courses');
+  const phone = await device(api);
+  const phoneGeo = JSON.parse(phone.values.get('ga_course_geo'));
+  assert.ok(phoneGeo.c1791301672938?.holes?.['1']?.teeF, 'a second device receives the repaired course holes');
+  assert.ok(phoneGeo.c1791301672938?.holes?.['2']?.green, 'a second device receives all synced hole records');
+});
+
+await test('A pending local geo edit merges with the server and wins for the same geoId', async () => {
+  const api = server();
+  api.rows.set('ga_course_geo', { k: 'ga_course_geo', v: {
+    cRemoteOnly: { name: 'remote course' },
+    cSame: { name: 'remote old', updatedAt: '2026-01-01T00:00:00.000Z' },
+  }, updated_at: '2026-10-06T16:00:00.000Z' });
+  const local = {
+    cLocalOnly: { name: 'local course' },
+    cSame: { name: 'local new', updatedAt: '2026-10-06T17:00:00.000Z' },
+  };
+  const d = await device(api, {
+    ga_course_geo: JSON.stringify(local),
+    ga_cloud_dirty: JSON.stringify({ ga_course_geo: '2026-10-06T17:00:00.000Z' }),
+  });
+  assert.equal(await d.GA.push('manual'), true);
+  const saved = api.rows.get('ga_course_geo').v;
+  assert.ok(saved.cRemoteOnly && saved.cLocalOnly, 'different courses from both devices are retained');
+  assert.equal(saved.cSame.name, 'local new', 'pending local edit wins for the same course');
+});
+
 console.log(`PASS — ${passed} cloud queue regression scenarios; zero live database requests.`);

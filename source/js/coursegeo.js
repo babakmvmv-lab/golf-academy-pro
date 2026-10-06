@@ -181,6 +181,7 @@
     const next = clone(cur);
     fn(next);
     all[key].holes[String(n)] = next;
+    all[key].updatedAt = new Date().toISOString();
     saveAll(all);
     return next;
   }
@@ -212,7 +213,9 @@
   }
   function set(geoId, data){
     const all = loadAll();
-    all[String(geoId)] = data;
+    const record = data && typeof data === 'object'
+      ? Object.assign({}, data, { updatedAt:new Date().toISOString() }) : data;
+    all[String(geoId)] = record;
     saveAll(all);
   }
   function summary(p){

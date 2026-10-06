@@ -3599,6 +3599,24 @@ svg.leaflet-image-layer.leaflet-interactive path {
               }
               return;
             }
+            if (COURSE_MERGE[r.k]) {
+              /* رجیستری زمین و نقشهٔ KML هر دو چندرکوردی‌اند. pull نیز باید merge کند:
+                 رکوردهای محلیِ غایب از ابر حفظ و برای ارسال دوباره صف می‌شوند؛ نسخهٔ
+                 جدیدترِ همان زمین برنده است تا گوشی خالی نتواند زمین لپ‌تاپ را حذف کند. */
+              var localRaw = L.getItem(r.k), remoteVal = decode(r.v);
+              var mergedVal = mergeCourseValue(r.k, localRaw, remoteVal, false);
+              var uploadMerged = !sameJsonValue(mergedVal, remoteVal);
+              try {
+                if (!sameJsonValue(mergedVal, localRaw)) {
+                  L.setItem(r.k, mergedVal);
+                  applied++;
+                }
+                ts[r.k] = r.updated_at;
+                if (uploadMerged) d[r.k] = localStamp();
+                else delete d[r.k];
+              } catch (e) {}
+              return;
+            }
             if (!remoteNewer && localDirty === undefined && L.getItem(r.k) !== null) return;
             if (remoteNewer) {
               var newVal = decode(r.v);
@@ -3613,6 +3631,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
                 if (localDirty) delete d[r.k];
               } catch (e) {}
             }
+          });
+          /* اگر این دستگاه زمین/نقشه دارد ولی کلید هنوز در ابر ساخته نشده، آن را هم صف کن. */
+          var remoteKeys = {};
+          (rows || []).forEach(function (r) { if (r && r.k) remoteKeys[r.k] = 1; });
+          Object.keys(COURSE_MERGE).forEach(function (k) {
+            if (!remoteKeys[k] && L.getItem(k) !== null && !d[k]) d[k] = localStamp();
           });
           stripSpStorage(L);
           jwrite(DIRTY_KEY, d);
@@ -3645,9 +3669,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
      خطای یک کلید مانع ثبت کلیدهای سالم نیست. مسیر REST نوشتن fallback نیست:
      خطای اصلی ga-sync نباید با خطای مجوز جدول پوشانده یا موفق تلقی شود. */
   var SP_MERGE = { ga_sp_sessions: 1, ga_sp_shots: 1, ga_sp_tomb: 1 };
-  /* زمین‌ها یک کلید آرایه‌ای‌اند، اما merge باید بر اساس courseId انجام شود؛
-     LWW کل آرایه می‌تواند افزودن/بایگانی هم‌زمان دستگاه دیگر را پاک کند. */
-  var COURSE_MERGE = { ga_courses: 1 };
+  /* هر دو کلید چندزمینی‌اند؛ LWW کلِ ga_courses یا ga_course_geo ممکن است
+     زمینی را که فقط روی دستگاه دیگر است از ابر حذف کند. */
+  var COURSE_MERGE = { ga_courses: 1, ga_course_geo: 1 };
   function courseRows(raw){
     try {
       var value = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw;
@@ -3686,6 +3710,46 @@ svg.leaflet-image-layer.leaflet-interactive path {
     });
     return JSON.stringify(Object.keys(merged).map(function (id) { return merged[id]; })
       .sort(function (a, b) { return a.courseId - b.courseId; }));
+  }
+  function courseGeoMap(raw){
+    try {
+      var value = typeof raw === 'string' ? JSON.parse(raw || '{}') : raw;
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    } catch(e){ return {}; }
+  }
+  function courseGeoVersion(rec){
+    return Date.parse(rec && (rec.updatedAt || rec.updated_at || rec.modifiedAt || rec.modified_at) || '') || 0;
+  }
+  function mergeCourseGeoMaps(localRaw, remoteRaw, preferLocal){
+    var local = courseGeoMap(localRaw), remote = courseGeoMap(remoteRaw), merged = {};
+    Object.keys(remote).forEach(function (id) { merged[id] = remote[id]; });
+    Object.keys(local).forEach(function (id) {
+      var hasRemote = Object.prototype.hasOwnProperty.call(remote, id);
+      if (!hasRemote || preferLocal || courseGeoVersion(local[id]) > courseGeoVersion(remote[id])) merged[id] = local[id];
+    });
+    return JSON.stringify(merged);
+  }
+  function stableValue(value){
+    if (Array.isArray(value)) return value.map(stableValue);
+    if (value && typeof value === 'object'){
+      var out = {};
+      Object.keys(value).sort().forEach(function (key) { out[key] = stableValue(value[key]); });
+      return out;
+    }
+    return value;
+  }
+  function sameJsonValue(a, b){
+    function parse(raw){
+      if (typeof raw !== 'string') return raw;
+      try { return JSON.parse(raw); } catch(e) { return raw; }
+    }
+    try { return JSON.stringify(stableValue(parse(a))) === JSON.stringify(stableValue(parse(b))); }
+    catch(e) { return a === b; }
+  }
+  function mergeCourseValue(key, localRaw, remoteRaw, preferLocal){
+    if (key === 'ga_courses') return mergeCourseRows(localRaw, remoteRaw);
+    if (key === 'ga_course_geo') return mergeCourseGeoMaps(localRaw, remoteRaw, preferLocal);
+    return localRaw;
   }
   function push(reason, options) {
     if (pushFlight) return pushFlight;
@@ -3746,8 +3810,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
             if (k === 'ga_sp_tomb') row.v = tomb;
             else row.v = encode(mergeSpKey(k, raw, decode(remote[k] || (k === 'ga_sp_shots' ? [] : {})), tomb));
           } else if (COURSE_MERGE[k]) {
-            var remoteCourses = remote[k] === undefined ? '[]' : decode(remote[k]);
-            row.v = encode(mergeCourseRows(raw, remoteCourses));
+            var remoteValue = remote[k] === undefined ? (k === 'ga_courses' ? '[]' : '{}') : decode(remote[k]);
+            row.v = encode(mergeCourseValue(k, raw, remoteValue, true));
           }
         }
         var payload = JSON.stringify({ action: 'kv', rows: [row] });
@@ -17120,6 +17184,7 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
     const next = clone(cur);
     fn(next);
     all[key].holes[String(n)] = next;
+    all[key].updatedAt = new Date().toISOString();
     saveAll(all);
     return next;
   }
@@ -17151,7 +17216,9 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
   }
   function set(geoId, data){
     const all = loadAll();
-    all[String(geoId)] = data;
+    const record = data && typeof data === 'object'
+      ? Object.assign({}, data, { updatedAt:new Date().toISOString() }) : data;
+    all[String(geoId)] = record;
     saveAll(all);
   }
   function summary(p){

@@ -23035,6 +23035,7 @@ const stCal = $('#st-cal');
     S = D.loadState();
     A = D.compute(S);
     if (currentPage === 'player') go('player');
+    else if (currentPage === 'course') go('course'); /* دریافت KML/هندسه پس از رندر اول: نقشه را با geo تازه دوباره بساز */
     msgGate();
   };
   let __cloudT = null, __cloudResultsChanged = false;

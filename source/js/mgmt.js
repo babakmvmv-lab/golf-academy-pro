@@ -1830,13 +1830,14 @@
       const o = ov[c[0]] || {};
       const pars = (o.pars && o.pars.length) ? o.pars : (D.parsOf(c[0]) || D.COURSE_PARS[c[0]] || []);
       const index = (o.index && o.index.length) ? o.index : ((D.indexOf && D.indexOf(c[0])) || []);
+      const distances = Array.isArray(o.distances) ? o.distances : [];
       const isMis = c[0] === 1 || String(c[1]).indexOf('مسجدسلیمان') >= 0;
-      return { id:c[0], name: o.name || c[1], loc: o.loc || c[2], holes: pars.length || c[3], pars, index, base:true, lat: o.lat != null ? o.lat : (isMis ? 31.90494 : 24.7136), lng: o.lng != null ? o.lng : (isMis ? 49.31398 : 46.6753) };
+      return { id:c[0], name: o.name || c[1], loc: o.loc || c[2], holes: pars.length || c[3], pars, index, distances, base:true, lat: o.lat != null ? o.lat : (isMis ? 31.90494 : 24.7136), lng: o.lng != null ? o.lng : (isMis ? 49.31398 : 46.6753) };
     });
     extra.forEach((c,i) => {
       if (!c || (D.isArchivedCourse && D.isArchivedCourse(c))) return;
       const id = D.courseIdOf ? D.courseIdOf(c, i) : (1000 + i);
-      rows.push({ id, name:c.name, loc:c.loc||'ریاض', holes:(c.pars&&c.pars.length)?c.pars.length:c.holes, pars:c.pars||[], index:c.index||[], base:false, idx:i, geoId:c.geoId, lat:c.lat, lng:c.lng });
+      rows.push({ id, name:c.name, loc:c.loc||'ریاض', holes:(c.pars&&c.pars.length)?c.pars.length:c.holes, pars:c.pars||[], index:c.index||[], distances:Array.isArray(c.distances)?c.distances:[], base:false, idx:i, geoId:c.geoId, lat:c.lat, lng:c.lng });
     });
     const archived = extra.filter(c => c && D.isArchivedCourse && D.isArchivedCourse(c));
     body.innerHTML = `
@@ -1874,7 +1875,8 @@
     </div>`;
     let parVals = Array.from({length:18}, () => 4);
     let idxVals = Array.from({length:18}, (_,i) => i + 1);
-    bindParEditor($('#mc-pars'), parVals, idxVals);
+    let distanceVals = Array.from({length:18}, () => '');
+    bindParEditor($('#mc-pars'), parVals, idxVals, distanceVals);
     const kmlInp = $('#mc-kml');
     if (kmlInp) kmlInp.addEventListener('change', function(){
       const f = kmlInp.files && kmlInp.files[0];
@@ -1901,7 +1903,9 @@
             parVals = sm.pars.slice();
             while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
             idxVals.length = parVals.length;
-            bindParEditor($('#mc-pars'), parVals, idxVals);
+            while (distanceVals.length < parVals.length) distanceVals.push('');
+            distanceVals.length = parVals.length;
+            bindParEditor($('#mc-pars'), parVals, idxVals, distanceVals);
           }
           if (g.center){
             $('#mc-lat').value = g.center.lat.toFixed(6);
@@ -1928,7 +1932,7 @@
       if (!name){ APP.toast('نام زمین را وارد کنید', 'red'); return; }
       const pars = parVals.slice();
       if (!pars.length){ APP.toast('حداقل یک میدان لازم است', 'red'); return; }
-      const rec = { name, loc: $('#mc-loc').value.trim() || 'ریاض', holes: pars.length, pars, index: idxVals.slice(0, pars.length), lat:+$('#mc-lat').value, lng:+$('#mc-lng').value };
+      const rec = { name, loc: $('#mc-loc').value.trim() || 'ریاض', holes: pars.length, pars, index: idxVals.slice(0, pars.length), distances: normalizeHoleDistances(distanceVals, pars.length), lat:+$('#mc-lat').value, lng:+$('#mc-lng').value };
       if (kmlDraft && window.CourseGeo){
         rec.geoId = 'c' + Date.now();
         kmlDraft.name = name;
@@ -2164,9 +2168,11 @@
     m.style.display = 'flex';
     const parVals = (r.pars && r.pars.length) ? r.pars.slice() : Array.from({length: r.holes || 18}, () => 4);
     const idxVals = (r.index && r.index.length) ? r.index.slice() : ((D.indexOf && r.id != null) ? D.indexOf(r.id).slice() : Array.from({length: parVals.length}, (_,i) => i + 1));
+    const distanceVals = Array.isArray(r.distances) ? r.distances.slice(0, parVals.length).map(v => v == null ? '' : String(v)) : [];
     while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
     idxVals.length = parVals.length;
-    bindParEditor($('#ec-pars'), parVals, idxVals);
+    while (distanceVals.length < parVals.length) distanceVals.push('');
+    bindParEditor($('#ec-pars'), parVals, idxVals, distanceVals);
     let geoGender = 'F';
     function mountGeoEdit(){
       if (!window.EarthMap) return;
@@ -2293,7 +2299,9 @@
             parVals.splice(0, parVals.length, ...sm.pars);
             while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
             idxVals.length = parVals.length;
-            bindParEditor($('#ec-pars'), parVals, idxVals);
+            while (distanceVals.length < parVals.length) distanceVals.push('');
+            distanceVals.length = parVals.length;
+            bindParEditor($('#ec-pars'), parVals, idxVals, distanceVals);
           }
           if (g.center){ $('#ec-lat').value = g.center.lat.toFixed(6); $('#ec-lng').value = g.center.lng.toFixed(6); }
           $('#ec-kml-rep').textContent = `KML ذخیره شد: ${sm.holes} میدان · تی خانم ${sm.teesF} · تی آقا ${sm.teesM}`;
@@ -2309,24 +2317,25 @@
       const pars = parVals.map(v => Math.max(3, Math.min(6, +v || 4)));
       if (!pars.length){ APP.toast('حداقل یک میدان لازم است','red'); return; }
       const lat = +$('#ec-lat').value || 24.7136, lng = +$('#ec-lng').value || 46.6753;
-      /* ایندکس سختی میدان‌ها هم مثل پار باید ذخیره شود؛ قبلاً جا افتاده بود و ویرایش ایندکس پس از «ذخیره» بی‌اثر می‌شد. */
+      /* ایندکس سختی و Distance هر میدان همراه پار ذخیره می‌شوند؛ Distance اختیاری و دستی است. */
       const idxSave = idxVals.slice(0, pars.length).map((v,i) => Math.max(1, Math.min(pars.length, +v || (i + 1))));
+      const distanceSave = normalizeHoleDistances(distanceVals, pars.length);
       if (r.base){
         let ov = {};
         try { ov = JSON.parse(localStorage.getItem('ga_course_override') || '{}'); } catch(e){}
-        ov[r.id] = Object.assign({}, ov[r.id], { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave });
+        ov[r.id] = Object.assign({}, ov[r.id], { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave, distances: distanceSave });
         localStorage.setItem('ga_course_override', JSON.stringify(ov));
         if (D.PAR_MAP) D.PAR_MAP[r.id] = pars.slice();
         if (D.INDEX_MAP) D.INDEX_MAP[r.id] = idxSave.slice();
         if (D.COURSE_NAME) D.COURSE_NAME[r.id] = name;
       } else {
         try {
-          if (D.updateCourse) D.updateCourse(r.id, { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave });
+          if (D.updateCourse) D.updateCourse(r.id, { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave, distances: distanceSave });
           else {
             const lst = extraCourses();
             const c = lst.find((item,i) => item && (D.courseIdOf ? D.courseIdOf(item,i) : 1000+i) === r.id);
             if (!c) throw new Error('زمین پیدا نشد');
-            Object.assign(c, { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave });
+            Object.assign(c, { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave, distances: distanceSave });
             saveCourses(lst);
           }
         } catch(err){ APP.toast('ذخیرهٔ زمین ناموفق بود؛ اطلاعات قبلی حفظ شد.', 'red'); return; }
@@ -5498,7 +5507,15 @@
     }));
     return () => selectedHoleIds(box);
   }
-  function parEditorHtml(pars, idxs){
+  function normalizeHoleDistances(values, count){
+    return Array.from({length:count}, (_,i) => {
+      const raw = values && values[i];
+      if (raw == null || String(raw).trim() === '') return null;
+      const value = Number(raw);
+      return Number.isFinite(value) && value >= 0 ? value : null;
+    });
+  }
+  function parEditorHtml(pars, idxs, distances){
     const n = (pars || []).length;
     const mid = n > 9 ? 9 : n;
     function nine(from, to, title){
@@ -5506,16 +5523,18 @@
       for (let i = from; i < to; i++){
         const p = pars[i] != null ? pars[i] : 4;
         const ix = (idxs && idxs[i]) || (i + 1);
+        const distance = distances && distances[i] != null ? String(distances[i]) : '';
         rows += `<div class="hp-par" data-i="${i}">
           <span class="hp-par-n">${esc(holeName(i + 1))}</span>
           <input class="input pe-par" type="number" min="3" max="6" value="${p}" data-i="${i}" inputmode="numeric" aria-label="پار ${i+1}">
           <input class="input pe-idx" type="number" min="1" max="${n}" value="${ix}" data-i="${i}" inputmode="numeric" aria-label="Index ${i+1}" title="۱ سخت‌ترین — ${n} آسان‌ترین">
+          <input class="input pe-distance" type="number" min="0" step="any" value="${esc(distance)}" placeholder="—" data-i="${i}" inputmode="decimal" aria-label="Distance ${i+1}">
           <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" aria-label="حذف">×</button>
         </div>`;
       }
       return `<section class="hp-par-nine">
         <div class="hp-par-nine-h">${title}</div>
-        <div class="hp-par-head"><span>میدان</span><span>پار</span><span>Index</span><span></span></div>
+        <div class="hp-par-head"><span>میدان</span><span>پار</span><span>Index</span><span>Distance</span><span></span></div>
         ${rows}
       </section>`;
     }
@@ -5526,12 +5545,24 @@
         <button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
               </div>`;
   }
-  function bindParEditor(box, parVals, idxVals, onDraw){
-    if (typeof idxVals === 'function'){ onDraw = idxVals; idxVals = null; }
+  function bindParEditor(box, parVals, idxVals, distanceVals, onDraw){
+    if (typeof idxVals === 'function'){ onDraw = idxVals; idxVals = null; distanceVals = null; }
+    if (typeof distanceVals === 'function'){ onDraw = distanceVals; distanceVals = null; }
     if (!idxVals) idxVals = [];
+    if (!distanceVals) distanceVals = [];
     function ensureIdx(){
       while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
       idxVals.length = parVals.length;
+    }
+    function ensureDistances(){
+      while (distanceVals.length < parVals.length) distanceVals.push('');
+      distanceVals.length = parVals.length;
+    }
+    function readDistance(inp){
+      const raw = String(inp.value == null ? '' : inp.value).trim();
+      if (raw === '') return '';
+      const value = Number(raw);
+      return Number.isFinite(value) && value >= 0 ? value : '';
     }
     function sync(){
       $$('.pe-par', box).forEach(inp => { parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4)); });
@@ -5540,23 +5571,27 @@
         const n = parVals.length;
         idxVals[+inp.dataset.i] = Math.max(1, Math.min(n, +inp.value || ( +inp.dataset.i + 1)));
       });
+      ensureDistances();
+      $$('.pe-distance', box).forEach(inp => { distanceVals[+inp.dataset.i] = readDistance(inp); });
     }
     function draw(){
       ensureIdx();
-      box.innerHTML = parEditorHtml(parVals, idxVals);
+      ensureDistances();
+      box.innerHTML = parEditorHtml(parVals, idxVals, distanceVals);
       $$('.pe-par', box).forEach(inp => inp.addEventListener('input', () => { parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4)); }));
       $$('.pe-idx', box).forEach(inp => inp.addEventListener('input', () => {
         const n = parVals.length;
         idxVals[+inp.dataset.i] = Math.max(1, Math.min(n, +inp.value || 1));
       }));
+      $$('.pe-distance', box).forEach(inp => inp.addEventListener('input', () => { distanceVals[+inp.dataset.i] = readDistance(inp); }));
       $$('.pe-del', box).forEach(b => b.addEventListener('click', () => {
         sync();
         if (parVals.length <= 1){ APP.toast('حداقل یک میدان لازم است', 'red'); return; }
         const i = +b.dataset.i;
-        parVals.splice(i, 1); idxVals.splice(i, 1); draw();
+        parVals.splice(i, 1); idxVals.splice(i, 1); distanceVals.splice(i, 1); draw();
       }));
       const add = box.querySelector('#pe-add');
-      if (add) add.addEventListener('click', () => { sync(); parVals.push(4); idxVals.push(parVals.length); draw(); });
+      if (add) add.addEventListener('click', () => { sync(); parVals.push(4); idxVals.push(parVals.length); distanceVals.push(''); draw(); });
       if (onDraw) onDraw();
     }
     draw();

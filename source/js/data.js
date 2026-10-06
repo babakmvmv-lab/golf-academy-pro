@@ -239,6 +239,15 @@
     }
     return defaultIndex(n);
   }
+  /* Distance دستی هر میدان؛ مقدار خالی با null ذخیره می‌شود و فعلاً هیچ محاسبه‌ای از آن نمی‌سازد. */
+  function distancesOf(id){
+    const cid = Number(id);
+    if (!Number.isSafeInteger(cid)) return [];
+    const ov = loadCourseOverride()[cid];
+    if (ov && Array.isArray(ov.distances)) return ov.distances.slice();
+    const course = courseById(cid);
+    return course && Array.isArray(course.distances) ? course.distances.slice() : [];
+  }
   /* مقیاس استاندارد سایت: سبز تیره → سبز روشن → زرد → نارنجی → قرمز روشن → قرمز تیره */
   const SCALE = ['#146C43', '#3DDC97', '#F4C430', '#E67E22', '#E85D4C', '#8B1A1A'];
   function scaleStep(i){ return SCALE[Math.max(0, Math.min(5, i | 0))]; }
@@ -1172,7 +1181,7 @@
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
-    parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
+    parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, distancesOf, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
     courseIdOf, isArchivedCourse, courseRecords, courseById, createCourse, updateCourse, archiveCourse, restoreCourse,
     compute, careerStats, nationalPlaces, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,

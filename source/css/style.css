@@ -458,7 +458,7 @@ canvas.glow-canvas{filter:drop-shadow(0 0 6px rgba(212,175,55,.25))}
   .podium{transform:scale(.82);transform-origin:top center}
   .toolbar{flex-wrap:wrap;gap:8px}
   .toolbar .input,.toolbar .sel{min-width:0!important;width:100%!important}
-  .hp-par-head,.hp-par{grid-template-columns:minmax(3.6rem,1fr) 3.6rem 3.6rem 1.8rem;gap:6px;padding:6px 8px}
+  .hp-par-head,.hp-par{grid-template-columns:minmax(3rem,1fr) 3rem 3rem 3.5rem 1.75rem;gap:5px;padding:6px 6px}
   .hp-par-n{font-size:12px}
   .field-grid{grid-template-columns:1fr 1fr;gap:10px}
   .field-grid .span2{grid-column:span 2}
@@ -830,7 +830,7 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   font-variant-numeric:tabular-nums;direction:ltr;text-align:center;
 }
 
-/* پار + Index — اسکورکارت دو ستون (۱–۹ | ۱۰–۱۸) */
+/* پار + Index + Distance — ویرایش جزئیات هر میدان */
 .hp-par-wrap{margin-top:14px}
 .hp-par-board{
   display:grid;
@@ -854,10 +854,10 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 .hp-par-head,
 .hp-par{
   display:grid;
-  grid-template-columns:minmax(4.6rem,1.15fr) 4.6rem 4.6rem 2.1rem;
-  gap:8px;
+  grid-template-columns:minmax(3.6rem,1.15fr) 3.6rem 3.6rem 4rem 1.9rem;
+  gap:6px;
   align-items:center;
-  padding:7px 12px;
+  padding:7px 8px;
 }
 .hp-par-head{
   font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.3px;
@@ -869,13 +869,15 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 }
 .hp-par-n{font-size:12.5px;font-weight:800;color:var(--muted);white-space:nowrap}
 .hp-par .pe-par,
-.hp-par .pe-idx{
+.hp-par .pe-idx,
+.hp-par .pe-distance{
   width:100%;min-width:0;max-width:100%;
   text-align:center;direction:ltr;
   padding:7px 4px;font-weight:800;font-size:14px;
   box-sizing:border-box;
 }
 .hp-par .pe-idx{color:var(--gold-l);border-color:rgba(212,175,55,.35)}
+.hp-par .pe-distance{color:#7adbb4;border-color:rgba(61,220,151,.35)}
 .hp-par .pe-del{
   width:28px;height:28px;padding:0;border-radius:8px;
   font-size:15px;line-height:1;opacity:.55;justify-self:center;

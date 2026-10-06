@@ -47,7 +47,9 @@ assert.match(editCourseBlock, /base \+ delta \* COURSE_ZOOM_LOCK_STEP/,
   'lock adjustment uses one-third zoom increments');
 assert.match(editCourseBlock, /EarthMap\.setEdit\(true\)/,
   'only the viewer map is restricted; management editing stays free');
-assert.match(editCourseBlock, /دکمه‌های نقشه هر بار یک‌سوم زوم کامل/,
+assert.match(editCourseBlock, /تصویر از این حد کوچک‌تر نمی‌شود؛ به زمین نزدیک‌شدن آزاد است/,
+  'the UI states that only moving farther away is blocked');
+assert.match(editCourseBlock, /دکمه‌های \+ و − هر بار یک‌سوم گام زوم حرکت می‌کنند/,
   'the UI explains fine-grained map zoom steps');
 assert.match(editCourseBlock, /data-earth-bg/, 'course editor retains its map-layer controls');
 assert.match(mgmtCourseBlock, /courseZoomLockOf\(all\[k\]\)/, 'each course row reads its own lock state');

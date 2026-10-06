@@ -2336,7 +2336,7 @@
           <button type="button" class="btn sm ghost" id="ec-zl-minus" aria-label="اجازهٔ زوم‌اوت بیشتر" title="اجازهٔ زوم‌اوت بیشتر" style="display:none;padding:2px 10px">−</button>
           <button type="button" class="btn sm ghost" id="ec-zl-plus" aria-label="محدودکردن زوم‌اوت" title="محدودکردن زوم‌اوت" style="display:none;padding:2px 10px">＋</button>
           <button type="button" class="btn sm ghost" id="ec-zl-open" style="display:none">🔓 حذف قفل</button>
-          <span style="color:var(--muted);flex-basis:100%;line-height:1.7">پس از قفل، بیننده نمی‌تواند دورتر زوم‌اوت کند؛ زوم‌این آزاد می‌ماند. قفل برای هر زمین جداست. دکمه‌های نقشه هر بار یک‌سوم زوم کامل جابه‌جا می‌شوند.</span>
+          <span style="color:var(--muted);flex-basis:100%;line-height:1.7">پس از قفل، تصویر از این حد کوچک‌تر نمی‌شود؛ به زمین نزدیک‌شدن آزاد است و می‌توانید تا سقف زوم نقشه پیش بروید. این حد برای هر زمین جداست. دکمه‌های + و − هر بار یک‌سوم گام زوم حرکت می‌کنند.</span>
         </div>
       </div>
             <div id="ec-pars" class="hp-par-wrap"></div>

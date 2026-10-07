@@ -124,6 +124,30 @@ async function whoIs(req: Request): Promise<Who> {
   return null;
 }
 
+/* زمان‌های «آینده» درون رکوردها (ساعت/تاریخ اشتباه دستگاه) به زمان سرور برگردانده می‌شوند؛
+   وگرنه در ادغام رکوردی (اشتراک، زمین، …) تا رسیدن آن تاریخ همیشه برنده می‌مانند. فقط زمانِ نسخه، نه داده. */
+const STAMP_FIELDS = ["updated_at", "updatedAt", "deleted_at", "deletedAt", "created_at", "createdAt"];
+function clampStamps(v: any, limit: number, nowIso: string): any {
+  if (!Array.isArray(v)) return v;
+  let changed = false;
+  const fix = (o: any) => {
+    if (!o || typeof o !== "object" || Array.isArray(o)) return o;
+    let c: any = null;
+    for (const f of STAMP_FIELDS) {
+      const t = typeof o[f] === "string" ? Date.parse(o[f]) : NaN;
+      if (Number.isFinite(t) && t > limit) { c = c || { ...o }; c[f] = nowIso; }
+    }
+    if (Array.isArray(o.events) && o.events.some((e: any) => e && typeof e.at === "string" && Date.parse(e.at) > limit)) {
+      c = c || { ...o };
+      c.events = o.events.map((e: any) => (e && typeof e.at === "string" && Date.parse(e.at) > limit) ? { ...e, at: nowIso } : e);
+    }
+    if (c) changed = true;
+    return c || o;
+  };
+  const out = v.map(fix);
+  return changed ? out : v;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
@@ -151,27 +175,30 @@ Deno.serve(async (req) => {
 
     /* ── اکشن ۱: آینهٔ کلید/مقدار ── */
     if (body.action === "kv") {
+      /* زمانِ نسخه همیشه از ساعت سرور است، نه ساعت دستگاه: دستگاهی با ساعت/تاریخ اشتباه
+         (مثلاً یک روز جلو) نباید باعث شود مرورگرهای دیگر تغییرات بعدی را «قدیمی» بدانند. */
+      const nowIso = new Date().toISOString(), limit = Date.now() + 5 * 60000;
       const rows = (body.rows || []).filter((r: any) => r && okKey(r.k)).map((r: any) => ({
         k: r.k,
-        v: r.v,
-        updated_at: r.updated_at || new Date().toISOString(),
+        v: clampStamps(r.v, limit, nowIso),
+        updated_at: nowIso,
       }));
       if (!rows.length) return json({ ok: false, err: "no valid rows" }, 400);
       if (!isAdmin) {
         const bad = rows.find((r: any) => !MEMBER_KEYS[r.k] || (r.v && r.v.__del));
         if (bad) return json({ ok: false, err: "این بخش فقط برای مدیر قابل ذخیره است: " + bad.k, code: "FORBIDDEN_KEY", key: bad.k }, 403);
       }
-      const cur = await db.from("ga_store").select("k,v").in("k", rows.map((r: any) => r.k));
+      const cur = await db.from("ga_store").select("k,v,updated_at").in("k", rows.map((r: any) => r.k));
       if (cur.error) return json({ ok: false, err: cur.error.message }, 502);
-      const current: Record<string, any> = {};
-      (cur.data || []).forEach((r: any) => { current[r.k] = r.v; });
+      const current: Record<string, any> = {}, curStamp: Record<string, string> = {};
+      (cur.data || []).forEach((r: any) => { current[r.k] = r.v; curStamp[r.k] = r.updated_at; });
       const values: Record<string, any> = {};
       if (!isAdmin) {
         for (const r of rows) {
           const m = mergeMember(r.k, current[r.k], r.v, who!.username);
           if (!m.ok) return json({ ok: false, err: m.err, code: "FORBIDDEN_CHANGE", key: r.k }, 403);
           r.v = m.v;
-          r.updated_at = new Date().toISOString();
+          r.updated_at = nowIso;
           values[r.k] = m.v;
         }
       }
@@ -187,7 +214,11 @@ Deno.serve(async (req) => {
         const e2 = await db.from("ga_store").delete().in("k", del);
         if (e2.error) return json({ ok: false, err: e2.error.message }, 502);
       }
-      const out: any = { ok: true, put: put.length, del: delAll, written: changed.length + del.length };
+      /* stamps: نسخهٔ سروریِ هر کلید پس از این درخواست — کلاینت همین را به‌عنوان «آخرین نسخهٔ دیده‌شده» نگه می‌دارد */
+      const stamps: Record<string, string | null> = {};
+      put.forEach((r: any) => { stamps[r.k] = changed.indexOf(r) >= 0 ? nowIso : (curStamp[r.k] || nowIso); });
+      rows.filter((r: any) => r.v && r.v.__del).forEach((r: any) => { stamps[r.k] = null; });
+      const out: any = { ok: true, put: put.length, del: delAll, written: changed.length + del.length, stamps, now: nowIso };
       if (!isAdmin) out.values = values;
       return json(out);
     }

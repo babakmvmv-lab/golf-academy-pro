@@ -45,6 +45,7 @@
     if (init.token) h.Authorization = 'Bearer ' + init.token;
     return fetch(c.url + path, { method: init.method || 'GET', headers: h, body: init.body ? JSON.stringify(init.body) : undefined, cache: 'no-store' })
       .then(function (r) {
+        try { if (window.GA_CLOCK) window.GA_CLOCK.note(r.headers.get('date')); } catch (e) {}
         return r.text().then(function (t) {
           var j = null; try { j = t ? JSON.parse(t) : null; } catch (e) { j = null; }
           if (!r.ok) {
@@ -71,6 +72,21 @@
       .then(function (rows) { return Array.isArray(rows) && rows[0] ? profileFromRow(rows[0]) : null; });
   }
 
+  /* اعتبار نشست از خودِ Auth (نه فقط امضای توکن): اگر مدیر رمز را عوض کرده/حساب را غیرفعال کرده،
+     نشست در سرور حذف شده و این درخواست 401/403 می‌دهد. خطای شبکه = نامعلوم (ادامه با نشست فعلی). */
+  var NOTICE_KEY = 'pc_auth_notice';
+  function validate(session) {
+    return req('/auth/v1/user', { token: session.access_token }).then(function () { return true; }, function (e) {
+      if (e && (e.status === 401 || e.status === 403)) return false;
+      return true;
+    });
+  }
+  function dropSession(reason) {
+    var t = st.session && st.session.access_token;
+    st.session = null; st.profile = null; writeSaved(null);
+    if (reason) { try { sessionStorage.setItem(NOTICE_KEY, reason); } catch (e) {} }
+    if (t) req('/auth/v1/logout', { method: 'POST', token: t }).catch(function () {});
+  }
   var refreshing = null, timer = null;
   function schedule() {
     clearTimeout(timer);
@@ -111,10 +127,15 @@
     if (!saved || !saved.session || !saved.session.refresh_token) { st.ready = true; readyResolve(false); return; }
     st.session = saved.session; st.profile = saved.profile || null;
     var p = (st.session.expires_at - Date.now() < 120000) ? refresh() : Promise.resolve(st.session.access_token);
-    p.then(function () { return fetchProfile(st.session); })
+    p.then(function () { return validate(st.session); })
+      .then(function (valid) {
+        if (!valid) { dropSession('رمز یا وضعیت حساب شما تغییر کرده است؛ لطفاً دوباره وارد شوید.'); return null; }
+        return fetchProfile(st.session);
+      })
       .then(function (prof) {
-        if (!prof || !prof.active) { var t = st.session && st.session.access_token; st.session = null; st.profile = null; writeSaved(null); if (t) req('/auth/v1/logout', { method: 'POST', token: t }).catch(function () {}); return false; }
-        st.profile = prof; writeSaved({ session: st.session, profile: prof }); schedule(); return true;
+        if (prof === null && !st.session) return false;
+        if (!prof || !prof.active) { dropSession(prof && !prof.active ? 'حساب شما غیرفعال شده است.' : ''); return false; }
+        st.profile = prof; writeSaved({ session: st.session, profile: prof }); schedule(); watch(); return true;
       })
       .catch(function (e) {
         /* شبکه قطع است ولی نشست باطل نشده → با پروفایل ذخیره‌شده ادامه (خواندن محلی)؛ ارسال‌ها بعداً با توکن تازه */
@@ -124,8 +145,67 @@
       .then(function (ok) { st.ready = true; readyResolve(!!ok); });
   }
 
+  /* بازگشت به برگه (focus/visible) — حداکثر هر ۶۰ ثانیه یک بار: نشست و پروفایل دوباره از سرور.
+     نشست باطل → صفحه به فرم ورود برمی‌گردد. تغییر نقش/بازیکن/نام → صفحه تازه می‌شود تا همان لحظه اعمال شود. */
+  var watching = false, lastCheck = Date.now();
+  function recheck() {
+    if (!st.session || Date.now() - lastCheck < 60000) return;
+    lastCheck = Date.now();
+    var s0 = st.session;
+    var tok = (s0.expires_at - Date.now() < 120000) ? refresh() : Promise.resolve(s0.access_token);
+    tok.then(function () { return st.session ? validate(st.session) : false; })
+      .then(function (valid) {
+        if (!st.session) { location.reload(); return; }
+        if (!valid) { dropSession('رمز یا وضعیت حساب شما تغییر کرده است؛ لطفاً دوباره وارد شوید.'); location.reload(); return; }
+        return fetchProfile(st.session).then(function (prof) {
+          if (!prof || !prof.active) { dropSession(prof && !prof.active ? 'حساب شما غیرفعال شده است.' : ''); location.reload(); return; }
+          var old = st.profile || {}, keys = ['user', 'role', 'main', 'pid', 'name', 'active'];
+          var changed = keys.some(function (k) { return String(old[k]) !== String(prof[k]); });
+          st.profile = prof; writeSaved({ session: st.session, profile: prof });
+          if (changed) location.reload();
+        });
+      }).catch(function () { /* شبکه: بعداً */ });
+  }
+  function watch() {
+    if (watching || typeof document === 'undefined') return;
+    watching = true;
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') recheck(); });
+    window.addEventListener('focus', recheck);
+  }
+  /* نسخهٔ جدید سایت: GitHub Pages فایل‌ها را تا ۱۰ دقیقه کش می‌کند. اگر فایلِ روی سرور از نسخهٔ بازِ فعلی
+     جدیدتر باشد، یک دکمهٔ «تازه‌سازی» نشان داده می‌شود (بدون رفرش خودکار تا کار کاربر از دست نرود). */
+  var verShown = false, verLast = 0;
+  function checkVersion() {
+    if (verShown || typeof document === 'undefined' || !/^https?:$/.test(location.protocol)) return;
+    if (Date.now() - verLast < 600000) return;
+    verLast = Date.now();
+    var mine = Date.parse(document.lastModified);
+    if (!mine) return;
+    fetch(location.pathname, { method: 'HEAD', cache: 'no-store' }).then(function (r) {
+      var lm = Date.parse(r.headers.get('last-modified') || '');
+      if (!r.ok || !lm || lm <= mine + 2000 || verShown) return;
+      verShown = true;
+      var b = document.createElement('button');
+      b.type = 'button'; b.id = 'pc-new-version';
+      b.textContent = '✨ نسخهٔ جدید آماده است — تازه‌سازی';
+      b.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;padding:10px 18px;border-radius:999px;border:1px solid #c9a24a;background:#0f3d2e;color:#f3e2b3;font:inherit;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);cursor:pointer';
+      b.onclick = function () { location.reload(); };
+      document.body.appendChild(b);
+    }).catch(function () {});
+  }
+  if (typeof document !== 'undefined') {
+    var startVer = function () {
+      setTimeout(function () { verLast = 0; checkVersion(); }, 30000);
+      setInterval(checkVersion, 600000);
+      document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') checkVersion(); });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startVer); else startVer();
+  }
+  function takeNotice() { try { var m = sessionStorage.getItem(NOTICE_KEY); sessionStorage.removeItem(NOTICE_KEY); return m || ''; } catch (e) { return ''; } }
+
   var api = {
     DOMAIN: DOMAIN,
+    takeNotice: takeNotice,
     mode: function () { return shell() ? 'adminpanel' : 'panel'; },
     ready: function () { return readyP; },
     isReady: function () { return st.ready; },
@@ -167,7 +247,7 @@
             if (!prof.active) throw new Error('این حساب غیرفعال است.');
             st.session = session; st.profile = prof;
             writeSaved({ session: session, profile: prof });
-            schedule(); emit();
+            schedule(); watch(); emit();
             return api.profile();
           });
         });

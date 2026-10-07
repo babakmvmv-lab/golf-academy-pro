@@ -6,6 +6,9 @@
    ═══════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
+  /* زمان سرور (از cloud.js) — ساعت اشتباهِ دستگاه، تاریخ اشتراک و نسخهٔ رکورد را خراب نکند */
+  function clockIso() { return window.GA_CLOCK ? GA_CLOCK.iso() : new Date().toISOString(); }
+  function clockDate() { return window.GA_CLOCK ? GA_CLOCK.date() : new Date(); }
 
   var PLANS_KEY = 'ga_plans';
   var CYCLES_KEY = 'ga_billing_cycles';
@@ -135,7 +138,7 @@
   function stamp(action, extra) {
     var a = actor();
     return Object.assign({
-      at: new Date().toISOString(),
+      at: clockIso(),
       by: a.user,
       byName: a.name,
       action: action
@@ -147,11 +150,11 @@
 
   function pad2(n) { return String(n).padStart(2, '0'); }
   function localDateISO(d) {
-    d = d || new Date();
+    d = d || clockDate();
     return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
   }
   function localDateTimeISO(d) {
-    d = d || new Date();
+    d = d || clockDate();
     return localDateISO(d) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
   }
   function splitStamp(iso) {
@@ -413,7 +416,7 @@
       billing_cycle: months,
       auto_renew: !!opt.auto_renew,
       payment_status: opt.payment_status || 'manual',
-      created_at: new Date().toISOString(),
+      created_at: clockIso(),
       created_by: a.user,
       created_by_name: a.name,
       events: [stamp('create', { plan: plan, months: months, start: startRaw, end: endRaw })]
@@ -435,7 +438,7 @@
       billing_cycle: all[i].billing_cycle, status: all[i].status
     };
     all[i] = Object.assign({}, all[i], patch, {
-      updated_at: new Date().toISOString(),
+      updated_at: clockIso(),
       updated_by: a.user,
       updated_by_name: a.name
     });
@@ -460,7 +463,7 @@
     if (i < 0) return { ok: false, err: 'اشتراک پیدا نشد.' };
     if (isDeleted(all[i])) return { ok: true, rec: all[i] };
     all[i].status = 'deleted';
-    all[i].deleted_at = new Date().toISOString();
+    all[i].deleted_at = clockIso();
     all[i].updated_at = all[i].deleted_at;
     all[i].deleted_by = a.user;
     all[i].deleted_by_name = a.name;
@@ -483,7 +486,7 @@
     var from = ukey(oldUser), to = ukey(newUser);
     if (!from || !to) return 0;
     var sameName = from === to;
-    var all = list(), now = new Date().toISOString(), a = actor(), changed = 0;
+    var all = list(), now = clockIso(), a = actor(), changed = 0;
     all.forEach(function (s) {
       if (ukey(s.user) !== from) return;
       if (userId != null && s.user_id != null && String(s.user_id) !== String(userId)) return;
@@ -510,7 +513,7 @@
     var target = ukey(user);
     reason = String(reason || 'حذف حساب یوزر').trim();
     if (!target) return 0;
-    var all = list(), now = new Date().toISOString(), a = actor(), changed = 0;
+    var all = list(), now = clockIso(), a = actor(), changed = 0;
     all.forEach(function (s) {
       if (ukey(s.user) !== target || isDeleted(s)) return;
       if (userId != null && s.user_id != null && String(s.user_id) !== String(userId)) return;

@@ -27,6 +27,10 @@ const json = (o: unknown, status = 200) =>
 
 const okUser = (u: unknown) => typeof u === "string" && /^[a-z0-9][a-z0-9._-]{0,39}$/.test(u);
 const emailOf = (u: string) => `${u}@${DOMAIN}`;
+/* همهٔ نشست‌های یک حساب روی همهٔ مرورگرها باطل شود (تغییر رمز/یوزرنیم، غیرفعال‌سازی) */
+async function revokeSessions(uid: string): Promise<void> {
+  try { await db.rpc("ga_revoke_sessions", { p_uid: uid }); } catch (_) { /* نبودِ تابع نباید عملیات اصلی را خراب کند */ }
+}
 const COLS = "user_id,legacy_id,username,name,role,main,active,pid,created_at,updated_at";
 const view = (r: any) => ({
   id: r.legacy_id, user: r.username, name: r.name, role: r.role, main: !!r.main,
@@ -161,6 +165,7 @@ Deno.serve(async (req) => {
       if (Object.keys(authPatch).length) {
         const ua = await db.auth.admin.updateUserById(cur.user_id, authPatch);
         if (ua.error) return json({ ok: false, err: "Auth: " + ua.error.message }, 502);
+        if (authPatch.email || patch.active === false) await revokeSessions(cur.user_id);
       }
       const up = await db.from("ga_accounts").update(patch).eq("user_id", cur.user_id).select(COLS).single();
       if (up.error) return json({ ok: false, err: up.error.message }, 502);
@@ -174,6 +179,7 @@ Deno.serve(async (req) => {
       if (pass.length < MIN_PASS) return json({ ok: false, err: `رمز باید حداقل ${MIN_PASS} نویسه باشد` }, 400);
       const ua = await db.auth.admin.updateUserById(cur.user_id, { password: pass });
       if (ua.error) return json({ ok: false, err: "Auth: " + ua.error.message }, 502);
+      await revokeSessions(cur.user_id);   // رمز عوض شد → ورودهای قبلی روی همهٔ مرورگرها خارج می‌شوند
       await db.from("ga_accounts").update({ updated_at: new Date().toISOString() }).eq("user_id", cur.user_id);
       return json({ ok: true });
     }

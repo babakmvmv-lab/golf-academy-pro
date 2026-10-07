@@ -4344,7 +4344,7 @@ const stCal = $('#st-cal');
     if (!A){ showLogin('ماژول ورود بارگذاری نشده است؛ صفحه را دوباره باز کنید.'); return; }
     A.ready().then(ok => {
       const prof = A.profile();
-      if (!ok || !prof){ showLogin(store.get('ga_session') ? 'نشست معتبر نیست؛ لطفاً دوباره وارد شوید.' : ''); return; }
+      if (!ok || !prof){ const note = A.takeNotice ? A.takeNotice() : ''; showLogin(note || (store.get('ga_session') ? 'نشست معتبر نیست؛ لطفاً دوباره وارد شوید.' : '')); return; }
       const go2 = () => {
         if (prof.role === 'member' && window.GA_SUB && !GA_SUB.isAllowed(prof.user)){
           A.signOut();

@@ -14,7 +14,9 @@ const MEMBER_KEYS = ['ga_msg_reads', 'ga_avatars', 'ga_cart', 'ga_fav', 'ga_coin
 function b64(s) { return Buffer.from(s).toString('base64').replace(/=+$/, ''); }
 function createMockCloud(opts) {
   opts = opts || {};
-  const now = () => new Date().toISOString();
+  const clock = { offsetMs: 0 };   // ساعتِ «سرور» mock نسبت به ساعت مرورگر (برای آزمون ساعت اشتباه دستگاه)
+  const now = () => new Date(Date.now() + clock.offsetMs).toISOString();
+  const site = { lastModified: null };   // سرآیند last-modified صفحه (آزمون بنر نسخهٔ جدید)
   const store = {};       // k → { v, updated_at }
   Object.entries(opts.store || {}).forEach(([k, v]) => { store[k] = { v, updated_at: '2026-10-01T00:00:00.000Z' }; });
   const accounts = {};    // username → { pass, uid, row, consoleAdmin }
@@ -45,7 +47,7 @@ function createMockCloud(opts) {
     const req = route.request();
     const url = new URL(req.url());
     const headers = req.headers();
-    const json = (o, status) => route.fulfill({ status: status || 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(o) });
+    const json = (o, status) => route.fulfill({ status: status || 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'Date', date: new Date(Date.now() + clock.offsetMs).toUTCString() }, body: JSON.stringify(o) });
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }, body: '' });
     const p = url.pathname;
     let body = null; try { body = req.postDataJSON(); } catch (e) { body = null; }
@@ -68,6 +70,10 @@ function createMockCloud(opts) {
         const a = Object.values(accounts).find(x => x.uid === uid);
         return json(session(uid, a ? a.row.username + '@members.puttclub.ir' : ''));
       }
+    }
+    if (p === '/auth/v1/user') {
+      if (!w) return json({ code: 403, error_code: 'session_not_found', msg: 'Session from session_id claim in JWT does not exist' }, 403);
+      return json({ id: w.uid, email: w.user + '@members.puttclub.ir' });
     }
     if (p === '/auth/v1/logout') { log.push({ kind: 'auth', action: 'logout' }); return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*' }, body: '' }); }
 
@@ -104,12 +110,14 @@ function createMockCloud(opts) {
         const values = {};
         // نوشتنی که مقدارش با ابر یکی است «تکراری» است (همان مشکل ۵ نوشتن بیهوده در هر بارگذاری)
         entry.same = body.rows.filter(r => store[r.k] && JSON.stringify(store[r.k].v) === JSON.stringify(r.v)).map(r => r.k);
+        const stamps = {}, t = now();     // مثل ga-sync v8+: زمانِ نسخه فقط از ساعت سرور
         body.rows.forEach(r => {
-          if (r.v && r.v.__del) delete store[r.k];
-          else { store[r.k] = { v: r.v, updated_at: now() }; values[r.k] = r.v; }
+          if (r.v && r.v.__del) { delete store[r.k]; stamps[r.k] = null; }
+          else if (store[r.k] && JSON.stringify(store[r.k].v) === JSON.stringify(r.v)) { stamps[r.k] = store[r.k].updated_at; values[r.k] = r.v; }
+          else { store[r.k] = { v: r.v, updated_at: t }; values[r.k] = r.v; stamps[r.k] = t; }
         });
         entry.status = 200;
-        return json(Object.assign({ ok: true, put: body.rows.filter(r => !(r.v && r.v.__del)).length, del: body.rows.filter(r => r.v && r.v.__del).length }, w.admin ? {} : { values }));
+        return json(Object.assign({ ok: true, put: body.rows.filter(r => !(r.v && r.v.__del)).length, del: body.rows.filter(r => r.v && r.v.__del).length, stamps, now: t }, w.admin ? {} : { values }));
       }
       if (action === 'public' || action === 'shots') {
         if (!w.admin) { entry.status = 403; return json({ ok: false, err: 'forbidden' }, 403); }
@@ -139,7 +147,7 @@ function createMockCloud(opts) {
       const qa = u.match(/^https?:\/\/qa\.local(\/[^?#]*)/);
       if (qa) {
         if (!root) {
-          if (/^\/(index\.html)?$/.test(qa[1])) return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html });
+          if (/^\/(index\.html)?$/.test(qa[1])) return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', headers: site.lastModified ? { 'last-modified': site.lastModified } : {}, body: route.request().method() === 'HEAD' ? '' : html });
           return route.fulfill({ status: 404, body: '' });
         }
         let rel = decodeURIComponent(qa[1]); if (rel.endsWith('/')) rel += 'index.html';
@@ -153,6 +161,13 @@ function createMockCloud(opts) {
       return route.abort();   // هیچ میزبان زنده‌ای (CDN، نقشه، EmailJS، پل پنل اعضا، …)
     });
   }
-  return { attach, store, accounts, log, PUBLIC_KEYS, MEMBER_KEYS };
+  /* باطل کردن همهٔ نشست‌های یک یوزر (مثل ga_revoke_sessions پس از تغییر رمز) */
+  function revoke(user) {
+    const a = accounts[user]; if (!a) return 0; let n = 0;
+    Object.keys(tokens).forEach(t => { if (tokens[t] === a.uid) { delete tokens[t]; n++; } });
+    Object.keys(refresh).forEach(r => { if (refresh[r] === a.uid) delete refresh[r]; });
+    return n;
+  }
+  return { attach, store, accounts, log, revoke, clock, site, PUBLIC_KEYS, MEMBER_KEYS };
 }
 module.exports = { createMockCloud };

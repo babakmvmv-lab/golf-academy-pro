@@ -32,12 +32,14 @@
 
   /* کلیدهایی که هرگز sync نمی‌شوند (جلسه/سید/دستگاه‌محور/درون‌سازمانی) */
   var SKIP = {
+    'ga_clock_offset': 1,
     'ga_session': 1,
     'ga_seed_v2': 1,
     'ga_cloud_cfg': 1,
     'ga_backup_slots': 1,      // نسخه‌های محلیِ «پشتیبان آکادمی»: فقط روی همین دستگاه، ابری نیست
     'ga_cloud_dirty': 1,
     'ga_cloud_ts': 1,
+    'ga_cloud_parked': 1,      // تغییرات ارسال‌نشدنیِ کاربر قبلی روی این دستگاه (فقط محلی، برای بازیابی دستی)
     '__ga_t': 1,
     /* امنیت: یوزر/رمز هرگز روی ابر نرود — فقط محلی نگه داشته می‌شود */
     'ga_users': 1,
@@ -143,6 +145,45 @@
   }
 
   /* پاسخ HTTP ناموفق یا بدون تأیید صریح هرگز به‌معنی ذخیره‌شدن نیست. */
+  /* ── ساعت سرور: هر پاسخ Supabase سرآیند Date دارد. اختلاف ساعت دستگاه با سرور نگه داشته می‌شود تا
+     (۱) زمانِ رکوردها (اشتراک و …) با ساعت سرور ثبت شود، (۲) نسخه‌های «آینده» که دستگاهی با تاریخ
+     اشتباه ساخته در ادغام برنده نشوند، (۳) به کاربر هشدارِ تنظیم ساعت داده شود. ── */
+  var CLOCK_KEY = 'ga_clock_offset', SKEW_WARN = 5 * 60000;
+  var clockOffset = (function () { try { var o = Number(localStorage.getItem(CLOCK_KEY)); return Number.isFinite(o) ? o : 0; } catch (e) { return 0; } })();
+  var clockKnown = false;
+  function noteServerDate(h) {
+    var t = Date.parse(h || '');
+    if (!Number.isFinite(t)) return;
+    var o = t + 500 - Date.now();            // سرآیند Date دقت ثانیه دارد
+    if (clockKnown && Math.abs(o - clockOffset) < 3000) return;
+    clockOffset = Math.abs(o) < 3000 ? 0 : o; clockKnown = true;
+    try { localStorage.setItem(CLOCK_KEY, String(Math.round(clockOffset))); } catch (e) {}
+    clockBanner();
+  }
+  function serverNow() { return Date.now() + clockOffset; }
+  function futureLimit() { return serverNow() + SKEW_WARN; }
+  function clockBanner() {
+    if (typeof document === 'undefined' || !document.body) return;
+    var el = document.getElementById('ga-clock-warn');
+    if (Math.abs(clockOffset) < SKEW_WARN) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div'); el.id = 'ga-clock-warn'; el.setAttribute('role', 'alert');
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99998;padding:8px 14px;background:#7a1f1f;color:#fff;font:inherit;font-size:13px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.35)';
+      document.body.appendChild(el);
+    }
+    var mins = Math.round(Math.abs(clockOffset) / 60000), txt = mins >= 90 ? (Math.round(mins / 60) + ' ساعت') : (mins + ' دقیقه');
+    el.textContent = '⚠️ ساعت/تاریخ این دستگاه ' + txt + (clockOffset < 0 ? ' جلوتر' : ' عقب‌تر') +
+      ' از زمان واقعی است. لطفاً ساعت و تاریخ دستگاه را روی «تنظیم خودکار» بگذارید — پنل زمان سرور را به کار می‌برد، اما سایر برنامه‌ها ممکن است اشتباه کنند.';
+  }
+  window.GA_CLOCK = {
+    now: serverNow,
+    iso: function () { return new Date(serverNow()).toISOString(); },
+    date: function () { return new Date(serverNow()); },
+    offset: function () { return clockOffset; },
+    known: function () { return clockKnown; },
+    note: noteServerDate,
+  };
+
   function requestJSON(url, init) {
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
     var timeout = null, timedOut = false;
@@ -151,6 +192,7 @@
       timeout = setTimeout(function () { timedOut = true; controller.abort(); }, REQUEST_TIMEOUT);
     }
     var run = Promise.resolve().then(function () { return fetch(url, init); }).then(function (r) {
+      try { noteServerDate(r.headers && r.headers.get('date')); } catch (_) {}
       return r.text().then(function (text) {
         var json = null;
         try { json = text ? JSON.parse(text) : null; } catch (_) {}
@@ -202,6 +244,26 @@
   }
 
   function localStamp() { return new Date().toISOString(); }
+  /* نسخهٔ ابری با «برابری زمانِ سرور» سنجیده می‌شود، نه «بزرگ‌تر بودن»: ساعت دستگاه‌ها مهم نیست و
+     ردیفی که با ساعت اشتباهِ یک دستگاه (مثلاً یک روز جلو) ثبت شده، تغییرات بعدی را پنهان نمی‌کند. */
+  function sameStamp(a, b) {
+    if (!a || !b) return false;
+    var x = Date.parse(a), y = Date.parse(b);
+    return Number.isFinite(x) && Number.isFinite(y) ? x === y : String(a) === String(b);
+  }
+  /* کلیدی که روی این دستگاه در صف است ولی کاربرِ واردشدهٔ فعلی اجازهٔ ارسالش را ندارد (مثلاً مدیر روی
+     همین مرورگر چیزی ذخیره نکرده بود و بعد عضو وارد شد) نباید جلوی دیدن نسخهٔ ابری را برای همیشه بگیرد.
+     مقدار محلی پاک نمی‌شود؛ در ga_cloud_parked کنار گذاشته می‌شود و نسخهٔ ابری نمایش داده می‌شود. */
+  var PARK_KEY = 'ga_cloud_parked';
+  function park(k, raw, stamp) {
+    try {
+      var p = jread(PARK_KEY, {});
+      p[k] = { raw: raw, stamp: stamp, at: localStamp(), user: (auth() && auth().user()) || null };
+      var keys = Object.keys(p).sort(function (a, b) { return String(p[b].at).localeCompare(String(p[a].at)); });
+      keys.slice(30).forEach(function (x) { delete p[x]; });
+      jwrite(PARK_KEY, p);
+    } catch (e) {}
+  }
 
   function syncableKeys() {
     var out = [], L = ls();
@@ -410,8 +472,14 @@
           var d = jread(DIRTY_KEY, {}), ts = jread(TS_KEY, {}), L = ls(), applied = 0, resultsApplied = false;
           (rows || []).forEach(function (r) {
             if (!r || !r.k || SKIP[r.k]) return;
-            var remoteNewer = !ts[r.k] || r.updated_at > ts[r.k];
+            var remoteNewer = !ts[r.k] || !sameStamp(r.updated_at, ts[r.k]);
             var localDirty = d[r.k];
+            if (localDirty && authorized && role() === 'member' && !canWrite(r.k)) {
+              park(r.k, L.getItem(r.k), localDirty);
+              delete d[r.k];
+              localDirty = undefined;
+              remoteNewer = true;
+            }
             if (localDirty) return; // خواندن، تأیید ارسال نیست؛ تغییرِ تأییدنشدهٔ گوشی را جایگزین نکن
             if (r.v && typeof r.v === 'object' && r.v.__del) delete synced[r.k];
             else noteSynced(r.k, decode(r.v));
@@ -522,16 +590,16 @@
     } catch(e) { return []; }
   }
   function subscriptionVersion(s){
-    var latest = 0;
+    var latest = 0, lim = futureLimit();
     ['updated_at','updatedAt','deleted_at','created_at'].forEach(function (key) {
       var t = Date.parse(s && s[key] || '');
-      if (Number.isFinite(t) && t > latest) latest = t;
+      if (Number.isFinite(t) && t > latest && t <= lim) latest = t;
     });
     (Array.isArray(s && s.events) ? s.events : []).forEach(function (event) {
       var t = Date.parse(event && event.at || '');
-      if (Number.isFinite(t) && t > latest) latest = t;
+      if (Number.isFinite(t) && t > latest && t <= lim) latest = t;
     });
-    return latest;
+    return latest;   // زمان‌های «آینده» (ساعت اشتباه دستگاه) نادیده گرفته می‌شوند تا نسخهٔ درست را نپوشانند
   }
   function subscriptionDenied(s){
     return !!(s && (s.deleted_at || s.status === 'deleted' || s.status === 'canceled' || s.status === 'past_due'));
@@ -564,6 +632,9 @@
   function courseVersion(c){
     var updated = Date.parse(c && c.updatedAt || '') || 0;
     var deleted = Date.parse(c && c.deletedAt || '') || 0;
+    var lim = futureLimit();
+    if (updated > lim) updated = 0;
+    if (deleted > lim) deleted = 0;
     return Math.max(updated, deleted);
   }
   function normalizeCourseRows(raw){
@@ -723,7 +794,10 @@
             applying = true;
             try { L.setItem(k, JSON.stringify(ack.values[k])); raw = L.getItem(k); } finally { applying = false; }
           }
-          ts[k] = stamp;
+          /* نسخهٔ سرور (زمان سرور) — نه ساعت این دستگاه */
+          var srv = ack && ack.stamps && Object.prototype.hasOwnProperty.call(ack.stamps, k) ? ack.stamps[k] : undefined;
+          if (srv === null) delete ts[k];
+          else ts[k] = srv || stamp;
           jwrite(TS_KEY, ts);
           // ویرایشِ حین درخواست هرگز با پاسخ نسخهٔ قدیمی از صف حذف نمی‌شود.
           if (d2[k] === stamp && L.getItem(k) === raw) {

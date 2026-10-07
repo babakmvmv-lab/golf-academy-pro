@@ -174,10 +174,21 @@
   }
   /* نسخهٔ جدید سایت: GitHub Pages فایل‌ها را تا ۱۰ دقیقه کش می‌کند. اگر فایلِ روی سرور از نسخهٔ بازِ فعلی
      جدیدتر باشد، یک دکمهٔ «تازه‌سازی» نشان داده می‌شود (بدون رفرش خودکار تا کار کاربر از دست نرود). */
-  var verShown = false, verLast = 0;
-  function checkVersion() {
+  var verShown = false, verLast = 0, verPending = false;
+  function busy() {
+    var a = document.activeElement;
+    if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return true;
+    var open = document.querySelectorAll('#tour-report, #score-wizard, [id^="modal-"], .spk-modal');
+    for (var i = 0; i < open.length; i++) { var cs = getComputedStyle(open[i]); if (cs.display !== 'none' && cs.visibility !== 'hidden') return true; }
+    return false;
+  }
+  /* بارگذاری نسخهٔ جدید: اول خودِ فایل از شبکه (cache:'reload' کش HTTP را هم تازه می‌کند)، بعد رفرش */
+  function hardReload() {
+    fetch(location.pathname, { cache: 'reload' }).catch(function () {}).then(function () { location.reload(); });
+  }
+  function checkVersion(minGap) {
     if (verShown || typeof document === 'undefined' || !/^https?:$/.test(location.protocol)) return;
-    if (Date.now() - verLast < 600000) return;
+    if (Date.now() - verLast < (minGap || 60000)) return;
     verLast = Date.now();
     var mine = Date.parse(document.lastModified);
     if (!mine) return;
@@ -185,19 +196,28 @@
       var lm = Date.parse(r.headers.get('last-modified') || '');
       if (!r.ok || !lm || lm <= mine + 2000 || verShown) return;
       verShown = true;
-      var b = document.createElement('button');
-      b.type = 'button'; b.id = 'pc-new-version';
-      b.textContent = '✨ نسخهٔ جدید آماده است — تازه‌سازی';
-      b.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;padding:10px 18px;border-radius:999px;border:1px solid #c9a24a;background:#0f3d2e;color:#f3e2b3;font:inherit;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);cursor:pointer';
-      b.onclick = function () { location.reload(); };
-      document.body.appendChild(b);
+      if (document.visibilityState === 'hidden') { verPending = true; return; }   // با برگشتن کاربر خودکار تازه می‌شود
+      showVersionButton();
     }).catch(function () {});
+  }
+  function showVersionButton() {
+    if (document.getElementById('pc-new-version')) return;
+    var b = document.createElement('button');
+    b.type = 'button'; b.id = 'pc-new-version';
+    b.textContent = '✨ نسخهٔ جدید آماده است — تازه‌سازی';
+    b.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;padding:10px 18px;border-radius:999px;border:1px solid #c9a24a;background:#0f3d2e;color:#f3e2b3;font:inherit;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);cursor:pointer';
+    b.onclick = hardReload;
+    document.body.appendChild(b);
   }
   if (typeof document !== 'undefined') {
     var startVer = function () {
-      setTimeout(function () { verLast = 0; checkVersion(); }, 30000);
-      setInterval(checkVersion, 600000);
-      document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') checkVersion(); });
+      setTimeout(function () { verLast = 0; checkVersion(0); }, 30000);
+      setInterval(function () { checkVersion(290000); }, 300000);
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState !== 'visible') return;
+        if (verPending) { verPending = false; if (!busy()) { hardReload(); return; } showVersionButton(); return; }
+        checkVersion(60000);
+      });
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startVer); else startVer();
   }

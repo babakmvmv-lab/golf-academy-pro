@@ -4161,8 +4161,26 @@ const stCal = $('#st-cal');
     if (!window.GA_CLOUD || !GA_CLOUD.pull) return Promise.resolve(false);
     return Promise.race([
       Promise.resolve().then(() => GA_CLOUD.pull()).catch(() => false),
-      new Promise(r => setTimeout(() => r(false), 8000))
+      new Promise(r => setTimeout(() => r(false), 10000))
     ]);
+  }
+  /* «در حال دریافت از سرور» — پنل با آخرین دادهٔ سرور باز می‌شود، نه با نسخهٔ قدیمیِ این مرورگر */
+  function loadingNote(on){
+    let el = document.getElementById('ga-loading-note');
+    if (!on){ if (el) el.remove(); return; }
+    if (el) return;
+    el = document.createElement('div'); el.id = 'ga-loading-note';
+    el.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:99990;pointer-events:none;color:#f3e2b3;font:inherit;font-size:15px;text-shadow:0 2px 10px rgba(0,0,0,.6)';
+    el.textContent = '⏳ در حال دریافت آخرین اطلاعات از سرور…';
+    document.body.appendChild(el);
+  }
+  /* کاربر وسط کار است؟ (فیلد فعال یا پنجرهٔ باز) — در این حالت صفحه زیر دستش بازسازی نمی‌شود */
+  function userBusy(){
+    const a = document.activeElement;
+    if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return true;
+    return $$('#tour-report, #score-wizard, [id^="modal-"], .spk-modal').some(m => {
+      const cs = getComputedStyle(m); return cs.display !== 'none' && cs.visibility !== 'hidden';
+    });
   }
 
   function applyRoleUI(rec){
@@ -4218,8 +4236,16 @@ const stCal = $('#st-cal');
   function logout(){
     store.remove('ga_session');
     const done = () => location.reload();
-    if (AUTH() && AUTH().mode() === 'panel') AUTH().signOut().then(done, done);
-    else done();
+    const out = () => {
+      try { if (window.GA_CLOUD && GA_CLOUD.wipeLocal) GA_CLOUD.wipeLocal(); } catch (e){}
+      if (AUTH() && AUTH().mode() === 'panel') AUTH().signOut().then(done, done);
+      else done();
+    };
+    /* اول تغییرات ارسال‌نشده (حداکثر ۶ ثانیه)، بعد پاک کردن نسخهٔ محلی؛ صفِ ارسال‌نشده هرگز پاک نمی‌شود */
+    const C = window.GA_CLOUD;
+    if (C && C.dirty && C.dirty().length && C.push)
+      Promise.race([Promise.resolve().then(() => C.push('logout')).catch(() => null), new Promise(r => setTimeout(r, 6000))]).then(out);
+    else out();
   }
 
   /* ═══════════ راهاندازی ═══════════ */
@@ -4310,9 +4336,17 @@ const stCal = $('#st-cal');
     A = D.compute(S);
     if (currentPage === 'player') go('player');
     else if (currentPage === 'course') go('course'); /* دریافت KML/هندسه پس از رندر اول: نقشه را با geo تازه دوباره بساز */
+    else if (currentPage && $('#app') && $('#app').classList.contains('on')){
+      /* دادهٔ تازهٔ سرور (تغییر از دستگاه/مرورگر دیگر): صفحهٔ فعلی همان لحظه با دادهٔ جدید ساخته شود */
+      if (!userBusy()){ applyRoleUI(userRec(currentUser)); go(currentPage, true); }
+      else __cloudApplied.pending = true;
+    }
     msgGate();
   };
   let __cloudT = null, __cloudResultsChanged = false;
+  document.addEventListener('focusout', () => setTimeout(() => {
+    if (__cloudApplied.pending && !userBusy()){ __cloudApplied.pending = false; __cloudApplied(); }
+  }, 400));
   window.addEventListener('ga-cloud-applied', e => {
     if (e.detail && e.detail.resultsChanged) __cloudResultsChanged = true;
     clearTimeout(__cloudT);
@@ -4335,6 +4369,8 @@ const stCal = $('#st-cal');
     if (!enterApp._clk) enterApp._clk = setInterval(tickClock, 1000);
     const showLogin = (msg) => {
       store.remove('ga_session');
+      /* خارج از حساب: نسخهٔ محلیِ داده‌های سرور روی این مرورگر نماند (کاربر بعدی از صفر از سرور می‌خواند) */
+      try { if (window.GA_CLOUD && GA_CLOUD.wipeLocal) GA_CLOUD.wipeLocal(); } catch (e){}
       $('#login').classList.add('on');
       const last = store.get('ga_last_user');
       if (last && $('#login-user') && !$('#login-user').value) $('#login-user').value = last;
@@ -4355,10 +4391,13 @@ const stCal = $('#st-cal');
         store.set('ga_user_label', userLabelFor(prof.user));
         enterApp(prof.user);
       };
+      /* هر بار باز شدن پنل: اول آخرین دادهٔ سرور (حداکثر ۱۰ ثانیه)، بعد ورود — بدون وابستگی به نسخهٔ این مرورگر */
+      loadingNote(true);
+      const fresh = cloudPullAfterLogin().then(() => loadingNote(false), () => loadingNote(false));
       if (A.mode() === 'adminpanel'){
         /* فهرست حساب‌ها برای «یوزرها»/«اشتراک‌ها»/«پیام‌ها» — شکست آن ورود را متوقف نمی‌کند */
-        Promise.race([A.accounts.load().catch(() => null), new Promise(r => setTimeout(r, 8000))]).then(go2);
-      } else go2();
+        Promise.all([fresh, Promise.race([A.accounts.load().catch(() => null), new Promise(r => setTimeout(r, 8000))])]).then(go2);
+      } else fresh.then(go2);
     });
   });
 

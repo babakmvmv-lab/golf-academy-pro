@@ -457,12 +457,41 @@
       return JSON.stringify(applyTombShots(arr, tomb));
     } catch (e) { return remoteRaw; }
   }
+  /* ── نوار «آفلاین»: وقتی سرور در دسترس نیست، کاربر بداند دادهٔ روی صفحه ممکن است قدیمی باشد ── */
+  var lastPullOk = 0, lastPullTry = 0;
+  function offlineBanner(on) {
+    if (typeof document === 'undefined' || !document.body) return;
+    var el = document.getElementById('ga-offline-warn');
+    if (!on) { if (el) el.remove(); return; }
+    if (el) return;
+    el = document.createElement('div'); el.id = 'ga-offline-warn'; el.setAttribute('role', 'status');
+    el.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:99997;max-width:min(92vw,420px);padding:9px 14px;border-radius:12px;background:#5a3b0b;color:#fff3d6;border:1px solid #c9a24a;font:inherit;font-size:13px;line-height:1.6;box-shadow:0 6px 24px rgba(0,0,0,.35)';
+    el.textContent = '📡 اتصال به سرور برقرار نیست — اطلاعات این صفحه ممکن است قدیمی باشد. تغییرات شما محفوظ است و پس از وصل شدن ارسال می‌شود.';
+    document.body.appendChild(el);
+  }
+  /* پاک کردن نسخهٔ محلیِ داده‌های سرور (هنگام خروج/نمایش فرم ورود): مرورگر بعدی/کاربر بعدی از صفر از سرور می‌خواند.
+     تغییرات ارسال‌نشده (صف) و تنظیمات خودِ دستگاه دست نمی‌خورند. */
+  function wipeLocal() {
+    var L = ls(), d = jread(DIRTY_KEY, {}), ts = jread(TS_KEY, {}), n = 0;
+    applying = true;
+    try {
+      Object.keys(ts).forEach(function (k) {
+        if (d[k] || SKIP[k] || k.indexOf(PFX) !== 0) return;
+        try { if (L.getItem(k) !== null) { L.removeItem(k); n++; } } catch (e) {}
+        delete ts[k];
+      });
+      jwrite(TS_KEY, ts);
+    } finally { applying = false; }
+    return n;
+  }
+
   /* ── pull: اعمال دادهٔ جدیدترِ سرور روی این دستگاه ──────────────── */
   function pull() {
     if (pullFlight) return pullFlight;
     if (pushFlight) return pushFlight.then(function () { return pull(); });
     if (!hasCred()) { setPhase('off', 'کانفیگ ابری کامل نیست — از پنل ☁️ تنظیم کنید'); return Promise.resolve(false); }
     setPhase('pulling');
+    lastPullTry = Date.now();
     var A0 = auth(), authorized = !A0 || !!(A0.profile() && A0.token());
     pullFlight = rest('ga_store?select=k,v,updated_at&order=updated_at.desc&limit=500')
       .then(function (rows) {
@@ -499,7 +528,7 @@
               }
               return;
             }
-            if (COURSE_MERGE[r.k] || SUB_MERGE[r.k]) {
+            if ((COURSE_MERGE[r.k] || SUB_MERGE[r.k]) && !authorized) {
               /* داده‌های چندرکوردی را هنگام pull هم merge کن تا رکوردهای محلیِ غایب
                  از ابر حذف نشوند. اشتراک‌ها بر اساس id ادغام می‌شوند، نه کلید آرایه. */
               var localRaw = L.getItem(r.k), remoteVal = decode(r.v);
@@ -518,16 +547,22 @@
               } catch (e) {}
               return;
             }
-            if (!remoteNewer && localDirty === undefined && L.getItem(r.k) !== null) return;
+            /* سرور مرجع است: وقتی وارد شده‌ایم و این کلید تغییر ارسال‌نشده ندارد، نسخهٔ این مرورگر
+               دقیقاً همان نسخهٔ سرور می‌شود — بدون توجه به مهر زمان، ساعت دستگاه یا سابقهٔ همین مرورگر.
+               (زمین‌ها و اشتراک‌ها هم دیگر با نسخهٔ محلی ادغام نمی‌شوند؛ ادغام فقط هنگام ارسالِ تغییر است.) */
+            var curRaw = L.getItem(r.k);
+            if (authorized && !remoteNewer && curRaw !== null && !sameJsonValue(decode(r.v), curRaw)) remoteNewer = true;
+            if (!remoteNewer && localDirty === undefined && curRaw !== null) { ts[r.k] = r.updated_at; return; }
             if (remoteNewer) {
               var newVal = decode(r.v);
-              if (r.k === 'ga_sp_sessions' || r.k === 'ga_sp_shots' || r.k === 'ga_sp_tomb') newVal = mergeSpKey(r.k, L.getItem(r.k), newVal);
+              if (r.k === 'ga_sp_sessions' || r.k === 'ga_sp_shots' || r.k === 'ga_sp_tomb') newVal = mergeSpKey(r.k, curRaw, newVal);
               try {
-                L.setItem(r.k, newVal);
+                var same = curRaw !== null && sameJsonValue(newVal, curRaw);
+                if (!same) L.setItem(r.k, newVal);
                 /* مهر زمان فقط وقتی بنویسد که واقعاً نوشته شده؛ اگر حافظهٔ مرورگر پر بود،
                    دفعهٔ بعد دوباره تلاش می‌شود و رکورد برای همیشه گم نمی‌شود. */
                 ts[r.k] = r.updated_at;
-                applied++;
+                if (!same) applied++;
                 if (r.k === 'ga_results') resultsApplied = true;
                 if (localDirty) delete d[r.k];
               } catch (e) {}
@@ -536,6 +571,15 @@
           /* اگر این دستگاه زمین/نقشه دارد ولی کلید هنوز در ابر ساخته نشده، آن را هم صف کن. */
           var remoteKeys = {};
           (rows || []).forEach(function (r) { if (r && r.k) remoteKeys[r.k] = 1; });
+          /* کلیدی که قبلاً از سرور آمده بود و حالا روی سرور نیست (حذف شده یا این کاربر اجازهٔ دیدنش را ندارد)
+             از این مرورگر هم برداشته می‌شود — مگر تغییر ارسال‌نشده داشته باشد. فقط با فهرست کامل. */
+          if (authorized && rows.length < 500) {
+            Object.keys(ts).forEach(function (k) {
+              if (remoteKeys[k] || d[k] || SKIP[k] || k.indexOf(PFX) !== 0) return;
+              try { if (L.getItem(k) !== null) { L.removeItem(k); applied++; } } catch (e) {}
+              delete ts[k];
+            });
+          }
           Object.keys(COURSE_MERGE).concat(Object.keys(SUB_MERGE)).forEach(function (k) {
             if (!remoteKeys[k] && L.getItem(k) !== null && !d[k]) d[k] = localStamp();
           });
@@ -553,6 +597,7 @@
           state.pulled += applied;
           primeSweep();
           state.read = { ok: true, at: localStamp(), message: 'خواندن از دیتابیس برقرار است.' };
+          lastPullOk = Date.now(); offlineBanner(false);
           var pending = pendingKeys().length;
           setPhase(pending ? (state.errors.length ? 'error' : 'pending') : 'idle', pending
             ? ('دریافت انجام شد؛ ' + pending + ' بخش هنوز در صف ارسال است.')
@@ -568,6 +613,7 @@
       .catch(function (e) {
         state.err = errorText(e);
         state.read = { ok: false, at: localStamp(), message: state.err };
+        if (!(e && (e.status === 401 || e.status === 403))) offlineBanner(true);
         setPhase('error', 'خطا در دریافت: ' + state.err);
         return false;
       }).then(function (ok) { pullFlight = null; render(); return ok; });
@@ -1035,6 +1081,19 @@
       window.addEventListener('ga-auth-changed', function () { if (pendingKeys().length) schedule(500); render(); });
     }
     setInterval(sweep, 20000);
+    /* تازه‌سازی خودکار از سرور: هر ۶۰ ثانیه وقتی صفحه دیده می‌شود، و با برگشتن به برگه (حداکثر هر ۱۵ ثانیه) */
+    function freshen(minGap) {
+      if (document.visibilityState === 'hidden' || pullFlight || pushFlight) return;
+      if (Date.now() - lastPullTry < minGap) return;
+      var A1 = auth(); if (A1 && !(A1.profile() && A1.token())) return;
+      pull();
+    }
+    setInterval(function () { freshen(55000); }, 60000);
+    if (window.addEventListener) {
+      window.addEventListener('focus', function () { freshen(15000); });
+      document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') freshen(15000); });
+      window.addEventListener('online', function () { freshen(0); });
+    }
     if (window.addEventListener) {
       window.addEventListener('online', function () { failStreak = 0; schedule(100); });
       document.addEventListener('visibilitychange', function () {
@@ -1104,6 +1163,8 @@
     status: function () { var out = JSON.parse(JSON.stringify(state)); out.pending = pendingKeys().length; return out; },
     pull: pull,
     push: push,
+    wipeLocal: wipeLocal,
+    lastPullOk: function () { return lastPullOk; },
     test: test,
     tombShots: tombShots,
     tombSession: tombSession,

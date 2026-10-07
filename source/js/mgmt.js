@@ -45,9 +45,14 @@
     memCmd: true, memRace: true, memPlayer: true, memMatch: true,
     memCourse: true, memRecords: true, memCal: true, memTv: true, memAvatarLand: true,
   };
+  /* ACCESS_TREE_V1: سوییچ‌های نمودار/صفحهٔ قدیمی دیگر چیزی را پنهان نمی‌کنند — کنترل نمایش فقط از
+     «اشتراک‌ها ← ماتریس دسترسی» است (مقادیر قدیمی ga_ui یک‌بار در sub.js به ماتریس مهاجرت می‌شوند). */
   function getSettings(){
-    try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('ga_ui') || '{}')); }
-    catch(e){ return Object.assign({}, DEFAULTS); }
+    let s;
+    try { s = Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('ga_ui') || '{}')); }
+    catch(e){ s = Object.assign({}, DEFAULTS); }
+    Object.keys(DEFAULTS).forEach(k => { s[k] = true; });
+    return s;
   }
   function saveSettings(s){
     try { localStorage.setItem('ga_ui', JSON.stringify(s)); } catch(e){}
@@ -322,109 +327,248 @@
   }
 
   /* ═══════════════ صفحه: تنظیمات نمایش ═══════════════ */
-  function pageSettings(){
-    if (!requireAdminPage('تنظیمات نمایش')) return;
-    const v = $('#view');
-    const s = getSettings();
-    const groups = [
-      { t:L('group.dashboard','داشبورد') + ' و ' + L('nav.cmd','فرماندهی'), items:[
-        ['chCmd','🏠 کارت‌های آمار ' + L('nav.cmd','فرماندهی'),'نمایش ۸ کارت کلیدی در صفحهٔ ' + L('nav.cmd','فرماندهی')],
-        ['chMonthly','📈 نمودار امتیاز ماهانه','نمودار خطی امتیاز ماه‌ها + انتخاب ماه'],
-      ]},
-      { t:L('settings.group.analytics','صفحات تحلیلی'), items:[
-        ['chRace','🏁 نمودار ' + L('nav.race','رقابت فصل'),'بارها و خطوط رقابت در صفحهٔ ' + L('nav.race','رقابت فصل')],
-        ['chPlayer','🏌️ نمودارهای ' + L('nav.player','مرکز بازیکن'),'رادار مهارت + دونات فرم'],
-        ['chMatch','🥇 نمودار ' + L('nav.match','فرماندهی مسابقه'),'تحلیل مسابقه و امتیازات'],
-        ['chCourse','🗺️ نمودار ' + L('nav.course','هوش زمین'),'سختی حفره‌ها و کارنامه بازیکن'],
-        ['chRecords','🎖️ نمودار ' + L('nav.records','رکوردها'),'آمار رکوردها و بهترین‌ها'],
-        ['chTv','📺 گرافیک ' + L('nav.tv','نمایش تلویزیونی'),'گرافیک پخش و نمایشگرها'],
-        ['chBattle','⚔️ نمودار ' + L('nav.battle','میدان نبرد'),'مقایسه دو تیم'],
-      ]},
-      { t:L('settings.group.calendar','تقویم'), items:[
-        ['chCal','📅 ' + L('nav.cal','تقویم فصل') + ' و تعطیلات','نمایش تقویم + تعطیلات رسمی ایران ۱۴۰۵'],
-      ]},
-      { t:L('settings.group.members','بخش اعضا — نمایش برای اعضا') + ' (فقط مدیر)', items:[
-        ['memCmd','🎯 ' + L('nav.cmd','فرماندهی'),'وقتی فعال باشد، اعضا صفحهٔ ' + L('nav.cmd','فرماندهی') + ' را می‌بینند'],
-        ['memRace','🏁 ' + L('nav.race','رقابت فصل'),'نمایش جدول ' + L('nav.race','رقابت فصل') + ' برای اعضا'],
-        ['memPlayer','🏌️ ' + L('nav.player','مرکز بازیکن'),'نمایش پروفایل/تحلیل بازیکن برای اعضا'],
-        ['memMatch','🥇 ' + L('nav.match','فرماندهی مسابقه'),'نمایش نتایج مسابقات برای اعضا'],
-        ['memCourse','🗺️ ' + L('nav.course','هوش زمین'),'نمایش اطلاعات زمین‌ها برای اعضا'],
-        ['memRecords','🎖️ ' + L('nav.records','رکوردها'),'نمایش رکوردها و تالار افتخارات برای اعضا'],
-        ['memCal','📅 ' + L('nav.cal','تقویم فصل'),'نمایش تقویم و رویدادها برای اعضا'],
-        ['memTv','📺 ' + L('nav.tv','نمایش تلویزیونی'),'نمایش گرافیک تلویزیونی برای اعضا'],
-      ]},
-    ];
-    v.innerHTML = `
-    <div class="glass gold-border" style="margin-bottom:18px">
-      <div class="card-head"><span class="ic">🛠️</span><h3>${esc(L('nav.settings','تنظیمات نمایش'))} — هر چیزی را فعال/غیرفعال کنید</h3><span class="tag">UI Controls</span></div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-        <button class="btn sm" id="st-all-on">همه فعال</button>
-        <button class="btn sm ghost" id="st-all-off">همه غیرفعال</button>
-        <span style="color:var(--muted);font-size:11.5px;align-self:center">تغییرات فوراً در همهٔ صفحات اعمال می‌شود</span>
-      </div>
-    </div>
-    ${groups.map(g => `
-      <div class="glass" style="margin-bottom:16px">
-        <div class="card-head"><span class="ic">⚙️</span><h3>${g.t}</h3><span class="tag">${g.items.filter(i=>s[i[0]]).length}/${g.items.length} فعال</span></div>
-        <div style="margin-top:10px">
-        ${g.items.map(([k, name, desc]) => `
-          <div class="set-row ${s[k] ? '' : 'off'}" data-k="${k}">
-            <span style="font-size:20px">${esc(name.split(' ')[0])}</span>
-            <div class="info"><b>${esc(name.replace(/^[^ ]+ /,''))}</b><small>${esc(desc)}</small></div>
-            <label class="switch"><input type="checkbox" data-set="${k}" ${s[k]?'checked':''}><span class="trk"></span></label>
-          </div>`).join('')}
-        </div>
-      </div>`).join('')}`;
-    $$('[data-set]').forEach(inp => inp.addEventListener('change', () => {
-      const k = inp.dataset.set;
-      s[k] = inp.checked;
-      saveSettings(s);
-      APP.toast('تنظیم نمایش ذخیره شد ✓', 'green');
-    }));
-    $('#st-all-on').addEventListener('click', () => { Object.keys(DEFAULTS).forEach(k => s[k]=true); saveSettings(s); APP.go('settings'); APP.toast('همهٔ نمودارها فعال شدند ✓', 'green'); });
-    $('#st-all-off').addEventListener('click', () => { Object.keys(DEFAULTS).forEach(k => s[k]=false); saveSettings(s); APP.go('settings'); APP.toast('همهٔ نمودارها غیرفعال شدند', 'orange'); });
-    renderSubSettings(v);
+  /* ═══ اشتراک‌ها — ماتریس دسترسی پلن × صفحه/تب/بخش (ACCESS_TREE_V1) ═══
+     «تنظیمات نمایش» در همین صفحه ادغام شد. هر صفحهٔ اعضا یک ردیف بازشونده است و
+     تب‌ها و نمودارهای داخلش به‌صورت جداگانه برای هر پلن روشن/خاموش می‌شوند. */
+  let subsTab = 'access';
+  const accOpen = new Set();
+  let accQuery = '';
+  let accToastT = 0;
+  const ACX_SVG = {
+    shield:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>',
+    coin:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.4 0-2.5.8-2.5 2s1.1 1.6 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2c-1 0-2-.5-2.5-1.5"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>',
+    users:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    card:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+    search:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+    lock:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  };
+  /* آیکن هر صفحه = همان آیکن SVG منوی کناری (یکدست با طراحی و مستقل از فونت ایموجی دستگاه) */
+  function acxIcon(id, fallback){
+    const el = document.querySelector('#app .nav-item[data-page="' + id + '"] .ico');
+    return el ? el.innerHTML : esc(fallback || '');
   }
 
-  function renderSubSettings(host){
-    if (!window.GA_SUB || !host) return;
+  function pageSubs(){
+    if (!requireAdminPage('اشتراک‌ها')) return;
+    const v = $('#view');
+    const TABS = [
+      ['access', ACX_SVG.shield, 'ماتریس دسترسی', 'چه کسی چه چیزی را ببیند'],
+      ['pricing', ACX_SVG.coin, 'قیمت و تخفیف', 'قیمت پایه و تخفیف مدت'],
+      ['members', ACX_SVG.users, 'اشتراک یوزرها', 'ثبت، تمدید و وضعیت'],
+    ];
+    v.innerHTML = `
+    <div class="glass gold-border acx-hero">
+      <div class="acx-hero-top">
+        <span class="acx-hero-ic">${ACX_SVG.card}</span>
+        <div class="acx-hero-txt">
+          <h3>${esc(L('nav.subs','اشتراک‌ها'))}</h3>
+          <p>برای هر پلن تعیین کنید اعضا چه چیزی را ببینند؛ هر صفحه، هر تب و هر نمودار به‌صورت جداگانه.</p>
+        </div>
+      </div>
+      <div class="acx-tabs" role="tablist" aria-label="بخش‌های اشتراک‌ها">
+        ${TABS.map(t => `<button type="button" role="tab" class="acx-tab ${subsTab===t[0]?'on':''}" data-subs-tab="${t[0]}" aria-selected="${subsTab===t[0]}"><span class="i">${t[1]}</span><span><b>${t[2]}</b><small>${t[3]}</small></span></button>`).join('')}
+      </div>
+    </div>
+    <div id="subs-pane"></div>`;
+    v.querySelectorAll('[data-subs-tab]').forEach(b => b.addEventListener('click', () => { subsTab = b.dataset.subsTab; pageSubs(); }));
+    const pane = $('#subs-pane');
+    if (subsTab === 'pricing') renderSubPricing(pane);
+    else if (subsTab === 'members') renderSubUserList(pane);
+    else renderAccessMatrix(pane);
+  }
+
+  function renderAccessMatrix(host){
+    if (!window.GA_SUB || !GA_SUB.ACCESS_TREE){ host.innerHTML = '<div class="glass">ماژول اشتراک بارگذاری نشده است.</div>'; return; }
     const SUB = GA_SUB;
-    const wrap = document.createElement('div');
-    wrap.id = 'sub-settings';
-    const plans = SUB.loadPlans();
-    const cycles = SUB.loadCycles();
-    const feat = SUB.loadFeatures();
+    const fa = (n) => (window.Data && Data.fa) ? Data.fa(n) : String(n);
+    const faN = (n) => (window.Data && Data.faNum) ? Data.faNum(n, 0) : String(n);
+    host.innerHTML = `
+    <div class="glass acx-panel">
+      <div class="acx-bar">
+        <div class="acx-search">${ACX_SVG.search}<input class="input" id="acx-q" type="search" placeholder="جستجوی صفحه، تب یا نمودار…" value="${esc(accQuery)}" aria-label="جستجو در ماتریس دسترسی"></div>
+        <button type="button" class="btn sm ghost" id="acx-expand">باز کردن همه</button>
+        <button type="button" class="btn sm ghost" id="acx-collapse">بستن همه</button>
+      </div>
+      <div class="acx-legend">
+        <span><i class="lg on"></i> روشن</span>
+        <span><i class="lg off"></i> خاموش</span>
+        <span><i class="lg inh"></i> خاموش به‌خاطر صفحه/تب بالاتر</span>
+        <span class="acx-note">${ACX_SVG.shield} مدیران همیشه همه‌چیز را می‌بینند • هر تغییر فوراً ذخیره و روی همهٔ دستگاه‌ها همگام می‌شود</span>
+      </div>
+      <div class="acx-scroll"><div class="acx-grid" id="acx-grid" role="table" aria-label="ماتریس دسترسی پلن‌ها"></div></div>
+    </div>`;
+    const grid = host.querySelector('#acx-grid');
+
+    function descendants(n){ const out = []; (function w(k){ (k || []).forEach(c => { out.push(c); w(c.kids); }); })(n.kids); return out; }
+    function leafCount(n, f){
+      const d = descendants(n).filter(c => !(c.kids && c.kids.length));
+      const on = f ? d.filter(c => SUB.featOn(f, c.id)).length : 0;
+      return { total: d.length, on };
+    }
+    function matches(n){
+      if (!accQuery) return true;
+      const q = accQuery.trim().toLowerCase();
+      return n.t.toLowerCase().indexOf(q) > -1 || descendants(n).some(c => c.t.toLowerCase().indexOf(q) > -1);
+    }
+    function selfMatch(n){ return !accQuery || n.t.toLowerCase().indexOf(accQuery.trim().toLowerCase()) > -1; }
+
+    function draw(){
+      const feats = SUB.loadFeatures();
+      const plans = SUB.loadPlans();
+      const allLeaves = []; SUB.walkTree(n => { if (!(n.kids && n.kids.length)) allLeaves.push(n); });
+      const cols = SUB.PLAN_ORDER.length;
+      grid.style.setProperty('--acx-cols', cols);
+      let html = `<div class="acx-row acx-head" role="row">
+        <div class="acx-cell acx-lbl" role="columnheader"><b>صفحه / بخش</b><small>${fa(SUB.ACCESS_TREE.length)} صفحه • ${fa(allLeaves.length)} آیتم قابل‌کنترل</small></div>
+        ${SUB.PLAN_ORDER.map(c => {
+          const p = plans[c] || {};
+          const f = feats[c];
+          const on = allLeaves.filter(n => SUB.featOn(f, n.id)).length;
+          const pct = allLeaves.length ? Math.round(on / allLeaves.length * 100) : 0;
+          return `<div class="acx-cell acx-plan" role="columnheader" data-plan-col="${c}">
+            <div class="acx-plan-fa">${esc(p.nameFa || c)}</div>
+            <div class="acx-plan-en">${esc(p.nameEn || c)}</div>
+            <div class="acx-plan-price">${+p.monthly ? faN(+p.monthly) + ' <small>/ ماه</small>' : 'رایگان'}</div>
+            <div class="acx-meter" title="${fa(on)} از ${fa(allLeaves.length)} آیتم روشن"><i style="width:${pct}%"></i></div>
+            <div class="acx-plan-cnt">${fa(on)} / ${fa(allLeaves.length)}</div>
+            <div class="acx-plan-bulk">
+              <button type="button" data-bulk-plan="${c}" data-bulk-val="1" title="روشن کردن همه برای ${esc(p.nameEn || c)}">همه</button>
+              <button type="button" data-bulk-plan="${c}" data-bulk-val="0" title="خاموش کردن همه برای ${esc(p.nameEn || c)}">هیچ</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+
+      SUB.ACCESS_TREE.forEach(page => {
+        if (!matches(page)) return;
+        const open = accOpen.has(page.id) || !!accQuery;
+        const hasKids = !!(page.kids && page.kids.length);
+        const tot = leafCount(page).total;
+        html += row(page, 0, null, { open, hasKids, tot, feats });
+        if (hasKids && open){
+          page.kids.forEach(k => {
+            if (accQuery && !matches(k) && !selfMatch(page)) return;
+            const kHas = !!(k.kids && k.kids.length);
+            html += row(k, 1, page, { hasKids: kHas, tot: kHas ? leafCount(k).total : 0, feats });
+            if (kHas) k.kids.forEach(g => {
+              if (accQuery && !selfMatch(g) && !selfMatch(k) && !selfMatch(page)) return;
+              html += row(g, 2, k, { feats });
+            });
+          });
+        }
+      });
+      grid.innerHTML = html;
+      bind();
+    }
+
+    function row(n, lv, parent, o){
+      const always = n.id === 'memberzone';
+      const lbl = lv === 0
+        ? `<button type="button" class="acx-toggle" data-acx-open="${n.id}" aria-expanded="${o.open ? 'true' : 'false'}" ${o.hasKids ? '' : 'disabled'}>
+             <span class="acx-chev">${o.hasKids ? '▾' : '•'}</span><span class="acx-ic">${acxIcon(n.id, n.ic)}</span>
+             <span class="acx-t">${esc(n.t)}</span>
+             ${o.hasKids ? `<span class="acx-chip">${fa(o.tot)} بخش</span>` : `<span class="acx-chip ghost">کل صفحه</span>`}
+           </button>`
+        : `<div class="acx-t2">${n.tab ? '<span class="acx-tabtag">تب</span>' : '<span class="acx-dot"></span>'}<span>${esc(n.t)}</span>${o.hasKids ? `<span class="acx-chip">${fa(o.tot)}</span>` : ''}</div>`;
+      const cells = SUB.PLAN_ORDER.map(c => {
+        const f = o.feats[c];
+        if (always) {
+          const lc = leafCount(n, f);
+          return `<div class="acx-cell acx-sw" role="cell"><span class="acx-always" title="خانهٔ اعضا همیشه باز است؛ بخش‌های داخلش را جدا کنترل کنید">همیشه</span><small class="acx-sub">${fa(lc.on)}/${fa(lc.total)}</small></div>`;
+        }
+        const self = f[n.id] !== false;
+        const inherited = parent && !SUB.featOn(f, parent.id);
+        const lc = (o.hasKids || lv === 0) && o.tot ? leafCount(n, f) : null;
+        const partial = lc && self && !inherited && lc.on < lc.total;
+        return `<div class="acx-cell acx-sw ${inherited ? 'inh' : ''}" role="cell">
+          <label class="acx-switch ${lv ? 'sm' : ''}" title="${inherited ? 'به‌خاطر خاموشی صفحه/تب بالاتر در این پلن دیده نمی‌شود' : esc(n.t) + ' — ' + c}">
+            <input type="checkbox" data-acx-plan="${c}" data-acx-id="${n.id}" ${self ? 'checked' : ''} ${inherited ? 'disabled' : ''} aria-label="${esc(n.t)} برای ${c}">
+            <span class="trk"></span>
+          </label>
+          ${lc ? `<small class="acx-sub ${partial ? 'part' : ''}">${fa(self && !inherited ? lc.on : 0)}/${fa(lc.total)}</small>` : ''}
+        </div>`;
+      }).join('');
+      const bulk = always ? '' : `<span class="acx-rowbulk">
+          <button type="button" data-row-id="${n.id}" data-row-val="1" title="روشن برای همهٔ پلن‌ها">✓</button>
+          <button type="button" data-row-id="${n.id}" data-row-val="0" title="خاموش برای همهٔ پلن‌ها">✕</button>
+        </span>`;
+      return `<div class="acx-row lv${lv} ${lv === 0 && o.open ? 'open' : ''}" role="row" data-acx-row="${n.id}">
+        <div class="acx-cell acx-lbl" role="rowheader">${lbl}${bulk}</div>${cells}</div>`;
+    }
+
+    function save(mut, msg){
+      const all = SUB.loadFeatures();
+      mut(all);
+      SUB.saveFeatures(all);
+      const sx = host.querySelector('.acx-scroll'); const keep = sx ? sx.scrollLeft : 0;
+      draw();
+      const sx2 = host.querySelector('.acx-scroll'); if (sx2) sx2.scrollLeft = keep;
+      clearTimeout(accToastT);
+      accToastT = setTimeout(() => APP.toast(msg || 'دسترسی پلن ذخیره شد ✓', 'green'), 120);
+    }
+    function setNode(f, id, val){
+      if (val) {
+        f[id] = true;
+        /* روشن کردن یک بخش، والدهای خاموشش را هم روشن می‌کند تا واقعاً دیده شود */
+        const parts = id.split('.');
+        for (let i = 1; i < parts.length; i++) f[parts.slice(0, i).join('.')] = true;
+      } else f[id] = false;
+    }
+    function bind(){
+      grid.querySelectorAll('[data-acx-open]').forEach(b => b.addEventListener('click', () => {
+        const id = b.dataset.acxOpen;
+        if (accOpen.has(id)) accOpen.delete(id); else accOpen.add(id);
+        draw();
+      }));
+      grid.querySelectorAll('[data-acx-plan]').forEach(inp => inp.addEventListener('change', () => {
+        const pl = inp.dataset.acxPlan, id = inp.dataset.acxId, on = !!inp.checked;
+        save(all => { all[pl] = all[pl] || {}; setNode(all[pl], id, on); });
+      }));
+      grid.querySelectorAll('[data-row-id]').forEach(b => b.addEventListener('click', () => {
+        const id = b.dataset.rowId, on = b.dataset.rowVal === '1';
+        save(all => SUB.PLAN_ORDER.forEach(c => { all[c] = all[c] || {}; setNode(all[c], id, on); }),
+          on ? 'برای همهٔ پلن‌ها روشن شد ✓' : 'برای همهٔ پلن‌ها خاموش شد ✓');
+      }));
+      grid.querySelectorAll('[data-bulk-plan]').forEach(b => b.addEventListener('click', () => {
+        const pl = b.dataset.bulkPlan, on = b.dataset.bulkVal === '1';
+        const name = (SUB.loadPlans()[pl] || {}).nameEn || pl;
+        const doIt = () => save(all => {
+          const f = all[pl] = all[pl] || {};
+          SUB.walkTree(n => { if (n.id !== 'memberzone') f[n.id] = on; });
+          if (on) f.memberzone = true;
+        }, on ? 'همه برای ' + name + ' روشن شد ✓' : 'همه برای ' + name + ' خاموش شد ✓');
+        if (on) doIt();
+        else confirmPop({ title:'خاموش کردن همهٔ بخش‌ها', itemName:'پلن ' + name, body:'اعضای این پلن فقط «بخش اعضا» را بدون محتوای داخلی خواهند دید.', confirmLabel:'بله، همه خاموش شود', onYes: doIt });
+      }));
+    }
+
+    host.querySelector('#acx-expand').addEventListener('click', () => { SUB.ACCESS_TREE.forEach(n => { if (n.kids && n.kids.length) accOpen.add(n.id); }); draw(); });
+    host.querySelector('#acx-collapse').addEventListener('click', () => { accOpen.clear(); draw(); });
+    const q = host.querySelector('#acx-q');
+    q.addEventListener('input', () => { accQuery = q.value; draw(); });
+    draw();
+  }
+
+  /* قیمت پایهٔ یک‌ماه + تخفیف مدت (همان داده‌های قبلی، در تب جدا) */
+  function renderSubPricing(host){
+    const SUB = window.GA_SUB;
+    if (!SUB){ host.innerHTML = '<div class="glass">ماژول اشتراک بارگذاری نشده است.</div>'; return; }
     const faN = (n) => (window.Data && Data.faNum) ? Data.faNum(n, 0) : String(n);
     const fa = (n) => (window.Data && Data.fa) ? Data.fa(n) : String(n);
-    wrap.innerHTML = `
-    <div class="glass gold-border" style="margin-bottom:16px">
-      <div class="card-head"><span class="ic">💳</span><h3>${esc(L('settings.group.plans','پلن‌ها و اشتراک'))}</h3><span class="tag">سطح دسترسی سایت</span></div>
-          </div>
-    <div class="glass sub-acc" style="margin-bottom:16px">
-      <button type="button" class="sub-acc-head" aria-expanded="false">
-        <span class="ic">💰</span><h3>قیمت پایهٔ یک‌ماه</h3><span class="tag">عدد</span><span class="sub-acc-chev">▾</span>
-      </button>
-      <div class="sub-acc-body"><div id="sub-plan-prices"></div></div>
-    </div>
-    <div class="glass sub-acc" style="margin-bottom:16px">
-      <button type="button" class="sub-acc-head" aria-expanded="false">
-        <span class="ic">📆</span><h3>تخفیف مدت اشتراک</h3><span class="tag">۱ / ۳ / ۶ / ۱۲ ماه</span><span class="sub-acc-chev">▾</span>
-      </button>
-      <div class="sub-acc-body"><div id="sub-cycles"></div></div>
-    </div>
-    <div class="glass sub-acc" style="margin-bottom:16px">
-      <button type="button" class="sub-acc-head" aria-expanded="false">
-        <span class="ic">☑️</span><h3>ماتریس پلن × صفحه</h3><span class="tag">پیش‌فرض: همه روشن</span><span class="sub-acc-chev">▾</span>
-      </button>
-      <div class="sub-acc-body">
-                <div style="overflow-x:auto"><table class="plan-matrix" id="sub-matrix"></table></div>
+    host.innerHTML = `
+    <div class="grid cols-2 acx-price-grid">
+      <div class="glass">
+        <div class="card-head"><span class="ic">💰</span><h3>قیمت پایهٔ یک‌ماه</h3><span class="tag">تومان</span></div>
+        <div id="sub-plan-prices"></div>
+      </div>
+      <div class="glass">
+        <div class="card-head"><span class="ic">📆</span><h3>تخفیف مدت اشتراک</h3><span class="tag">۱ / ۳ / ۶ / ۱۲ ماه</span></div>
+        <div id="sub-cycles"></div>
       </div>
     </div>`;
-    host.appendChild(wrap);
-
     function drawPrices(){
       const p = SUB.loadPlans();
-      const box = wrap.querySelector('#sub-plan-prices');
+      const box = host.querySelector('#sub-plan-prices');
       box.innerHTML = SUB.PLAN_ORDER.map(c => {
         const x = p[c];
         return `<div class="plan-price-row">
@@ -437,13 +581,12 @@
         const all = SUB.loadPlans();
         all[inp.dataset.planPrice].monthly = Math.max(0, +inp.value || 0);
         SUB.savePlans(all);
-        drawPrices();
+        drawPrices(); drawCycles();
         APP.toast('قیمت پلن ذخیره شد ✓', 'green');
       }));
     }
     function drawCycles(){
-      const box = wrap.querySelector('#sub-cycles');
-      const p0 = SUB.loadPlans().professional;
+      const box = host.querySelector('#sub-cycles');
       box.innerHTML = SUB.loadCycles().map(c => {
         const pr = SUB.priceOf('professional', c.months);
         return `<div class="plan-price-row">
@@ -459,33 +602,7 @@
         APP.toast('تخفیف مدت ذخیره شد ✓', 'green');
       }));
     }
-    function drawMatrix(){
-      const f = SUB.loadFeatures();
-      const tbl = wrap.querySelector('#sub-matrix');
-      const head = '<tr><th>صفحه</th>' + SUB.PLAN_ORDER.map(c => `<th>${esc(SUB.loadPlans()[c].nameEn)}</th>`).join('') + '</tr>';
-      const body = SUB.PAGE_KEYS.map(([k, faName]) => {
-        const tds = SUB.PLAN_ORDER.map(c => {
-          const on = f[c] && f[c][k] !== false;
-          return `<td><label class="switch" title="${esc(c)}"><input type="checkbox" data-mx-plan="${c}" data-mx-page="${k}" ${on?'checked':''}><span class="trk"></span></label></td>`;
-        }).join('');
-        return `<tr><td>${esc(faName)}</td>${tds}</tr>`;
-      }).join('');
-      tbl.innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
-      tbl.querySelectorAll('[data-mx-plan]').forEach(inp => inp.addEventListener('change', () => {
-        const all = SUB.loadFeatures();
-        const pl = inp.dataset.mxPlan, pg = inp.dataset.mxPage;
-        if (!all[pl]) all[pl] = {};
-        all[pl][pg] = !!inp.checked;
-        SUB.saveFeatures(all);
-        APP.toast('دسترسی پلن ذخیره شد ✓', 'green');
-      }));
-    }
-    drawPrices(); drawCycles(); drawMatrix();
-    wrap.querySelectorAll('.sub-acc-head').forEach(btn => btn.addEventListener('click', () => {
-      const box = btn.closest('.sub-acc');
-      const open = box.classList.toggle('open');
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    }));
+    drawPrices(); drawCycles();
   }
 
   function subActorHint(){
@@ -671,20 +788,6 @@
     const U = window.APP && APP.users;
     if (U && APP.currentUser && U.isMain(APP.currentUser())) return true;
     return showPageDenied(label || 'مدیریت');
-  }
-
-  function pageSubs(){
-
-    if (!requireAdminPage('اشتراک‌ها')) return;
-    const v = $('#view');
-    v.innerHTML = `
-    <div class="glass gold-border" style="margin-bottom:18px">
-      <div class="card-head"><span class="ic">💳</span><h3>${esc(L('nav.subs','اشتراک‌ها'))}</h3><span class="tag">پلن و دسترسی سایت</span></div>
-          </div>
-    <div id="sub-catalog"></div>
-    <div id="sub-userlist"></div>`;
-    renderSubSettings($('#sub-catalog'));
-    renderSubUserList($('#sub-userlist'));
   }
 
   function renderSubUserList(host){
@@ -6022,7 +6125,7 @@
 
   /* ═══════════════ API ═══════════════ */
   window.MGMT = {
-    pageSettings, pageMgmt, pageUsers, pageSubs, pageMessages, renderMgmtTab, customEvents, saveEvents,
+    pageMgmt, pageUsers, pageSubs, pageMessages, renderMgmtTab, customEvents, saveEvents,
     customPlayers, saveCustomPlayers, playerEdits, savePlayerEdits,
     playerUsers, savePlayerUsers, playerFull,
     getSettings, saveSettings, DEFAULTS,

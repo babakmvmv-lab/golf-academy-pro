@@ -49,6 +49,111 @@
     ['messages',   'ارسال پیام']
   ];
 
+
+  /* ── درخت دسترسی (ACCESS_TREE_V1) ───────────────────────────────────
+     هر صفحهٔ قابل‌مشاهده برای اعضا → (تب) → بخش. شناسهٔ هر گره = «صفحه.تب.بخش»
+     و در همان کلید ga_plan_features (برای هر پلن) ذخیره می‌شود؛ مقدار غایب = روشن.
+     خاموش بودن هر والد، همهٔ فرزندانش را هم خاموش می‌کند. مدیران همیشه همه را می‌بینند.
+     sel (اختیاری) = انتخابگر CSS برای بخش‌هایی که خارج از قالب app.js ساخته می‌شوند. */
+  var ACCESS_TREE = [
+    { id: 'memberzone', t: 'بخش اعضا', ic: '🏠', kids: [
+      { id: 'memberzone.header', t: 'سربرگ خوش‌آمد و سکهٔ من' },
+      { id: 'memberzone.home', t: 'خانهٔ من', tab: true, kids: [
+        { id: 'memberzone.home.rank', t: 'کارت رنک من' },
+        { id: 'memberzone.home.season', t: 'وضعیت من در فصل' },
+        { id: 'memberzone.home.sections', t: 'بخش‌های فعال و راه‌های سریع' } ] },
+      { id: 'memberzone.earn', t: 'دریافت سکه', tab: true, kids: [
+        { id: 'memberzone.earn.request', t: 'ارسال درخواست سکه به مدیریت' },
+        { id: 'memberzone.earn.mine', t: 'درخواست‌های من' },
+        { id: 'memberzone.earn.auto', t: 'سکه‌های خودکار مسابقات' } ] },
+      { id: 'memberzone.guide', t: 'راهنمای سکه', tab: true, kids: [
+        { id: 'memberzone.guide.table', t: 'جدول کامل دریافت سکه' },
+        { id: 'memberzone.guide.ranks', t: 'توضیحات رنک‌ها و مسیر ارتقاء' } ] },
+      { id: 'memberzone.avatar', t: 'ساخت آواتار و فروشگاه', tab: true, kids: [
+        { id: 'memberzone.avatar.hero', t: 'بنر ویترین فروشگاه', sel: '.as-hero' },
+        { id: 'memberzone.avatar.outfit', t: 'استایل کامل (ست‌های آماده)', sel: '.as-outfit-wrap' },
+        { id: 'memberzone.avatar.feats', t: 'نوار مزایای فروشگاه', sel: '.as-feats' } ] } ] },
+    { id: 'cmd', t: 'فرماندهی', ic: '🎯', kids: [
+      { id: 'cmd.hero', t: 'تصویر سربرگ' },
+      { id: 'cmd.stats', t: 'کارت‌های آمار کلیدی' },
+      { id: 'cmd.podium', t: 'سکوی قهرمانی فصل' },
+      { id: 'cmd.phases', t: 'قهرمانان فازها' },
+      { id: 'cmd.monthly', t: 'امتیاز ماهانهٔ فصل' },
+      { id: 'cmd.live', t: 'رقابت زنده — ده نفر برتر' } ] },
+    { id: 'race', t: 'رقابت فصل', ic: '🏁', kids: [
+      { id: 'race.table', t: 'جدول رقابت فصل' },
+      { id: 'race.zones', t: 'مناطق واجد شرایط' },
+      { id: 'race.top', t: 'نبرد صدر جدول' } ] },
+    { id: 'player', t: 'مرکز بازیکن', ic: '🏌️', kids: [
+      { id: 'player.classic', t: 'تحلیل کلاسیک', tab: true, kids: [
+        { id: 'player.classic.stats', t: 'کارت‌های آمار بازیکن' },
+        { id: 'player.classic.radar', t: 'رادار مهارت' },
+        { id: 'player.classic.dist', t: 'توزیع اسکور' },
+        { id: 'player.classic.gold', t: 'پیشرفت Gold Elite' },
+        { id: 'player.classic.pie', t: 'تحلیل دایره‌ای نتیجهٔ تمرین' },
+        { id: 'player.classic.clubs', t: 'آنالیز بزرگ تمرین هر کلاب' },
+        { id: 'player.classic.monthly', t: 'امتیاز ماهانه' },
+        { id: 'player.classic.cumul', t: 'تجمعی فصل' },
+        { id: 'player.classic.holes', t: 'ضربات حفره‌به‌حفره' } ] },
+      { id: 'player.smart', t: 'بازیکن هوشمند', tab: true, kids: [
+        { id: 'player.smart.live', t: 'آنالیز آخرین ضربه‌ها (زنده)' },
+        { id: 'player.smart.archive', t: 'آرشیو نمودار جلسات' },
+        { id: 'player.smart.notes', t: 'یادداشت‌های مربی' } ] } ] },
+    { id: 'match', t: 'فرماندهی مسابقه', ic: '🥇', kids: [
+      { id: 'match.stats', t: 'کارت‌های آمار مسابقه' },
+      { id: 'match.results', t: 'نتایج بازیکنان' },
+      { id: 'match.birdies', t: 'پرنده‌های هر بازیکن' },
+      { id: 'match.hardest', t: 'سخت‌ترین حفره‌ها' } ] },
+    { id: 'course', t: 'هوش زمین', ic: '🗺️', kids: [
+      { id: 'course.map', t: 'نقشهٔ ماهواره‌ای زمین' },
+      { id: 'course.practice', t: 'آنالیز تمرین روی زمین' },
+      { id: 'course.stats', t: 'کارت‌های آمار زمین' },
+      { id: 'course.holes', t: 'سختی حفره‌ها' },
+      { id: 'course.card', t: 'کارنامهٔ بازیکن' },
+      { id: 'course.fit', t: 'میانگین بازیکن در زمین‌ها' } ] },
+    { id: 'records', t: 'رکوردها', ic: '🎖️', kids: [
+      { id: 'records.champs', t: 'کارت‌های قهرمانان' },
+      { id: 'records.best', t: 'بهترین دورهای فصل' },
+      { id: 'records.podium', t: 'سکوی فصل' } ] },
+    { id: 'cal', t: 'تقویم فصل', ic: '📅', kids: [
+      { id: 'cal.next', t: 'سربرگ رویداد بعدی' },
+      { id: 'cal.events', t: 'فهرست رویدادها' },
+      { id: 'cal.month', t: 'تقویم ماه' } ] },
+    { id: 'tv', t: 'نمایش تلویزیونی', ic: '📺', kids: [] },
+    { id: 'battle', t: 'میدان نبرد', ic: '⚔️', kids: [
+      { id: 'battle.header', t: 'سربرگ نبرد' },
+      { id: 'battle.teams', t: 'کارت تیم‌ها' },
+      { id: 'battle.score', t: 'امتیاز تیم‌ها' },
+      { id: 'battle.duels', t: 'جدال‌های نبرد' } ] },
+    { id: 'academy', t: 'پنل آکادمی', ic: '🏛️', kids: [
+      { id: 'academy.kpis', t: 'کارت‌های آمار آکادمی' },
+      { id: 'academy.ranks', t: 'ترکیب رنک‌های فصل' },
+      { id: 'academy.glance', t: 'آکادمی در یک نگاه — پیام سرپرست' } ] },
+    { id: 'avatarland', t: 'سرزمین آواتارها', ic: '💚', kids: [] }
+  ];
+  var MEMBER_PAGES = ACCESS_TREE.map(function (n) { return n.id; });
+  function walkTree(fn) {
+    (function w(list, depth, parent) {
+      list.forEach(function (n) { fn(n, depth, parent); if (n.kids && n.kids.length) w(n.kids, depth + 1, n); });
+    })(ACCESS_TREE, 0, null);
+  }
+  function nodeById(id) { var hit = null; walkTree(function (n) { if (n.id === id) hit = n; }); return hit; }
+  /* سوییچ‌های «تنظیمات نمایش» قدیمی (ga_ui) → شناسه‌های درخت. فقط تا اولین ذخیرهٔ ماتریس جدید (_v<2) خوانده می‌شوند. */
+  var LEGACY_UI = {
+    memCmd: 'cmd', memRace: 'race', memPlayer: 'player', memMatch: 'match', memCourse: 'course',
+    memRecords: 'records', memCal: 'cal', memTv: 'tv', memAvatarLand: 'avatarland',
+    chCmd: 'cmd.stats', chMonthly: 'cmd.monthly', chRace: 'race', chRaceBars: 'race.table',
+    chPlayer: 'player', chPlayerRadar: 'player.classic.radar', chMatch: 'match', chCourse: 'course',
+    chRecords: 'records', chCal: 'cal', chTv: 'tv', chBattle: 'battle'
+  };
+  function legacyOff() {
+    var ui = jread('ga_ui', {}) || {};
+    /* پیش از درخت دسترسی، اعضا هرگز «میدان نبرد» و «پنل آکادمی» را نمی‌دیدند — همان رفتار حفظ می‌شود */
+    var off = ['battle', 'academy'];
+    Object.keys(LEGACY_UI).forEach(function (k) { if (ui[k] === false && off.indexOf(LEGACY_UI[k]) < 0) off.push(LEGACY_UI[k]); });
+    return off;
+  }
+
   function jread(k, d) {
     try { var s = localStorage.getItem(k); return s ? JSON.parse(s) : (d || null); } catch (e) { return d || null; }
   }
@@ -88,20 +193,34 @@
     return f;
   }
   function loadFeatures() {
-    var o = jread(FEAT_KEY, {});
+    var o = jread(FEAT_KEY, {}) || {};
+    var legacy = (+o._v >= 2) ? null : legacyOff();
     var out = {};
     PLAN_ORDER.forEach(function (c) {
       var src = (o && o[c]) || {};
       var f = emptyFeat();
-      PAGE_KEYS.forEach(function (p) {
-        if (src[p[0]] === false) f[p[0]] = false;
-        else f[p[0]] = true;
-      });
+      /* همهٔ کلیدهای بولی (صفحه و بخش‌ها) حفظ می‌شوند؛ غایب = روشن */
+      Object.keys(src).forEach(function (k) { if (src[k] === false) f[k] = false; else if (src[k] === true) f[k] = true; });
+      if (legacy) legacy.forEach(function (k) { f[k] = false; });
       out[c] = f;
     });
     return out;
   }
-  function saveFeatures(o) { jwrite(FEAT_KEY, o); }
+  function saveFeatures(o) {
+    var out = { _v: 2 };
+    PLAN_ORDER.forEach(function (c) {
+      var f = (o && o[c]) || {}, keep = {};
+      Object.keys(f).forEach(function (k) { if (typeof f[k] === 'boolean') keep[k] = f[k]; });
+      out[c] = keep;
+    });
+    jwrite(FEAT_KEY, out);
+  }
+  /* روشن بودن یک گره برای یک پلن: خودش و همهٔ والدهایش نباید خاموش باشند */
+  function featOn(f, id) {
+    var parts = String(id || '').split('.');
+    for (var i = 1; i <= parts.length; i++) { if (f[parts.slice(0, i).join('.')] === false) return false; }
+    return true;
+  }
   function featuresOf(plan) {
     var all = loadFeatures();
     return all[plan] || all.professional || emptyFeat();
@@ -309,6 +428,40 @@
     var sub = of(user);
     var f = featuresOf(sub && sub.plan);
     return f[page] !== false;
+  }
+
+  /* canSee: آیا این کاربر گره‌ای از درخت دسترسی (صفحه/تب/بخش) را می‌بیند؟ */
+  function canSee(user, id) {
+    if (isStaff(user)) return true;
+    if (!isAllowed(user)) return false;
+    if (!id) return true;
+    var sub = of(user);
+    return featOn(featuresOf(sub && sub.plan), id);
+  }
+  /* اعمال پس از رندر: بخش‌های خاموشِ صفحهٔ جاری برای عضو پنهان می‌شوند (DOM حذف نمی‌شود تا کد نمودارها نشکند) */
+  function applyAccess(root, user, page) {
+    if (!root) return 0;
+    var node = nodeById(page);
+    if (!node) return 0;
+    var staff = isStaff(user), hidden = 0;
+    (function w(list) {
+      list.forEach(function (n) {
+        var els = root.querySelectorAll('[data-acc="' + n.id + '"]' + (n.sel ? ',' + n.sel : ''));
+        var on = staff || canSee(user, n.id);
+        for (var i = 0; i < els.length; i++) {
+          if (on) { if (els[i].classList.contains('feat-off')) { els[i].classList.remove('feat-off'); els[i].removeAttribute('aria-hidden'); } }
+          else if (!els[i].classList.contains('feat-off')) { els[i].classList.add('feat-off'); els[i].setAttribute('aria-hidden', 'true'); hidden++; }
+        }
+        if (n.kids && n.kids.length) w(n.kids);
+      });
+    })(node.kids || []);
+    return hidden;
+  }
+  /* اولین تب مجاز (برای صفحات دارای تب مثل مرکز بازیکن و بخش اعضا) */
+  function pickTab(user, page, tabs, cur) {
+    var ok = tabs.filter(function (t) { return canSee(user, page + '.' + t); });
+    if (ok.indexOf(cur) > -1) return cur;
+    return ok.length ? ok[0] : null;
   }
 
   function priceOf(plan, months) {
@@ -636,6 +789,8 @@
     assign: assign, updateById: updateById, softDelete: softDelete,
     relinkUser: relinkUser, revokeUser: revokeUser, hasForeignSubscription: hasForeignSubscription,
     isAllowed: isAllowed, canPage: canPage, isStaff: isStaff,
+    ACCESS_TREE: ACCESS_TREE, MEMBER_PAGES: MEMBER_PAGES, walkTree: walkTree, nodeById: nodeById,
+    canSee: canSee, featOn: featOn, applyAccess: applyAccess, pickTab: pickTab,
     priceOf: priceOf, daysLeft: daysLeft, liveStatus: liveStatus, statusFaOf: statusFaOf,
     addMonthsISO: addMonthsISO, todayISO: todayISO, nextStart: nextStart, latestLiveEnd: latestLiveEnd, endFa: endFa, atFa: atFa, faNum: faNum,
     ensureSeed: ensureSeed,

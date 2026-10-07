@@ -391,9 +391,28 @@
   let courseTeeGender = 'F';
   let playerTab = 'classic'; /* classic | smart — تب «بازیکن هوشمند» */
 
-  const MEM_PAGE_KEY = { cmd:'memCmd', race:'memRace', player:'memPlayer', match:'memMatch',
-    course:'memCourse', records:'memRecords', cal:'memCal', tv:'memTv', avatarland:'memAvatarLand' };
-  const MEMBER_PAGE_ORDER = ['cmd','race','player','match','course','records','cal','tv','avatarland'];
+  const MEMBER_PAGE_ORDER = ['cmd','race','player','match','course','records','cal','tv','battle','academy','avatarland'];
+  /* ACCESS_TREE_V1: آنچه عضو می‌بیند فقط از «اشتراک‌ها ← ماتریس دسترسی» می‌آید (سوییچ‌های قدیمی «تنظیمات نمایش» در sub.js مهاجرت شده‌اند) */
+  function memberPageOn(rec, pg){
+    if (pg === 'memberzone') return true;   /* خانهٔ عضو همیشه باز است؛ بخش‌های داخلش از ماتریس کنترل می‌شوند */
+    if (MEMBER_PAGE_ORDER.indexOf(pg) < 0) return false;
+    return !(window.GA_SUB && rec && rec.user && !GA_SUB.canPage(rec.user, pg));
+  }
+  /* پنهان‌سازی بخش‌های خاموشِ پلن پس از هر رندر (فقط برای اعضا؛ مدیر همه را می‌بیند) */
+  let _accObs = null;
+  function applyAccessNow(){
+    const rec = userRec(currentUser);
+    if (!window.GA_SUB || !GA_SUB.applyAccess || !rec || rec.role !== 'member') return;
+    GA_SUB.applyAccess($('#view'), rec.user, currentPage);
+  }
+  function watchAccess(){
+    const view = $('#view');
+    const rec = userRec(currentUser);
+    const member = !!(rec && rec.role === 'member');
+    if (!view || typeof MutationObserver === 'undefined') return;
+    if (member && !_accObs){ _accObs = new MutationObserver(applyAccessNow); _accObs.observe(view, { childList:true, subtree:true }); }
+    else if (!member && _accObs){ _accObs.disconnect(); _accObs = null; }
+  }
 
   /* دسترسی سریع اعضا در موبایل — صفحات فعال دیگر داخل منوی کشویی پنهان نمی‌مانند. */
   function renderMemberMobileNav(rec, page){
@@ -404,12 +423,7 @@
       nav.classList.remove('ready');
       return;
     }
-    const settings = MGMT.getSettings();
-    const pages = ['memberzone'].concat(MEMBER_PAGE_ORDER.filter(pg => {
-      if (!settings[MEM_PAGE_KEY[pg]]) return false;
-      if (window.GA_SUB && rec && rec.user && !GA_SUB.canPage(rec.user, pg)) return false;
-      return true;
-    }));
+    const pages = ['memberzone'].concat(MEMBER_PAGE_ORDER.filter(pg => memberPageOn(rec, pg)));
     nav.innerHTML = pages.map(pg => {
       const p = PAGES[pg];
       const active = pg === page;
@@ -431,17 +445,14 @@
     const rec = userRec(currentUser);
     if (!rec || rec.active === false || ['member','admin'].indexOf(rec.role) < 0) { logout(); return; }
     // اعضا: فقط بخش اعضا + آیتم‌هایی که مدیر در تنظیمات نمایش برایشان فعال کرده
+    if (page === 'settings') page = 'subs';   /* «تنظیمات نمایش» در «اشتراک‌ها» ادغام شد */
     if (rec && rec.role === 'member'){
-      const settings = MGMT.getSettings();
-      if (page !== 'memberzone'){
-        const key = MEM_PAGE_KEY[page];
-        if (!key || !settings[key]) page = 'memberzone';
-      }
+      if (page !== 'memberzone' && MEMBER_PAGE_ORDER.indexOf(page) < 0) page = 'memberzone';
       if (page === 'users' || page === 'mgmt' || page === 'settings' || page === 'messages' || page === 'subs') page = 'memberzone';
     }
     if ((page === 'users' || page === 'backup') && !isMain(currentUser)) page = 'cmd';   // پشتیبان: فقط حساب اصلی
     if (page === 'memberzone' && rec && rec.role !== 'member') page = 'cmd';
-    if (window.GA_SUB && rec && !GA_SUB.canPage(rec.user, page)){
+    if (window.GA_SUB && rec && page !== 'memberzone' && !GA_SUB.canPage(rec.user, page)){
       toast('این بخش در پلن شما فعال نیست.', 'orange');
       if (rec.role === 'member') page = 'memberzone';
       else if (GA_SUB.canPage(rec.user, 'cmd')) page = 'cmd';
@@ -456,8 +467,10 @@
     const p = PAGES[page];
     $('#top-title').innerHTML = `${p.i} ${esc(p.t)}`;
     $('#top-crumb').textContent = page.startsWith('a') ? 'ابزار طراح / ' + p.t : L('group.dashboard','داشبورد') + ' / ' + p.t;
+    watchAccess();
     try {
       RENDERERS[page]();
+      applyAccessNow();
     } catch (err) {
       console.error('render', page, err);
       viewEl.innerHTML = `<div class="glass" style="padding:28px;text-align:center;color:var(--muted)">نمایش این صفحه کامل نشد. یک‌بار صفحه را تازه کنید.</div>`;
@@ -505,7 +518,7 @@
     const g = A.GOLD_COUNT;
     const top = raceLB().LB.slice(0, 3); /* از دیتای جدول رقابت فصل (مسابقات امسال) */
     v.innerHTML = `
-    <div class="glass gold-border" style="padding:0;overflow:hidden;margin-bottom:18px">
+    <div data-acc="cmd.hero" class="glass gold-border" style="padding:0;overflow:hidden;margin-bottom:18px">
       <img src="assets/hero_main.webp" class="hero-pano" alt="">
       <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(11,15,20,.92));display:flex;flex-direction:column;justify-content:flex-end;padding:26px">
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -516,16 +529,16 @@
           <div style="margin-right:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <button class="btn sm" onclick="APP.go('mgmt')" style="box-shadow:0 0 16px rgba(212,175,55,.25)">⚙️ ${esc(L('nav.mgmt','پنل مدیریت'))}</button>
             <button class="btn sm ghost" onclick="APP.go('subs')">💳 ${esc(L('nav.subs','اشتراک‌ها'))}</button>
-            <button class="btn sm ghost" onclick="APP.go('settings')">🛠️ ${esc(L('nav.settings','تنظیمات نمایش'))}</button>
+            <button class="btn sm ghost" onclick="APP.go('subs')">💳 ${esc(L('nav.subs','اشتراک‌ها'))}</button>
             <span class="chip gold">⏳ مسابقه بعدی: ${esc(A.NEXT_T ? A.NEXT_T[1] : '—')} — ${D.fa(A.COUNTDOWN)} روز</span>
             <span class="chip green">🔴 فصل در جریان است</span>
           </div>
         </div>
       </div>
     </div>
-    <div class="grid cols-4" id="cmd-stats"></div>
+    <div data-acc="cmd.stats" class="grid cols-4" id="cmd-stats"></div>
     <div class="grid cols-3" style="margin-top:18px">
-      <div class="glass tilt" style="grid-column:span 2">
+      <div data-acc="cmd.podium" class="glass tilt" style="grid-column:span 2">
         <div class="card-head"><span class="ic">🏆</span><h3>سکوی قهرمانی فصل</h3><span class="tag">FedEx Style</span><span id="pub-state" style="font-size:10.5px;font-weight:700;margin-right:8px">⚪ در انتظار</span>${storyBtn('st-podium')}</div>
         <div class="podium">
           ${[1,0,2].map(k => {
@@ -544,7 +557,7 @@
           }).join('')}
         </div>
       </div>
-      <div class="glass tilt">
+      <div data-acc="cmd.phases" class="glass tilt">
         <div class="card-head"><span class="ic">⚡</span><h3>قهرمانان فازها</h3><span class="tag">Phase</span></div>
         ${(() => {
           const curPh = D.jalaliInfo(D.now()).season;   /* فاز جاری فصل */
@@ -573,7 +586,7 @@
       </div>
     </div>
     <div class="grid cols-2" style="margin-top:18px">
-      <div class="glass tilt">
+      <div data-acc="cmd.monthly" class="glass tilt">
         <div class="card-head"><span class="ic">📈</span><h3>امتیاز ماهانه فصل</h3><span class="tag">Monthly</span>
           <span style="margin-right:auto;display:flex;gap:6px;align-items:center">
             <button class="btn sm ghost" id="cm-pick" style="padding:5px 12px" aria-haspopup="dialog" aria-expanded="false">📅 <b id="cm-pick-lbl">${cmMonth}</b> <span style="opacity:.6">▾</span></button>
@@ -589,7 +602,7 @@
         </div>
         <div class="cm-foot" id="cm-foot"></div>
       </div>
-      <div class="glass">
+      <div data-acc="cmd.live" class="glass">
         <div class="card-head"><span class="ic">🏁</span><h3>رقابت زنده — ده نفر برتر</h3><span class="tag">Live</span></div>
         <table class="tbl"><thead><tr><th>#</th><th>بازیکن</th><th>رنک</th><th>امتیاز</th><th>تغییر</th><th>فرم</th></tr></thead><tbody>
         ${(() => { const T = tvLB().LB; return (T.length ? T.slice(0,10).map(r => `<tr class="top${r.rank<=3?r.rank:0}">
@@ -1269,14 +1282,14 @@ const sp = $('#st-podium');
       <span class="chip dim">🌱 توسعه (۹+) — ${D.fa(dev)}</span>
     </div>
     <div class="grid cols-3">
-      <div class="glass tilt" style="grid-column:span 2">
+      <div data-acc="race.table" class="glass tilt" style="grid-column:span 2">
         <div class="card-head"><span class="ic">🏁</span><h3>جدول ${esc(L('nav.race','رقابت فصل'))} ${D.fa(yr)}</h3><span class="tag">FedEx Cup</span></div>
         <div style="overflow-x:auto"><table class="tbl" id="race-tbl"><thead><tr>
           <th>#</th><th>بازیکن</th><th>رنک</th><th>امتیاز</th><th>پیشرفت طلایی</th><th>تغییر</th><th>برد</th><th>میانگین</th><th>پرنده</th><th>فرم</th>
         </tr></thead><tbody></tbody></table></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:18px">
-        <div class="glass">
+        <div data-acc="race.zones" class="glass">
           <div class="card-head"><span class="ic">💎</span><h3>مناطق واجد شرایط</h3><span class="tag">Lock / Open</span></div>
           ${[
             {n:'منطقه قهرمانی', c:'gold', v:gold, mx:3},
@@ -1287,7 +1300,7 @@ const sp = $('#st-podium');
             ${pbar(z.v/z.mx*100, z.c)}
           </div>`).join('')}
         </div>
-        <div class="glass">
+        <div data-acc="race.top" class="glass">
           <div class="card-head"><span class="ic">⚔️</span><h3>نبرد صدر جدول</h3><span class="tag">Top Race</span></div>
           <div style="display:flex;align-items:flex-end;gap:16px;justify-content:center;padding-top:8px">
             ${LB.slice(0,3).map(r => `
@@ -1500,6 +1513,11 @@ const sp = $('#st-podium');
       return;
     }
     if (!selfGate(v)) return;
+    if (window.GA_SUB && currentUser){
+      const okTab = GA_SUB.pickTab(currentUser, 'player', ['classic','smart'], playerTab);
+      if (!okTab){ v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🔒 بخش‌های «${esc(L('nav.player','مرکز بازیکن'))}» در پلن شما فعال نیست.</div>`; return; }
+      playerTab = okTab;
+    }
     const _me = selfPid();
     const livePid = (playerTab === 'smart') ? lastOpenShotPid() : null;
     if (livePid && (_me === null || livePid === _me)) playerSel = livePid;
@@ -1517,8 +1535,8 @@ const sp = $('#st-podium');
     const BARS_SVG = '<svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>';
     const TABS = `
     <div class="seg" role="tablist" aria-label="بخش‌های مرکز بازیکن">
-      <button type="button" class="seg-btn ${playerTab==='classic'?'on':''}" id="pl-tab-classic" role="tab" aria-selected="${playerTab==='classic'}">${BARS_SVG}<span>مرکز بازیکن</span></button>
-      <button type="button" class="seg-btn ${playerTab==='smart'?'on':''}" id="pl-tab-smart" role="tab" aria-selected="${playerTab==='smart'}">${SPARK_SVG}<span>بازیکن هوشمند</span><span class="seg-new">جدید</span></button>
+      <button data-acc="player.classic" type="button" class="seg-btn ${playerTab==='classic'?'on':''}" id="pl-tab-classic" role="tab" aria-selected="${playerTab==='classic'}">${BARS_SVG}<span>مرکز بازیکن</span></button>
+      <button data-acc="player.smart" type="button" class="seg-btn ${playerTab==='smart'?'on':''}" id="pl-tab-smart" role="tab" aria-selected="${playerTab==='smart'}">${SPARK_SVG}<span>بازیکن هوشمند</span><span class="seg-new">جدید</span></button>
     </div>`;
     if (playerTab === 'smart'){ renderSmartPlayer(v, p, cards, TABS); return; }
     v.innerHTML = TABS + `<style>
@@ -1534,13 +1552,13 @@ const sp = $('#st-podium');
       ${honorChip(playerSel)}
       ${rankPill(p.color)}
     </div>
-    <div class="grid cols-3" id="pl-stats" style="margin-bottom:18px"></div>
+    <div data-acc="player.classic.stats" class="grid cols-3" id="pl-stats" style="margin-bottom:18px"></div>
     <div class="grid cols-3">
-      <div class="glass tilt">
+      <div data-acc="player.classic.radar" class="glass tilt">
         <div class="card-head"><span class="ic">🕸️</span><h3>رادار مهارت</h3><span class="tag">۰–۱۰۰</span></div>
         <div class="chart-box"><canvas id="pl-radar"></canvas></div>
       </div>
-      <div class="glass">
+      <div data-acc="player.classic.dist" class="glass">
         <div class="card-head"><span class="ic">🍩</span><h3>توزیع اسکور</h3><span class="tag">Per Hole</span></div>
         <div style="display:flex;align-items:center;gap:16px">
           <div class="chart-box short" style="flex:1"><canvas id="pl-donut"></canvas></div>
@@ -1550,12 +1568,12 @@ const sp = $('#st-podium');
           </div>
         </div>
       </div>
-      <div class="glass">
+      <div data-acc="player.classic.gold" class="glass">
         <div class="card-head"><span class="ic">💎</span><h3>پیشرفت Gold Elite</h3><span class="tag">${D.faNum(p.pts,0)} / ${D.fa(D.GOLD_ELITE)}</span></div>
         <div class="chart-box short"><canvas id="pl-gold"></canvas></div>
         <div style="text-align:center;font-size:12px;color:var(--muted)">${D.faNum(p.pts,0)} امتیاز — فاصله تا طلایی: ${D.fa(Math.max(0, D.GOLD_ELITE - p.pts))} امتیاز</div>
       </div>
-      <div class="glass" style="grid-column:span 3" id="pp-card">
+      <div data-acc="player.classic.pie" class="glass" style="grid-column:span 3" id="pp-card">
         <div class="card-head"><span class="ic">🍩</span><h3>تحلیل دایره‌ای نتیجهٔ تمرین</h3><span class="tag" id="pp-tag">صاف • سمت راست • سمت چپ • خطا</span></div>
         <div class="fold-body">
         <div class="toolbar" style="margin-bottom:8px">
@@ -1583,7 +1601,7 @@ const sp = $('#st-podium');
         </div>
         </div>
       </div>
-      <div class="glass" style="grid-column:span 3" id="pa-card">
+      <div data-acc="player.classic.clubs" class="glass" style="grid-column:span 3" id="pa-card">
         <div class="card-head"><span class="ic">🧪</span><h3>آنالیز بزرگ تمرین — نمودار دایره‌ای هر کلاب</h3><span class="tag" id="pa-tag">همهٔ گروه‌های تمرین</span></div>
         <div class="fold-body">
         <div class="toolbar" style="margin-bottom:8px;align-items:center">
@@ -1606,15 +1624,15 @@ const sp = $('#st-podium');
         <div id="pa-body" class="pa-body"></div>
         </div>
       </div>
-      <div class="glass" style="grid-column:span 2">
+      <div data-acc="player.classic.monthly" class="glass" style="grid-column:span 2">
         <div class="card-head"><span class="ic">📊</span><h3>امتیاز ماهانه</h3><span class="tag">Monthly</span></div>
         <div class="chart-box short"><canvas id="pl-month"></canvas></div>
       </div>
-      <div class="glass">
+      <div data-acc="player.classic.cumul" class="glass">
         <div class="card-head"><span class="ic">📈</span><h3>تجمعی فصل</h3><span class="tag">Cumulative</span></div>
         <div class="chart-box short"><canvas id="pl-cum"></canvas></div>
       </div>
-      <div class="glass" style="grid-column:span 3" id="pl-holes-card">
+      <div data-acc="player.classic.holes" class="glass" style="grid-column:span 3" id="pl-holes-card">
         <div class="card-head"><span class="ic">⛳</span><h3>ضربات حفره‌به‌حفره — آخرین مسابقه</h3><span class="tag">Hole by Hole</span></div>
         <div class="fold-body">
         <div class="chart-box"><canvas id="pl-holes"></canvas></div>
@@ -1991,11 +2009,11 @@ const sp = $('#st-podium');
       ${honorChip(p.pid)}
     </div>`;
     v.innerHTML = TABS + selBar + `
-    <div class="glass" id="sp-live">
+    <div data-acc="player.smart.live" class="glass" id="sp-live">
       <div class="card-head"><span class="ic">${CHART_SVG}</span><h3>آنالیز آخرین ضربه‌ها — ${esc(p.name)}</h3><span class="tag gold">Live</span><button type="button" class="sp-refresh" id="sp-live-refresh" title="تازه‌سازی نمودار" aria-label="تازه‌سازی نمودار"><svg class="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button></div>
       <div id="sp-live-body"></div>
     </div>
-    <div class="glass" id="sp-hist">
+    <div data-acc="player.smart.archive" class="glass" id="sp-hist">
       <div class="card-head"><span class="ic">${ARCHIVE_SVG}</span><h3>آرشیو نمودار جلسات تمام‌شده</h3><span class="tag"></span></div>
       <div class="toolbar" style="margin-bottom:4px">
         <span class="lbl">🏌️ بازیکن:</span>
@@ -2009,7 +2027,7 @@ const sp = $('#st-podium');
       </div>
       <div id="sph-body"></div>
     </div>
-    <div class="sp-notes-sec">
+    <div data-acc="player.smart.notes" class="sp-notes-sec">
       <div class="card-head" style="margin:16px 2px 10px">
         <span class="ic">🗒</span><h3 style="font-size:14px">یادداشت‌های مربی</h3>
         <span class="tag">وابسته به فیلترهای بالا (بازیکن • نوع تمرین • کلاب)</span>
@@ -2329,9 +2347,9 @@ const sp = $('#st-podium');
       <div style="flex:1"></div>
       <span class="chip ${D.dateFrom(t[5]) >= D.TODAY ? 'blue' : 'green'}">${D.dateFrom(t[5]) >= D.TODAY ? 'آینده' : 'برگزار شده'}</span>
     </div>
-    <div class="grid cols-4" id="mt-stats" style="margin-bottom:18px"></div>
+    <div data-acc="match.stats" class="grid cols-4" id="mt-stats" style="margin-bottom:18px"></div>
     <div class="grid cols-3">
-      <div class="glass tilt" style="grid-column:span 2">
+      <div data-acc="match.results" class="glass tilt" style="grid-column:span 2">
         <div class="card-head"><span class="ic">📋</span><h3>نتایج بازیکنان</h3><span class="tag">${esc(t[1])}</span></div>
         <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>رتبه</th><th>بازیکن</th><th>ضربات</th><th>پار</th><th>در برابر پار</th><th>پرنده</th><th>نتیجه</th><th>امتیاز</th></tr></thead><tbody>
         ${cards.map((c, i) => {
@@ -2352,11 +2370,11 @@ const sp = $('#st-podium');
         </tbody></table></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:18px">
-        <div class="glass">
+        <div data-acc="match.birdies" class="glass">
           <div class="card-head"><span class="ic">🐦</span><h3>پرندههای هر بازیکن</h3><span class="tag">Birdies</span></div>
           <div class="chart-box short"><canvas id="mt-bird"></canvas></div>
         </div>
-        <div class="glass">
+        <div data-acc="match.hardest" class="glass">
           <div class="card-head"><span class="ic">🌋</span><h3>سختترین حفرهها</h3><span class="tag">Avg vs Par</span></div>
           <div class="chart-box short"><canvas id="mt-hard"></canvas></div>
           ${hardest ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">سختترین: <b style="color:${D.SCALE ? D.SCALE[5] : '#8B1A1A'}">${esc(D.holeName ? D.holeName(hardest.h) : ('میدان '+D.fa(hardest.h)))}</b> — میانگین ${hardest.d>0?'+':''}${D.fa(hardest.d.toFixed(2))} نسبت به پار</div>` : ''}
@@ -2434,7 +2452,7 @@ const sp = $('#st-podium');
       <span class="chip blue">${D.fa(holes)} حفره • پار ${D.fa(pars.slice(0,holes).reduce((a,b)=>a+b,0))}</span>
     </div>
     <div class="earth-layout">
-      <div class="glass earth-pane">
+      <div data-acc="course.map" class="glass earth-pane">
         <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین — ${esc(crs[1])}</h3><span class="tag">تصویر ماهواره</span></div>
         <div class="earth-stage" dir="ltr">
           <div id="earth-map" class="earth-map" dir="ltr"></div>
@@ -2487,7 +2505,7 @@ const sp = $('#st-podium');
           <span id="earth-geo-hint" style="font-size:12px;color:var(--muted);line-height:1.5"></span>
         </div>
       </div>
-      <div class="glass earth-pa">
+      <div data-acc="course.practice" class="glass earth-pa">
         <div class="card-head"><span class="ic">🧪</span><h3>آنالیز تمرین — ${pl ? esc(pl.name) : ''}</h3><span class="tag" id="earth-pa-tag">نمودار کلاب</span></div>
         <div class="earth-tools" style="margin-top:8px">
           <label class="lbl">🔢 تعداد تمرین</label>
@@ -2503,9 +2521,9 @@ const sp = $('#st-podium');
         <div id="earth-pa-body" class="pa-body"></div>
       </div>
     </div>
-    <div class="grid cols-4" id="cs-stats" style="margin-bottom:18px"></div>
+    <div data-acc="course.stats" class="grid cols-4" id="cs-stats" style="margin-bottom:18px"></div>
     <div class="grid cols-3">
-      <div class="glass" style="grid-column:span 2">
+      <div data-acc="course.holes" class="glass" style="grid-column:span 2">
         <div class="card-head"><span class="ic">🌋</span><h3>سختی حفرهها در این زمین</h3><span class="tag">${esc(crs[1])}</span></div>
         <div class="chart-box tall"><canvas id="cs-hard"></canvas></div>
         <div class="scale-legend" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted)">
@@ -2514,7 +2532,7 @@ const sp = $('#st-podium');
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:18px">
-        <div class="glass">
+        <div data-acc="course.card" class="glass">
           <div class="card-head"><span class="ic">🏌️</span><h3>کارنامه ${pl ? esc(pl.name) : ''}</h3><span class="tag">Course Record</span></div>
           ${recs.length ? `<table class="tbl"><thead><tr><th>مسابقه</th><th>ضربات</th><th>vs پار</th><th>رتبه</th><th>نتیجه</th></tr></thead><tbody>
           ${recs.map(r => `<tr>
@@ -2523,7 +2541,7 @@ const sp = $('#st-podium');
             <td class="num">${D.fa(r.rank)}</td><td>${r.rank===1?'<span class="chip gold">قهرمان</span>':'<span class="chip dim">'+esc(r.result)+'</span>'}</td>
           </tr>`).join('')}</tbody></table>` : '<div style="color:var(--muted);font-size:12.5px">این بازیکن هنوز در این زمین مسابقهای نداشته است.</div>'}
         </div>
-        <div class="glass">
+        <div data-acc="course.fit" class="glass">
           <div class="card-head"><span class="ic">🗺️</span><h3>میانگین بازیکن در زمینها</h3><span class="tag">Course Fit</span></div>
           <div class="chart-box short"><canvas id="cs-fit"></canvas></div>
         </div>
@@ -2624,7 +2642,7 @@ const sp = $('#st-podium');
       console.error('pageCourse', err);
       try {
         if (v && !v.querySelector('#earth-map')){
-          v.innerHTML = `<div class="glass earth-pane" style="padding:0">
+          v.innerHTML = `<div data-acc="course.map" class="glass earth-pane" style="padding:0">
             <div class="card-head"><span class="ic">🛰</span><h3>نقشهٔ زمین</h3></div>
             <div class="earth-stage" dir="ltr"><div id="earth-map" class="earth-map" dir="ltr"></div></div>
           </div>`;
@@ -2670,9 +2688,9 @@ const sp = $('#st-podium');
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;border-radius:12px;border:1px solid rgba(212,175,55,.4);background:linear-gradient(90deg,rgba(212,175,55,.1),rgba(30,187,138,.06));font-size:12.5px;color:var(--text,#dfe8f2)">
       🏆 <b style="color:#f0d989">رکورد امتیاز گلف:</b> هر مسابقه ۱۸ حفره و پار ۷۲ است؛ <b style="color:#7ee8b8">کمترین مجموع ضربات برنده است</b> — رکورد فصل متعلق به کمترین ضربه در یک دور کامل است.
     </div>
-    <div class="grid cols-4" id="rec-champs" style="margin-bottom:18px"></div>
+    <div data-acc="records.champs" class="grid cols-4" id="rec-champs" style="margin-bottom:18px"></div>
     <div class="grid cols-3">
-      <div class="glass tilt" style="grid-column:span 2">
+      <div data-acc="records.best" class="glass tilt" style="grid-column:span 2">
         <div class="card-head"><span class="ic">🏅</span><h3>بهترین دورهای فصل</h3><span class="tag">Best Rounds</span></div>
         <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>بازیکن</th><th>مسابقه</th><th>مجموع</th><th>در برابر پار</th></tr></thead><tbody>
         ${A.BEST_ROUNDS.slice(0,12).map((r,i) => `<tr class="${i===0?'top1':i===1?'top2':i===2?'top3':''}">
@@ -2681,7 +2699,7 @@ const sp = $('#st-podium');
           <td class="num" style="color:${r.vspar<=0?'var(--green-l)':'#ff8f82'};font-weight:800">${r.vspar>0?'+':''}${D.fa(r.vspar)}</td>
         </tr>`).join('')}</tbody></table></div>
       </div>
-      <div class="glass">
+      <div data-acc="records.podium" class="glass">
         <div class="card-head"><span class="ic">🏆</span><h3>سکوی فصل</h3><span class="tag">Champions</span></div>
         <div class="podium" style="transform:scale(.85);transform-origin:top center;padding:8px 0 0">
           ${(() => { const RLB = raceLB().LB; return [1,0,2].map(k => {
@@ -2777,7 +2795,7 @@ const sp = $('#st-podium');
     }
 
     v.innerHTML = `
-    <div class="glass gold-border" style="margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div data-acc="cal.next" class="glass gold-border" style="margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <img src="assets/ball_3d.webp" class="floaty fast glow-img green" style="width:64px;height:64px;border-radius:14px;object-fit:cover" alt="">
       <div>
         <div style="font-size:12px;color:var(--muted)">رویداد بعدی</div>
@@ -2799,7 +2817,7 @@ const sp = $('#st-podium');
 
     <div class="cal-main">
       <!-- لیست رویدادها -->
-      <div class="glass cal-list-pane">
+      <div data-acc="cal.events" class="glass cal-list-pane">
         <div class="card-head"><span class="ic">📋</span><h3>رویدادها</h3>
           <span style="margin-right:auto;display:flex;gap:5px;flex-wrap:wrap">
             ${['all', ...TYPES].map(f => `<button class="btn sm ghost cal-f ${f==='all'?'on':''}" data-f="${f}" style="padding:3px 8px;font-size:10.5px">${f==='all'?'همه':(TYPE_ICON[f]||'') + f}</button>`).join('')}
@@ -2808,7 +2826,7 @@ const sp = $('#st-podium');
         <div id="cal-events-list" class="cal-events-list"></div>
       </div>
       <!-- تقویم ماه -->
-      <div class="glass cal-grid-pane">
+      <div data-acc="cal.month" class="glass cal-grid-pane">
         <div class="card-head"><span class="ic">🇮🇷</span>
           <h3>تقویم <span id="cal-month-name"></span></h3>
           <span class="tag">فصل ${D.fa(D.seasonYear)}</span>
@@ -3142,7 +3160,7 @@ const stCal = $('#st-cal');
     const maxT = Math.max(...teams.map(t=>t.pts), 1);
     const totalMembers = B.teams.reduce((a,t)=>a+(t.members||[]).length,0);
     v.innerHTML = `
-    <div class="glass gold-border" style="display:flex;align-items:center;gap:16px;margin-bottom:18px;flex-wrap:wrap">
+    <div data-acc="battle.header" class="glass gold-border" style="display:flex;align-items:center;gap:16px;margin-bottom:18px;flex-wrap:wrap">
       <img src="assets/flag_3d.webp" class="floaty glow-img" style="width:70px;height:70px;border-radius:14px;object-fit:cover" alt="">
       <div>
         <h2 style="font-size:21px;font-weight:900" class="gold-text">${esc(L('nav.battle','میدان نبرد'))} — جدال تیمها</h2>
@@ -3150,7 +3168,7 @@ const stCal = $('#st-cal');
       </div>
       <div style="margin-right:auto" class="chip ${B.settings.seasonEnabled?'green':'orange'}">${B.settings.seasonEnabled?'🔴 فصل در جریان':'نتیجه روی فصل اثر ندارد'}</div>
     </div>
-    <div class="grid cols-2" style="margin-bottom:18px">
+    <div data-acc="battle.teams" class="grid cols-2" style="margin-bottom:18px">
       ${teams.map(t => `
         <div class="glass tilt" style="border-color:${t.color}44">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
@@ -3177,11 +3195,11 @@ const stCal = $('#st-cal');
         </div>`).join('')}
     </div>
     <div class="grid cols-2">
-      <div class="glass">
+      <div data-acc="battle.score" class="glass">
         <div class="card-head"><span class="ic">🏆</span><h3>امتیاز تیمها</h3><span class="tag">Team Race</span></div>
         <div class="chart-box"><canvas id="bt-chart"></canvas></div>
       </div>
-      <div class="glass">
+      <div data-acc="battle.duels" class="glass">
         <div class="card-head"><span class="ic">🔥</span><h3>جدالهای نبرد</h3><span class="tag">${D.fa(matches.length)} جدال</span></div>
         ${matches.length ? matches.map(m => {
           if (!m.home || !m.away) return '';
@@ -3401,9 +3419,9 @@ const stCal = $('#st-cal');
     ];
     const rc = D.RANK_DEF.slice().reverse();
     v.innerHTML = `
-    <div class="grid cols-4" id="ac-kpis" style="margin-bottom:18px"></div>
+    <div data-acc="academy.kpis" class="grid cols-4" id="ac-kpis" style="margin-bottom:18px"></div>
     <div class="grid cols-3">
-      <div class="glass">
+      <div data-acc="academy.ranks" class="glass">
         <div class="card-head"><span class="ic">🏅</span><h3>ترکیب رنکهای فصل</h3><span class="tag">Distribution</span></div>
         ${rc.map(rk => `
           <div style="margin-bottom:13px">
@@ -3413,7 +3431,7 @@ const stCal = $('#st-cal');
             ${pbar(A.RANK_COUNT[rk[0]]/A.LB.length*100, rk[0]==='Gold Elite'?'gold':rk[0]==='Red'?'red':rk[0]==='Blue'?'blue':'')}
           </div>`).join('')}
       </div>
-      <div class="glass" style="grid-column:span 2">
+      <div data-acc="academy.glance" class="glass" style="grid-column:span 2">
         <div class="card-head"><span class="ic">🚀</span><h3>آکادمی در یک نگاه — پیام سرپرست</h3><span class="tag">Coach Desk</span></div>
         ${[
           `✅ فصل ${D.fa(D.seasonYear)} با ${D.fa(A.MATCHES_HELD)} مسابقه، ${D.fa(A.COURSE_COUNT)} دوره در جریان است.`,
@@ -3531,9 +3549,10 @@ const stCal = $('#st-cal');
     const tabs = [
       ['home','🏠',L('member.home','خانهٔ من')], ['earn','🪙',L('member.earn','دریافت سکه')],
       ['guide','📜',L('member.guide','راهنمای سکه')], ['avatar','🎨',L('member.avatar','ساخت آواتار')],
-    ];
+    ].filter(t => !window.GA_SUB || GA_SUB.canSee(currentUser, 'memberzone.' + t[0]));
+    if (tabs.length && !tabs.some(t => t[0] === memTab)) memTab = tabs[0][0];
     v.innerHTML = `
-    <div class="glass gold-border" style="margin-bottom:16px;padding:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div data-acc="memberzone.header" class="glass gold-border" style="margin-bottom:16px;padding:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <div style="width:74px;height:74px;border-radius:50%;overflow:hidden;border:3px solid ${hn.rank.border};box-shadow:0 0 26px -4px ${hn.rank.glow};display:flex;align-items:flex-end;justify-content:center;background:radial-gradient(120% 80% at 50% 0%, ${hn.rank.bg3}, ${hn.rank.bg1})">
         ${AV.renderAvatarSVG(AV.avatarOf(currentUser, genderOfUser(currentUser)).sel, { gender: AV.avatarOf(currentUser).gender, w:66, h:110 })}
       </div>
@@ -3552,7 +3571,8 @@ const stCal = $('#st-cal');
     <div id="mz-body"></div>`;
     v.querySelectorAll('[data-mtab]').forEach(t => t.addEventListener('click', () => { memTab = t.dataset.mtab; pageMemberZone(); }));
     const body = $('#mz-body');
-    if (memTab === 'home') memHome(body, { rec, name, pid, row, coin, hn });
+    if (!tabs.length) body.innerHTML = `<div class="glass" style="padding:28px;text-align:center;color:var(--muted)">🔒 بخشی از «${esc(L('nav.memberzone','بخش اعضا'))}» در پلن شما فعال نیست.</div>`;
+    else if (memTab === 'home') memHome(body, { rec, name, pid, row, coin, hn });
     else if (memTab === 'earn') memEarn(body, { coin });
     else if (memTab === 'guide') memGuide(body, { hn });
     else if (memTab === 'avatar') memAvatar(body, { coin, hn, name });
@@ -3587,23 +3607,17 @@ const stCal = $('#st-cal');
   }
 
   function memHome(body, o){
-    const s = MGMT.getSettings();
-    const enabled = [];
-    Object.keys(MEM_PAGE_KEY).forEach(pg => {
-      if (!s[MEM_PAGE_KEY[pg]]) return;
-      if (window.GA_SUB && currentUser && !GA_SUB.canPage(currentUser, pg)) return;
-      enabled.push(pg);
-    });
+    const enabled = MEMBER_PAGE_ORDER.filter(pg => memberPageOn(userRec(currentUser), pg));
     const names = Object.fromEntries(MEMBER_PAGE_ORDER.map(pg => [pg, PAGES[pg].t]));
     const pend = AV.reqsOf(currentUser).filter(r => r.status === 'pending').length;
     body.innerHTML = `
     <div class="grid cols-3">
-      <div class="glass" style="text-align:center">
+      <div data-acc="memberzone.home.rank" class="glass" style="text-align:center">
         <div class="card-head"><span class="ic">🏅</span><h3>کارت رنک من</h3><span class="tag">Honor Rank</span>${RANK_GUIDE.iconButton('توضیحات رنک‌ها و پیش‌نیاز لول بعدی')}</div>
         <div style="margin-top:10px;display:flex;justify-content:center">${honorCardHTML(currentUser, o.name, 'md', 'mz-card')}</div>
         ${honorProgHTML(o.hn)}
       </div>
-      <div class="glass tilt">
+      <div data-acc="memberzone.home.season" class="glass tilt">
         <div class="card-head"><span class="ic">🏌️</span><h3>وضعیت من در فصل</h3><span class="tag">${D.fa(D.seasonYear)}</span></div>
         ${o.row ? `
           <div style="display:flex;justify-content:space-between;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px"><span style="color:var(--muted)">رتبه در فصل</span><b class="gold-text">${D.fa(o.row.rank)}</b></div>
@@ -3616,7 +3630,7 @@ const stCal = $('#st-cal');
         </div>
         ${pend ? `<div style="margin-top:9px;font-size:11.5px;color:#ffcf6b;text-align:center">⏳ ${D.fa(pend)} درخواست سکهٔ شما در انتظار تأیید مدیریت است</div>` : ''}
       </div>
-      <div class="glass">
+      <div data-acc="memberzone.home.sections" class="glass">
         <div class="card-head"><span class="ic">🗂️</span><h3>بخش‌های فعال‌شده برای شما</h3><span class="tag">دسترسی‌ها</span></div>
         ${enabled.length ? `
           <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:10px">
@@ -3663,13 +3677,13 @@ const stCal = $('#st-cal');
     });
     const mine = AV.reqsOf(currentUser).slice(0, 12);
     body.innerHTML = `
-    ${c.auto ? `<div class="glass" style="margin-bottom:14px;padding:13px 16px;background:linear-gradient(135deg,rgba(30,187,138,.14),rgba(30,187,138,.04));border:1px solid rgba(30,187,138,.4);font-size:13px">🏆 سکه‌های قهرمانی شما (خودکار): <b>+${D.fa(c.auto)} 🪙</b> از ${D.fa(auto.length)} قهرمانی — با تغییر نتایج مسابقات، این عدد هم به‌روز می‌شود.</div>` : ''}
-    <div class="glass" style="margin-bottom:16px">
+    ${c.auto ? `<div data-acc="memberzone.earn.auto" class="glass" style="margin-bottom:14px;padding:13px 16px;background:linear-gradient(135deg,rgba(30,187,138,.14),rgba(30,187,138,.04));border:1px solid rgba(30,187,138,.4);font-size:13px">🏆 سکه‌های قهرمانی شما (خودکار): <b>+${D.fa(c.auto)} 🪙</b> از ${D.fa(auto.length)} قهرمانی — با تغییر نتایج مسابقات، این عدد هم به‌روز می‌شود.</div>` : ''}
+    <div data-acc="memberzone.earn.request" class="glass" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">🪙</span><h3>دریافت سکه — ارسال درخواست به مدیریت</h3><span class="tag">سکهٔ من: ${D.fa(c.total)}</span></div>
       <div class="golfrule" style="margin:8px 0 12px;line-height:2">📝 با زدن «ارسال درخواست»، درخواست شما به <b>${esc(L('nav.mgmt','پنل مدیریت'))}</b> می‌رود. سکه فقط پس از <b>تأیید مدیر</b> به کیف‌پول شما اضافه می‌شود.</div>
       <div style="margin-top:10px">${rows}</div>
     </div>
-    <div class="glass" style="margin-bottom:16px">
+    <div data-acc="memberzone.earn.mine" class="glass" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">📨</span><h3>درخواست‌های من</h3><span class="tag">${D.fa(mine.length)} مورد</span></div>
       ${mine.length ? mine.map(r => `
         <div class="req-row">
@@ -3680,7 +3694,7 @@ const stCal = $('#st-cal');
           <span style="font-size:11px;color:var(--muted)">${esc(D.faDate ? D.faDate(r.date) : r.date)}</span>
         </div>`).join('') : `<div style="color:var(--muted);font-size:12.5px;padding:8px">هنوز درخواستی نداده‌اید.</div>`}
     </div>
-    <div class="glass">
+    <div data-acc="memberzone.earn.auto" class="glass">
       <div class="card-head"><span class="ic">🏆</span><h3>سکه‌های خودکار مسابقات</h3><span class="tag" id="mz-auto-tag">${D.fa(c.auto || 0)} 🪙 از ${D.fa(auto.length)} قهرمانی</span></div>
       <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:2">
         قهرمانی در مسابقات به‌صورت خودکار و بدون نیاز به تأیید، برای شما سکه می‌سازد:<br>
@@ -3717,13 +3731,13 @@ const stCal = $('#st-cal');
       rows += `<div class="row"><span class="pnm"><span style="font-size:20px">${r.ic}</span><span>${esc(r.title)}</span></span><span style="font-weight:900;color:#f6e27a">+${D.fa(r.amount)} 🪙</span></div>`;
     });
     body.innerHTML = `
-    <div class="glass" style="margin-bottom:16px">
+    <div data-acc="memberzone.guide.table" class="glass" style="margin-bottom:16px">
       <div class="card-head"><span class="ic">📜</span><h3>اطلاعات دریافت سکه — جدول کامل</h3><span class="tag">GolfCoin 🪙</span></div>
       <div style="margin-top:10px">${rows}</div>
       <div class="golfrule" style="margin-top:14px;line-height:2">🪙 <b>سکه چیست؟</b> سکه‌های آکادمی را از فعالیت‌های ورزشی و اجتماعی به دست می‌آورید و در <b>فروشگاه اوتار</b> خرج می‌کنید. هر خرید برای همیشه در کمد شما می‌ماند. خودت طراحی کن، ایده بگیر و استایل مخصوص خودت را بساز!</div>
       <div class="golfrule" style="margin-top:10px;line-height:2">⏳ همهٔ درخواست‌های سکه، پس از بررسی و <b>تأیید مدیریت</b> اعمال می‌شوند.</div>
     </div>
-    <div class="rg-launch">
+    <div data-acc="memberzone.guide.ranks" class="rg-launch">
       ${RANK_GUIDE.iconButton('نمایش راهنمای رنک‌ها و مسیر شخصی ارتقاء')}
       <div><h3>توضیحات رنک‌ها و مسیر ارتقاء</h3><p>فهرست کامل ۱۵ رنک، نشان‌ها، امتیازها و افتخارات موردنیاز را ببینید. بالای راهنما مشخص است برای لول بعدی چه کمبودهایی دارید و چه مسیرهای معادلی می‌توانید انتخاب کنید.</p></div>
     </div>`;
@@ -4096,7 +4110,7 @@ const stCal = $('#st-cal');
     course: pageCourse, records: pageRecords, cal: pageCal, tv: pageTv,
     battle: pageBattle, academy: pageAcademy, avatarland: pageAvatarLand,
     acourses: pageACourses, atournaments: pageATours, ascorecards: pageAScorecards,
-    mgmt: () => MGMT.pageMgmt(), users: () => MGMT.pageUsers(), subs: () => MGMT.pageSubs(), settings: () => MGMT.pageSettings(),
+    mgmt: () => MGMT.pageMgmt(), users: () => MGMT.pageUsers(), subs: () => MGMT.pageSubs(), settings: () => MGMT.pageSubs(),
     messages: () => MGMT.pageMessages(),
     backup: () => { if (window.GA_BACKUP) GA_BACKUP.page(); },
   };
@@ -4192,7 +4206,7 @@ const stCal = $('#st-cal');
       let show = false;
       if (knownRole && member){
         if (p === 'memberzone') show = true;
-        else show = !!settings[MEM_PAGE_KEY[p]];
+        else show = memberPageOn(rec, p);
       }
       else if (knownRole && rec.role === 'admin'){
         if (p === 'memberzone') show = false;

@@ -18,6 +18,7 @@ const FIXTURE = {
   ga_avatars: { p1: { v6: 1, gender: 'm', sel: {}, owned: [], lvl: 8 } },   // قالب v6 و سطحِ هم‌خوان با نتایج داخلی تا به‌روزرسانی واقعی یک‌باره رخ ندهد
   ga_coins: { p1: { total: 40, log: [], v7auto: 1 } },
   ga_email_cfg: { key: 'qa', svc: 'qa', tpl: 'template_qa' },
+  ga_sp_sessions: { sqa1: { id: 'sqa1', pid: 1, status: 'closed', openedAt: '2026-09-01T10:00:00.000Z', closedAt: '2026-09-01T11:00:00.000Z' }, sqa2: { id: 'sqa2', pid: 2, status: 'closed', openedAt: '2026-09-02T10:00:00.000Z', closedAt: '2026-09-02T11:00:00.000Z' } },
 };
 const ACCOUNTS = [
   { id: 1, user: 'admin', pass: 'Admin-Pass-QA1', name: 'مدیر آکادمی', role: 'admin', main: true },
@@ -120,6 +121,19 @@ const ok = (c, m) => { if (c) pass++; else fail++; console.log((c ? 'PASS' : 'FA
     const ls = await allStorage(page);
     ok(JSON.parse(ls.ga_battle).teams[0].name === 'تیم واقعی ابر', 'نبرد میدان‌ها روی دستگاه مدیر هم همان مقدار ابر است');
     ok(kv.every(e => e.uid === 'uid-admin'), 'نوشتن‌های مدیر با توکن مدیر');
+    // همان داده با ترتیب دیگری از کلیدها دوباره ذخیره شود (رفتار واقعی ga_sp_sessions روی پنل زنده) → ارسال نشود
+    const n0 = cloud.log.filter(e => e.kind === 'sync' && e.action === 'kv').length;
+    await page.evaluate(() => { const o = JSON.parse(localStorage.getItem('ga_sp_sessions')); const r = {}; Object.keys(o).reverse().forEach(k => { const x = o[k], y = {}; Object.keys(x).reverse().forEach(f => { y[f] = x[f]; }); r[k] = y; }); localStorage.setItem('ga_sp_sessions', JSON.stringify(r)); });
+    await page.waitForTimeout(5000);
+    ok(cloud.log.filter(e => e.kind === 'sync' && e.action === 'kv').length === n0, 'ذخیرهٔ دوبارهٔ همان مقدار با ترتیب دیگر (ga_sp_sessions) ارسال نشد');
+    // تغییر موقت و برگشت پیش از ارسال (رفتار restoreLegacyPractice/stripSp هنگام ورود) → درخواستی نرود
+    await page.evaluate(() => { const raw = localStorage.getItem('ga_sp_sessions'); const o = JSON.parse(raw); o.legacyTmp = { id: 'legacyTmp', pid: 3, status: 'closed' }; localStorage.setItem('ga_sp_sessions', JSON.stringify(o)); setTimeout(() => localStorage.setItem('ga_sp_sessions', raw), 300); });
+    await page.waitForTimeout(5000);
+    ok(cloud.log.filter(e => e.kind === 'sync' && e.action === 'kv').length === n0, 'تغییر موقتی که پیش از ارسال برگشت، ارسال نشد');
+    ok(await page.evaluate(() => !JSON.parse(localStorage.getItem('ga_cloud_dirty') || '{}').ga_sp_sessions), 'و از صف هم خارج شد');
+    await page.evaluate(() => { const o = JSON.parse(localStorage.getItem('ga_sp_sessions')); o.sqa1.note = 'تغییر واقعی'; localStorage.setItem('ga_sp_sessions', JSON.stringify(o)); });
+    await page.waitForTimeout(5000);
+    ok(cloud.log.some(e => e.kind === 'sync' && e.action === 'kv' && e.keys.includes('ga_sp_sessions') && e.status === 200), 'تغییر واقعی ga_sp_sessions ارسال شد');
     console.log('INFO | انتشار عمومی (سرور محتوای تکراری را نمی‌نویسد): ' + cloud.log.filter(e => e.action === 'public').length + ' درخواست');
     ok(errors.length === 0, 'بدون خطای صفحه' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
     await ctx.close();

@@ -217,8 +217,27 @@
      مجاز (با ورود) ساخته شد — مثل تیم‌های پیش‌فرض «نبرد میدان‌ها» — تغییر کاربر نیست؛
      صف نمی‌شود تا مقدار واقعی ابر را بازنویسی نکند. اگر ابر آن کلید را نداشت، بعد از دریافت صف می‌شود. */
   var authPulled = false, seeded = {};
+  /* آخرین مقدار شناخته‌شدهٔ سرور برای هر کلید (از pull یا تأیید ارسال). اگر کدی همان داده را
+     فقط با ترتیب دیگری از کلیدها دوباره ذخیره کند (مثل ga_sp_sessions هنگام ورود مدیر)، تغییر
+     واقعی نیست و صف نمی‌شود. مقایسهٔ کامل فقط وقتی طول رشته برابر است انجام می‌شود (ارزان). */
+  var synced = {};
+  function noteSynced(k, raw) {
+    if (typeof raw === 'string') synced[k] = { raw: raw, len: raw.length, canon: null };
+    else delete synced[k];
+  }
+  function sameAsSynced(k) {
+    var s = synced[k]; if (!s) return false;
+    var raw = ls().getItem(k);
+    if (raw === null || raw.length !== s.len) return false;
+    if (raw === s.raw) return true;
+    try {
+      if (s.canon === null) s.canon = JSON.stringify(stableValue(JSON.parse(s.raw)));
+      return JSON.stringify(stableValue(JSON.parse(raw))) === s.canon;
+    } catch (e) { return false; }
+  }
   function markDirty(k, before) {
     if (applying || !k || k.indexOf(PFX) !== 0 || SKIP[k] || !hasCred()) return;
+    if (sameAsSynced(k)) return;
     if (!authPulled && before === null) { seeded[k] = 1; return; }
     if (!canWrite(k)) return;
     var d = jread(DIRTY_KEY, {}), stamp = localStamp();
@@ -394,6 +413,8 @@
             var remoteNewer = !ts[r.k] || r.updated_at > ts[r.k];
             var localDirty = d[r.k];
             if (localDirty) return; // خواندن، تأیید ارسال نیست؛ تغییرِ تأییدنشدهٔ گوشی را جایگزین نکن
+            if (r.v && typeof r.v === 'object' && r.v.__del) delete synced[r.k];
+            else noteSynced(r.k, decode(r.v));
             // ردیفِ نشان‌دارِ حذف (tombstone): کلید محلی هم پاک می‌شود
             if (r.v && typeof r.v === 'object' && r.v.__del) {
               if (remoteNewer) {
@@ -657,6 +678,13 @@
     function sendKey(k) {
       if (stopped) return Promise.resolve();
       var stamp, raw, row, bytes = 0;
+      /* تغییری که پیش از ارسال به همان مقدار شناخته‌شدهٔ سرور برگشت (مثلاً تمرین‌های legacy که هنگام ورود
+         موقتاً اضافه و بلافاصله دوباره جدا می‌شوند) چیزی برای ارسال ندارد؛ بدون درخواست از صف خارج می‌شود. */
+      if (sameAsSynced(k)) {
+        var dq = jread(DIRTY_KEY, {});
+        if (dq[k]) { delete dq[k]; jwrite(DIRTY_KEY, dq); sweepCache[k] = L.getItem(k); }
+        return Promise.resolve();
+      }
       return ((SP_MERGE[k] || COURSE_MERGE[k] || SUB_MERGE[k]) ? remoteMerge() : Promise.resolve(null)).then(function (remote) {
         var dirty = jread(DIRTY_KEY, {});
         if (!dirty[k]) return;
@@ -706,6 +734,7 @@
             delete d2[k];
             jwrite(DIRTY_KEY, d2);
             sweepCache[k] = L.getItem(k);
+            noteSynced(k, (ack && ack.values && Object.prototype.hasOwnProperty.call(ack.values, k)) ? JSON.stringify(ack.values[k]) : (row.v && row.v.__del ? null : decode(row.v)));
           }
           sent++;
           state.pushed++;

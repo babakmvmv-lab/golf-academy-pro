@@ -82,76 +82,46 @@
     h2 = Math.imul(h2^(h2>>>16), 2246822507) ^ Math.imul(h1^(h1>>>13), 3266489909);
     return (4294967296*(2097151&h2)+(h1>>>0)).toString(36);
   }
-  const USERS_KEY = 'ga_users';
+  /* ── حساب‌ها (ابری — 2026-10-07) ──
+     یوزر/نقش در جدول ga_accounts و رمز فقط در Supabase Auth است (GA_AUTH در js/auth.js).
+     • پنل اعضا: فقط حساب واردشدهٔ خودِ کاربر در دسترس است.
+     • adminpanel: فهرست کامل از تابع ga-accounts (فقط مدیر)؛ save تفاوت‌ها را به سرور می‌فرستد.
+     دیگر هیچ یوزر/رمز پیش‌فرضی (golf1405) روی دستگاه ساخته نمی‌شود و ورود محلی وجود ندارد. */
+  const AUTH = () => window.GA_AUTH || null;
   function loadUsers(){
-    try { const a = JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); if (Array.isArray(a)) return a; } catch(e){}
-    return [];
+    const A = AUTH();
+    if (!A) return [];
+    if (A.mode() === 'adminpanel') return A.accounts.list();
+    const me = A.profile();
+    return me && !me.console ? [me] : [];
   }
-  function saveUsers(a){ try { localStorage.setItem(USERS_KEY, JSON.stringify(a)); } catch(e){} }
-  /* ساخت اولیه: مدیر اصلی + مربی/مدیریت (مدیر) + یک یوزر عضو برای هر بازیکن */
-  function seedUsers(){
-    const cur = loadUsers();
-    if (cur.length) return cur;
-    const arr = [
-      { id: 1, user: 'admin',  pass: 'golf1405', name: 'مدیر آکادمی', role: 'admin',  active: true, main: true },
-      { id: 2, user: 'coach',  pass: 'golf1405', name: 'مربی ارشد',   role: 'admin',  active: true },
-      { id: 3, user: 'manager',pass: 'golf1405', name: 'مدیریت',      role: 'admin',  active: true },
-    ];
-    try {
-      D.loadState().players.forEach(p => {
-        arr.push({ id: 100 + p[0], user: 'p' + p[0], pass: 'golf1405', name: p[1], role: 'member', active: true, pid: p[0] });
-      });
-    } catch(e){}
-    saveUsers(arr);
-    return arr;
+  function saveUsers(a){
+    const A = AUTH();
+    if (A && A.mode() === 'adminpanel') A.accounts.save(a);
   }
+  function seedUsers(){ return loadUsers(); }
   function userRec(u){
     const key = String(u || '').trim().toLowerCase();
     if (!key) return null;
-    const current = loadUsers().find(x => String(x.user || '').trim().toLowerCase() === key);
-    if (current) return current;
-    /* رجیستری قدیمی فقط می‌تواند به‌عنوان عضو resolve شود؛ هرگز نقش مدیر نمی‌گیرد. */
-    const legacy = Object.entries(playerUsers() || {}).find(([pid, p]) => p && p.user && p.pass && p.active !== false && String(p.user).trim().toLowerCase() === key);
-    if (!legacy) return null;
-    const [pid, p] = legacy;
-    return { id: null, user: String(p.user).trim(), pass: p.pass, name: (p.name || 'بازیکن') + (p.family ? ' ' + p.family : ''),
-      role: 'member', active: true, main: false, pid: +pid, legacy: true };
+    const A = AUTH(), me = A ? A.profile() : null;
+    if (me && String(me.user || '').toLowerCase() === key) return me;
+    return loadUsers().find(x => String(x.user || '').trim().toLowerCase() === key) || null;
   }
   function isMain(u){ const r = userRec(u); return !!(r && r.main && r.active); }
   function isAdmin(u){ const r = userRec(u); return !!(r && r.role === 'admin' && r.active); }
-  /* یوزر/پسورد بازیکنان (ساخته‌شده در پلن مدیریت — سازگاری قدیمی) */
-  function playerUsers(){
-    try { return JSON.parse(localStorage.getItem('ga_player_users') || '{}'); } catch(e){ return {}; }
-  }
-  function buildUsers(){
-    const m = {};
-    seedUsers().forEach(u => { if (u.active) m[String(u.user || '').trim().toLowerCase()] = cyrb53(u.pass); });
-    try {
-      const pusers = playerUsers();
-      Object.values(pusers).forEach(p => {
-        if (p && p.user && p.pass && p.active !== false) m[String(p.user).trim().toLowerCase()] = cyrb53(p.pass);
-      });
-    } catch(e){}
-    return m;
-  }
   function userLabelFor(u){
     const r = userRec(u);
     if (r){
       if (r.role === 'admin') return (r.main ? 'مدیر اصلی آکادمی' : (r.name || 'مدیر'));
       return 'عضو آکادمی — ' + (r.name || u);
     }
-    try {
-      const pusers = playerUsers();
-      const hit = Object.values(pusers).find(p => p && p.user === u);
-      if (hit) return 'بازیکن — ' + ((hit.name + ' ' + (hit.family||'')).trim() || u);
-    } catch(e){}
     return 'کاربر';
   }
 
   /* ── State ── */
   let S = null;      // raw state (courses/tournaments/scorecards/activities)
   let A = null;      // analytics
-  let currentUser = 'admin';
+  let currentUser = '';   /* تا ورود ابری هیچ هویتی فرض نمی‌شود */
 
   function recompute(){
     try {
@@ -1451,10 +1421,13 @@ const sp = $('#st-podium');
       const key = x => [x.sid, x.t, x.pid, x.club, x.res].join('|');
       const seen = new Set(shots.map(key));
       (payload.shots || []).forEach(x => { if (!seen.has(key(x))) { shots.push(x); added++; } });
-      shots.sort((a, b) => (a.t || 0) - (b.t || 0));
-      localStorage.setItem('ga_sp_sessions', JSON.stringify(ses));
-      localStorage.setItem('ga_sp_shots', JSON.stringify(shots));
-      try { if (window.GA_CLOUD && GA_CLOUD.stripSp) GA_CLOUD.stripSp(); } catch(e){}
+      /* فقط اگر واقعاً چیزی اضافه شد بنویس — بازنویسیِ بی‌تغییر هر بار ورود، یک ارسال ابری بی‌مورد می‌ساخت */
+      if (added > 0){
+        shots.sort((a, b) => (a.t || 0) - (b.t || 0));
+        localStorage.setItem('ga_sp_sessions', JSON.stringify(ses));
+        localStorage.setItem('ga_sp_shots', JSON.stringify(shots));
+        try { if (window.GA_CLOUD && GA_CLOUD.stripSp) GA_CLOUD.stripSp(); } catch(e){}
+      }
       localStorage.setItem('sp_restore_done_v1', '1');
       return added > 0;
     } catch(e){ return false; }
@@ -1988,7 +1961,7 @@ const sp = $('#st-podium');
     <div class="toolbar">
       <span class="lbl">🏌️ بازیکن:</span>
       <select class="sel" id="pl-sel-smart">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===p.pid?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
-      <button type="button" class="btn sm" id="sp-record">${PLUS_SVG} ثبت رکورد</button>
+      ${isAdmin(currentUser) ? `<button type="button" class="btn sm" id="sp-record">${PLUS_SVG} ثبت رکورد</button>` : ''}
       <div style="flex:1"></div>
       ${honorChip(p.pid)}
     </div>`;
@@ -4123,36 +4096,43 @@ const stCal = $('#st-cal');
     form.addEventListener('submit', e => {
       e.preventDefault();
       const sbtn = form.querySelector('button[type="submit"]');
-      if (sbtn && !sbtn.disabled){ sbtn.disabled = true; sbtn.dataset.old = sbtn.textContent; sbtn.textContent = 'در حال بررسی…'; }
-      setTimeout(() => {
+      if (sbtn && sbtn.disabled) return;
+      if (sbtn){ sbtn.disabled = true; sbtn.dataset.old = sbtn.textContent; sbtn.textContent = 'در حال بررسی…'; }
       const u = user.value.trim().toLowerCase();
-      const h = cyrb53(pass.value);
-      if (sbtn){ sbtn.disabled = false; sbtn.textContent = sbtn.dataset.old || 'ورود به داشبورد'; }
-      const rec = userRec(u);
-      const passOk = !!(rec && rec.pass && cyrb53(rec.pass) === h);
-      if (!passOk){
+      const fail = (msg) => {
+        if (sbtn){ sbtn.disabled = false; sbtn.textContent = sbtn.dataset.old || 'ورود به داشبورد'; }
         err.classList.add('show');
-        err.textContent = 'نام کاربری یا رمز عبور اشتباه است — دوباره تلاش کنید';
-        setTimeout(() => err.classList.remove('show'), 2600);
-        return;
-      }
-      store.set('ga_last_user', u);
-      if (window.GA_SUB) GA_SUB.paintLogin(u);
-      if (rec.active === false || ['member','admin'].indexOf(rec.role) < 0){
-        err.classList.add('show');
-        err.textContent = rec.active === false ? 'این حساب غیرفعال است.' : 'نقش این حساب معتبر نیست؛ با مدیر آکادمی تماس بگیرید.';
-        return;
-      }
-      if (window.GA_SUB && !GA_SUB.isAllowed(u)){
-        err.classList.add('show');
-        err.textContent = 'ورود ممکن نیست؛ اشتراک فعال ندارید.';
-        return;
-      }
-      store.set('ga_session', u);
-      store.set('ga_user_label', userLabelFor(u));
-      enterApp(u);
-      }, 350);
+        err.textContent = msg;
+        setTimeout(() => err.classList.remove('show'), 3200);
+      };
+      if (!u || !pass.value){ fail('نام کاربری و رمز عبور را وارد کنید'); return; }
+      if (!AUTH()){ fail('ماژول ورود بارگذاری نشده است؛ صفحه را دوباره باز کنید.'); return; }
+      AUTH().signIn(u, pass.value).then(prof => {
+        pass.value = '';
+        store.set('ga_last_user', prof.user);
+        /* داده‌های خصوصی آکادمی فقط پس از ورود خوانده می‌شوند */
+        return cloudPullAfterLogin().then(() => prof);
+      }).then(prof => {
+        if (sbtn){ sbtn.disabled = false; sbtn.textContent = sbtn.dataset.old || 'ورود به داشبورد'; }
+        if (window.GA_SUB) GA_SUB.paintLogin(prof.user);
+        if (window.GA_SUB && !GA_SUB.isAllowed(prof.user)){
+          AUTH().signOut();
+          fail('ورود ممکن نیست؛ اشتراک فعال ندارید.');
+          return;
+        }
+        store.set('ga_session', prof.user);
+        store.set('ga_user_label', userLabelFor(prof.user));
+        enterApp(prof.user);
+      }).catch(ex => fail(String(ex && ex.message || ex)));
     });
+  }
+  /* پس از ورود: یک‌بار دریافت از ابر (با توکن کاربر) — حداکثر ۸ ثانیه انتظار، بعد ادامه با دادهٔ محلی */
+  function cloudPullAfterLogin(){
+    if (!window.GA_CLOUD || !GA_CLOUD.pull) return Promise.resolve(false);
+    return Promise.race([
+      Promise.resolve().then(() => GA_CLOUD.pull()).catch(() => false),
+      new Promise(r => setTimeout(() => r(false), 8000))
+    ]);
   }
 
   function applyRoleUI(rec){
@@ -4207,7 +4187,9 @@ const stCal = $('#st-cal');
 
   function logout(){
     store.remove('ga_session');
-    location.reload();
+    const done = () => location.reload();
+    if (AUTH() && AUTH().mode() === 'panel') AUTH().signOut().then(done, done);
+    else done();
   }
 
   /* ═══════════ راهاندازی ═══════════ */
@@ -4316,33 +4298,38 @@ const stCal = $('#st-cal');
   document.addEventListener('DOMContentLoaded', () => {
     if (window.UI_LABELS) UI_LABELS.apply(document);
     restoreLegacyPractice();
-    seedUsers();
     initParticles();
     initAuth();
     initNav();
     tickClock();
     if (!enterApp._clk) enterApp._clk = setInterval(tickClock, 1000);
-    const sess = store.get('ga_session');
-    if (sess){
-      const sessRec = userRec(sess);
-      const sessionAccountOk = buildUsers()[String(sess).toLowerCase()] !== undefined && sessRec && sessRec.active !== false && ['member','admin'].indexOf(sessRec.role) >= 0;
-      if (sessionAccountOk && (!window.GA_SUB || GA_SUB.isAllowed(sess))) enterApp(sess);
-      else {
-        store.remove('ga_session');
-        store.set('ga_last_user', sess);
-        $('#login').classList.add('on');
-        if ($('#login-user')) $('#login-user').value = sess;
-        if (window.GA_SUB && sessionAccountOk) GA_SUB.paintLogin(sess);
-        const err = $('#login-err');
-        if (err){ err.classList.add('show'); err.textContent = sessionAccountOk ? 'ورود ممکن نیست؛ اشتراک فعال ندارید.' : 'نشست معتبر نیست؛ لطفاً دوباره وارد شوید.'; }
-      }
-    } else {
+    const showLogin = (msg) => {
+      store.remove('ga_session');
+      $('#login').classList.add('on');
       const last = store.get('ga_last_user');
-      if (last && window.GA_SUB){
-        if ($('#login-user') && !$('#login-user').value) $('#login-user').value = last;
-        GA_SUB.paintLogin(last);
-      }
-    }
+      if (last && $('#login-user') && !$('#login-user').value) $('#login-user').value = last;
+      if (msg){ const err = $('#login-err'); if (err){ err.classList.add('show'); err.textContent = msg; } }
+    };
+    const A = AUTH();
+    if (!A){ showLogin('ماژول ورود بارگذاری نشده است؛ صفحه را دوباره باز کنید.'); return; }
+    A.ready().then(ok => {
+      const prof = A.profile();
+      if (!ok || !prof){ showLogin(store.get('ga_session') ? 'نشست معتبر نیست؛ لطفاً دوباره وارد شوید.' : ''); return; }
+      const go2 = () => {
+        if (prof.role === 'member' && window.GA_SUB && !GA_SUB.isAllowed(prof.user)){
+          A.signOut();
+          showLogin('ورود ممکن نیست؛ اشتراک فعال ندارید.');
+          return;
+        }
+        store.set('ga_session', prof.user);
+        store.set('ga_user_label', userLabelFor(prof.user));
+        enterApp(prof.user);
+      };
+      if (A.mode() === 'adminpanel'){
+        /* فهرست حساب‌ها برای «یوزرها»/«اشتراک‌ها»/«پیام‌ها» — شکست آن ورود را متوقف نمی‌کند */
+        Promise.race([A.accounts.load().catch(() => null), new Promise(r => setTimeout(r, 8000))]).then(go2);
+      } else go2();
+    });
   });
 
   /* ← دکمه‌های Back/Forward مرورگر: بین بخش‌های داخل همین اپ حرکت می‌کنند؛ اگر مودال باز است، Back آن را می‌بندد و جای‌مان عوض نمی‌شود */

@@ -3241,6 +3241,273 @@ svg.leaflet-image-layer.leaflet-interactive path {
 })();
 </script>
     <script>/* ═══════════════════════════════════════════════════════════════════
+   پات کلاب • هویت ابری پنل آکادمی (GA_AUTH) — 2026-10-07
+   ─────────────────────────────────────────────────────────────────
+   • ورود با Supabase Auth: نام کاربری ← ایمیل مصنوعی <user>@members.puttclub.ir
+     (یا خودِ ایمیل اگر @ داشته باشد). رمز هرگز در مرورگر ذخیره نمی‌شود.
+   • نقش/نام/بازیکن از جدول ga_accounts (RLS: هر کس فقط ردیف خودش) خوانده می‌شود.
+   • داخل adminpanel.puttclub.ir: هویت و توکن از پوستهٔ واردشدهٔ مدیر (window.parent.__PUTT_ADMIN).
+   • نشست در localStorage «pc_auth_v1» (بدون پیشوند ga_ → هرگز با ابر همگام نمی‌شود).
+   • مدیریت حساب‌ها (فقط adminpanel): تابع ga-accounts با JWT مدیر.
+   ═══════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  var DEF = { url: 'https://iultwqtzvrysugfxwshw.supabase.co', key: 'sb_publishable_058vN6QjD4sUC9Mam5izUg__vjKt9d0' };
+  var DOMAIN = 'members.puttclub.ir';
+  var KEY = 'pc_auth_v1';
+  var inBrowser = typeof window !== 'undefined';
+
+  function cfg() {
+    try {
+      var o = JSON.parse(localStorage.getItem('ga_cloud_cfg') || 'null');
+      if (o && typeof o === 'object') return { url: String(o.url || DEF.url).replace(/\/+$/, ''), key: o.key || DEF.key };
+    } catch (e) {}
+    return DEF;
+  }
+  function shell() {
+    try {
+      if (window.__PUTT_IN_ADMIN && window.parent !== window && window.parent.__PUTT_ADMIN) return window.parent.__PUTT_ADMIN;
+    } catch (e) {}
+    return null;
+  }
+  function readSaved() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
+  function writeSaved(o) { try { if (o) localStorage.setItem(KEY, JSON.stringify(o)); else localStorage.removeItem(KEY); } catch (e) {} }
+
+  var st = { session: null, profile: null, ready: false };
+  var listeners = [];
+  function emit() {
+    listeners.forEach(function (f) { try { f(api.profile()); } catch (e) {} });
+    try { window.dispatchEvent(new CustomEvent('ga-auth-changed', { detail: { user: st.profile ? st.profile.user : null } })); } catch (e) {}
+  }
+
+  function req(path, init) {
+    var c = cfg();
+    init = init || {};
+    var h = { apikey: c.key, 'Content-Type': 'application/json' };
+    if (init.token) h.Authorization = 'Bearer ' + init.token;
+    return fetch(c.url + path, { method: init.method || 'GET', headers: h, body: init.body ? JSON.stringify(init.body) : undefined, cache: 'no-store' })
+      .then(function (r) {
+        return r.text().then(function (t) {
+          var j = null; try { j = t ? JSON.parse(t) : null; } catch (e) { j = null; }
+          if (!r.ok) {
+            var err = new Error((j && (j.err || j.msg || j.error_description || j.message)) || ('HTTP ' + r.status));
+            err.status = r.status; err.code = j && (j.code || j.error_code); throw err;
+          }
+          return j;
+        });
+      });
+  }
+  function normSession(raw) {
+    var exp = raw.expires_at ? Number(raw.expires_at) * 1000 : Date.now() + Math.max(0, Number(raw.expires_in || 3600)) * 1000;
+    return { access_token: raw.access_token, refresh_token: raw.refresh_token, expires_at: exp, user: { id: raw.user && raw.user.id, email: raw.user && raw.user.email } };
+  }
+  function emailOf(identifier) {
+    var u = String(identifier || '').trim().toLowerCase();
+    return u.indexOf('@') >= 0 ? u : (u + '@' + DOMAIN);
+  }
+  function profileFromRow(r) {
+    return { id: r.legacy_id, user: r.username, name: r.name || r.username, role: r.role, main: !!r.main, active: r.active !== false, pid: r.pid == null ? null : r.pid, cloud: true };
+  }
+  function fetchProfile(session) {
+    return req('/rest/v1/ga_accounts?select=legacy_id,username,name,role,main,active,pid&user_id=eq.' + encodeURIComponent(session.user.id), { token: session.access_token })
+      .then(function (rows) { return Array.isArray(rows) && rows[0] ? profileFromRow(rows[0]) : null; });
+  }
+
+  var refreshing = null, timer = null;
+  function schedule() {
+    clearTimeout(timer);
+    if (!st.session || !st.session.expires_at) return;
+    var wait = Math.max(15000, st.session.expires_at - Date.now() - 120000);
+    timer = setTimeout(function () { refresh().catch(function () {}); }, wait);
+  }
+  function refresh() {
+    if (refreshing) return refreshing;
+    var s = st.session;
+    if (!s || !s.refresh_token) return Promise.reject(new Error('no session'));
+    refreshing = req('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: s.refresh_token } })
+      .then(function (raw) {
+        st.session = normSession(raw);
+        writeSaved({ session: st.session, profile: st.profile });
+        schedule();
+        return st.session.access_token;
+      }, function (e) {
+        if (e && (e.status === 400 || e.status === 401 || e.status === 403)) { /* نشست باطل/حساب غیرفعال */
+          st.session = null; st.profile = null; writeSaved(null); emit();
+        }
+        throw e;
+      })
+      .then(function (t) { refreshing = null; return t; }, function (e) { refreshing = null; throw e; });
+    return refreshing;
+  }
+
+  /* ── راه‌اندازی: نشست ذخیره‌شده را تازه کن و نقش را دوباره از سرور بخوان ── */
+  var readyResolve;
+  var readyP = new Promise(function (res) { readyResolve = res; });
+  function boot() {
+    var sh = shell();
+    if (sh) {
+      st.profile = { id: 0, user: String(sh.email || 'admin').toLowerCase(), name: 'مدیر سیستم', role: 'admin', main: true, active: true, pid: null, console: true };
+      st.ready = true; readyResolve(true); return;
+    }
+    var saved = readSaved();
+    if (!saved || !saved.session || !saved.session.refresh_token) { st.ready = true; readyResolve(false); return; }
+    st.session = saved.session; st.profile = saved.profile || null;
+    var p = (st.session.expires_at - Date.now() < 120000) ? refresh() : Promise.resolve(st.session.access_token);
+    p.then(function () { return fetchProfile(st.session); })
+      .then(function (prof) {
+        if (!prof || !prof.active) { var t = st.session && st.session.access_token; st.session = null; st.profile = null; writeSaved(null); if (t) req('/auth/v1/logout', { method: 'POST', token: t }).catch(function () {}); return false; }
+        st.profile = prof; writeSaved({ session: st.session, profile: prof }); schedule(); return true;
+      })
+      .catch(function (e) {
+        /* شبکه قطع است ولی نشست باطل نشده → با پروفایل ذخیره‌شده ادامه (خواندن محلی)؛ ارسال‌ها بعداً با توکن تازه */
+        if (st.session && st.profile) { schedule(); return true; }
+        return false;
+      })
+      .then(function (ok) { st.ready = true; readyResolve(!!ok); });
+  }
+
+  var api = {
+    DOMAIN: DOMAIN,
+    mode: function () { return shell() ? 'adminpanel' : 'panel'; },
+    ready: function () { return readyP; },
+    isReady: function () { return st.ready; },
+    profile: function () { return st.profile ? Object.assign({}, st.profile) : null; },
+    user: function () { return st.profile ? st.profile.user : null; },
+    /* توکن فعلی (همگام) — برای هدر درخواست‌ها */
+    token: function () {
+      var sh = shell();
+      if (sh) { try { return typeof sh.getToken === 'function' ? (sh.getToken() || null) : null; } catch (e) { return null; } }
+      return st.session ? st.session.access_token : null;
+    },
+    /* توکنِ معتبر (در صورت نزدیک‌بودن انقضا تازه می‌شود) */
+    fresh: function () {
+      var sh = shell();
+      if (sh) return Promise.resolve(api.token());
+      return readyP.then(function () {
+        if (!st.session) return null;
+        if (st.session.expires_at - Date.now() < 60000) return refresh().catch(function () { return st.session ? st.session.access_token : null; });
+        return st.session.access_token;
+      });
+    },
+    signIn: function (identifier, password) {
+      if (shell()) return Promise.resolve(api.profile());
+      var email = emailOf(identifier);
+      return req('/auth/v1/token?grant_type=password', { method: 'POST', body: { email: email, password: String(password || '') } })
+        .catch(function (e) {
+          var m = String(e && e.message || '');
+          if (/banned/i.test(m)) throw new Error('این حساب غیرفعال است.');
+          if (e && (e.status === 400 || e.status === 401)) throw new Error('نام کاربری یا رمز عبور اشتباه است — دوباره تلاش کنید');
+          throw new Error('اتصال به سرور ورود برقرار نشد؛ اینترنت را بررسی کنید.');
+        })
+        .then(function (raw) {
+          var session = normSession(raw);
+          return fetchProfile(session).then(function (prof) {
+            if (!prof) {
+              req('/auth/v1/logout', { method: 'POST', token: session.access_token }).catch(function () {});
+              throw new Error('این حساب در پنل آکادمی تعریف نشده است؛ با مدیر آکادمی تماس بگیرید.');
+            }
+            if (!prof.active) throw new Error('این حساب غیرفعال است.');
+            st.session = session; st.profile = prof;
+            writeSaved({ session: session, profile: prof });
+            schedule(); emit();
+            return api.profile();
+          });
+        });
+    },
+    signOut: function () {
+      var t = st.session && st.session.access_token;
+      st.session = null; st.profile = null; writeSaved(null); clearTimeout(timer); emit();
+      if (t) return req('/auth/v1/logout', { method: 'POST', token: t }).catch(function () {});
+      return Promise.resolve();
+    },
+    onChange: function (f) { if (typeof f === 'function') listeners.push(f); }
+  };
+
+  /* ═══ مدیریت حساب‌ها (فقط داخل adminpanel؛ سرور هم دوباره بررسی می‌کند) ═══ */
+  var acc = { list: [], loaded: false, queue: Promise.resolve(), busy: 0, err: '' };
+  function strip(r) { var o = Object.assign({}, r); delete o.pass; return o; }
+  function call(action, body) {
+    return api.fresh().then(function (t) {
+      if (!t) throw new Error('نشست مدیر پیدا نشد؛ دوباره وارد پنل مدیریت شوید.');
+      return req('/functions/v1/ga-accounts', { method: 'POST', token: t, body: Object.assign({ action: action }, body || {}) });
+    });
+  }
+  function accChanged() { try { window.dispatchEvent(new CustomEvent('ga-accounts-changed', { detail: { count: acc.list.length, err: acc.err } })); } catch (e) {} }
+  function load() {
+    return call('list').then(function (r) {
+      acc.list = (r && r.accounts || []).map(strip); acc.loaded = true; acc.err = '';
+      accChanged(); return acc.list.slice();
+    });
+  }
+  function toast(m, c) { try { if (window.APP && APP.toast) APP.toast(m, c); } catch (e) {} }
+  function randomPass() {
+    var chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%', b = new Uint8Array(16);
+    try { crypto.getRandomValues(b); } catch (e) { for (var i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256); }
+    return Array.prototype.map.call(b, function (x) { return chars[x % chars.length]; }).join('');
+  }
+  /* save(arr): همان رابط قدیمی APP.users.save — تفاوت با فهرست فعلی به عملیات سرور تبدیل می‌شود.
+     فهرست محلی بلافاصله به‌روز می‌شود (بدون رمز) و پس از پایان صف، از سرور تازه خوانده می‌شود. */
+  function save(arr) {
+    if (!Array.isArray(arr)) return;
+    var prev = {}, next = {}, ops = [];
+    acc.list.forEach(function (r) { prev[r.id] = r; });
+    arr.forEach(function (r) { if (r && r.id != null) next[r.id] = r; });
+    arr.forEach(function (r) {
+      if (!r || r.id == null) return;
+      var p = prev[r.id];
+      if (!p) {
+        ops.push(['create', { id: +r.id, user: String(r.user || '').trim().toLowerCase(), name: r.name || '', role: r.role, pid: r.pid == null ? null : +r.pid, pass: r.pass || randomPass(), active: r.active !== false, main: !!r.main }, r.name || r.user]);
+        return;
+      }
+      var patch = {}, n = 0;
+      ['user', 'name', 'role', 'active', 'pid'].forEach(function (f) {
+        var a = p[f], b = r[f];
+        if (f === 'user') { a = String(a || '').toLowerCase(); b = String(b || '').trim().toLowerCase(); }
+        if (f === 'active') { a = a !== false; b = b !== false; }
+        if (f === 'pid') { a = a == null ? null : +a; b = b == null || b === '' ? null : +b; }
+        if (a !== b) { patch[f] = b; n++; }
+      });
+      if (n) ops.push(['update', Object.assign({ id: +r.id }, patch), r.name || r.user]);
+      if (r.pass) ops.push(['password', { id: +r.id, pass: r.pass }, r.name || r.user]);
+    });
+    Object.keys(prev).forEach(function (id) { if (!next[id]) ops.push(['delete', { id: +id }, prev[id].name || prev[id].user]); });
+    acc.list = arr.map(strip);
+    arr.forEach(function (r) { if (r && r.pass) delete r.pass; });
+    if (!ops.length) return;
+    acc.busy++;
+    acc.queue = acc.queue.then(function () {
+      var failed = 0;
+      return ops.reduce(function (p, op) {
+        return p.then(function () {
+          return call(op[0], op[1]).catch(function (e) {
+            failed++;
+            toast('ذخیرهٔ حساب «' + op[2] + '» در سرور انجام نشد: ' + (e && e.message || e), 'red');
+          });
+        });
+      }, Promise.resolve()).then(function () {
+        return load().catch(function (e) { acc.err = String(e && e.message || e); accChanged(); });
+      }).then(function () { if (!failed) toast('حساب‌ها در سرور ذخیره شدند ✓', 'green'); });
+    }).then(function () { acc.busy--; }, function () { acc.busy--; });
+  }
+  api.accounts = {
+    list: function () { return acc.list.map(function (r) { return Object.assign({}, r); }); },
+    loaded: function () { return acc.loaded; },
+    load: load,
+    save: save,
+    call: call,
+    pending: function () { return acc.busy; },
+    idle: function () { return acc.queue; },
+    error: function () { return acc.err; },
+    randomPass: randomPass
+  };
+
+  if (inBrowser) {
+    window.GA_AUTH = api;
+    boot();
+  }
+})();
+</script>
+    <script>/* ═══════════════════════════════════════════════════════════════════
    پات کلاب • Putt Club Golf Academy — لایهٔ همگام‌سازی ابری (localStorage ↔ Supabase)
    ─────────────────────────────────────────────────────────────────────
    فاز ۱: آینهٔ کلید/مقدار روی جدول ga_store با پروتکل LWW
@@ -3283,8 +3550,34 @@ svg.leaflet-image-layer.leaflet-interactive path {
     '__ga_t': 1,
     /* امنیت: یوزر/رمز هرگز روی ابر نرود — فقط محلی نگه داشته می‌شود */
     'ga_users': 1,
-    'ga_player_users': 1
+    'ga_player_users': 1,
+    /* پیش‌پرکردن فرم ورود همین دستگاه — نباید روی ابر برود (نام آخرین یوزر را برای همه فاش می‌کرد) */
+    'ga_last_user': 1,
+    'ga_user_label': 1
   };
+
+  /* ── هویت و مجوز نوشتن (حساب‌های ابری 2026-10-07) ──
+     همهٔ درخواست‌ها با JWT کاربرِ واردشده فرستاده می‌شوند (GA_AUTH در js/auth.js).
+     عضو فقط کلیدهای سهم خودش را می‌فرستد؛ سرور (ga-sync) همین را دوباره اعمال می‌کند. */
+  var MEMBER_KEYS = { ga_msg_reads: 1, ga_avatars: 1, ga_cart: 1, ga_fav: 1, ga_coins: 1, ga_coinreq: 1 };
+  function auth() { try { return (typeof window !== 'undefined' && window.GA_AUTH) || null; } catch (e) { return null; } }
+  function role() {
+    var A = auth();
+    if (!A) return 'admin';                // تست‌های node/هدلس بدون ماژول هویت: رفتار قبلی
+    var p = A.profile();
+    if (!p || p.active === false) return 'guest';
+    return p.role === 'admin' ? 'admin' : 'member';
+  }
+  function canWrite(k) {
+    var r = role();
+    return r === 'admin' || (r === 'member' && !!MEMBER_KEYS[k]);
+  }
+  function bearer(sync) {
+    var A = auth(), key = cfg().key;
+    if (!A) return Promise.resolve(key);
+    if (sync) return Promise.resolve(A.token() || key);
+    return A.fresh().then(function (t) { return t || key; }, function () { return key; });
+  }
 
   var inBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
   var mem = {}; // ذخیرهٔ جایگزین برای تست هدلس (node)
@@ -3325,7 +3618,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   function pendingKeys() {
     return Object.keys(jread(DIRTY_KEY, {})).filter(function (k) {
-      return k.indexOf(PFX) === 0 && k !== PFX && !SKIP[k];
+      return k.indexOf(PFX) === 0 && k !== PFX && !SKIP[k] && canWrite(k);
     });
   }
   function byteLength(text) {
@@ -3393,11 +3686,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
   }
 
   function rest(path, init) {
-    var c = cfg(), h = { apikey: c.key, 'Content-Type': 'application/json' };
+    var c = cfg();
     init = init || {};
-    Object.keys(init.headers || {}).forEach(function (k) { h[k] = init.headers[k]; });
-    return requestJSON(c.url.replace(/\/+$/, '') + '/rest/v1/' + path, {
-      method: init.method || 'GET', headers: h, body: init.body || null, mode: 'cors'
+    return bearer(false).then(function (tok) {
+      var h = { apikey: c.key, Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' };
+      Object.keys(init.headers || {}).forEach(function (k) { h[k] = init.headers[k]; });
+      return requestJSON(c.url.replace(/\/+$/, '') + '/rest/v1/' + path, {
+        method: init.method || 'GET', headers: h, body: init.body || null, mode: 'cors'
+      });
     });
   }
 
@@ -3426,8 +3722,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
   }
 
   /* ── علامت‌گذاری تغییرات (نگهبان setItem/removeItem + جاروب دوره‌ای) ── */
-  function markDirty(k) {
+  /* محافظ «پیش‌فرضِ قبل از دریافت»: کلیدی که روی این دستگاه نبود و پیش از اولین دریافتِ
+     مجاز (با ورود) ساخته شد — مثل تیم‌های پیش‌فرض «نبرد میدان‌ها» — تغییر کاربر نیست؛
+     صف نمی‌شود تا مقدار واقعی ابر را بازنویسی نکند. اگر ابر آن کلید را نداشت، بعد از دریافت صف می‌شود. */
+  var authPulled = false, seeded = {};
+  function markDirty(k, before) {
     if (applying || !k || k.indexOf(PFX) !== 0 || SKIP[k] || !hasCred()) return;
+    if (!authPulled && before === null) { seeded[k] = 1; return; }
+    if (!canWrite(k)) return;
     var d = jread(DIRTY_KEY, {}), stamp = localStamp();
     // حتی دو ویرایش در یک میلی‌ثانیه باید نسخهٔ جدا داشته باشند.
     var previous = Date.parse(d[k]);
@@ -3449,7 +3751,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         value: function (k, v) {
           var before = this.getItem(k);
           origSet.call(this, k, v);
-          try { if (this === window.localStorage && before !== String(v)) markDirty(String(k)); } catch (e) {}
+          try { if (this === window.localStorage && before !== String(v)) markDirty(String(k), before); } catch (e) {}
         }
       });
       Object.defineProperty(proto, 'removeItem', {
@@ -3471,7 +3773,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     Object.keys(sweepCache).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); });
     keys.forEach(function (k) {
       var v = L.getItem(k);
-      if (sweepCache[k] !== v) markDirty(k);
+      if (sweepCache[k] !== v) markDirty(k, sweepCache[k] === undefined ? null : sweepCache[k]);
       sweepCache[k] = v;
     });
   }
@@ -3589,6 +3891,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     if (pushFlight) return pushFlight.then(function () { return pull(); });
     if (!hasCred()) { setPhase('off', 'کانفیگ ابری کامل نیست — از پنل ☁️ تنظیم کنید'); return Promise.resolve(false); }
     setPhase('pulling');
+    var A0 = auth(), authorized = !A0 || !!(A0.profile() && A0.token());
     pullFlight = rest('ga_store?select=k,v,updated_at&order=updated_at.desc&limit=500')
       .then(function (rows) {
         if (!Array.isArray(rows)) throw new Error('پاسخ دریافت داده معتبر نیست.');
@@ -3656,6 +3959,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
           Object.keys(COURSE_MERGE).concat(Object.keys(SUB_MERGE)).forEach(function (k) {
             if (!remoteKeys[k] && L.getItem(k) !== null && !d[k]) d[k] = localStamp();
           });
+          if (authorized) {
+            /* پیش‌فرض‌های قبل از دریافت: اگر ابر مقدار داشت، همان بالا اعمال شد؛ اگر نداشت، حالا صف شود */
+            Object.keys(seeded).forEach(function (k) {
+              if (!remoteKeys[k] && L.getItem(k) !== null && canWrite(k) && !d[k]) d[k] = localStamp();
+            });
+            seeded = {};
+            authPulled = true;
+          }
           stripSpStorage(L);
           jwrite(DIRTY_KEY, d);
           jwrite(TS_KEY, ts);
@@ -3886,8 +4197,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
           tooBig.maxBytes = keepalive ? KEEPALIVE_BYTES : MAX_EDGE_BYTES;
           throw tooBig;
         }
-        return edgeSync([row], { keepalive: keepalive }).then(function () {
+        return edgeSync([row], { keepalive: keepalive }).then(function (ack) {
           var d2 = jread(DIRTY_KEY, {}), ts = jread(TS_KEY, {});
+          if (ack && ack.values && Object.prototype.hasOwnProperty.call(ack.values, k) && d2[k] === stamp && L.getItem(k) === raw) {
+            /* سهم عضو در سرور با بقیهٔ داده ادغام شد؛ نسخهٔ ادغام‌شده جایگزین نسخهٔ محلی می‌شود */
+            applying = true;
+            try { L.setItem(k, JSON.stringify(ack.values[k])); raw = L.getItem(k); } finally { applying = false; }
+          }
           ts[k] = stamp;
           jwrite(TS_KEY, ts);
           // ویرایشِ حین درخواست هرگز با پاسخ نسخهٔ قدیمی از صف حذف نمی‌شود.
@@ -3906,6 +4222,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
         });
       }).catch(function (e) {
         var detail = { key: k, status: e.status || 0, code: e.code || '', bytes: bytes, message: errorText(e) };
+        if (e.status === 403 && (e.code === 'FORBIDDEN_KEY' || e.code === 'FORBIDDEN_CHANGE')) {
+          /* این تغییر هرگز مجاز نمی‌شود (نقش عضو)؛ در صف نماند تا ارسال‌های بعدی گیر نکنند */
+          var dd = jread(DIRTY_KEY, {}); delete dd[k]; jwrite(DIRTY_KEY, dd);
+        }
+        if (e.status === 401) detail.message = 'برای ذخیره در سرور باید دوباره وارد شوید؛ تغییرات در صف محفوظ است.';
         errors.push(detail);
         state.errors = errors.slice();
         state.err = detail.message;
@@ -4112,9 +4433,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
     ui();
     if (!hasCred()) { setPhase('off', 'خاموش — کلید/URL تنظیم نشده (پنل ☁️)'); return; }
     primeSweep();
-    pull().then(function () {
+    var A = auth();
+    (A ? A.ready() : Promise.resolve()).then(function () { return pull(); }).then(function () {
       if (pendingKeys().length) schedule(800);
     });
+    if (A && window.addEventListener) {
+      window.addEventListener('ga-auth-changed', function () { if (pendingKeys().length) schedule(500); render(); });
+    }
     setInterval(sweep, 20000);
     if (window.addEventListener) {
       window.addEventListener('online', function () { failStreak = 0; schedule(100); });
@@ -4142,11 +4467,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   /* نوشتن فقط از ga-sync؛ HTTP 2xx + ok:true + تعداد دقیق ردیف‌ها لازم است. */
   function edgeRequest(payload, options) {
-    var c = cfg();
-    return requestJSON(c.url.replace(/\/+$/, '') + '/functions/v1/ga-sync', {
-      method: 'POST',
-      headers: { apikey: c.key, Authorization: 'Bearer ' + c.key, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload), mode: 'cors', keepalive: !!(options && options.keepalive)
+    var c = cfg(), keep = !!(options && options.keepalive);
+    return bearer(keep).then(function (tok) {
+      return requestJSON(c.url.replace(/\/+$/, '') + '/functions/v1/ga-sync', {
+        method: 'POST',
+        headers: { apikey: c.key, Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload), mode: 'cors', keepalive: keep
+      });
     }).then(function (r) {
       if (!r || r.ok !== true) throw new Error('ga-sync: ' + (r && (r.err || r.message) || 'تأیید ذخیره دریافت نشد'));
       return r;
@@ -4187,7 +4514,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
     tombShots: tombShots,
     tombSession: tombSession,
     stripSp: stripSpStorage,
-    syncable: syncableKeys,           // «پشتیبان آکادمی» همین فهرست را می‌گیرد تا از list اصلی جا نماند
+    syncable: syncableKeys,
+    canWrite: canWrite,
+    role: role,           // «پشتیبان آکادمی» همین فهرست را می‌گیرد تا از list اصلی جا نماند
     dirty: pendingKeys,
     queueInfo: queueInfo,
     cfg: cfg,
@@ -10669,8 +10998,11 @@ window.addEventListener('ga:brand-changed', function(){
   function savePlayerEdits(e){ try { localStorage.setItem('ga_players', JSON.stringify(e)); } catch(e){} }
 
   /* ── یوزر/پسورد سایت بازیکنان ── */
-  function playerUsers(){ return D ? D.loadPlayerUsers() : {}; }
-  function savePlayerUsers(u){ try { localStorage.setItem('ga_player_users', JSON.stringify(u)); } catch(e){} }
+  /* رمزها فقط در Supabase Auth‌اند (حساب‌های ابری 2026-10-07): این رجیستری محلی دیگر رمز نگه نمی‌دارد،
+     و رمزِ قدیمیِ ذخیره‌شده روی دستگاه هرگز دوباره به حساب ابری فرستاده نمی‌شود. */
+  function noPass(u){ const o = {}; Object.keys(u || {}).forEach(k => { const v = u[k]; if (v && typeof v === 'object'){ const c = Object.assign({}, v); delete c.pass; o[k] = c; } }); return o; }
+  function playerUsers(){ return noPass(D ? D.loadPlayerUsers() : {}); }
+  function savePlayerUsers(u){ try { localStorage.setItem('ga_player_users', JSON.stringify(noPass(u))); } catch(e){} }
   function randomAccountPassword(length){
     const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%';
     const size = Math.max(12, Math.min(32, +length || 16));
@@ -10752,7 +11084,6 @@ window.addEventListener('ga:brand-changed', function(){
     const prev = pu[u.pid] || {};
     pu[u.pid] = Object.assign({}, prev, {
       user: u.user || prev.user,
-      pass: u.pass || prev.pass,
       name: u.name || prev.name,
       active: u.active !== false
     });
@@ -12124,7 +12455,7 @@ window.addEventListener('ga:brand-changed', function(){
     <div class="field-grid">
       <div><label>نام کاربری (login)</label><input class="input" id="pf-user" value="${esc(p.user)}" style="width:100%;direction:ltr" placeholder="player123"></div>
       <div><label>رمز عبور</label>
-        <input class="input" id="pf-pass" value="${esc(p.pass)}" style="width:100%;direction:ltr">
+        <input class="input" id="pf-pass" value="" placeholder="${p.hasUser ? 'برای تغییر رمز وارد کنید (حداقل ۸ نویسه)' : 'خالی = رمز تصادفی'}" autocomplete="new-password" style="width:100%;direction:ltr">
         <span class="gen-pass" id="pf-gen">⚡ تولید خودکار رمز</span>
       </div>
     </div>`;
@@ -12304,7 +12635,7 @@ window.addEventListener('ga:brand-changed', function(){
       if (!syncedUser) return;
       saveCustomPlayers(lst);
       const pu = playerUsers();
-      pu[pid] = { user, pass, name: d.name, family: d.family, active: true };
+      pu[pid] = { user, name: d.name, family: d.family, active: true };
       savePlayerUsers(pu);
       APP.reloadData(); APP.go('mgmt');
       APP.toast('بازیکن «' + fullName + '» ثبت شد — یوزر: ' + user + '؛ برای تغییر رمز از مدیریت یوزرها استفاده کنید.', 'green');
@@ -12412,13 +12743,13 @@ window.addEventListener('ga:brand-changed', function(){
       const pu = playerUsers();
       const prev = credsOf(pid) || { active: true };
       if (d.user || d.pass){
-        pu[pid] = { user: d.user || prev.user || 'player' + pid, pass: d.pass || prev.pass, name: d.name, family: d.family, active: prev.active !== false };
+        pu[pid] = { user: d.user || prev.user || 'player' + pid, name: d.name, family: d.family, active: prev.active !== false };
         savePlayerUsers(pu);
       }
       // ⇄ همگام‌سازی با لیست یوزرها (یوزر/رمز/نام)
       syncPlayerToUser(pid, {
         user: d.user || prev.user || '',
-        pass: d.pass || prev.pass || '',
+        pass: d.pass || '',   /* فقط رمزِ تازه‌تایپ‌شده؛ رمز ذخیره‌شده دیگر وجود ندارد */
         name: fullName,
         active: prev.active !== false
       });
@@ -15110,9 +15441,14 @@ window.addEventListener('ga:brand-changed', function(){
     const edge = edgeCfg.url + '/functions/v1/ga-mail';
     try {
       const key = edgeCfg.key;
-      const r2 = await fetch(edge, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key, 'apikey': key },
+      /* ga-mail فقط با توکن مدیرِ واردشده کار می‌کند (کلید عمومی کافی نیست) */
+      const jwt = (window.GA_AUTH && GA_AUTH.fresh) ? await GA_AUTH.fresh() : null;
+      if (!jwt) throw new Error('دالان دوم (ga-mail) پاسخ 401: نشست مدیر پیدا نشد؛ دوباره وارد شوید.');
+      const r2 = await fetch(edge, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt, 'apikey': key },
         body: JSON.stringify({ to: toEmail, to_name: toName || '', subject, html: buildEmailHtml(subject, text), text }) });
       if (r2.ok) return true;
+      const j2 = await r2.clone().json().catch(() => null);
+      if (j2 && j2.err) throw new Error('دالان دوم (ga-mail) پاسخ ' + r2.status + ': ' + j2.err);
       /* CSP_EMAILJS_V1 — پاسخ واقعی سرور پنهان نشود (قبلاً همه‌چیز «خطای شبکه» گزارش می‌شد) */
       throw new Error('دالان دوم (ga-mail) پاسخ ' + r2.status + ': ' + (await r2.text().catch(() => '')).slice(0, 140));
     } catch(e2){
@@ -15641,7 +15977,9 @@ window.addEventListener('ga:brand-changed', function(){
         <button class="btn sm" id="us-add">➕ یوزر جدید</button>
         <button class="btn sm ghost" id="us-sync">👥 ساخت یوزر برای همهٔ اعضا (همگام‌سازی)</button>
         <span style="color:var(--muted);font-size:11.5px;align-self:center">${D.fa(users.length)} یوزر ثبت شده</span>
+        <button class="btn sm ghost" id="us-reload" title="خواندن دوبارهٔ فهرست از سرور">⟳ تازه‌سازی از سرور</button>
       </div>
+      <div id="us-cloud" class="sub-note" style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.9"></div>
     </div>
     <div class="glass">
       <div class="card-head"><span class="ic">👤</span><h3>لیست ${esc(L('nav.users','یوزرها'))}</h3><span class="tag">مدیر / عضو</span></div>
@@ -15650,8 +15988,18 @@ window.addEventListener('ga:brand-changed', function(){
       </tr></thead><tbody id="us-rows"></tbody></table></div>
     </div>
     <div id="us-modal"></div>`;
+    function cloudNote(){
+      const el = $('#us-cloud'); if (!el) return;
+      const A = window.GA_AUTH && GA_AUTH.accounts;
+      if (!A){ el.innerHTML = ''; return; }
+      const e = A.error();
+      el.innerHTML = '☁️ حساب‌ها روی سرور (Supabase Auth) نگه‌داری می‌شوند و روی همهٔ دستگاه‌ها یکسان‌اند؛ رمزها فقط به‌صورت هش در سرورند و قابل نمایش نیستند — برای تعیین رمز جدید از «🔑 یوزر و رمز» استفاده کنید (حداقل ۸ نویسه).'
+        + (A.pending() ? ' <b style="color:var(--gold-l)">در حال ذخیره در سرور…</b>' : '')
+        + (e ? '<br><b style="color:#ff8a80">خطای سرور: ' + esc(e) + '</b>' : (!A.loaded() ? '<br><b style="color:#ff8a80">فهرست حساب‌ها از سرور خوانده نشد.</b>' : ''));
+    }
     function render(){
       const rows = U.list();
+      cloudNote();
       $('#us-rows').innerHTML = rows.map(u => `
         <tr class="${u.active ? '' : 'off-row'}">
           <td class="num">${D.fa(u.id)}</td>
@@ -15807,6 +16155,7 @@ window.addEventListener('ga:brand-changed', function(){
         const un = $('#pw-user').value.trim().toLowerCase();
         const nm = $('#pw-name').value.trim();
         if (!pw || !un){ APP.toast('یوزر و رمز نمی‌تواند خالی باشد', 'red'); return; }
+        if (pw.length < 8){ APP.toast('رمز باید حداقل ۸ نویسه باشد', 'red'); return; }
         const a2 = U.list();
         const t = a2.find(x => x.id === id);
         if (!t) return;
@@ -15878,6 +16227,8 @@ window.addEventListener('ga:brand-changed', function(){
         const user = $('#nu-user').value.trim().toLowerCase();
         const pass = $('#nu-pass').value.trim();
         if (!name || !user || !pass){ APP.toast('نام، یوزر و رمز را کامل کنید', 'red'); return; }
+        if (pass.length < 8){ APP.toast('رمز باید حداقل ۸ نویسه باشد', 'red'); return; }
+        if (!/^[a-z0-9][a-z0-9._-]{0,39}$/.test(user)){ APP.toast('نام کاربری فقط حروف انگلیسی کوچک، عدد و . _ - باشد', 'red'); return; }
         const a = U.list();
         if (a.some(x => String(x.user || '').trim().toLowerCase() === user) || (U.rec && U.rec(user)) ||
             (window.GA_SUB && GA_SUB.hasForeignSubscription(user, null))){
@@ -15897,6 +16248,18 @@ window.addEventListener('ga:brand-changed', function(){
       });
       m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
     });
+    const usReload = $('#us-reload');
+    if (usReload) usReload.addEventListener('click', () => {
+      const A = window.GA_AUTH && GA_AUTH.accounts; if (!A) return;
+      usReload.disabled = true;
+      A.load().then(() => APP.toast('فهرست حساب‌ها از سرور تازه شد ✓', 'green'), e => APP.toast('خواندن از سرور انجام نشد: ' + (e && e.message || e), 'red'))
+        .then(() => { usReload.disabled = false; render(); });
+    });
+    if (!mgmtUsers._evt){
+      mgmtUsers._evt = true;
+      window.addEventListener('ga-accounts-changed', () => { const f = mgmtUsers._render; if (f && document.getElementById('us-rows')) f(); });
+    }
+    mgmtUsers._render = render;
     $('#us-sync').addEventListener('click', () => {
       const a = U.list();
       let added = 0;
@@ -19136,76 +19499,46 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
     h2 = Math.imul(h2^(h2>>>16), 2246822507) ^ Math.imul(h1^(h1>>>13), 3266489909);
     return (4294967296*(2097151&h2)+(h1>>>0)).toString(36);
   }
-  const USERS_KEY = 'ga_users';
+  /* ── حساب‌ها (ابری — 2026-10-07) ──
+     یوزر/نقش در جدول ga_accounts و رمز فقط در Supabase Auth است (GA_AUTH در js/auth.js).
+     • پنل اعضا: فقط حساب واردشدهٔ خودِ کاربر در دسترس است.
+     • adminpanel: فهرست کامل از تابع ga-accounts (فقط مدیر)؛ save تفاوت‌ها را به سرور می‌فرستد.
+     دیگر هیچ یوزر/رمز پیش‌فرضی (golf1405) روی دستگاه ساخته نمی‌شود و ورود محلی وجود ندارد. */
+  const AUTH = () => window.GA_AUTH || null;
   function loadUsers(){
-    try { const a = JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); if (Array.isArray(a)) return a; } catch(e){}
-    return [];
+    const A = AUTH();
+    if (!A) return [];
+    if (A.mode() === 'adminpanel') return A.accounts.list();
+    const me = A.profile();
+    return me && !me.console ? [me] : [];
   }
-  function saveUsers(a){ try { localStorage.setItem(USERS_KEY, JSON.stringify(a)); } catch(e){} }
-  /* ساخت اولیه: مدیر اصلی + مربی/مدیریت (مدیر) + یک یوزر عضو برای هر بازیکن */
-  function seedUsers(){
-    const cur = loadUsers();
-    if (cur.length) return cur;
-    const arr = [
-      { id: 1, user: 'admin',  pass: 'golf1405', name: 'مدیر آکادمی', role: 'admin',  active: true, main: true },
-      { id: 2, user: 'coach',  pass: 'golf1405', name: 'مربی ارشد',   role: 'admin',  active: true },
-      { id: 3, user: 'manager',pass: 'golf1405', name: 'مدیریت',      role: 'admin',  active: true },
-    ];
-    try {
-      D.loadState().players.forEach(p => {
-        arr.push({ id: 100 + p[0], user: 'p' + p[0], pass: 'golf1405', name: p[1], role: 'member', active: true, pid: p[0] });
-      });
-    } catch(e){}
-    saveUsers(arr);
-    return arr;
+  function saveUsers(a){
+    const A = AUTH();
+    if (A && A.mode() === 'adminpanel') A.accounts.save(a);
   }
+  function seedUsers(){ return loadUsers(); }
   function userRec(u){
     const key = String(u || '').trim().toLowerCase();
     if (!key) return null;
-    const current = loadUsers().find(x => String(x.user || '').trim().toLowerCase() === key);
-    if (current) return current;
-    /* رجیستری قدیمی فقط می‌تواند به‌عنوان عضو resolve شود؛ هرگز نقش مدیر نمی‌گیرد. */
-    const legacy = Object.entries(playerUsers() || {}).find(([pid, p]) => p && p.user && p.pass && p.active !== false && String(p.user).trim().toLowerCase() === key);
-    if (!legacy) return null;
-    const [pid, p] = legacy;
-    return { id: null, user: String(p.user).trim(), pass: p.pass, name: (p.name || 'بازیکن') + (p.family ? ' ' + p.family : ''),
-      role: 'member', active: true, main: false, pid: +pid, legacy: true };
+    const A = AUTH(), me = A ? A.profile() : null;
+    if (me && String(me.user || '').toLowerCase() === key) return me;
+    return loadUsers().find(x => String(x.user || '').trim().toLowerCase() === key) || null;
   }
   function isMain(u){ const r = userRec(u); return !!(r && r.main && r.active); }
   function isAdmin(u){ const r = userRec(u); return !!(r && r.role === 'admin' && r.active); }
-  /* یوزر/پسورد بازیکنان (ساخته‌شده در پلن مدیریت — سازگاری قدیمی) */
-  function playerUsers(){
-    try { return JSON.parse(localStorage.getItem('ga_player_users') || '{}'); } catch(e){ return {}; }
-  }
-  function buildUsers(){
-    const m = {};
-    seedUsers().forEach(u => { if (u.active) m[String(u.user || '').trim().toLowerCase()] = cyrb53(u.pass); });
-    try {
-      const pusers = playerUsers();
-      Object.values(pusers).forEach(p => {
-        if (p && p.user && p.pass && p.active !== false) m[String(p.user).trim().toLowerCase()] = cyrb53(p.pass);
-      });
-    } catch(e){}
-    return m;
-  }
   function userLabelFor(u){
     const r = userRec(u);
     if (r){
       if (r.role === 'admin') return (r.main ? 'مدیر اصلی آکادمی' : (r.name || 'مدیر'));
       return 'عضو آکادمی — ' + (r.name || u);
     }
-    try {
-      const pusers = playerUsers();
-      const hit = Object.values(pusers).find(p => p && p.user === u);
-      if (hit) return 'بازیکن — ' + ((hit.name + ' ' + (hit.family||'')).trim() || u);
-    } catch(e){}
     return 'کاربر';
   }
 
   /* ── State ── */
   let S = null;      // raw state (courses/tournaments/scorecards/activities)
   let A = null;      // analytics
-  let currentUser = 'admin';
+  let currentUser = '';   /* تا ورود ابری هیچ هویتی فرض نمی‌شود */
 
   function recompute(){
     try {
@@ -20505,10 +20838,13 @@ const sp = $('#st-podium');
       const key = x => [x.sid, x.t, x.pid, x.club, x.res].join('|');
       const seen = new Set(shots.map(key));
       (payload.shots || []).forEach(x => { if (!seen.has(key(x))) { shots.push(x); added++; } });
-      shots.sort((a, b) => (a.t || 0) - (b.t || 0));
-      localStorage.setItem('ga_sp_sessions', JSON.stringify(ses));
-      localStorage.setItem('ga_sp_shots', JSON.stringify(shots));
-      try { if (window.GA_CLOUD && GA_CLOUD.stripSp) GA_CLOUD.stripSp(); } catch(e){}
+      /* فقط اگر واقعاً چیزی اضافه شد بنویس — بازنویسیِ بی‌تغییر هر بار ورود، یک ارسال ابری بی‌مورد می‌ساخت */
+      if (added > 0){
+        shots.sort((a, b) => (a.t || 0) - (b.t || 0));
+        localStorage.setItem('ga_sp_sessions', JSON.stringify(ses));
+        localStorage.setItem('ga_sp_shots', JSON.stringify(shots));
+        try { if (window.GA_CLOUD && GA_CLOUD.stripSp) GA_CLOUD.stripSp(); } catch(e){}
+      }
       localStorage.setItem('sp_restore_done_v1', '1');
       return added > 0;
     } catch(e){ return false; }
@@ -21042,7 +21378,7 @@ const sp = $('#st-podium');
     <div class="toolbar">
       <span class="lbl">🏌️ بازیکن:</span>
       <select class="sel" id="pl-sel-smart">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===p.pid?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
-      <button type="button" class="btn sm" id="sp-record">${PLUS_SVG} ثبت رکورد</button>
+      ${isAdmin(currentUser) ? `<button type="button" class="btn sm" id="sp-record">${PLUS_SVG} ثبت رکورد</button>` : ''}
       <div style="flex:1"></div>
       ${honorChip(p.pid)}
     </div>`;
@@ -23177,36 +23513,43 @@ const stCal = $('#st-cal');
     form.addEventListener('submit', e => {
       e.preventDefault();
       const sbtn = form.querySelector('button[type="submit"]');
-      if (sbtn && !sbtn.disabled){ sbtn.disabled = true; sbtn.dataset.old = sbtn.textContent; sbtn.textContent = 'در حال بررسی…'; }
-      setTimeout(() => {
+      if (sbtn && sbtn.disabled) return;
+      if (sbtn){ sbtn.disabled = true; sbtn.dataset.old = sbtn.textContent; sbtn.textContent = 'در حال بررسی…'; }
       const u = user.value.trim().toLowerCase();
-      const h = cyrb53(pass.value);
-      if (sbtn){ sbtn.disabled = false; sbtn.textContent = sbtn.dataset.old || 'ورود به داشبورد'; }
-      const rec = userRec(u);
-      const passOk = !!(rec && rec.pass && cyrb53(rec.pass) === h);
-      if (!passOk){
+      const fail = (msg) => {
+        if (sbtn){ sbtn.disabled = false; sbtn.textContent = sbtn.dataset.old || 'ورود به داشبورد'; }
         err.classList.add('show');
-        err.textContent = 'نام کاربری یا رمز عبور اشتباه است — دوباره تلاش کنید';
-        setTimeout(() => err.classList.remove('show'), 2600);
-        return;
-      }
-      store.set('ga_last_user', u);
-      if (window.GA_SUB) GA_SUB.paintLogin(u);
-      if (rec.active === false || ['member','admin'].indexOf(rec.role) < 0){
-        err.classList.add('show');
-        err.textContent = rec.active === false ? 'این حساب غیرفعال است.' : 'نقش این حساب معتبر نیست؛ با مدیر آکادمی تماس بگیرید.';
-        return;
-      }
-      if (window.GA_SUB && !GA_SUB.isAllowed(u)){
-        err.classList.add('show');
-        err.textContent = 'ورود ممکن نیست؛ اشتراک فعال ندارید.';
-        return;
-      }
-      store.set('ga_session', u);
-      store.set('ga_user_label', userLabelFor(u));
-      enterApp(u);
-      }, 350);
+        err.textContent = msg;
+        setTimeout(() => err.classList.remove('show'), 3200);
+      };
+      if (!u || !pass.value){ fail('نام کاربری و رمز عبور را وارد کنید'); return; }
+      if (!AUTH()){ fail('ماژول ورود بارگذاری نشده است؛ صفحه را دوباره باز کنید.'); return; }
+      AUTH().signIn(u, pass.value).then(prof => {
+        pass.value = '';
+        store.set('ga_last_user', prof.user);
+        /* داده‌های خصوصی آکادمی فقط پس از ورود خوانده می‌شوند */
+        return cloudPullAfterLogin().then(() => prof);
+      }).then(prof => {
+        if (sbtn){ sbtn.disabled = false; sbtn.textContent = sbtn.dataset.old || 'ورود به داشبورد'; }
+        if (window.GA_SUB) GA_SUB.paintLogin(prof.user);
+        if (window.GA_SUB && !GA_SUB.isAllowed(prof.user)){
+          AUTH().signOut();
+          fail('ورود ممکن نیست؛ اشتراک فعال ندارید.');
+          return;
+        }
+        store.set('ga_session', prof.user);
+        store.set('ga_user_label', userLabelFor(prof.user));
+        enterApp(prof.user);
+      }).catch(ex => fail(String(ex && ex.message || ex)));
     });
+  }
+  /* پس از ورود: یک‌بار دریافت از ابر (با توکن کاربر) — حداکثر ۸ ثانیه انتظار، بعد ادامه با دادهٔ محلی */
+  function cloudPullAfterLogin(){
+    if (!window.GA_CLOUD || !GA_CLOUD.pull) return Promise.resolve(false);
+    return Promise.race([
+      Promise.resolve().then(() => GA_CLOUD.pull()).catch(() => false),
+      new Promise(r => setTimeout(() => r(false), 8000))
+    ]);
   }
 
   function applyRoleUI(rec){
@@ -23261,7 +23604,9 @@ const stCal = $('#st-cal');
 
   function logout(){
     store.remove('ga_session');
-    location.reload();
+    const done = () => location.reload();
+    if (AUTH() && AUTH().mode() === 'panel') AUTH().signOut().then(done, done);
+    else done();
   }
 
   /* ═══════════ راهاندازی ═══════════ */
@@ -23370,33 +23715,38 @@ const stCal = $('#st-cal');
   document.addEventListener('DOMContentLoaded', () => {
     if (window.UI_LABELS) UI_LABELS.apply(document);
     restoreLegacyPractice();
-    seedUsers();
     initParticles();
     initAuth();
     initNav();
     tickClock();
     if (!enterApp._clk) enterApp._clk = setInterval(tickClock, 1000);
-    const sess = store.get('ga_session');
-    if (sess){
-      const sessRec = userRec(sess);
-      const sessionAccountOk = buildUsers()[String(sess).toLowerCase()] !== undefined && sessRec && sessRec.active !== false && ['member','admin'].indexOf(sessRec.role) >= 0;
-      if (sessionAccountOk && (!window.GA_SUB || GA_SUB.isAllowed(sess))) enterApp(sess);
-      else {
-        store.remove('ga_session');
-        store.set('ga_last_user', sess);
-        $('#login').classList.add('on');
-        if ($('#login-user')) $('#login-user').value = sess;
-        if (window.GA_SUB && sessionAccountOk) GA_SUB.paintLogin(sess);
-        const err = $('#login-err');
-        if (err){ err.classList.add('show'); err.textContent = sessionAccountOk ? 'ورود ممکن نیست؛ اشتراک فعال ندارید.' : 'نشست معتبر نیست؛ لطفاً دوباره وارد شوید.'; }
-      }
-    } else {
+    const showLogin = (msg) => {
+      store.remove('ga_session');
+      $('#login').classList.add('on');
       const last = store.get('ga_last_user');
-      if (last && window.GA_SUB){
-        if ($('#login-user') && !$('#login-user').value) $('#login-user').value = last;
-        GA_SUB.paintLogin(last);
-      }
-    }
+      if (last && $('#login-user') && !$('#login-user').value) $('#login-user').value = last;
+      if (msg){ const err = $('#login-err'); if (err){ err.classList.add('show'); err.textContent = msg; } }
+    };
+    const A = AUTH();
+    if (!A){ showLogin('ماژول ورود بارگذاری نشده است؛ صفحه را دوباره باز کنید.'); return; }
+    A.ready().then(ok => {
+      const prof = A.profile();
+      if (!ok || !prof){ showLogin(store.get('ga_session') ? 'نشست معتبر نیست؛ لطفاً دوباره وارد شوید.' : ''); return; }
+      const go2 = () => {
+        if (prof.role === 'member' && window.GA_SUB && !GA_SUB.isAllowed(prof.user)){
+          A.signOut();
+          showLogin('ورود ممکن نیست؛ اشتراک فعال ندارید.');
+          return;
+        }
+        store.set('ga_session', prof.user);
+        store.set('ga_user_label', userLabelFor(prof.user));
+        enterApp(prof.user);
+      };
+      if (A.mode() === 'adminpanel'){
+        /* فهرست حساب‌ها برای «یوزرها»/«اشتراک‌ها»/«پیام‌ها» — شکست آن ورود را متوقف نمی‌کند */
+        Promise.race([A.accounts.load().catch(() => null), new Promise(r => setTimeout(r, 8000))]).then(go2);
+      } else go2();
+    });
   });
 
   /* ← دکمه‌های Back/Forward مرورگر: بین بخش‌های داخل همین اپ حرکت می‌کنند؛ اگر مودال باز است، Back آن را می‌بندد و جای‌مان عوض نمی‌شود */

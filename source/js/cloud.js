@@ -41,8 +41,34 @@
     '__ga_t': 1,
     /* امنیت: یوزر/رمز هرگز روی ابر نرود — فقط محلی نگه داشته می‌شود */
     'ga_users': 1,
-    'ga_player_users': 1
+    'ga_player_users': 1,
+    /* پیش‌پرکردن فرم ورود همین دستگاه — نباید روی ابر برود (نام آخرین یوزر را برای همه فاش می‌کرد) */
+    'ga_last_user': 1,
+    'ga_user_label': 1
   };
+
+  /* ── هویت و مجوز نوشتن (حساب‌های ابری 2026-10-07) ──
+     همهٔ درخواست‌ها با JWT کاربرِ واردشده فرستاده می‌شوند (GA_AUTH در js/auth.js).
+     عضو فقط کلیدهای سهم خودش را می‌فرستد؛ سرور (ga-sync) همین را دوباره اعمال می‌کند. */
+  var MEMBER_KEYS = { ga_msg_reads: 1, ga_avatars: 1, ga_cart: 1, ga_fav: 1, ga_coins: 1, ga_coinreq: 1 };
+  function auth() { try { return (typeof window !== 'undefined' && window.GA_AUTH) || null; } catch (e) { return null; } }
+  function role() {
+    var A = auth();
+    if (!A) return 'admin';                // تست‌های node/هدلس بدون ماژول هویت: رفتار قبلی
+    var p = A.profile();
+    if (!p || p.active === false) return 'guest';
+    return p.role === 'admin' ? 'admin' : 'member';
+  }
+  function canWrite(k) {
+    var r = role();
+    return r === 'admin' || (r === 'member' && !!MEMBER_KEYS[k]);
+  }
+  function bearer(sync) {
+    var A = auth(), key = cfg().key;
+    if (!A) return Promise.resolve(key);
+    if (sync) return Promise.resolve(A.token() || key);
+    return A.fresh().then(function (t) { return t || key; }, function () { return key; });
+  }
 
   var inBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
   var mem = {}; // ذخیرهٔ جایگزین برای تست هدلس (node)
@@ -83,7 +109,7 @@
 
   function pendingKeys() {
     return Object.keys(jread(DIRTY_KEY, {})).filter(function (k) {
-      return k.indexOf(PFX) === 0 && k !== PFX && !SKIP[k];
+      return k.indexOf(PFX) === 0 && k !== PFX && !SKIP[k] && canWrite(k);
     });
   }
   function byteLength(text) {
@@ -151,11 +177,14 @@
   }
 
   function rest(path, init) {
-    var c = cfg(), h = { apikey: c.key, 'Content-Type': 'application/json' };
+    var c = cfg();
     init = init || {};
-    Object.keys(init.headers || {}).forEach(function (k) { h[k] = init.headers[k]; });
-    return requestJSON(c.url.replace(/\/+$/, '') + '/rest/v1/' + path, {
-      method: init.method || 'GET', headers: h, body: init.body || null, mode: 'cors'
+    return bearer(false).then(function (tok) {
+      var h = { apikey: c.key, Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' };
+      Object.keys(init.headers || {}).forEach(function (k) { h[k] = init.headers[k]; });
+      return requestJSON(c.url.replace(/\/+$/, '') + '/rest/v1/' + path, {
+        method: init.method || 'GET', headers: h, body: init.body || null, mode: 'cors'
+      });
     });
   }
 
@@ -184,8 +213,14 @@
   }
 
   /* ── علامت‌گذاری تغییرات (نگهبان setItem/removeItem + جاروب دوره‌ای) ── */
-  function markDirty(k) {
+  /* محافظ «پیش‌فرضِ قبل از دریافت»: کلیدی که روی این دستگاه نبود و پیش از اولین دریافتِ
+     مجاز (با ورود) ساخته شد — مثل تیم‌های پیش‌فرض «نبرد میدان‌ها» — تغییر کاربر نیست؛
+     صف نمی‌شود تا مقدار واقعی ابر را بازنویسی نکند. اگر ابر آن کلید را نداشت، بعد از دریافت صف می‌شود. */
+  var authPulled = false, seeded = {};
+  function markDirty(k, before) {
     if (applying || !k || k.indexOf(PFX) !== 0 || SKIP[k] || !hasCred()) return;
+    if (!authPulled && before === null) { seeded[k] = 1; return; }
+    if (!canWrite(k)) return;
     var d = jread(DIRTY_KEY, {}), stamp = localStamp();
     // حتی دو ویرایش در یک میلی‌ثانیه باید نسخهٔ جدا داشته باشند.
     var previous = Date.parse(d[k]);
@@ -207,7 +242,7 @@
         value: function (k, v) {
           var before = this.getItem(k);
           origSet.call(this, k, v);
-          try { if (this === window.localStorage && before !== String(v)) markDirty(String(k)); } catch (e) {}
+          try { if (this === window.localStorage && before !== String(v)) markDirty(String(k), before); } catch (e) {}
         }
       });
       Object.defineProperty(proto, 'removeItem', {
@@ -229,7 +264,7 @@
     Object.keys(sweepCache).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); });
     keys.forEach(function (k) {
       var v = L.getItem(k);
-      if (sweepCache[k] !== v) markDirty(k);
+      if (sweepCache[k] !== v) markDirty(k, sweepCache[k] === undefined ? null : sweepCache[k]);
       sweepCache[k] = v;
     });
   }
@@ -347,6 +382,7 @@
     if (pushFlight) return pushFlight.then(function () { return pull(); });
     if (!hasCred()) { setPhase('off', 'کانفیگ ابری کامل نیست — از پنل ☁️ تنظیم کنید'); return Promise.resolve(false); }
     setPhase('pulling');
+    var A0 = auth(), authorized = !A0 || !!(A0.profile() && A0.token());
     pullFlight = rest('ga_store?select=k,v,updated_at&order=updated_at.desc&limit=500')
       .then(function (rows) {
         if (!Array.isArray(rows)) throw new Error('پاسخ دریافت داده معتبر نیست.');
@@ -414,6 +450,14 @@
           Object.keys(COURSE_MERGE).concat(Object.keys(SUB_MERGE)).forEach(function (k) {
             if (!remoteKeys[k] && L.getItem(k) !== null && !d[k]) d[k] = localStamp();
           });
+          if (authorized) {
+            /* پیش‌فرض‌های قبل از دریافت: اگر ابر مقدار داشت، همان بالا اعمال شد؛ اگر نداشت، حالا صف شود */
+            Object.keys(seeded).forEach(function (k) {
+              if (!remoteKeys[k] && L.getItem(k) !== null && canWrite(k) && !d[k]) d[k] = localStamp();
+            });
+            seeded = {};
+            authPulled = true;
+          }
           stripSpStorage(L);
           jwrite(DIRTY_KEY, d);
           jwrite(TS_KEY, ts);
@@ -644,8 +688,13 @@
           tooBig.maxBytes = keepalive ? KEEPALIVE_BYTES : MAX_EDGE_BYTES;
           throw tooBig;
         }
-        return edgeSync([row], { keepalive: keepalive }).then(function () {
+        return edgeSync([row], { keepalive: keepalive }).then(function (ack) {
           var d2 = jread(DIRTY_KEY, {}), ts = jread(TS_KEY, {});
+          if (ack && ack.values && Object.prototype.hasOwnProperty.call(ack.values, k) && d2[k] === stamp && L.getItem(k) === raw) {
+            /* سهم عضو در سرور با بقیهٔ داده ادغام شد؛ نسخهٔ ادغام‌شده جایگزین نسخهٔ محلی می‌شود */
+            applying = true;
+            try { L.setItem(k, JSON.stringify(ack.values[k])); raw = L.getItem(k); } finally { applying = false; }
+          }
           ts[k] = stamp;
           jwrite(TS_KEY, ts);
           // ویرایشِ حین درخواست هرگز با پاسخ نسخهٔ قدیمی از صف حذف نمی‌شود.
@@ -664,6 +713,11 @@
         });
       }).catch(function (e) {
         var detail = { key: k, status: e.status || 0, code: e.code || '', bytes: bytes, message: errorText(e) };
+        if (e.status === 403 && (e.code === 'FORBIDDEN_KEY' || e.code === 'FORBIDDEN_CHANGE')) {
+          /* این تغییر هرگز مجاز نمی‌شود (نقش عضو)؛ در صف نماند تا ارسال‌های بعدی گیر نکنند */
+          var dd = jread(DIRTY_KEY, {}); delete dd[k]; jwrite(DIRTY_KEY, dd);
+        }
+        if (e.status === 401) detail.message = 'برای ذخیره در سرور باید دوباره وارد شوید؛ تغییرات در صف محفوظ است.';
         errors.push(detail);
         state.errors = errors.slice();
         state.err = detail.message;
@@ -870,9 +924,13 @@
     ui();
     if (!hasCred()) { setPhase('off', 'خاموش — کلید/URL تنظیم نشده (پنل ☁️)'); return; }
     primeSweep();
-    pull().then(function () {
+    var A = auth();
+    (A ? A.ready() : Promise.resolve()).then(function () { return pull(); }).then(function () {
       if (pendingKeys().length) schedule(800);
     });
+    if (A && window.addEventListener) {
+      window.addEventListener('ga-auth-changed', function () { if (pendingKeys().length) schedule(500); render(); });
+    }
     setInterval(sweep, 20000);
     if (window.addEventListener) {
       window.addEventListener('online', function () { failStreak = 0; schedule(100); });
@@ -900,11 +958,13 @@
 
   /* نوشتن فقط از ga-sync؛ HTTP 2xx + ok:true + تعداد دقیق ردیف‌ها لازم است. */
   function edgeRequest(payload, options) {
-    var c = cfg();
-    return requestJSON(c.url.replace(/\/+$/, '') + '/functions/v1/ga-sync', {
-      method: 'POST',
-      headers: { apikey: c.key, Authorization: 'Bearer ' + c.key, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload), mode: 'cors', keepalive: !!(options && options.keepalive)
+    var c = cfg(), keep = !!(options && options.keepalive);
+    return bearer(keep).then(function (tok) {
+      return requestJSON(c.url.replace(/\/+$/, '') + '/functions/v1/ga-sync', {
+        method: 'POST',
+        headers: { apikey: c.key, Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload), mode: 'cors', keepalive: keep
+      });
     }).then(function (r) {
       if (!r || r.ok !== true) throw new Error('ga-sync: ' + (r && (r.err || r.message) || 'تأیید ذخیره دریافت نشد'));
       return r;
@@ -945,7 +1005,9 @@
     tombShots: tombShots,
     tombSession: tombSession,
     stripSp: stripSpStorage,
-    syncable: syncableKeys,           // «پشتیبان آکادمی» همین فهرست را می‌گیرد تا از list اصلی جا نماند
+    syncable: syncableKeys,
+    canWrite: canWrite,
+    role: role,           // «پشتیبان آکادمی» همین فهرست را می‌گیرد تا از list اصلی جا نماند
     dirty: pendingKeys,
     queueInfo: queueInfo,
     cfg: cfg,

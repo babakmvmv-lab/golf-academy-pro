@@ -89,8 +89,11 @@
   function savePlayerEdits(e){ try { localStorage.setItem('ga_players', JSON.stringify(e)); } catch(e){} }
 
   /* ── یوزر/پسورد سایت بازیکنان ── */
-  function playerUsers(){ return D ? D.loadPlayerUsers() : {}; }
-  function savePlayerUsers(u){ try { localStorage.setItem('ga_player_users', JSON.stringify(u)); } catch(e){} }
+  /* رمزها فقط در Supabase Auth‌اند (حساب‌های ابری 2026-10-07): این رجیستری محلی دیگر رمز نگه نمی‌دارد،
+     و رمزِ قدیمیِ ذخیره‌شده روی دستگاه هرگز دوباره به حساب ابری فرستاده نمی‌شود. */
+  function noPass(u){ const o = {}; Object.keys(u || {}).forEach(k => { const v = u[k]; if (v && typeof v === 'object'){ const c = Object.assign({}, v); delete c.pass; o[k] = c; } }); return o; }
+  function playerUsers(){ return noPass(D ? D.loadPlayerUsers() : {}); }
+  function savePlayerUsers(u){ try { localStorage.setItem('ga_player_users', JSON.stringify(noPass(u))); } catch(e){} }
   function randomAccountPassword(length){
     const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%';
     const size = Math.max(12, Math.min(32, +length || 16));
@@ -172,7 +175,6 @@
     const prev = pu[u.pid] || {};
     pu[u.pid] = Object.assign({}, prev, {
       user: u.user || prev.user,
-      pass: u.pass || prev.pass,
       name: u.name || prev.name,
       active: u.active !== false
     });
@@ -1544,7 +1546,7 @@
     <div class="field-grid">
       <div><label>نام کاربری (login)</label><input class="input" id="pf-user" value="${esc(p.user)}" style="width:100%;direction:ltr" placeholder="player123"></div>
       <div><label>رمز عبور</label>
-        <input class="input" id="pf-pass" value="${esc(p.pass)}" style="width:100%;direction:ltr">
+        <input class="input" id="pf-pass" value="" placeholder="${p.hasUser ? 'برای تغییر رمز وارد کنید (حداقل ۸ نویسه)' : 'خالی = رمز تصادفی'}" autocomplete="new-password" style="width:100%;direction:ltr">
         <span class="gen-pass" id="pf-gen">⚡ تولید خودکار رمز</span>
       </div>
     </div>`;
@@ -1724,7 +1726,7 @@
       if (!syncedUser) return;
       saveCustomPlayers(lst);
       const pu = playerUsers();
-      pu[pid] = { user, pass, name: d.name, family: d.family, active: true };
+      pu[pid] = { user, name: d.name, family: d.family, active: true };
       savePlayerUsers(pu);
       APP.reloadData(); APP.go('mgmt');
       APP.toast('بازیکن «' + fullName + '» ثبت شد — یوزر: ' + user + '؛ برای تغییر رمز از مدیریت یوزرها استفاده کنید.', 'green');
@@ -1832,13 +1834,13 @@
       const pu = playerUsers();
       const prev = credsOf(pid) || { active: true };
       if (d.user || d.pass){
-        pu[pid] = { user: d.user || prev.user || 'player' + pid, pass: d.pass || prev.pass, name: d.name, family: d.family, active: prev.active !== false };
+        pu[pid] = { user: d.user || prev.user || 'player' + pid, name: d.name, family: d.family, active: prev.active !== false };
         savePlayerUsers(pu);
       }
       // ⇄ همگام‌سازی با لیست یوزرها (یوزر/رمز/نام)
       syncPlayerToUser(pid, {
         user: d.user || prev.user || '',
-        pass: d.pass || prev.pass || '',
+        pass: d.pass || '',   /* فقط رمزِ تازه‌تایپ‌شده؛ رمز ذخیره‌شده دیگر وجود ندارد */
         name: fullName,
         active: prev.active !== false
       });
@@ -4530,9 +4532,14 @@
     const edge = edgeCfg.url + '/functions/v1/ga-mail';
     try {
       const key = edgeCfg.key;
-      const r2 = await fetch(edge, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key, 'apikey': key },
+      /* ga-mail فقط با توکن مدیرِ واردشده کار می‌کند (کلید عمومی کافی نیست) */
+      const jwt = (window.GA_AUTH && GA_AUTH.fresh) ? await GA_AUTH.fresh() : null;
+      if (!jwt) throw new Error('دالان دوم (ga-mail) پاسخ 401: نشست مدیر پیدا نشد؛ دوباره وارد شوید.');
+      const r2 = await fetch(edge, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt, 'apikey': key },
         body: JSON.stringify({ to: toEmail, to_name: toName || '', subject, html: buildEmailHtml(subject, text), text }) });
       if (r2.ok) return true;
+      const j2 = await r2.clone().json().catch(() => null);
+      if (j2 && j2.err) throw new Error('دالان دوم (ga-mail) پاسخ ' + r2.status + ': ' + j2.err);
       /* CSP_EMAILJS_V1 — پاسخ واقعی سرور پنهان نشود (قبلاً همه‌چیز «خطای شبکه» گزارش می‌شد) */
       throw new Error('دالان دوم (ga-mail) پاسخ ' + r2.status + ': ' + (await r2.text().catch(() => '')).slice(0, 140));
     } catch(e2){
@@ -5061,7 +5068,9 @@
         <button class="btn sm" id="us-add">➕ یوزر جدید</button>
         <button class="btn sm ghost" id="us-sync">👥 ساخت یوزر برای همهٔ اعضا (همگام‌سازی)</button>
         <span style="color:var(--muted);font-size:11.5px;align-self:center">${D.fa(users.length)} یوزر ثبت شده</span>
+        <button class="btn sm ghost" id="us-reload" title="خواندن دوبارهٔ فهرست از سرور">⟳ تازه‌سازی از سرور</button>
       </div>
+      <div id="us-cloud" class="sub-note" style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.9"></div>
     </div>
     <div class="glass">
       <div class="card-head"><span class="ic">👤</span><h3>لیست ${esc(L('nav.users','یوزرها'))}</h3><span class="tag">مدیر / عضو</span></div>
@@ -5070,8 +5079,18 @@
       </tr></thead><tbody id="us-rows"></tbody></table></div>
     </div>
     <div id="us-modal"></div>`;
+    function cloudNote(){
+      const el = $('#us-cloud'); if (!el) return;
+      const A = window.GA_AUTH && GA_AUTH.accounts;
+      if (!A){ el.innerHTML = ''; return; }
+      const e = A.error();
+      el.innerHTML = '☁️ حساب‌ها روی سرور (Supabase Auth) نگه‌داری می‌شوند و روی همهٔ دستگاه‌ها یکسان‌اند؛ رمزها فقط به‌صورت هش در سرورند و قابل نمایش نیستند — برای تعیین رمز جدید از «🔑 یوزر و رمز» استفاده کنید (حداقل ۸ نویسه).'
+        + (A.pending() ? ' <b style="color:var(--gold-l)">در حال ذخیره در سرور…</b>' : '')
+        + (e ? '<br><b style="color:#ff8a80">خطای سرور: ' + esc(e) + '</b>' : (!A.loaded() ? '<br><b style="color:#ff8a80">فهرست حساب‌ها از سرور خوانده نشد.</b>' : ''));
+    }
     function render(){
       const rows = U.list();
+      cloudNote();
       $('#us-rows').innerHTML = rows.map(u => `
         <tr class="${u.active ? '' : 'off-row'}">
           <td class="num">${D.fa(u.id)}</td>
@@ -5227,6 +5246,7 @@
         const un = $('#pw-user').value.trim().toLowerCase();
         const nm = $('#pw-name').value.trim();
         if (!pw || !un){ APP.toast('یوزر و رمز نمی‌تواند خالی باشد', 'red'); return; }
+        if (pw.length < 8){ APP.toast('رمز باید حداقل ۸ نویسه باشد', 'red'); return; }
         const a2 = U.list();
         const t = a2.find(x => x.id === id);
         if (!t) return;
@@ -5298,6 +5318,8 @@
         const user = $('#nu-user').value.trim().toLowerCase();
         const pass = $('#nu-pass').value.trim();
         if (!name || !user || !pass){ APP.toast('نام، یوزر و رمز را کامل کنید', 'red'); return; }
+        if (pass.length < 8){ APP.toast('رمز باید حداقل ۸ نویسه باشد', 'red'); return; }
+        if (!/^[a-z0-9][a-z0-9._-]{0,39}$/.test(user)){ APP.toast('نام کاربری فقط حروف انگلیسی کوچک، عدد و . _ - باشد', 'red'); return; }
         const a = U.list();
         if (a.some(x => String(x.user || '').trim().toLowerCase() === user) || (U.rec && U.rec(user)) ||
             (window.GA_SUB && GA_SUB.hasForeignSubscription(user, null))){
@@ -5317,6 +5339,18 @@
       });
       m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
     });
+    const usReload = $('#us-reload');
+    if (usReload) usReload.addEventListener('click', () => {
+      const A = window.GA_AUTH && GA_AUTH.accounts; if (!A) return;
+      usReload.disabled = true;
+      A.load().then(() => APP.toast('فهرست حساب‌ها از سرور تازه شد ✓', 'green'), e => APP.toast('خواندن از سرور انجام نشد: ' + (e && e.message || e), 'red'))
+        .then(() => { usReload.disabled = false; render(); });
+    });
+    if (!mgmtUsers._evt){
+      mgmtUsers._evt = true;
+      window.addEventListener('ga-accounts-changed', () => { const f = mgmtUsers._render; if (f && document.getElementById('us-rows')) f(); });
+    }
+    mgmtUsers._render = render;
     $('#us-sync').addEventListener('click', () => {
       const a = U.list();
       let added = 0;

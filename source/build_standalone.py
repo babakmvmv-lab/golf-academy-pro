@@ -80,7 +80,7 @@ def main():
                       '<style>' + lcss + '</style>', html)
 
     # 3) inline JS in load order
-    for jsname in ['device', 'cloud', 'labels', 'holidays', 'data', 'brand', 'sub', 'charts', 'qrcode.min', 'qr-webp', 'battle', 'landing', 'jdate', 'avatar', 'rank-guide', 'shop', 'mgmt', 'smartplay', 'leaflet', 'mis-golf', 'coursegeo', 'earthshot', 'earthmap', 'ga-backup', 'app']:
+    for jsname in ['device', 'auth', 'cloud', 'labels', 'holidays', 'data', 'brand', 'sub', 'charts', 'qrcode.min', 'qr-webp', 'battle', 'landing', 'jdate', 'avatar', 'rank-guide', 'shop', 'mgmt', 'smartplay', 'leaflet', 'mis-golf', 'coursegeo', 'earthshot', 'earthmap', 'ga-backup', 'app']:
         js = open(os.path.join(ROOT, 'js', jsname + '.js'), encoding='utf-8').read()
         html = re.sub(rf'<script src="js/{jsname}\.js"></script>',
                       lambda m: '<script>' + js + '</script>', html)

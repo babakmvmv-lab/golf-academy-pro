@@ -1057,7 +1057,24 @@
     const COUNTDOWN = NEXT_T ? Math.ceil((dateFrom(NEXT_T[5]) - TODAY)/86400000) : 0;
     const RANK_COUNT = {};
     RANK_DEF.forEach(rk => RANK_COUNT[rk[0]] = Object.values(PTS).filter(v => rankOf(v)[0] === rk[0]).length);
-    const PRACTICE_DAYS = new Set(activities.filter(a=>a.type==='تمرین').map(a=>dayFmt(a.date))).size;
+    /* «جلسات تمرین» (PRACTICE_DAYS_V2): روزهای تمرین برگزارشدهٔ فصل جاری از همهٔ منابع واقعی —
+       رویدادهای تقویم (ga_events) و دوره‌های (ga_programs) با نوع «تمرین» + activities قدیمی.
+       برگزارشده = تاریخ شروع از ابتدای فصل تا امروز و دست‌کم یک شرکت‌کنندهٔ فعال. چند جلسه در یک روز = یک روز. */
+    const PRACTICE_DAYS = (() => {
+      const days = new Set(activities.filter(a=>a.type==='تمرین').map(a=>dayFmt(a.date)));
+      const held = (it) => {
+        if (!it || it.type !== 'تمرین') return false;
+        const d0 = it.start || it.date;
+        if (!d0) return false;
+        const d = dateFrom(String(d0).slice(0, 10));
+        if (isNaN(d) || d < SEASON_START || d > TODAY) return false;
+        return (Array.isArray(it.participants) ? it.participants : []).some(pid => activeSet.has(+pid));
+      };
+      let evs = [];
+      try { evs = JSON.parse(localStorage.getItem('ga_events') || '[]'); } catch(e){}
+      (Array.isArray(evs) ? evs : []).concat(programs || []).forEach(it => { if (held(it)) days.add(String(it.start || it.date).slice(0, 10)); });
+      return days.size;
+    })();
     const COURSE_DAYS = new Set(activities.filter(a=>a.type==='آموزش').map(a=>dayFmt(a.date))).size;
 
     const CAREER = careerStats(state, { results, programs, rules, battleBonus });

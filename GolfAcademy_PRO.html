@@ -20916,6 +20916,28 @@ const sp = $('#st-podium');
   }
 
   /* ═══════════ صفحه: مرکز بازیکن ═══════════ */
+  /* ── حریم دادهٔ اعضا (2026-10-07): در «مرکز بازیکن» و «هوش زمین» هر عضو فقط دادهٔ بازیکنِ متصل به
+     حساب خودش (ga_accounts.pid) را می‌بیند؛ نقش مدیر مثل قبل همهٔ بازیکنان را. ── */
+  function selfPid(){
+    const r = userRec(currentUser);
+    if (!r || r.role !== 'member') return null;          // مدیر/کنسول: بدون محدودیت
+    const n = +r.pid;
+    return Number.isFinite(n) && n > 0 ? n : 0;          // ۰ = عضوِ بدون بازیکنِ متصل
+  }
+  function lbFor(){
+    const me = selfPid(), lb = (A && A.LB) || [];
+    return me === null ? lb : lb.filter(r => +r.pid === me);
+  }
+  /* برای عضو: انتخاب‌ها روی بازیکن خودش قفل می‌شود؛ اگر بازیکنی به حسابش وصل نیست پیام می‌دهد */
+  function selfGate(v){
+    const me = selfPid();
+    if (me === null) return true;
+    if (me && lbFor().length){ playerSel = me; coursePlayerSel = me; return true; }
+    v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted);line-height:2">🔒 ${me
+      ? 'هنوز اطلاعاتی برای بازیکنِ متصل به حساب شما ثبت نشده است.'
+      : 'حساب شما هنوز به یک بازیکن متصل نشده است.'}<br>برای اتصال حساب با مدیر آکادمی تماس بگیرید.</div>`;
+    return false;
+  }
   function pagePlayer(){
 
   const v = $('#view');
@@ -20923,9 +20945,11 @@ const sp = $('#st-podium');
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🏌️ نمودارهای ${esc(L('nav.player','مرکز بازیکن'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
     }
+    if (!selfGate(v)) return;
+    const _me = selfPid();
     const livePid = (playerTab === 'smart') ? lastOpenShotPid() : null;
-    if (livePid) playerSel = livePid;
-    const p = A.LB.find(r => +r.pid === +playerSel) || A.LB[0];
+    if (livePid && (_me === null || livePid === _me)) playerSel = livePid;
+    const p = lbFor().find(r => +r.pid === +playerSel) || lbFor()[0];
     const cards = A.CARDS[playerSel] || [];
     const sk = A.SKILLS[playerSel] || {scoring:0,birdie:0,consistency:0,practice:0,experience:0};
     const pt = A.PAR_TYPE[playerSel] || {};
@@ -20951,7 +20975,7 @@ const sp = $('#st-podium');
     </style>
     <div class="toolbar">
       <span class="lbl">🏌️ بازیکن:</span>
-      <select class="sel" id="pl-sel">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===playerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+      <select class="sel" id="pl-sel">${lbFor().map(r => `<option value="${r.pid}" ${r.pid===playerSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
       <div style="flex:1"></div>
       ${honorChip(playerSel)}
       ${rankPill(p.color)}
@@ -20982,7 +21006,7 @@ const sp = $('#st-podium');
         <div class="fold-body">
         <div class="toolbar" style="margin-bottom:8px">
           <span class="lbl">🏌️ بازیکن:</span>
-          <select class="sel" id="pp-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===pracSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+          <select class="sel" id="pp-player">${lbFor().map(r => `<option value="${r.pid}" ${r.pid===pracSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
           <span class="lbl">🎯 نوع تمرین:</span>
           <select class="sel" id="pp-type"><option value="all">همهٔ تمرین‌ها</option>${Object.keys(SP_TYPE_LBL).map(t => `<option value="${t}">${SP_TYPE_LBL[t]}</option>`).join('')}</select>
           <span class="lbl">⛳ کلاب:</span>
@@ -21010,7 +21034,7 @@ const sp = $('#st-podium');
         <div class="fold-body">
         <div class="toolbar" style="margin-bottom:8px;align-items:center">
           <span class="lbl">🏌️ بازیکن:</span>
-          <select class="sel" id="pa-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===pracSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+          <select class="sel" id="pa-player">${lbFor().map(r => `<option value="${r.pid}" ${r.pid===pracSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
           <span class="lbl">🔢 تعداد تمرین:</span>
           <select class="sel" id="pa-n">
             <option value="1">فقط تمرین آخر</option>
@@ -21090,6 +21114,7 @@ const sp = $('#st-podium');
   }
   /* بازیکنی که آخرین/فعلی دیتای تمرین تمام‌شده را دارد — برای پیش‌انتخاب هوشمند سلکت‌های تمرینی */
   function pracDefaultPid(){
+    if (selfPid() !== null) return playerSel;   // عضو: همیشه خودش
     try {
       const ssn = spSessions();
       const closedIds = {};
@@ -21406,7 +21431,7 @@ const sp = $('#st-podium');
     const selBar = `
     <div class="toolbar">
       <span class="lbl">🏌️ بازیکن:</span>
-      <select class="sel" id="pl-sel-smart">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===p.pid?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+      <select class="sel" id="pl-sel-smart">${lbFor().map(r => `<option value="${r.pid}" ${r.pid===p.pid?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
       ${isAdmin(currentUser) ? `<button type="button" class="btn sm" id="sp-record">${PLUS_SVG} ثبت رکورد</button>` : ''}
       <div style="flex:1"></div>
       ${honorChip(p.pid)}
@@ -21420,7 +21445,7 @@ const sp = $('#st-podium');
       <div class="card-head"><span class="ic">${ARCHIVE_SVG}</span><h3>آرشیو نمودار جلسات تمام‌شده</h3><span class="tag"></span></div>
       <div class="toolbar" style="margin-bottom:4px">
         <span class="lbl">🏌️ بازیکن:</span>
-        <select class="sel" id="sph-player">${A.LB.map(r => `<option value="${r.pid}" ${r.pid===pracSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+        <select class="sel" id="sph-player">${lbFor().map(r => `<option value="${r.pid}" ${r.pid===pracSel?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
         <span class="lbl">🎯 نوع تمرین:</span>
         <select class="sel" id="sph-type"><option value="all">همهٔ تمرین‌ها</option>${Object.keys(SP_TYPE_LBL).map(t => `<option value="${t}">${SP_TYPE_LBL[t]}</option>`).join('')}</select>
         <span class="lbl">⛳ کلاب:</span>
@@ -21665,7 +21690,8 @@ const sp = $('#st-podium');
     }
     /* بازیکن = آخرین ضربهٔ همین جلسهٔ باز (نه سلکت بالای صفحه) */
     const livePid = lastOpenShotPid();
-    if (livePid){
+    const meLive = selfPid();
+    if (livePid && (meLive === null || livePid === meLive)){
       const row = A.LB.find(r => +r.pid === +livePid);
       if (row) p = row;
     }
@@ -21813,6 +21839,8 @@ const sp = $('#st-podium');
       v.innerHTML = `<div class="glass" style="padding:30px;text-align:center;color:var(--muted)">🗺️ نمودار ${esc(L('nav.course','هوش زمین'))} غیرفعال است — از «${esc(L('nav.settings','تنظیمات نمایش'))}» فعال کنید</div>`;
       return;
     }
+    if (!selfGate(v)) return;
+    const meC = selfPid();   // عضو: آمار زمین فقط از کارت‌های خودش
     try {
     const list = (S && S.courses) || [];
     const crs = list.find(c => c[0] === courseSel) || list[0];
@@ -21828,12 +21856,13 @@ const sp = $('#st-podium');
     const cardsAll = (S && S.scorecards) || [];
     const toursAll = (S && S.tournaments) || [];
     const rounds = cardsAll.filter(c => {
+      if (meC !== null && +c.pid !== meC) return false;
       const t = toursAll.find(x => x[0] === c.tour);
       return t && t[3] === crs[0];
     }).length;
     const recs = ((A0.CARDS || {})[coursePlayerSel] || []).filter(c => c.course === crs[0]);
     const pl = (A0.LB || []).find(r => r.pid === coursePlayerSel);
-    const lbOpts = (A0.LB || []).map(r => `<option value="${r.pid}" ${r.pid===coursePlayerSel?'selected':''}>${esc(r.name)}</option>`).join('');
+    const lbOpts = lbFor().map(r => `<option value="${r.pid}" ${r.pid===coursePlayerSel?'selected':''}>${esc(r.name)}</option>`).join('');
     const crsOpts = list.map(c => `<option value="${c[0]}" ${c[0]===courseSel?'selected':''}>${esc(c[1])}</option>`).join('');
     v.innerHTML = `
     <div class="toolbar">
@@ -21949,6 +21978,7 @@ const sp = $('#st-podium');
     const avgAll = rounds ? (() => {
       let s = 0, n = 0;
       S.scorecards.forEach(c => {
+        if (meC !== null && +c.pid !== meC) return;
         const t = S.tournaments.find(x => x[0] === c.tour);
         if (t && t[3] === crs[0]){ const hs = (D.tourHoleIds ? D.tourHoleIds(t) : Array.from({length: t[4]}, (_,i)=>i+1)); s += c.total - hs.reduce((a,h)=>a+(pars[h-1]||0),0); n++; }
       });
@@ -21956,7 +21986,7 @@ const sp = $('#st-podium');
     })() : null;
     const st = [
       ['⛳','پار کل', D.fa(pars.slice(0,holes).reduce((a,b)=>a+b,0)), 'var(--gold)'], ['🏌️','میدانها', D.fa(holes), 'var(--blue)'],
-      ['👥','دورهای برگزار', D.fa(rounds), 'var(--orange)'], ['📉','میانگین vs پار', avgAll===null?'—':(avgAll>0?'+':'')+D.fa(avgAll.toFixed(2)), 'var(--green-l)'],
+      ['👥', meC !== null ? 'دورهای من' : 'دورهای برگزار', D.fa(rounds), 'var(--orange)'], ['📉', meC !== null ? 'میانگین من vs پار' : 'میانگین vs پار', avgAll===null?'—':(avgAll>0?'+':'')+D.fa(avgAll.toFixed(2)), 'var(--green-l)'],
     ];
     const csStats = $('#cs-stats'); if (csStats) csStats.innerHTML = st.map(([ic,lbl,val,col]) => `
       <div class="glass stat" style="min-height:88px">

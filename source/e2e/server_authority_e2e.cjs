@@ -45,6 +45,11 @@ const IGNORE = /livePrep|Charts\.spark|sp-1/;
         }).observe(app, { attributes: true, attributeFilter: ['class'] });
       });
     });
+    if (opts.slowAnon) await ctx.route(/supabase\.co\/rest\/v1\/ga_store/, async r => {
+      const h = r.request().headers()['authorization'] || '';
+      if (!/eyJ/.test(h)) await new Promise(res => setTimeout(res, 5000));   // درخواست بدون توکن کاربر (قبل از ورود) کند است
+      return r.fallback();
+    });
     const page = await ctx.newPage();
     if (opts.clock) await page.clock.install();
     const errors = [];
@@ -134,6 +139,17 @@ const IGNORE = /livePrep|Charts\.spark|sp-1/;
   await B.ctx.unroute(/functions\/v1\/ga-sync/);
   ok(A.errors.length === 0 && B.errors.length === 0, 'بدون خطای صفحه ' + A.errors.concat(B.errors).join(' | '));
   await A.ctx.close(); await B.ctx.close();
+
+  /* ── ۶ب) دریافتِ کندِ قبل از ورود هنوز در جریان است و کاربر سریع وارد می‌شود ← باز هم دادهٔ کامل سرور ── */
+  {
+    const D = await device({ slowAnon: true });
+    await D.page.waitForSelector('#login.on', { timeout: 20000 });
+    await D.page.fill('#login-user', 'p1'); await D.page.fill('#login-pass', 'Member-Pass-QA1');
+    await D.page.click('#login-form button[type="submit"]');
+    await D.page.waitForFunction(() => document.getElementById('app').classList.contains('on') || /اشتراک/.test((document.getElementById('login-err') || {}).textContent || ''), null, { timeout: 30000 }).catch(() => {});
+    ok(await inApp(D.page), 'ورود سریع حین دریافتِ عمومیِ کند: اشتراک از سرور خوانده شد و ورود انجام شد');
+    await D.ctx.close();
+  }
 
   /* ── ۷) نسخهٔ جدید سایت وقتی برگه پنهان است ← با برگشتن کاربر خودکار تازه می‌شود ── */
   {

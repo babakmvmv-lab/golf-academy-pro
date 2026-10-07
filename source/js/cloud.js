@@ -486,13 +486,20 @@
   }
 
   /* ── pull: اعمال دادهٔ جدیدترِ سرور روی این دستگاه ──────────────── */
+  var pullFlightAuth = false;
   function pull() {
-    if (pullFlight) return pullFlight;
+    if (pullFlight) {
+      /* دریافتِ در جریان قبل از ورود (فقط داده‌های عمومی) بود و حالا وارد شده‌ایم ⇒ بعد از آن یک دریافت کامل */
+      var A9 = auth(), nowAuth = !A9 || !!(A9.profile() && A9.token());
+      if (nowAuth && !pullFlightAuth) return pullFlight.then(function () { return pull(); });
+      return pullFlight;
+    }
     if (pushFlight) return pushFlight.then(function () { return pull(); });
     if (!hasCred()) { setPhase('off', 'کانفیگ ابری کامل نیست — از پنل ☁️ تنظیم کنید'); return Promise.resolve(false); }
     setPhase('pulling');
     lastPullTry = Date.now();
     var A0 = auth(), authorized = !A0 || !!(A0.profile() && A0.token());
+    pullFlightAuth = authorized;
     pullFlight = rest('ga_store?select=k,v,updated_at&order=updated_at.desc&limit=500')
       .then(function (rows) {
         if (!Array.isArray(rows)) throw new Error('پاسخ دریافت داده معتبر نیست.');

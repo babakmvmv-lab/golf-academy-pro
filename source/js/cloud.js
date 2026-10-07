@@ -374,12 +374,13 @@
               }
               return;
             }
-            if (COURSE_MERGE[r.k]) {
-              /* رجیستری زمین و نقشهٔ KML هر دو چندرکوردی‌اند. pull نیز باید merge کند:
-                 رکوردهای محلیِ غایب از ابر حفظ و برای ارسال دوباره صف می‌شوند؛ نسخهٔ
-                 جدیدترِ همان زمین برنده است تا گوشی خالی نتواند زمین لپ‌تاپ را حذف کند. */
+            if (COURSE_MERGE[r.k] || SUB_MERGE[r.k]) {
+              /* داده‌های چندرکوردی را هنگام pull هم merge کن تا رکوردهای محلیِ غایب
+                 از ابر حذف نشوند. اشتراک‌ها بر اساس id ادغام می‌شوند، نه کلید آرایه. */
               var localRaw = L.getItem(r.k), remoteVal = decode(r.v);
-              var mergedVal = mergeCourseValue(r.k, localRaw, remoteVal, false);
+              var mergedVal = COURSE_MERGE[r.k]
+                ? mergeCourseValue(r.k, localRaw, remoteVal, false)
+                : mergeSubscriptionRows(localRaw, remoteVal);
               var uploadMerged = !sameJsonValue(mergedVal, remoteVal);
               try {
                 if (!sameJsonValue(mergedVal, localRaw)) {
@@ -410,7 +411,7 @@
           /* اگر این دستگاه زمین/نقشه دارد ولی کلید هنوز در ابر ساخته نشده، آن را هم صف کن. */
           var remoteKeys = {};
           (rows || []).forEach(function (r) { if (r && r.k) remoteKeys[r.k] = 1; });
-          Object.keys(COURSE_MERGE).forEach(function (k) {
+          Object.keys(COURSE_MERGE).concat(Object.keys(SUB_MERGE)).forEach(function (k) {
             if (!remoteKeys[k] && L.getItem(k) !== null && !d[k]) d[k] = localStamp();
           });
           stripSpStorage(L);
@@ -447,6 +448,48 @@
   /* هر دو کلید چندزمینی‌اند؛ LWW کلِ ga_courses یا ga_course_geo ممکن است
      زمینی را که فقط روی دستگاه دیگر است از ابر حذف کند. */
   var COURSE_MERGE = { ga_courses: 1, ga_course_geo: 1 };
+  /* سوابق اشتراک یک آرایهٔ مشترک‌اند؛ merge-by-id از حذف اشتراک‌های دستگاه دیگر جلوگیری می‌کند. */
+  var SUB_MERGE = { ga_subscriptions: 1 };
+  function subscriptionRows(raw){
+    try {
+      var value = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw;
+      return Array.isArray(value) ? value.filter(function (s) { return s && typeof s === 'object' && !Array.isArray(s); }) : [];
+    } catch(e) { return []; }
+  }
+  function subscriptionVersion(s){
+    var latest = 0;
+    ['updated_at','updatedAt','deleted_at','created_at'].forEach(function (key) {
+      var t = Date.parse(s && s[key] || '');
+      if (Number.isFinite(t) && t > latest) latest = t;
+    });
+    (Array.isArray(s && s.events) ? s.events : []).forEach(function (event) {
+      var t = Date.parse(event && event.at || '');
+      if (Number.isFinite(t) && t > latest) latest = t;
+    });
+    return latest;
+  }
+  function subscriptionDenied(s){
+    return !!(s && (s.deleted_at || s.status === 'deleted' || s.status === 'canceled' || s.status === 'past_due'));
+  }
+  function subscriptionKey(s){
+    if (s && s.id != null && String(s.id).trim()) return 'id:' + String(s.id);
+    try { return 'raw:' + JSON.stringify(stableValue(s)); } catch(e) { return 'raw:' + String(s); }
+  }
+  function mergeSubscriptionRows(localRaw, remoteRaw){
+    var merged = Object.create(null);
+    function take(s, localWinsTie){
+      var key = subscriptionKey(s), old = merged[key];
+      if (!old) { merged[key] = s; return; }
+      var a = subscriptionVersion(s), b = subscriptionVersion(old);
+      if (a > b || (a === b && subscriptionDenied(s) && !subscriptionDenied(old)) || (a === b && localWinsTie)) merged[key] = s;
+    }
+    subscriptionRows(remoteRaw).forEach(function (s) { take(s, false); });
+    subscriptionRows(localRaw).forEach(function (s) { take(s, true); });
+    return JSON.stringify(Object.keys(merged).map(function (key) { return merged[key]; }).sort(function (a, b) {
+      var byCreated = String(a.created_at || '').localeCompare(String(b.created_at || ''));
+      return byCreated || String(a.id || '').localeCompare(String(b.id || ''));
+    }));
+  }
   function courseRows(raw){
     try {
       var value = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw;
@@ -535,7 +578,7 @@
     if (keepalive) {
       // ادغام تمرین‌ها نیازمند GET است؛ هنگام خروج، بدون ادغام آن‌ها را بازنویسی نکن.
       keys = keys.filter(function (k) {
-        return !SP_MERGE[k] && !COURSE_MERGE[k] && byteLength(L.getItem(k) || 'null') < KEEPALIVE_BYTES - 1024;
+        return !SP_MERGE[k] && !COURSE_MERGE[k] && !SUB_MERGE[k] && byteLength(L.getItem(k) || 'null') < KEEPALIVE_BYTES - 1024;
       }).slice(0, 1);
     }
     if (!keys.length) {
@@ -555,12 +598,12 @@
 
     function remoteMerge() {
       if (!remoteFlight) {
-        var wanted = keys.filter(function (k) { return SP_MERGE[k] || COURSE_MERGE[k]; });
+        var wanted = keys.filter(function (k) { return SP_MERGE[k] || COURSE_MERGE[k] || SUB_MERGE[k]; });
         if (wanted.some(function (k) { return SP_MERGE[k]; }) && wanted.indexOf('ga_sp_tomb') < 0) wanted.unshift('ga_sp_tomb');
         remoteFlight = rest('ga_store?select=k,v&k=in.(' + wanted.join(',') + ')').then(function (rows) {
           if (!Array.isArray(rows)) throw new Error('پاسخ ادغام داده‌های ساختاری معتبر نیست؛ ارسال متوقف شد.');
           var out = {};
-          rows.forEach(function (row) { if (row && (SP_MERGE[row.k] || COURSE_MERGE[row.k])) out[row.k] = row.v; });
+          rows.forEach(function (row) { if (row && (SP_MERGE[row.k] || COURSE_MERGE[row.k] || SUB_MERGE[row.k])) out[row.k] = row.v; });
           return out;
         });
       }
@@ -570,7 +613,7 @@
     function sendKey(k) {
       if (stopped) return Promise.resolve();
       var stamp, raw, row, bytes = 0;
-      return ((SP_MERGE[k] || COURSE_MERGE[k]) ? remoteMerge() : Promise.resolve(null)).then(function (remote) {
+      return ((SP_MERGE[k] || COURSE_MERGE[k] || SUB_MERGE[k]) ? remoteMerge() : Promise.resolve(null)).then(function (remote) {
         var dirty = jread(DIRTY_KEY, {});
         if (!dirty[k]) return;
         stamp = dirty[k];
@@ -587,6 +630,9 @@
           } else if (COURSE_MERGE[k]) {
             var remoteValue = remote[k] === undefined ? (k === 'ga_courses' ? '[]' : '{}') : decode(remote[k]);
             row.v = encode(mergeCourseValue(k, raw, remoteValue, true));
+          } else if (SUB_MERGE[k]) {
+            var remoteSubs = remote[k] === undefined ? '[]' : decode(remote[k]);
+            row.v = encode(mergeSubscriptionRows(raw, remoteSubs));
           }
         }
         var payload = JSON.stringify({ action: 'kv', rows: [row] });
@@ -604,7 +650,7 @@
           jwrite(TS_KEY, ts);
           // ویرایشِ حین درخواست هرگز با پاسخ نسخهٔ قدیمی از صف حذف نمی‌شود.
           if (d2[k] === stamp && L.getItem(k) === raw) {
-            if ((SP_MERGE[k] || COURSE_MERGE[k]) && raw !== null) {
+            if ((SP_MERGE[k] || COURSE_MERGE[k] || SUB_MERGE[k]) && raw !== null) {
               applying = true;
               try { L.setItem(k, decode(row.v)); } finally { applying = false; }
             }

@@ -599,7 +599,25 @@
     });
   }
   function loadCustomPlayers(){
-    try { return JSON.parse(localStorage.getItem('ga_custom_players') || '[]'); } catch(e){ return []; }
+    try { const rows = JSON.parse(localStorage.getItem('ga_custom_players') || '[]'); return Array.isArray(rows) ? rows : []; } catch(e){ return []; }
+  }
+  /* IDهای بازیکن سفارشی باید پایدار بمانند؛ رکوردهای legacy بدون ID یا دارای ID خراب
+     با یک offset آزاد resolve می‌شوند، بدون اینکه ترتیب/دادهٔ ذخیره‌شده خودکار بازنویسی شود. */
+  function customPlayerOffsets(rows){
+    rows = Array.isArray(rows) ? rows : [];
+    const out = new Array(rows.length).fill(null), used = [];
+    rows.forEach((p, i) => {
+      const raw = p && p.id;
+      const id = raw == null || String(raw).trim() === '' ? NaN : Number(raw);
+      if (Number.isSafeInteger(id) && id >= 0 && !used.includes(id)) { out[i] = id; used.push(id); }
+    });
+    rows.forEach((p, i) => {
+      if (out[i] !== null) return;
+      let id = i;
+      while (used.includes(id)) id++;
+      out[i] = id; used.push(id);
+    });
+    return out;
   }
   function loadPlayerUsers(){
     try { return JSON.parse(localStorage.getItem('ga_player_users') || '{}'); } catch(e){ return {}; }
@@ -1069,7 +1087,8 @@
       if (Array.isArray(c.index) && c.index.length) INDEX_MAP[cid] = c.index;
       if (c.name) COURSE_NAME[cid] = c.name;
     });
-    const players = loadPlayers().concat(loadCustomPlayers().map((p, i) => [9000+i, (p.name + ' ' + (p.family||'')).trim(), p.gender, +p.hcp, p.join || '2026-01-01', p.active === false ? 0 : 1]));
+    const customPlayers = loadCustomPlayers(), customOffsets = customPlayerOffsets(customPlayers);
+    const players = loadPlayers().concat(customPlayers.map((p, i) => [9000 + customOffsets[i], (p.name + ' ' + (p.family||'')).trim(), p.gender, +p.hcp, p.join || '2026-01-01', p.active === false ? 0 : 1]));
     // اطمینان: پلیرهای سفارشی که کاربر یوزر/پسورد برایشان ساخته، در USERS معتبرند (در app.js خوانده میشود)
     const PLAYER_NAME_EXT = {}; players.forEach(p => PLAYER_NAME_EXT[p[0]] = p[1]);
     const ACTIVE_EXT = players.filter(p => p[5]);
@@ -1125,8 +1144,8 @@
       rows.push({ pid: p[0], name: e.name || p[1], gender: e.gender || p[2], hcp: e.hcp !== undefined ? +e.hcp : p[3], active: e.active !== undefined ? e.active : !!p[5], photo: e.photo || '' });
     });
     try {
-      const cs = JSON.parse(localStorage.getItem('ga_custom_players') || '[]');
-      cs.forEach((c, i) => rows.push({ pid: 9000 + i, name: (c.name + ' ' + (c.family || '')).trim(), gender: c.gender, hcp: +c.hcp, active: c.active !== false, photo: c.photo || '' }));
+      const cs = loadCustomPlayers(), offsets = customPlayerOffsets(cs);
+      cs.forEach((c, i) => rows.push({ pid: 9000 + offsets[i], name: (c.name + ' ' + (c.family || '')).trim(), gender: c.gender, hcp: +c.hcp, active: c.active !== false, photo: c.photo || '' }));
     } catch(e){}
     return rows;
   }
@@ -1192,7 +1211,7 @@
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
     parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, distancesOf, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,
     courseIdOf, isArchivedCourse, courseRecords, courseById, createCourse, updateCourse, archiveCourse, restoreCourse,
-    compute, careerStats, nationalPlaces, loadState, loadPlayers, loadCustomPlayers, loadPlayerUsers, savePlayerUsers,
+    compute, careerStats, nationalPlaces, loadState, loadPlayers, loadCustomPlayers, customPlayerOffsets, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason,
   };

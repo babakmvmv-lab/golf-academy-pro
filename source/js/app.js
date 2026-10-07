@@ -106,7 +106,16 @@
     return arr;
   }
   function userRec(u){
-    return loadUsers().find(x => String(x.user).toLowerCase() === String(u).toLowerCase()) || null;
+    const key = String(u || '').trim().toLowerCase();
+    if (!key) return null;
+    const current = loadUsers().find(x => String(x.user || '').trim().toLowerCase() === key);
+    if (current) return current;
+    /* رجیستری قدیمی فقط می‌تواند به‌عنوان عضو resolve شود؛ هرگز نقش مدیر نمی‌گیرد. */
+    const legacy = Object.entries(playerUsers() || {}).find(([pid, p]) => p && p.user && p.pass && p.active !== false && String(p.user).trim().toLowerCase() === key);
+    if (!legacy) return null;
+    const [pid, p] = legacy;
+    return { id: null, user: String(p.user).trim(), pass: p.pass, name: (p.name || 'بازیکن') + (p.family ? ' ' + p.family : ''),
+      role: 'member', active: true, main: false, pid: +pid, legacy: true };
   }
   function isMain(u){ const r = userRec(u); return !!(r && r.main && r.active); }
   function isAdmin(u){ const r = userRec(u); return !!(r && r.role === 'admin' && r.active); }
@@ -116,11 +125,11 @@
   }
   function buildUsers(){
     const m = {};
-    seedUsers().forEach(u => { if (u.active) m[String(u.user).toLowerCase()] = cyrb53(u.pass); });
+    seedUsers().forEach(u => { if (u.active) m[String(u.user || '').trim().toLowerCase()] = cyrb53(u.pass); });
     try {
       const pusers = playerUsers();
       Object.values(pusers).forEach(p => {
-        if (p && p.user && p.pass && p.active !== false) m[String(p.user).toLowerCase()] = cyrb53(p.pass);
+        if (p && p.user && p.pass && p.active !== false) m[String(p.user).trim().toLowerCase()] = cyrb53(p.pass);
       });
     } catch(e){}
     return m;
@@ -450,6 +459,7 @@
     if (window.EarthMap && EarthMap.destroy) EarthMap.destroy();
     if (!PAGES[page]) page = 'cmd';
     const rec = userRec(currentUser);
+    if (!rec || rec.active === false || ['member','admin'].indexOf(rec.role) < 0) { logout(); return; }
     // اعضا: فقط بخش اعضا + آیتم‌هایی که مدیر در تنظیمات نمایش برایشان فعال کرده
     if (rec && rec.role === 'member'){
       const settings = MGMT.getSettings();
@@ -3218,7 +3228,7 @@ const stCal = $('#st-cal');
   function avLandJoin(pid){
     pid = +pid;
     try { const b = D.loadPlayers().find(p => p[0] === pid); if (b) return b[4] || ''; } catch(e){}
-    try { const cs = D.loadCustomPlayers(); const i = cs.findIndex((c,idx) => (9000+idx) === pid); if (i >= 0) return cs[i].join || ''; } catch(e){}
+    try { const cs = D.loadCustomPlayers(); const offsets = D.customPlayerOffsets(cs); const i = offsets.findIndex(offset => 9000 + offset === pid); if (i >= 0) return cs[i].join || ''; } catch(e){}
     return '';
   }
   function clubOf(lv, cfg){
@@ -4119,7 +4129,7 @@ const stCal = $('#st-cal');
       const h = cyrb53(pass.value);
       if (sbtn){ sbtn.disabled = false; sbtn.textContent = sbtn.dataset.old || 'ورود به داشبورد'; }
       const rec = userRec(u);
-      const passOk = rec ? (cyrb53(rec.pass) === h) : (buildUsers()[u] === h);
+      const passOk = !!(rec && rec.pass && cyrb53(rec.pass) === h);
       if (!passOk){
         err.classList.add('show');
         err.textContent = 'نام کاربری یا رمز عبور اشتباه است — دوباره تلاش کنید';
@@ -4128,9 +4138,9 @@ const stCal = $('#st-cal');
       }
       store.set('ga_last_user', u);
       if (window.GA_SUB) GA_SUB.paintLogin(u);
-      if (rec && rec.active === false){
+      if (rec.active === false || ['member','admin'].indexOf(rec.role) < 0){
         err.classList.add('show');
-        err.textContent = 'این حساب غیرفعال است.';
+        err.textContent = rec.active === false ? 'این حساب غیرفعال است.' : 'نقش این حساب معتبر نیست؛ با مدیر آکادمی تماس بگیرید.';
         return;
       }
       if (window.GA_SUB && !GA_SUB.isAllowed(u)){
@@ -4146,23 +4156,26 @@ const stCal = $('#st-cal');
   }
 
   function applyRoleUI(rec){
-    const member = !!(rec && rec.role === 'member');
+    const knownRole = !!(rec && rec.active !== false && (rec.role === 'member' || rec.role === 'admin'));
+    const member = !!(knownRole && rec.role === 'member');
     const settings = MGMT.getSettings();
     $$('#app .nav-item').forEach(n => {
       const p = n.dataset.page;
-      let show;
-      if (member){
+      let show = false;
+      if (knownRole && member){
         if (p === 'memberzone') show = true;
         else show = !!settings[MEM_PAGE_KEY[p]];
       }
-      else if (p === 'memberzone') show = false;
-      else if (p === 'users' || p === 'backup') show = !!(rec && rec.main);
-      else show = true;
-      if (show && window.GA_SUB && rec && p && !GA_SUB.canPage(rec.user, p)) show = false;
+      else if (knownRole && rec.role === 'admin'){
+        if (p === 'memberzone') show = false;
+        else if (p === 'users' || p === 'backup') show = !!rec.main;
+        else show = true;
+      }
+      if (show && window.GA_SUB && p && !GA_SUB.canPage(rec.user, p)) show = false;
       n.style.display = show ? '' : 'none';
     });
-    $$('#app .nav-group').forEach(g => { g.style.display = member ? 'none' : ''; });
-    const mb = $('#side-mgmt-btn'); if (mb) mb.style.display = member ? 'none' : '';
+    $$('#app .nav-group').forEach(g => { g.style.display = (!knownRole || member) ? 'none' : ''; });
+    const mb = $('#side-mgmt-btn'); if (mb) mb.style.display = (!knownRole || member) ? 'none' : '';
     $('#user-label').textContent = userLabelFor(currentUser);
     $('#user-name').textContent = currentUser;
     if (window.GA_SUB) GA_SUB.paintSide(currentUser);
@@ -4304,23 +4317,24 @@ const stCal = $('#st-cal');
     if (window.UI_LABELS) UI_LABELS.apply(document);
     restoreLegacyPractice();
     seedUsers();
-    if (window.GA_SUB) GA_SUB.ensureSeed(loadUsers());
     initParticles();
     initAuth();
     initNav();
     tickClock();
     if (!enterApp._clk) enterApp._clk = setInterval(tickClock, 1000);
     const sess = store.get('ga_session');
-    if (sess && buildUsers()[sess] !== undefined){
-      if (!window.GA_SUB || GA_SUB.isAllowed(sess)) enterApp(sess);
+    if (sess){
+      const sessRec = userRec(sess);
+      const sessionAccountOk = buildUsers()[String(sess).toLowerCase()] !== undefined && sessRec && sessRec.active !== false && ['member','admin'].indexOf(sessRec.role) >= 0;
+      if (sessionAccountOk && (!window.GA_SUB || GA_SUB.isAllowed(sess))) enterApp(sess);
       else {
         store.remove('ga_session');
         store.set('ga_last_user', sess);
         $('#login').classList.add('on');
         if ($('#login-user')) $('#login-user').value = sess;
-        GA_SUB.paintLogin(sess);
+        if (window.GA_SUB && sessionAccountOk) GA_SUB.paintLogin(sess);
         const err = $('#login-err');
-        if (err){ err.classList.add('show'); err.textContent = 'ورود ممکن نیست؛ اشتراک فعال ندارید.'; }
+        if (err){ err.classList.add('show'); err.textContent = sessionAccountOk ? 'ورود ممکن نیست؛ اشتراک فعال ندارید.' : 'نشست معتبر نیست؛ لطفاً دوباره وارد شوید.'; }
       }
     } else {
       const last = store.get('ga_last_user');

@@ -415,4 +415,33 @@ await test('A pending local geo edit merges with the server and wins for the sam
   assert.equal(saved.cSame.name, 'local new', 'pending local edit wins for the same course');
 });
 
+await test('Concurrent subscription additions on two devices merge by id instead of replacing the full key', async () => {
+  const api = server(), a = await device(api), b = await device(api);
+  set(a, 'ga_subscriptions', [{ id: 'sub-a', user: 'member-a', plan: 'trial', status: 'trial', created_at: '2026-10-01T00:00:00.000Z' }]);
+  set(b, 'ga_subscriptions', [{ id: 'sub-b', user: 'member-b', plan: 'starter', status: 'active', created_at: '2026-10-02T00:00:00.000Z' }]);
+  assert.equal(await a.GA.push('manual'), true);
+  assert.equal(await b.GA.push('manual'), true);
+  const saved = api.rows.get('ga_subscriptions').v;
+  assert.deepEqual(saved.map(s => s.id), ['sub-a', 'sub-b']);
+  assert.deepEqual(JSON.parse(b.values.get('ga_subscriptions')).map(s => s.id), ['sub-a', 'sub-b']);
+  assert.equal(b.GA.dirty().length, 0);
+});
+
+await test('Subscription merge preserves the newest edit and a soft-delete never loses to an older active row', async () => {
+  const api = server();
+  api.rows.set('ga_subscriptions', { k: 'ga_subscriptions', v: [
+    { id: 'sub-shared', user: 'member', plan: 'professional', status: 'active', created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-10-01T00:00:00.000Z' },
+    { id: 'sub-old-edit', user: 'member2', plan: 'starter', status: 'active', created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-10-04T00:00:00.000Z' },
+  ], updated_at: '2026-10-04T00:00:00.000Z' });
+  const d = await device(api);
+  set(d, 'ga_subscriptions', [
+    { id: 'sub-shared', user: 'member', plan: 'professional', status: 'deleted', created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-10-05T00:00:00.000Z', deleted_at: '2026-10-05T00:00:00.000Z' },
+    { id: 'sub-old-edit', user: 'member2', plan: 'business', status: 'active', created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-10-06T00:00:00.000Z' },
+  ]);
+  assert.equal(await d.GA.push('manual'), true);
+  const saved = api.rows.get('ga_subscriptions').v;
+  assert.equal(saved.find(s => s.id === 'sub-shared').status, 'deleted');
+  assert.equal(saved.find(s => s.id === 'sub-old-edit').plan, 'business');
+});
+
 console.log(`PASS — ${passed} cloud queue regression scenarios; zero live database requests.`);

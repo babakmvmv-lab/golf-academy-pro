@@ -58,8 +58,31 @@
   function saveEvents(a){ try { localStorage.setItem('ga_events', JSON.stringify(a)); } catch(e){} }
 
   /* ── بازیکنان سفارشی (فرم جامع) ── */
-  function customPlayers(){ try { return JSON.parse(localStorage.getItem('ga_custom_players') || '[]'); } catch(e){ return []; } }
-  function saveCustomPlayers(a){ try { localStorage.setItem('ga_custom_players', JSON.stringify(a)); } catch(e){} }
+  function customPlayers(){ try { const a = JSON.parse(localStorage.getItem('ga_custom_players') || '[]'); return Array.isArray(a) ? a : []; } catch(e){ return []; } }
+  function customPlayerOffsets(rows){
+    if (window.Data && D.customPlayerOffsets) return D.customPlayerOffsets(rows);
+    return (rows || []).map((p, i) => Number.isSafeInteger(+p.id) && +p.id >= 0 ? +p.id : i);
+  }
+  function customPlayerAtPid(pid, rows){
+    rows = rows || customPlayers();
+    const index = customPlayerOffsets(rows).findIndex(offset => 9000 + offset === +pid);
+    return index >= 0 ? rows[index] : null;
+  }
+  function nextCustomPlayerPid(rows){
+    const used = customPlayerOffsets(rows || customPlayers());
+    let offset = 0;
+    while (used.includes(offset)) offset++;
+    return 9000 + offset;
+  }
+  function saveCustomPlayers(a){
+    try {
+      if (window.Data && D.customPlayerOffsets && Array.isArray(a)) {
+        const offsets = D.customPlayerOffsets(a);
+        a.forEach((p, i) => { if (p && +p.id !== offsets[i]) p.id = offsets[i]; });
+      }
+      localStorage.setItem('ga_custom_players', JSON.stringify(a));
+    } catch(e){}
+  }
 
   /* ── ویرایش بازیکنان پایه ── */
   function playerEdits(){ try { return JSON.parse(localStorage.getItem('ga_players') || '{}'); } catch(e){ return {}; } }
@@ -68,6 +91,14 @@
   /* ── یوزر/پسورد سایت بازیکنان ── */
   function playerUsers(){ return D ? D.loadPlayerUsers() : {}; }
   function savePlayerUsers(u){ try { localStorage.setItem('ga_player_users', JSON.stringify(u)); } catch(e){} }
+  function randomAccountPassword(length){
+    const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%';
+    const size = Math.max(12, Math.min(32, +length || 16));
+    const bytes = new Uint8Array(size);
+    try { if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(bytes); else throw new Error('crypto unavailable'); }
+    catch(e){ for (let i=0;i<size;i++) bytes[i] = Math.floor(Math.random()*256); }
+    return Array.from(bytes, b => chars[b % chars.length]).join('');
+  }
 
   /* ══ همگام‌سازی دوطرفهٔ یوزر/رمز: «بازیکنان» ⇄ «یوزرها» ══
      هر تغییری در فرم بازیکن به لیست یوزرها می‌رود و هر تغییری در لیست یوزرها
@@ -77,23 +108,62 @@
     const U = usersAPI(); if (!U || !pid) return null;
     o = o || {};
     const a = U.list();
-    let rec = a.find(x => +x.pid === +pid);
-    if (!rec && o.user) rec = a.find(x => String(x.user||'').toLowerCase() === String(o.user).toLowerCase() && !x.main);
+    let rec = a.find(x => +x.pid === +pid), created = false, migratedLegacy = false;
+    if (!rec && o.user){
+      let existing = U.rec ? U.rec(o.user) : null;
+      /* اگر فرم در حال تغییر نام legacy است، منبع هویت را از PID همین بازیکن پیدا کن. */
+      if (!existing){
+        const legacy = playerUsers()[pid];
+        const mapped = legacy && legacy.user && U.rec ? U.rec(legacy.user) : null;
+        if (mapped && mapped.legacy && +mapped.pid === +pid) existing = mapped;
+      }
+      if (existing){
+        if (!existing.legacy || +existing.pid !== +pid) {
+          APP.toast('این نام کاربری به حساب دیگری وصل است؛ یوزر بازیکن تغییر نکرد.', 'red');
+          return null;
+        }
+        const id = Math.max(0, ...a.map(x => +x.id || 0)) + 1;
+        rec = { id, user: existing.user, pass: existing.pass, name: existing.name || o.name || ('بازیکن ' + pid),
+                role: 'member', active: existing.active !== false, pid: +pid };
+        a.push(rec); created = true; migratedLegacy = true;
+      }
+    }
     if (!rec){
       if (!o.user) return null;
+      if (U.rec && U.rec(o.user)) {
+        APP.toast('این نام کاربری قبلاً به حساب دیگری تعلق دارد.', 'red');
+        return null;
+      }
+      if (window.GA_SUB && GA_SUB.hasForeignSubscription(o.user, null)) {
+        APP.toast('این نام کاربری سابقهٔ اشتراک دارد؛ حساب تازه با آن ساخته نشد.', 'red');
+        return null;
+      }
       const id = Math.max(0, ...a.map(x => +x.id || 0)) + 1;
-      rec = { id, user: o.user, pass: o.pass || 'golf1405', name: o.name || ('بازیکن ' + pid),
+      rec = { id, user: o.user, pass: o.pass || randomAccountPassword(), name: o.name || ('بازیکن ' + pid),
               role: 'member', active: o.active !== false, pid: +pid };
-      a.push(rec);
-    } else {
-      if (rec.main) return rec;                       // مدیر اصلی دست‌نخورده می‌ماند
-      if (o.user) rec.user = o.user;
-      if (o.pass) rec.pass = o.pass;
-      if (o.name) rec.name = o.name;
-      if (o.active !== undefined) rec.active = o.active !== false;
-      rec.pid = +pid;
+      a.push(rec); created = true;
     }
+    if (rec.main) return rec;
+    const oldUser = String(rec.user || '').trim().toLowerCase();
+    if (o.user && String(o.user).trim().toLowerCase() !== oldUser){
+      const nextUser = String(o.user).trim().toLowerCase();
+      if (a.some(x => x.id !== rec.id && String(x.user || '').trim().toLowerCase() === nextUser) ||
+          (U.rec && U.rec(nextUser) && +((U.rec(nextUser) || {}).pid) !== +pid) ||
+          (window.GA_SUB && GA_SUB.hasForeignSubscription(nextUser, rec.id))){
+        APP.toast('نام کاربری تکراری است یا سابقهٔ اشتراک حساب دیگری را دارد.', 'red');
+        return null;
+      }
+      rec.user = nextUser;
+    }
+    if (o.pass) rec.pass = o.pass;
+    if (o.name) rec.name = o.name;
+    if (o.active !== undefined) rec.active = o.active !== false;
+    rec.pid = +pid;
     U.save(a);
+    if (oldUser && window.GA_SUB && (oldUser !== String(rec.user).toLowerCase() || migratedLegacy)) GA_SUB.relinkUser(oldUser, rec.user, rec.id);
+    if (created && o.newAccount && !migratedLegacy && window.GA_SUB) {
+      GA_SUB.assign(rec.user, { plan: 'trial', months: 1, user_id: rec.id, payment_status: 'manual' });
+    }
     return rec;
   }
   function syncUserToPlayer(u){
@@ -111,6 +181,8 @@
   function removeUserOfPlayer(pid){
     const U = usersAPI(); if (!U || !pid) return;
     const a = U.list();
+    const removed = a.filter(x => +x.pid === +pid && !x.main);
+    removed.forEach(u => { if (window.GA_SUB) GA_SUB.revokeUser(u.user, 'حذف بازیکن و حساب متصل', u.id); });
     const keep = a.filter(x => !(+x.pid === +pid && !x.main));
     if (keep.length !== a.length) U.save(keep);
   }
@@ -220,7 +292,7 @@
     const p = S.players.find(x => x[0] === pid);
     if (!p) return null;
     const isCustom = pid >= 9000;
-    const cu = isCustom ? customPlayers().find(c => c.id === pid - 9000) : null;
+    const cu = isCustom ? customPlayerAtPid(pid) : null;
     const ed = !isCustom ? playerEdits()[pid] : null;
     const u = credsOf(pid) || {};
     return {
@@ -249,6 +321,7 @@
 
   /* ═══════════════ صفحه: تنظیمات نمایش ═══════════════ */
   function pageSettings(){
+    if (!requireAdminPage('تنظیمات نمایش')) return;
     const v = $('#view');
     const s = getSettings();
     const groups = [
@@ -582,7 +655,25 @@
     m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
   }
 
+  function showPageDenied(label){
+    const v = $('#view');
+    if (v) v.innerHTML = '<div class="glass" style="padding:30px;text-align:center">🔒 دسترسی «' + esc(label || 'مدیریت') + '» مجاز نیست.</div>';
+    return false;
+  }
+  function requireAdminPage(label){
+    const U = window.APP && APP.users;
+    if (U && APP.currentUser && U.isAdmin(APP.currentUser())) return true;
+    return showPageDenied(label || 'مدیریت');
+  }
+  function requireMainPage(label){
+    const U = window.APP && APP.users;
+    if (U && APP.currentUser && U.isMain(APP.currentUser())) return true;
+    return showPageDenied(label || 'مدیریت');
+  }
+
   function pageSubs(){
+
+    if (!requireAdminPage('اشتراک‌ها')) return;
     const v = $('#view');
     v.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:18px">
@@ -733,6 +824,7 @@
   }
   function renderCourseKmlReport(){ renderKmlReportElement($('#mc-kml-rep'), kmlReportState, true); }
   function pageMgmt(){
+    if (!requireAdminPage('پنل مدیریت')) return;
     const v = $('#view');
     const tabs = [
       ['academy','🏛️',L('admin.academy','تنظیمات آکادمی')],
@@ -1611,25 +1703,31 @@
       const anyFilled = d.name || d.phone || d.national || d.email || d.user || d.father || d.mother;
       if (!anyFilled){ APP.toast('حداقل یک مورد را پر کنید (مثلاً نام یا موبایل)', 'red'); return; }
       const fullName = ((d.name || 'بازیکن') + ' ' + d.family).trim();
-      // یوزر پیشنهادی اگر خالی بود
-      let user = d.user;
-      if (!user) user = 'player' + (9000 + customPlayers().length);
-      let pass = d.pass;
-      if (!pass) pass = 'golf' + String(Math.floor(1000 + Math.random()*9000));
       const lst = customPlayers();
-      const pid = 9000 + (lst.length ? Math.max(...lst.map(p=>p.id)) - 9000 + 1 : 0);
+      const pid = nextCustomPlayerPid(lst);
+      // شناسهٔ بازیکن سفارشی بر پایهٔ offset آزاد است، نه طول/بزرگ‌ترین ID ذخیره‌شده.
+      let user = d.user;
+      if (!user) user = 'player' + pid;
+      let pass = d.pass;
+      if (!pass) pass = randomAccountPassword();
+      const U = usersAPI();
+      if ((U && U.rec && U.rec(user)) || (window.GA_SUB && GA_SUB.hasForeignSubscription(user, null))){
+        APP.toast('این نام کاربری یا سابقهٔ اشتراک قبلاً متعلق به حساب دیگری است.', 'red');
+        return;
+      }
       lst.push({ id: pid - 9000, name: d.name, family: d.family, gender: d.gender, hcp: d.hcp,
         join: d.join, birth: d.birth, phone: d.phone, national: d.national, email: d.email,
         address: d.address, father: d.father, fatherPhone: d.fatherPhone, mother: d.mother,
         motherPhone: d.motherPhone, photo: ($('#pf-photo').src && !$('#pf-photo').hasAttribute('data-empty')) ? $('#pf-photo').src : '',
         active: true });
+      const syncedUser = syncPlayerToUser(pid, { user, pass, name: fullName, active: true, newAccount: true });
+      if (!syncedUser) return;
       saveCustomPlayers(lst);
       const pu = playerUsers();
       pu[pid] = { user, pass, name: d.name, family: d.family, active: true };
       savePlayerUsers(pu);
-      syncPlayerToUser(pid, { user, pass, name: fullName, active: true });
       APP.reloadData(); APP.go('mgmt');
-      APP.toast('بازیکن «' + fullName + '» ثبت شد — یوزر: ' + user + ' / رمز: ' + pass, 'green');
+      APP.toast('بازیکن «' + fullName + '» ثبت شد — یوزر: ' + user + '؛ برای تغییر رمز از مدیریت یوزرها استفاده کنید.', 'green');
     });
 
     body.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
@@ -1641,7 +1739,7 @@
         const activeNow = act === 'act';
         if (isCustom){
           const lst = customPlayers();
-          const c = lst.find(x => x.id === pid - 9000);
+          const c = customPlayerAtPid(pid, lst);
           if (c) c.active = activeNow;
           saveCustomPlayers(lst);
         } else {
@@ -1659,7 +1757,8 @@
         if (isCustom){
           const playerName = (D.nameOf ? D.nameOf(pid) : '') || ('بازیکن #' + pid);
           const doDelete = () => {
-            const lst = customPlayers().filter(x => x.id !== pid - 9000);
+            const allCustom = customPlayers(), offsets = customPlayerOffsets(allCustom);
+            const lst = allCustom.filter((x, i) => 9000 + offsets[i] !== pid);
             saveCustomPlayers(lst);
             const pu = playerUsers(); delete pu[pid]; savePlayerUsers(pu);
             removeUserOfPlayer(pid);
@@ -1704,11 +1803,20 @@
       const anyFilled = d.name || d.phone || d.national || d.email || d.user || d.father || d.mother;
       if (!anyFilled){ APP.toast('حداقل یک مورد را پر کنید', 'red'); return; }
       const fullName = ((d.name || 'بازیکن') + ' ' + d.family).trim();
+      if (d.user){
+        const U = usersAPI(), currentRec = U && U.list().find(x => +x.pid === +pid), existing = U && U.rec ? U.rec(d.user) : null;
+        const currentName = String((currentRec && currentRec.user) || (credsOf(pid) || {}).user || '').trim().toLowerCase();
+        const nextName = String(d.user).trim().toLowerCase();
+        if (nextName !== currentName && ((existing && +existing.pid !== +pid) ||
+            (window.GA_SUB && GA_SUB.hasForeignSubscription(nextName, currentRec && currentRec.id)))){
+          APP.toast('این نام کاربری یا سابقهٔ اشتراک متعلق به حساب دیگری است.', 'red'); return;
+        }
+      }
       const phEl = sc.querySelector('#pf-photo');
       const photo = phEl && phEl.src && !phEl.hasAttribute('data-empty') ? phEl.src : full.photo;
       if (full.isCustom){
         const lst = customPlayers();
-        const c = lst.find(x => x.id === pid - 9000);
+        const c = customPlayerAtPid(pid, lst);
         if (c) Object.assign(c, { name:d.name, family:d.family, gender:d.gender, hcp:d.hcp, join:d.join,
           birth:d.birth, phone:d.phone, national:d.national, email:d.email, address:d.address,
           father:d.father, fatherPhone:d.fatherPhone, mother:d.mother, motherPhone:d.motherPhone, photo });
@@ -4309,6 +4417,7 @@
 
   /* ── صفحهٔ مستقل «ارسال پیام» — آیتم منوی گروه «مدیریت» (کنار پنل مدیریت/یوزرها/تنظیمات نمایش) ── */
   function pageMessages(){
+    if (!requireAdminPage('ارسال پیام')) return;
     const v = $('#view');
     v.innerHTML = `<div class="card-head" style="margin-bottom:14px"><span class="ic">📨</span>
       <h2 style="font-size:16px">${esc(L('nav.messages','ارسال پیام'))}</h2>
@@ -4334,8 +4443,8 @@
       if (!u || u.pid == null) return null;
       const pid = +u.pid; if (!pid) return null;
       if (pid >= 9000){  /* بازیکن سفارشی: در ga_custom_players ذخیره */
-        const cs = JSON.parse(localStorage.getItem('ga_custom_players') || '[]');
-        const c = cs[pid - 9000];
+        const cs = customPlayers();
+        const c = customPlayerAtPid(pid, cs);
         if (c && c.email && String(c.email).includes('@')) return String(c.email).trim();
         return null;
       }
@@ -4915,6 +5024,7 @@
 
   /* ── صفحهٔ مستقل یوزها (فقط مدیر اصلی) ── */
   function pageUsers(){
+    if (!requireMainPage('یوزرها')) return;
     const v = $('#view');
     v.innerHTML = `
     <div class="glass gold-border" style="margin-bottom:18px">
@@ -4967,7 +5077,7 @@
           <td class="num">${D.fa(u.id)}</td>
           <td><b>${esc(u.name || u.user)}</b> ${u.main ? '<span class="chip gold">مدیر اصلی</span>' : ''}</td>
           <td style="direction:ltr" class="num">${esc(u.user)}</td>
-          <td><code style="direction:ltr;background:rgba(255,255,255,.06);padding:3px 8px;border-radius:8px;font-size:12px">${esc(u.pass)}</code></td>
+          <td><code aria-label="رمز ذخیره‌شده" title="برای تغییر رمز از دکمهٔ یوزر و رمز استفاده کنید" style="direction:ltr;background:rgba(255,255,255,.06);padding:3px 8px;border-radius:8px;font-size:12px">••••••••</code></td>
           <td>
             ${u.main ? '<span class="chip gold">مدیر (ثابت)</span>' : `
             <select class="sel us-role" data-id="${u.id}" style="padding:4px 8px;font-size:11.5px">
@@ -5015,6 +5125,7 @@
         const a = U.list(); const u = a.find(x => x.id === id);
         if (!u || u.main) return;
         const doDelete = () => {
+          if (window.GA_SUB) GA_SUB.revokeUser(u.user, 'حذف حساب یوزر', u.id);
           U.save(a.filter(x => x.id !== id));
           if (u.pid){ const pu = playerUsers(); delete pu[u.pid]; savePlayerUsers(pu); }
           render();
@@ -5093,9 +5204,9 @@
         <div class="field-grid" style="margin-top:12px">
           <div class="span2"><label>نام نمایشی</label><input class="input" id="pw-name" value="${esc(u.name || '')}" style="width:100%"></div>
           <div><label>نام کاربری (login)</label><input class="input" id="pw-user" value="${esc(u.user)}" style="width:100%;direction:ltr"></div>
-          <div><label>رمز عبور</label>
+          <div><label>رمز عبور جدید</label>
             <div style="display:flex;gap:8px;margin-top:5px">
-              <input class="input" id="pw-val" value="${esc(u.pass)}" style="flex:1;direction:ltr">
+              <input class="input" id="pw-val" value="" placeholder="برای تغییر رمز وارد کنید" autocomplete="new-password" style="flex:1;direction:ltr">
               <button class="btn sm ghost" id="pw-gen">⚡</button>
             </div>
           </div>
@@ -5110,25 +5221,27 @@
       </div>`;
       m.style.display = 'flex';
       $('#pw-cancel').addEventListener('click', () => m.style.display = 'none');
-      $('#pw-gen').addEventListener('click', () => {
-        const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
-        let pw = '';
-        for (let i=0;i<8;i++) pw += chars[Math.floor(Math.random()*chars.length)];
-        $('#pw-val').value = pw;
-      });
+      $('#pw-gen').addEventListener('click', () => { $('#pw-val').value = randomAccountPassword(); });
       $('#pw-save').addEventListener('click', () => {
         const pw = $('#pw-val').value.trim();
         const un = $('#pw-user').value.trim().toLowerCase();
         const nm = $('#pw-name').value.trim();
         if (!pw || !un){ APP.toast('یوزر و رمز نمی‌تواند خالی باشد', 'red'); return; }
         const a2 = U.list();
-        if (a2.some(x => x.id !== id && String(x.user).toLowerCase() === un)){ APP.toast('این نام کاربری قبلاً ثبت شده است', 'red'); return; }
         const t = a2.find(x => x.id === id);
-        if (t){
-          t.pass = pw; t.user = un; if (nm) t.name = nm;
-          U.save(a2);
-          syncUserToPlayer(t);              // ⇄ برگشت به فرم بازیکن
+        if (!t) return;
+        const oldUser = String(t.user || '').trim().toLowerCase();
+        const newUser = un;
+        const byName = U.rec ? U.rec(newUser) : null;
+        if (a2.some(x => x.id !== id && String(x.user || '').trim().toLowerCase() === newUser) ||
+            (byName && +byName.id !== id && +byName.pid !== +t.pid) ||
+            (newUser !== oldUser && window.GA_SUB && GA_SUB.hasForeignSubscription(newUser, t.id))){
+          APP.toast('این نام کاربری یا سابقهٔ اشتراک متعلق به حساب دیگری است.', 'red'); return;
         }
+        t.pass = pw; t.user = newUser; if (nm) t.name = nm;
+        U.save(a2);
+        if (oldUser && oldUser !== newUser && window.GA_SUB) GA_SUB.relinkUser(oldUser, newUser, t.id);
+        syncUserToPlayer(t);              // ⇄ برگشت به فرم بازیکن
         m.style.display = 'none';
         render();
         APP.toast('یوزر و رمز «' + (t ? t.name : '') + '» ذخیره شد ✓ — در بخش بازیکنان هم به‌روز شد', 'green');
@@ -5150,7 +5263,7 @@
           <div class="span2"><label>نام</label><input class="input" id="nu-name" style="width:100%" placeholder="مثلاً: علی محمدی"></div>
           <div><label>نام کاربری</label><input class="input" id="nu-user" style="width:100%;direction:ltr" placeholder="username"></div>
           <div><label>رمز عبور</label>
-            <div style="display:flex;gap:8px;margin-top:5px"><input class="input" id="nu-pass" value="golf1405" style="flex:1;direction:ltr"><button class="btn sm ghost" id="nu-gen">⚡</button></div>
+            <div style="display:flex;gap:8px;margin-top:5px"><input class="input" id="nu-pass" value="" placeholder="رمز یکتا برای این حساب" autocomplete="new-password" style="flex:1;direction:ltr"><button class="btn sm ghost" id="nu-gen">⚡</button></div>
           </div>
           <div class="span2"><label>نقش / سطح دسترسی</label>
             <select class="sel" id="nu-role" style="width:100%">
@@ -5179,20 +5292,18 @@
       </div>`;
       m.style.display = 'flex';
       $('#nu-cancel').addEventListener('click', () => m.style.display = 'none');
-      $('#nu-gen').addEventListener('click', () => {
-        const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
-        let pw = '';
-        for (let i=0;i<8;i++) pw += chars[Math.floor(Math.random()*chars.length)];
-        $('#nu-pass').value = pw;
-      });
+      $('#nu-gen').addEventListener('click', () => { $('#nu-pass').value = randomAccountPassword(); });
       $('#nu-save').addEventListener('click', () => {
         const name = $('#nu-name').value.trim();
         const user = $('#nu-user').value.trim().toLowerCase();
         const pass = $('#nu-pass').value.trim();
         if (!name || !user || !pass){ APP.toast('نام، یوزر و رمز را کامل کنید', 'red'); return; }
         const a = U.list();
-        if (a.some(x => String(x.user).toLowerCase() === user)){ APP.toast('این نام کاربری قبلاً ثبت شده است', 'red'); return; }
-        const id = Math.max(0, ...a.map(x => x.id)) + 1;
+        if (a.some(x => String(x.user || '').trim().toLowerCase() === user) || (U.rec && U.rec(user)) ||
+            (window.GA_SUB && GA_SUB.hasForeignSubscription(user, null))){
+          APP.toast('این نام کاربری یا سابقهٔ اشتراک قبلاً متعلق به حساب دیگری است.', 'red'); return;
+        }
+        const id = Math.max(0, ...a.map(x => +x.id || 0)) + 1;
         a.push({ id, user, pass, name, role: $('#nu-role').value, active: true });
         U.save(a);
         if (window.GA_SUB && $('#nu-role').value !== 'admin'){
@@ -5202,7 +5313,7 @@
         }
         m.style.display = 'none';
         render();
-        APP.toast('یوزر «' + name + '» ساخته شد — یوزر: ' + user + ' / رمز: ' + pass, 'green');
+        APP.toast('یوزر «' + name + '» ساخته شد — نام کاربری: ' + user, 'green');
       });
       m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
     });
@@ -5218,7 +5329,7 @@
           if (!exists){
             const id = Math.max(0, ...a.map(x => x.id)) + 1;
             const cr = pu[p[0]] || {};
-            const rec = { id, user: cr.user || ('p' + p[0]), pass: cr.pass || 'golf1405', name: p[1],
+            const rec = { id, user: cr.user || ('p' + p[0]), pass: cr.pass || randomAccountPassword(), name: p[1],
                      role: 'member', active: cr.active !== false, pid: p[0] };
             a.push(rec);
             addedUsers.push(rec);
@@ -5229,7 +5340,7 @@
       U.save(a);
       if (window.GA_SUB) addedUsers.forEach(u => GA_SUB.assign(u.user, { plan: 'trial', months: 1, user_id: u.id, payment_status: 'manual' }));
       render();
-      APP.toast(added ? added + ' یوزر عضو ساخته شد — رمز پیش‌فرض: golf1405' : 'همهٔ اعضا قبلاً یوزر داشتند ✓', added ? 'green' : 'gold');
+      APP.toast(added ? added + ' یوزر عضو ساخته شد؛ رمزها تصادفی و پنهان‌اند. برای تعیین و تحویل امن رمز، از دکمهٔ «یوزر و رمز» استفاده کنید.' : 'همهٔ اعضا قبلاً یوزر داشتند ✓', added ? 'green' : 'gold');
     });
     render();
   }

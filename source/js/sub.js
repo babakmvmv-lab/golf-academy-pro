@@ -200,21 +200,27 @@
   function todayISO() { return localDateISO(); }
   function nowStamp() { return localDateTimeISO(); }
 
+  function boundMoment(value, isEnd) {
+    if (!value) return null;
+    var raw = String(value).trim();
+    if (!raw) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) raw += isEnd ? 'T23:59:59.999' : 'T00:00:00.000';
+    var ms = Date.parse(raw);
+    return Number.isFinite(ms) ? new Date(ms) : null;
+  }
+  function startMoment(sub) {
+    if (!sub || typeof sub !== 'object') return null;
+    return boundMoment(sub.start_at || sub.start_date, false);
+  }
   function endMoment(end) {
     if (!end) return null;
-    if (typeof end === 'object') {
-      if (end.end_at) return new Date(end.end_at);
-      if (end.end_date) return new Date(String(end.end_date).slice(0, 10) + 'T23:59:59');
-      return null;
-    }
-    var s = String(end);
-    if (s.length > 10) return new Date(s);
-    return new Date(s.slice(0, 10) + 'T23:59:59');
+    var raw = typeof end === 'object' ? (end.end_at || end.end_date) : end;
+    return boundMoment(raw, true);
   }
   function daysLeft(end) {
     var e = endMoment(end);
-    if (!e || isNaN(+e)) return 0;
-    return Math.ceil((e - new Date()) / 86400000);
+    if (!e) return 0;
+    return Math.ceil((e.getTime() - Date.now()) / 86400000);
   }
 
   function isDeleted(sub) {
@@ -225,35 +231,38 @@
     if (!sub) return 'none';
     if (isDeleted(sub)) return 'deleted';
     if (sub.status === 'canceled') return 'canceled';
-    var d = daysLeft(sub);
-    if (d < 0) return 'expired';
-    if (sub.status === 'trial' || sub.plan === 'trial') return 'trial';
+    if (PLAN_ORDER.indexOf(sub.plan) < 0) return 'invalid';
+    if (['active','trial','past_due'].indexOf(sub.status) < 0) return 'invalid';
+    var start = startMoment(sub), end = endMoment(sub);
+    if (!start || !end) return 'invalid';
+    var now = Date.now();
+    if (end.getTime() <= now) return 'expired';
+    if (start.getTime() > now) return 'scheduled';
     if (sub.status === 'past_due') return 'past_due';
+    if (sub.status === 'trial' || sub.plan === 'trial') return 'trial';
     return 'active';
   }
 
   function isLiveRec(s) {
-    if (!s || isDeleted(s) || s.status === 'canceled') return false;
     var st = liveStatus(s);
     return st === 'active' || st === 'trial';
   }
 
   function latestLiveEnd(user) {
-    var k = ukey(user);
-    var end = '';
+    var k = ukey(user), end = '', endMs = 0;
     list().forEach(function (s) {
-      if (ukey(s.user) !== k || !isLiveRec(s)) return;
-      var stamp = s.end_at || s.end_date;
-      if (!stamp) return;
-      if (String(stamp) > String(end)) end = stamp;
+      if (ukey(s.user) !== k) return;
+      var st = liveStatus(s);
+      if (st !== 'active' && st !== 'trial' && st !== 'scheduled') return;
+      var moment = endMoment(s), stamp = s.end_at || s.end_date;
+      if (moment && moment.getTime() > endMs) { end = stamp; endMs = moment.getTime(); }
     });
     return end;
   }
-  /* شروع دورهٔ تازه = الان، یا ته آخرین اشتراک فعال (همان روز و ساعت) */
+  /* شروع دورهٔ تازه = الان، یا پایان آخرین دورهٔ جاری/صف‌شده. */
   function nextStart(user) {
-    var now = nowStamp();
-    var end = latestLiveEnd(user);
-    if (end && String(end) > String(now)) return end;
+    var now = nowStamp(), end = latestLiveEnd(user), endDate = endMoment(end);
+    if (endDate && endDate.getTime() > Date.now()) return end;
     return now;
   }
 
@@ -261,11 +270,13 @@
     var k = ukey(user);
     var mine = list().filter(function (s) { return ukey(s.user) === k && !isDeleted(s); });
     var live = mine.filter(isLiveRec).sort(function (a, b) {
-      var ea = a.end_at || a.end_date || '';
-      var eb = b.end_at || b.end_date || '';
-      return String(eb).localeCompare(String(ea));
+      return endMoment(b).getTime() - endMoment(a).getTime();
     });
     if (live[0]) return live[0];
+    var scheduled = mine.filter(function (s) { return liveStatus(s) === 'scheduled'; }).sort(function (a, b) {
+      return startMoment(a).getTime() - startMoment(b).getTime();
+    });
+    if (scheduled[0]) return scheduled[0];
     mine.sort(function (a, b) { return String(b.start_date || '').localeCompare(String(a.start_date || '')); });
     return mine[0] || null;
   }
@@ -289,13 +300,12 @@
   }
 
   function canPage(user, page) {
-    if (!page) return true;
     if (isStaff(user)) return true;
+    if (!isAllowed(user)) return false;
+    if (!page) return true;
     var sub = of(user);
-    var plan = (sub && sub.plan) || 'trial';
-    var f = featuresOf(plan);
-    if (f[page] === false) return false;
-    return true;
+    var f = featuresOf(sub && sub.plan);
+    return f[page] !== false;
   }
 
   function priceOf(plan, months) {
@@ -330,7 +340,7 @@
   }
 
   function statusFaOf(st) {
-    return { none: 'بدون اشتراک', expired: 'منقضی', canceled: 'لغو شده', past_due: 'در انتظار پرداخت', trial: 'آزمایشی', active: 'فعال', deleted: 'حذف‌شده' }[st] || st;
+    return { none: 'بدون اشتراک', expired: 'منقضی', canceled: 'لغو شده', past_due: 'در انتظار پرداخت', trial: 'آزمایشی', active: 'فعال', scheduled: 'شروع آینده', invalid: 'نامعتبر', deleted: 'حذف‌شده' }[st] || st;
   }
 
   function view(user) {
@@ -451,6 +461,7 @@
     if (isDeleted(all[i])) return { ok: true, rec: all[i] };
     all[i].status = 'deleted';
     all[i].deleted_at = new Date().toISOString();
+    all[i].updated_at = all[i].deleted_at;
     all[i].deleted_by = a.user;
     all[i].deleted_by_name = a.name;
     all[i].delete_reason = reason;
@@ -460,36 +471,62 @@
     return { ok: true, rec: all[i] };
   }
 
-  function ensureSeed(users) {
-    var a = list();
-    var changed = false;
-    (users || []).forEach(function (u) {
-      if (!u || !u.user) return;
-      if (u.main || u.role === 'admin') return;
-      if (a.some(function (s) { return ukey(s.user) === ukey(u.user); })) return;
-      var start = todayISO();
-      var ac = { user: 'system', name: 'سیستم' };
-      a.push({
-        id: 'sseed-' + ukey(u.user),
-        user: ukey(u.user),
-        user_id: u.id || null,
-        plan: 'professional',
-        status: 'active',
-        start_date: start,
-        end_date: addMonthsISO(start, 12),
-        billing_cycle: 12,
-        auto_renew: false,
-        payment_status: 'manual',
-        created_at: new Date().toISOString(),
-        created_by: ac.user,
-        created_by_name: ac.name,
-        events: [{ at: new Date().toISOString(), by: ac.user, byName: ac.name, action: 'create', plan: 'professional', months: 12 }]
-      });
-      changed = true;
+  function hasForeignSubscription(user, userId) {
+    var target = ukey(user), owner = userId == null ? '' : String(userId);
+    return list().some(function (s) {
+      if (ukey(s.user) !== target || isDeleted(s)) return false;
+      return !owner || s.user_id == null || String(s.user_id) !== owner;
     });
-    if (changed) saveList(a);
+  }
+
+  function relinkUser(oldUser, newUser, userId) {
+    var from = ukey(oldUser), to = ukey(newUser);
+    if (!from || !to) return 0;
+    var sameName = from === to;
+    var all = list(), now = new Date().toISOString(), a = actor(), changed = 0;
+    all.forEach(function (s) {
+      if (ukey(s.user) !== from) return;
+      if (userId != null && s.user_id != null && String(s.user_id) !== String(userId)) return;
+      if (sameName) {
+        /* مهاجرت رجیستری legacy: همان username می‌ماند، اما تاریخچهٔ بی‌شناسه
+           به رکورد کاربر تازه متصل می‌شود؛ شناسهٔ متعلق به حساب دیگری دست‌نخورده است. */
+        if (userId == null || (s.user_id != null && String(s.user_id) !== String(userId))) return;
+        if (String(s.user_id) === String(userId)) return;
+        s.user_id = userId;
+      } else {
+        s.user = to;
+        if (userId != null) s.user_id = userId;
+      }
+      s.updated_at = now; s.updated_by = a.user; s.updated_by_name = a.name;
+      if (!Array.isArray(s.events)) s.events = [];
+      s.events.push(stamp('relink', { from: from, to: to }));
+      changed++;
+    });
+    if (changed) saveList(all);
     return changed;
   }
+
+  function revokeUser(user, reason, userId) {
+    var target = ukey(user);
+    reason = String(reason || 'حذف حساب یوزر').trim();
+    if (!target) return 0;
+    var all = list(), now = new Date().toISOString(), a = actor(), changed = 0;
+    all.forEach(function (s) {
+      if (ukey(s.user) !== target || isDeleted(s)) return;
+      if (userId != null && s.user_id != null && String(s.user_id) !== String(userId)) return;
+      s.status = 'deleted'; s.deleted_at = now; s.updated_at = now;
+      s.deleted_by = a.user; s.deleted_by_name = a.name; s.delete_reason = reason;
+      if (!Array.isArray(s.events)) s.events = [];
+      s.events.push(stamp('delete', { reason: reason }));
+      changed++;
+    });
+    if (changed) saveList(all);
+    return changed;
+  }
+
+  /* سازگاری API قدیمی: startup نباید برای حسابِ بی‌اشتراک entitlement بسازد.
+     اشتراک تازه فقط با اقدام صریح مدیر از صفحهٔ مدیریت ایجاد می‌شود. */
+  function ensureSeed() { return false; }
 
   function paintLogin(user) {
     var box = document.getElementById('login-sub');
@@ -594,6 +631,7 @@
     loadFeatures: loadFeatures, saveFeatures: saveFeatures, featuresOf: featuresOf,
     list: list, of: of, listOf: listOf, getById: getById, view: view, viewRec: viewRec,
     assign: assign, updateById: updateById, softDelete: softDelete,
+    relinkUser: relinkUser, revokeUser: revokeUser, hasForeignSubscription: hasForeignSubscription,
     isAllowed: isAllowed, canPage: canPage, isStaff: isStaff,
     priceOf: priceOf, daysLeft: daysLeft, liveStatus: liveStatus, statusFaOf: statusFaOf,
     addMonthsISO: addMonthsISO, todayISO: todayISO, nextStart: nextStart, latestLiveEnd: latestLiveEnd, endFa: endFa, atFa: atFa, faNum: faNum,

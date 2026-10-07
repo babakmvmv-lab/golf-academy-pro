@@ -489,7 +489,7 @@ canvas.glow-canvas{filter:drop-shadow(0 0 6px rgba(212,175,55,.25))}
   .podium{transform:scale(.82);transform-origin:top center}
   .toolbar{flex-wrap:wrap;gap:8px}
   .toolbar .input,.toolbar .sel{min-width:0!important;width:100%!important}
-  .hp-par-head,.hp-par{grid-template-columns:minmax(3rem,1fr) 3rem 3rem 3.5rem 1.75rem;gap:5px;padding:6px 6px}
+  .hp-par-head,.hp-par{grid-template-columns:minmax(2.8rem,1fr) 2.55rem 2.55rem 3.1rem 3.1rem 1.5rem;gap:4px;padding:6px 6px}
   .hp-par-n{font-size:12px}
   .field-grid{grid-template-columns:1fr 1fr;gap:10px}
   .field-grid .span2{grid-column:span 2}
@@ -861,14 +861,14 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   font-variant-numeric:tabular-nums;direction:ltr;text-align:center;
 }
 
-/* پار + Index + Distance — ویرایش جزئیات هر میدان */
+/* پار + Index + Distance خانم‌ها / آقایان — ویرایش جزئیات هر میدان */
 .hp-par-wrap{margin-top:14px}
 .hp-par-board{
   display:grid;
   grid-template-columns:1fr;
   gap:14px;
 }
-@media (min-width:640px){
+@media (min-width:900px){
   .hp-par-board{grid-template-columns:1fr 1fr;gap:14px 18px}
 }
 .hp-par-nine{
@@ -885,7 +885,7 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
 .hp-par-head,
 .hp-par{
   display:grid;
-  grid-template-columns:minmax(3.6rem,1.15fr) 3.6rem 3.6rem 4rem 1.9rem;
+  grid-template-columns:minmax(3.6rem,1.15fr) 3.4rem 3.4rem 4.2rem 4.2rem 1.9rem;
   gap:6px;
   align-items:center;
   padding:7px 8px;
@@ -914,6 +914,21 @@ svg.si{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-
   font-size:15px;line-height:1;opacity:.55;justify-self:center;
 }
 .hp-par .pe-del:hover{opacity:1}
+.hp-par-head .hp-distance-head{text-align:center;line-height:1.1;letter-spacing:0}
+.hp-par-head .hp-distance-head small{font-size:9px;color:var(--muted)}
+.hp-par .pe-distance-f{color:#f0a9cb;border-color:rgba(240,169,203,.35)}
+.hp-par .pe-distance-m{color:#7dccff;border-color:rgba(125,204,255,.38)}
+@media (max-width:640px){
+  .hp-par-head,.hp-par{grid-template-columns:minmax(2.8rem,1fr) 2.55rem 2.55rem 3.1rem 3.1rem 1.5rem;gap:4px;padding:6px 6px}
+  .hp-par-head{font-size:9px}
+  .hp-par .pe-par,.hp-par .pe-idx,.hp-par .pe-distance{padding:6px 2px;font-size:13px}
+  .hp-par-n{font-size:11.5px}
+}
+@media (max-width:380px){
+  .hp-par-head,.hp-par{grid-template-columns:minmax(2.1rem,1fr) 2rem 2.1rem 2.65rem 2.65rem 1.25rem;gap:3px;padding:6px 5px}
+  .hp-par .pe-par,.hp-par .pe-idx,.hp-par .pe-distance{font-size:12px;padding:6px 1px}
+  .hp-par .pe-del{width:22px;height:26px}
+}
 .hp-par-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
 .hp-par-hint{font-size:11px;color:var(--muted);line-height:1.6}
 .hp-par-grid{display:contents}
@@ -1489,6 +1504,8 @@ tr.off-row{opacity:.5}
 .ew-distance-card{display:inline-flex;flex:none;align-items:center;justify-content:center;gap:9px;min-height:32px;box-sizing:border-box;padding:5px 12px;border:1px solid rgba(212,175,55,.36);border-radius:10px;background:rgba(212,175,55,.08);line-height:1;white-space:nowrap}
 .ew-distance-card span{font-size:10px;font-weight:800;letter-spacing:.2px;color:var(--muted)}
 .ew-distance-card b{font-size:13px;font-weight:900;color:var(--gold-l);font-variant-numeric:tabular-nums;direction:ltr;line-height:1}
+.ew-index-card{border-color:var(--ew-index-color,rgba(212,175,55,.36))}
+.ew-index-card b{color:var(--ew-index-color,var(--gold-l))}
 .ew-hbtn.done{border-color:rgba(30,187,138,.55);background:rgba(30,187,138,.14);color:#8fe3c4}
 .ew-done{margin-top:14px;display:flex;flex-direction:column;gap:8px}
 .ew-acc{border:1px solid rgba(212,175,55,.28);border-radius:12px;background:rgba(255,255,255,.03);overflow:hidden}
@@ -4742,14 +4759,23 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
     }
     return defaultIndex(n);
   }
-  /* Distance دستی هر میدان؛ مقدار خالی با null ذخیره می‌شود و فعلاً هیچ محاسبه‌ای از آن نمی‌سازد. */
-  function distancesOf(id){
+  /* Distance دستی هر میدان؛ دادهٔ legacy همان Distance خانم‌هاست و هیچ محاسبه‌ای از آن ساخته نمی‌شود. */
+  function distancesOf(id, gender){
     const cid = Number(id);
     if (!Number.isSafeInteger(cid)) return [];
+    const sex = String(gender || 'F').toUpperCase() === 'M' ? 'M' : 'F';
+    function read(record){
+      if (!record || typeof record !== 'object') return null;
+      if (sex === 'M') return Array.isArray(record.distancesM) ? record.distancesM.slice() : null;
+      const values = Array.isArray(record.distancesF) ? record.distancesF : record.distances;
+      return Array.isArray(values) ? values.slice() : null;
+    }
     const ov = loadCourseOverride()[cid];
-    if (ov && Array.isArray(ov.distances)) return ov.distances.slice();
+    const overrideDistances = read(ov);
+    if (overrideDistances !== null) return overrideDistances;
     const course = courseById(cid);
-    return course && Array.isArray(course.distances) ? course.distances.slice() : [];
+    const courseDistances = read(course);
+    return courseDistances === null ? [] : courseDistances;
   }
   /* مقیاس استاندارد سایت: سبز تیره → سبز روشن → زرد → نارنجی → قرمز روشن → قرمز تیره */
   const SCALE = ['#146C43', '#3DDC97', '#F4C430', '#E67E22', '#E85D4C', '#8B1A1A'];
@@ -12409,14 +12435,17 @@ window.addEventListener('ga:brand-changed', function(){
       const o = ov[c[0]] || {};
       const pars = (o.pars && o.pars.length) ? o.pars : (D.parsOf(c[0]) || D.COURSE_PARS[c[0]] || []);
       const index = (o.index && o.index.length) ? o.index : ((D.indexOf && D.indexOf(c[0])) || []);
-      const distances = Array.isArray(o.distances) ? o.distances : [];
+      const distancesF = Array.isArray(o.distancesF) ? o.distancesF : (Array.isArray(o.distances) ? o.distances : []);
+      const distancesM = Array.isArray(o.distancesM) ? o.distancesM : [];
       const isMis = c[0] === 1 || String(c[1]).indexOf('مسجدسلیمان') >= 0;
-      return { id:c[0], name: o.name || c[1], loc: o.loc || c[2], holes: pars.length || c[3], pars, index, distances, base:true, lat: o.lat != null ? o.lat : (isMis ? 31.90494 : 24.7136), lng: o.lng != null ? o.lng : (isMis ? 49.31398 : 46.6753) };
+      return { id:c[0], name: o.name || c[1], loc: o.loc || c[2], holes: pars.length || c[3], pars, index, distances:distancesF, distancesF, distancesM, base:true, lat: o.lat != null ? o.lat : (isMis ? 31.90494 : 24.7136), lng: o.lng != null ? o.lng : (isMis ? 49.31398 : 46.6753) };
     });
     extra.forEach((c,i) => {
       if (!c || (D.isArchivedCourse && D.isArchivedCourse(c))) return;
       const id = D.courseIdOf ? D.courseIdOf(c, i) : (1000 + i);
-      rows.push({ id, name:c.name, loc:c.loc||'ریاض', holes:(c.pars&&c.pars.length)?c.pars.length:c.holes, pars:c.pars||[], index:c.index||[], distances:Array.isArray(c.distances)?c.distances:[], base:false, idx:i, geoId:c.geoId, lat:c.lat, lng:c.lng });
+      const distancesF = Array.isArray(c.distancesF) ? c.distancesF : (Array.isArray(c.distances) ? c.distances : []);
+      const distancesM = Array.isArray(c.distancesM) ? c.distancesM : [];
+      rows.push({ id, name:c.name, loc:c.loc||'ریاض', holes:(c.pars&&c.pars.length)?c.pars.length:c.holes, pars:c.pars||[], index:c.index||[], distances:distancesF, distancesF, distancesM, base:false, idx:i, geoId:c.geoId, lat:c.lat, lng:c.lng });
     });
     const archived = extra.filter(c => c && D.isArchivedCourse && D.isArchivedCourse(c));
     body.innerHTML = `
@@ -12455,8 +12484,9 @@ window.addEventListener('ga:brand-changed', function(){
     renderCourseKmlReport();
     let parVals = Array.from({length:18}, () => 4);
     let idxVals = Array.from({length:18}, (_,i) => i + 1);
-    let distanceVals = Array.from({length:18}, () => '');
-    bindParEditor($('#mc-pars'), parVals, idxVals, distanceVals);
+    let distanceFVals = Array.from({length:18}, () => '');
+    let distanceMVals = Array.from({length:18}, () => '');
+    bindParEditor($('#mc-pars'), parVals, idxVals, distanceFVals, distanceMVals);
     const kmlInp = $('#mc-kml');
     if (kmlInp) kmlInp.addEventListener('change', function(){
       const f = kmlInp.files && kmlInp.files[0];
@@ -12526,9 +12556,11 @@ window.addEventListener('ga:brand-changed', function(){
             parVals = sm.pars.slice();
             while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
             idxVals.length = parVals.length;
-            while (distanceVals.length < parVals.length) distanceVals.push('');
-            distanceVals.length = parVals.length;
-            bindParEditor($('#mc-pars'), parVals, idxVals, distanceVals);
+            while (distanceFVals.length < parVals.length) distanceFVals.push('');
+            distanceFVals.length = parVals.length;
+            while (distanceMVals.length < parVals.length) distanceMVals.push('');
+            distanceMVals.length = parVals.length;
+            bindParEditor($('#mc-pars'), parVals, idxVals, distanceFVals, distanceMVals);
           }
           if (g.center){
             $('#mc-lat').value = g.center.lat.toFixed(6);
@@ -12563,7 +12595,9 @@ window.addEventListener('ga:brand-changed', function(){
       if (!name){ APP.toast('نام زمین را وارد کنید', 'red'); return; }
       const pars = parVals.slice();
       if (!pars.length){ APP.toast('حداقل یک میدان لازم است', 'red'); return; }
-      const rec = { name, loc: $('#mc-loc').value.trim() || 'ریاض', holes: pars.length, pars, index: idxVals.slice(0, pars.length), distances: normalizeHoleDistances(distanceVals, pars.length), lat:+$('#mc-lat').value, lng:+$('#mc-lng').value };
+      const distancesF = normalizeHoleDistances(distanceFVals, pars.length);
+      const distancesM = normalizeHoleDistances(distanceMVals, pars.length);
+      const rec = { name, loc: $('#mc-loc').value.trim() || 'ریاض', holes: pars.length, pars, index: idxVals.slice(0, pars.length), distances:distancesF, distancesF, distancesM, lat:+$('#mc-lat').value, lng:+$('#mc-lng').value };
       if (kmlDraft && window.CourseGeo){
         rec.geoId = 'c' + Date.now();
         kmlDraft.name = name;
@@ -12802,11 +12836,14 @@ window.addEventListener('ga:brand-changed', function(){
     renderKmlReportElement($('#ec-kml-rep'), null, true);
     const parVals = (r.pars && r.pars.length) ? r.pars.slice() : Array.from({length: r.holes || 18}, () => 4);
     const idxVals = (r.index && r.index.length) ? r.index.slice() : ((D.indexOf && r.id != null) ? D.indexOf(r.id).slice() : Array.from({length: parVals.length}, (_,i) => i + 1));
-    const distanceVals = Array.isArray(r.distances) ? r.distances.slice(0, parVals.length).map(v => v == null ? '' : String(v)) : [];
+    const legacyDistanceF = Array.isArray(r.distancesF) ? r.distancesF : r.distances;
+    const distanceFVals = Array.isArray(legacyDistanceF) ? legacyDistanceF.slice(0, parVals.length).map(v => v == null ? '' : String(v)) : [];
+    const distanceMVals = Array.isArray(r.distancesM) ? r.distancesM.slice(0, parVals.length).map(v => v == null ? '' : String(v)) : [];
     while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
     idxVals.length = parVals.length;
-    while (distanceVals.length < parVals.length) distanceVals.push('');
-    bindParEditor($('#ec-pars'), parVals, idxVals, distanceVals);
+    while (distanceFVals.length < parVals.length) distanceFVals.push('');
+    while (distanceMVals.length < parVals.length) distanceMVals.push('');
+    bindParEditor($('#ec-pars'), parVals, idxVals, distanceFVals, distanceMVals);
     let geoGender = 'F';
     function mountGeoEdit(){
       if (!window.EarthMap) return;
@@ -12818,6 +12855,7 @@ window.addEventListener('ga:brand-changed', function(){
         zoom: 16,
         courseId: r.base ? 'mis' : String(r.id),
         tourCourse: r.id,
+        holeCount: parVals.length,
         gender: geoGender
       });
       if (EarthMap.setEdit) EarthMap.setEdit(true);
@@ -12987,9 +13025,11 @@ window.addEventListener('ga:brand-changed', function(){
             parVals.splice(0, parVals.length, ...sm.pars);
             while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
             idxVals.length = parVals.length;
-            while (distanceVals.length < parVals.length) distanceVals.push('');
-            distanceVals.length = parVals.length;
-            bindParEditor($('#ec-pars'), parVals, idxVals, distanceVals);
+            while (distanceFVals.length < parVals.length) distanceFVals.push('');
+            distanceFVals.length = parVals.length;
+            while (distanceMVals.length < parVals.length) distanceMVals.push('');
+            distanceMVals.length = parVals.length;
+            bindParEditor($('#ec-pars'), parVals, idxVals, distanceFVals, distanceMVals);
           }
           if (g.center){ $('#ec-lat').value = g.center.lat.toFixed(6); $('#ec-lng').value = g.center.lng.toFixed(6); }
           APP.toast('نقشهٔ زمین از KML به‌روز شد ✓', 'green');
@@ -13015,25 +13055,26 @@ window.addEventListener('ga:brand-changed', function(){
       const pars = parVals.map(v => Math.max(3, Math.min(6, +v || 4)));
       if (!pars.length){ APP.toast('حداقل یک میدان لازم است','red'); return; }
       const lat = +$('#ec-lat').value || 24.7136, lng = +$('#ec-lng').value || 46.6753;
-      /* ایندکس سختی و Distance هر میدان همراه پار ذخیره می‌شوند؛ Distance اختیاری و دستی است. */
+      /* هر میدان Distance دستی و مستقل برای خانم‌ها و آقایان دارد؛ مقدار legacy همان Distance خانم‌هاست. */
       const idxSave = idxVals.slice(0, pars.length).map((v,i) => Math.max(1, Math.min(pars.length, +v || (i + 1))));
-      const distanceSave = normalizeHoleDistances(distanceVals, pars.length);
+      const distanceFemaleSave = normalizeHoleDistances(distanceFVals, pars.length);
+      const distanceMaleSave = normalizeHoleDistances(distanceMVals, pars.length);
       if (r.base){
         let ov = {};
         try { ov = JSON.parse(localStorage.getItem('ga_course_override') || '{}'); } catch(e){}
-        ov[r.id] = Object.assign({}, ov[r.id], { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave, distances: distanceSave });
+        ov[r.id] = Object.assign({}, ov[r.id], { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave, distances:distanceFemaleSave, distancesF:distanceFemaleSave, distancesM:distanceMaleSave });
         localStorage.setItem('ga_course_override', JSON.stringify(ov));
         if (D.PAR_MAP) D.PAR_MAP[r.id] = pars.slice();
         if (D.INDEX_MAP) D.INDEX_MAP[r.id] = idxSave.slice();
         if (D.COURSE_NAME) D.COURSE_NAME[r.id] = name;
       } else {
         try {
-          if (D.updateCourse) D.updateCourse(r.id, { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave, distances: distanceSave });
+          if (D.updateCourse) D.updateCourse(r.id, { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave, distances:distanceFemaleSave, distancesF:distanceFemaleSave, distancesM:distanceMaleSave });
           else {
             const lst = extraCourses();
             const c = lst.find((item,i) => item && (D.courseIdOf ? D.courseIdOf(item,i) : 1000+i) === r.id);
             if (!c) throw new Error('زمین پیدا نشد');
-            Object.assign(c, { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave, distances: distanceSave });
+            Object.assign(c, { name, loc: $('#ec-loc').value.trim(), pars, holes: pars.length, lat, lng, index: idxSave, distances:distanceFemaleSave, distancesF:distanceFemaleSave, distancesM:distanceMaleSave });
             saveCourses(lst);
           }
         } catch(err){ APP.toast('ذخیرهٔ زمین ناموفق بود؛ اطلاعات قبلی حفظ شد.', 'red'); return; }
@@ -16213,26 +16254,30 @@ window.addEventListener('ga:brand-changed', function(){
       return Number.isFinite(value) && value >= 0 ? value : null;
     });
   }
-  function parEditorHtml(pars, idxs, distances){
+  function parEditorHtml(pars, idxs, distancesF, distancesM){
     const n = (pars || []).length;
     const mid = n > 9 ? 9 : n;
+    const femaleDistances = Array.isArray(distancesF) ? distancesF : [];
+    const maleDistances = Array.isArray(distancesM) ? distancesM : [];
     function nine(from, to, title){
       let rows = '';
       for (let i = from; i < to; i++){
         const p = pars[i] != null ? pars[i] : 4;
         const ix = (idxs && idxs[i]) || (i + 1);
-        const distance = distances && distances[i] != null ? String(distances[i]) : '';
+        const distanceF = femaleDistances[i] != null ? String(femaleDistances[i]) : '';
+        const distanceM = maleDistances[i] != null ? String(maleDistances[i]) : '';
         rows += `<div class="hp-par" data-i="${i}">
           <span class="hp-par-n">${esc(holeName(i + 1))}</span>
           <input class="input pe-par" type="number" min="3" max="6" value="${p}" data-i="${i}" inputmode="numeric" aria-label="پار ${i+1}">
           <input class="input pe-idx" type="number" min="1" max="${n}" value="${ix}" data-i="${i}" inputmode="numeric" aria-label="Index ${i+1}" title="۱ سخت‌ترین — ${n} آسان‌ترین">
-          <input class="input pe-distance" type="number" min="0" step="any" value="${esc(distance)}" placeholder="—" data-i="${i}" inputmode="decimal" aria-label="Distance ${i+1}">
+          <input class="input pe-distance pe-distance-f" type="number" min="0" step="any" value="${esc(distanceF)}" placeholder="—" data-i="${i}" inputmode="decimal" aria-label="Distance خانم‌ها میدان ${i+1}" title="Distance خانم‌ها">
+          <input class="input pe-distance pe-distance-m" type="number" min="0" step="any" value="${esc(distanceM)}" placeholder="—" data-i="${i}" inputmode="decimal" aria-label="Distance آقایان میدان ${i+1}" title="Distance آقایان">
           <button type="button" class="btn sm ghost pe-del" data-i="${i}" title="حذف این میدان" aria-label="حذف">×</button>
         </div>`;
       }
       return `<section class="hp-par-nine">
         <div class="hp-par-nine-h">${title}</div>
-        <div class="hp-par-head"><span>میدان</span><span>پار</span><span>Index</span><span>Distance</span><span></span></div>
+        <div class="hp-par-head"><span>میدان</span><span>پار</span><span>Index</span><span class="hp-distance-head hp-distance-f-head" title="Distance خانم‌ها">Distance<br><small>خانم‌ها</small></span><span class="hp-distance-head hp-distance-m-head" title="Distance آقایان">Distance<br><small>آقایان</small></span><span></span></div>
         ${rows}
       </section>`;
     }
@@ -16243,18 +16288,20 @@ window.addEventListener('ga:brand-changed', function(){
         <button type="button" class="btn sm ghost" id="pe-add">+ افزودن میدان</button>
               </div>`;
   }
-  function bindParEditor(box, parVals, idxVals, distanceVals, onDraw){
-    if (typeof idxVals === 'function'){ onDraw = idxVals; idxVals = null; distanceVals = null; }
-    if (typeof distanceVals === 'function'){ onDraw = distanceVals; distanceVals = null; }
+  function bindParEditor(box, parVals, idxVals, distanceFVals, distanceMVals, onDraw){
+    if (typeof idxVals === 'function'){ onDraw = idxVals; idxVals = null; distanceFVals = null; distanceMVals = null; }
+    if (typeof distanceFVals === 'function'){ onDraw = distanceFVals; distanceFVals = null; distanceMVals = null; }
+    if (typeof distanceMVals === 'function'){ onDraw = distanceMVals; distanceMVals = null; }
     if (!idxVals) idxVals = [];
-    if (!distanceVals) distanceVals = [];
+    if (!distanceFVals) distanceFVals = [];
+    if (!distanceMVals) distanceMVals = [];
     function ensureIdx(){
       while (idxVals.length < parVals.length) idxVals.push(idxVals.length + 1);
       idxVals.length = parVals.length;
     }
-    function ensureDistances(){
-      while (distanceVals.length < parVals.length) distanceVals.push('');
-      distanceVals.length = parVals.length;
+    function ensureDistances(values){
+      while (values.length < parVals.length) values.push('');
+      values.length = parVals.length;
     }
     function readDistance(inp){
       const raw = String(inp.value == null ? '' : inp.value).trim();
@@ -16269,27 +16316,31 @@ window.addEventListener('ga:brand-changed', function(){
         const n = parVals.length;
         idxVals[+inp.dataset.i] = Math.max(1, Math.min(n, +inp.value || ( +inp.dataset.i + 1)));
       });
-      ensureDistances();
-      $$('.pe-distance', box).forEach(inp => { distanceVals[+inp.dataset.i] = readDistance(inp); });
+      ensureDistances(distanceFVals);
+      ensureDistances(distanceMVals);
+      $$('.pe-distance-f', box).forEach(inp => { distanceFVals[+inp.dataset.i] = readDistance(inp); });
+      $$('.pe-distance-m', box).forEach(inp => { distanceMVals[+inp.dataset.i] = readDistance(inp); });
     }
     function draw(){
       ensureIdx();
-      ensureDistances();
-      box.innerHTML = parEditorHtml(parVals, idxVals, distanceVals);
+      ensureDistances(distanceFVals);
+      ensureDistances(distanceMVals);
+      box.innerHTML = parEditorHtml(parVals, idxVals, distanceFVals, distanceMVals);
       $$('.pe-par', box).forEach(inp => inp.addEventListener('input', () => { parVals[+inp.dataset.i] = Math.max(3, Math.min(6, +inp.value || 4)); }));
       $$('.pe-idx', box).forEach(inp => inp.addEventListener('input', () => {
         const n = parVals.length;
         idxVals[+inp.dataset.i] = Math.max(1, Math.min(n, +inp.value || 1));
       }));
-      $$('.pe-distance', box).forEach(inp => inp.addEventListener('input', () => { distanceVals[+inp.dataset.i] = readDistance(inp); }));
+      $$('.pe-distance-f', box).forEach(inp => inp.addEventListener('input', () => { distanceFVals[+inp.dataset.i] = readDistance(inp); }));
+      $$('.pe-distance-m', box).forEach(inp => inp.addEventListener('input', () => { distanceMVals[+inp.dataset.i] = readDistance(inp); }));
       $$('.pe-del', box).forEach(b => b.addEventListener('click', () => {
         sync();
         if (parVals.length <= 1){ APP.toast('حداقل یک میدان لازم است', 'red'); return; }
         const i = +b.dataset.i;
-        parVals.splice(i, 1); idxVals.splice(i, 1); distanceVals.splice(i, 1); draw();
+        parVals.splice(i, 1); idxVals.splice(i, 1); distanceFVals.splice(i, 1); distanceMVals.splice(i, 1); draw();
       }));
       const add = box.querySelector('#pe-add');
-      if (add) add.addEventListener('click', () => { sync(); parVals.push(4); idxVals.push(parVals.length); distanceVals.push(''); draw(); });
+      if (add) add.addEventListener('click', () => { sync(); parVals.push(4); idxVals.push(parVals.length); distanceFVals.push(''); distanceMVals.push(''); draw(); });
       if (onDraw) onDraw();
     }
     draw();
@@ -18356,18 +18407,54 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
     if (!Number.isSafeInteger(n) || n < 1) return null;
     const D = window.Data;
     if (!D || typeof D.distancesOf !== 'function') return null;
-    const distances = D.distancesOf(courseKey());
+    const distances = D.distancesOf(courseKey(), geoGender());
     const raw = Array.isArray(distances) ? distances[n - 1] : null;
     if (raw == null || String(raw).trim() === '') return null;
     const value = Number(raw);
     return Number.isFinite(value) && value >= 0 ? value : null;
   }
+  function courseHoleIndex(hole){
+    const n = Number(hole);
+    if (!Number.isSafeInteger(n) || n < 1) return null;
+    const D = window.Data;
+    if (!D || typeof D.indexOf !== 'function') return null;
+    const indexes = D.indexOf(courseKey());
+    const raw = Array.isArray(indexes) ? indexes[n - 1] : null;
+    if (raw == null || String(raw).trim() === '') return null;
+    const value = Number(raw);
+    return Number.isSafeInteger(value) && value >= 1 ? value : null;
+  }
+  function courseIndexCount(){
+    const explicit = Number(optsRef.holeCount);
+    if (Number.isSafeInteger(explicit) && explicit >= 2) return explicit;
+    const D = window.Data;
+    const pars = D && typeof D.parsOf === 'function' ? D.parsOf(courseKey()) : null;
+    const count = Array.isArray(pars) && pars.length ? pars.length : holeNums().length;
+    return Number.isSafeInteger(+count) && +count >= 2 ? +count : 18;
+  }
+  function courseIndexColor(index){
+    const D = window.Data;
+    if (!D || typeof D.scaleIndex !== 'function') return 'var(--muted)';
+    const color = D.scaleIndex(index, courseIndexCount());
+    return /^#[0-9a-f]{6}$/i.test(color) ? color : 'var(--muted)';
+  }
+  function holeIndexCard(hole){
+    const n = Number(hole);
+    const valid = Number.isSafeInteger(n) && n > 0;
+    const value = valid ? courseHoleIndex(n) : null;
+    const color = value == null ? 'var(--muted)' : courseIndexColor(value);
+    const holeAttr = valid ? ' data-ew-index-hole="' + n + '"' : '';
+    const valueAttr = value == null ? '' : ' data-ew-index-value="' + value + '"';
+    return '<div class="ew-distance-card ew-index-card" role="status" aria-live="polite"' + holeAttr + valueAttr + ' data-ew-index-color="' + color + '" style="--ew-index-color:' + color + '"><span>Index</span><b>' + (value == null ? '—' : fa(value)) + '</b></div>';
+  }
   function holeDistanceCard(hole){
     const n = Number(hole);
     const valid = Number.isSafeInteger(n) && n > 0;
+    const gender = geoGender();
+    const label = gender === 'M' ? 'Distance آقایان' : 'Distance خانم‌ها';
     const value = valid ? courseHoleDistance(n) : null;
     const holeAttr = valid ? ' data-ew-distance-hole="' + n + '"' : '';
-    return '<div class="ew-distance-card" role="status" aria-live="polite"' + holeAttr + '><span>Distance</span><b>' + (value == null ? '—' : fa(value)) + '</b></div>';
+    return '<div class="ew-distance-card" role="status" aria-live="polite" data-ew-distance-gender="' + gender + '"' + holeAttr + '><span>' + label + '</span><b>' + (value == null ? '—' : fa(value)) + '</b></div>';
   }
   function vsStrokeColor(vs){
     if (window.Data && Data.scaleVsPar) return Data.scaleVsPar(vs);
@@ -18460,7 +18547,7 @@ window.MIS_GOLF.sat={url:"mis_sat.webp?v=4",topo:"mis_topo.webp?v=4",south:31.89
     } else if (wizStep === 'ready'){
       const arr = holePlan();
       h = wizBack('hole','تغییر میدان')+'<div class="ew-head"><b>میدان '+holeSel+'</b><span>'+arr.length+' ضربه</span></div>'
-        + '<div class="ew-actions ew-main-acts"><button type="button" class="btn sm" id="ew-add">＋ افزودن ضربه</button><button type="button" class="btn sm" id="ew-lock">ثبت میدان</button>'+holeDistanceCard(holeSel)+'</div>'
+        + '<div class="ew-actions ew-main-acts"><button type="button" class="btn sm" id="ew-add">＋ افزودن ضربه</button><button type="button" class="btn sm" id="ew-lock">ثبت میدان</button>'+holeDistanceCard(holeSel)+holeIndexCard(holeSel)+'</div>'
         + '<div class="ew-shots">'+(arr.length ? arr.map(function(sh,i){ return shotArticle(sh,i); }).join('') : '<div class="ew-empty">هنوز ضربه‌ای ثبت نشده.</div>')+'</div>'
         + '<div class="ew-actions"><button type="button" class="btn sm ghost" id="ew-rep-one">گزارش این میدان</button><button type="button" class="btn sm" id="ew-rep-all">گزارش کامل</button></div>';
     } else if (wizStep === 'club'){
@@ -21358,7 +21445,7 @@ const sp = $('#st-podium');
         places.push({ name: c[1], lat, lng });
       });
       const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.90494, lng:49.31398 };
-      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], pid: coursePlayerSel, gender: courseTeeGender || 'F' });
+      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], holeCount: holes, pid: coursePlayerSel, gender: courseTeeGender || 'F' });
     })();
     } catch (err) {
       console.error('pageCourse', err);

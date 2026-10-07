@@ -239,14 +239,23 @@
     }
     return defaultIndex(n);
   }
-  /* Distance دستی هر میدان؛ مقدار خالی با null ذخیره می‌شود و فعلاً هیچ محاسبه‌ای از آن نمی‌سازد. */
-  function distancesOf(id){
+  /* Distance دستی هر میدان؛ دادهٔ legacy همان Distance خانم‌هاست و هیچ محاسبه‌ای از آن ساخته نمی‌شود. */
+  function distancesOf(id, gender){
     const cid = Number(id);
     if (!Number.isSafeInteger(cid)) return [];
+    const sex = String(gender || 'F').toUpperCase() === 'M' ? 'M' : 'F';
+    function read(record){
+      if (!record || typeof record !== 'object') return null;
+      if (sex === 'M') return Array.isArray(record.distancesM) ? record.distancesM.slice() : null;
+      const values = Array.isArray(record.distancesF) ? record.distancesF : record.distances;
+      return Array.isArray(values) ? values.slice() : null;
+    }
     const ov = loadCourseOverride()[cid];
-    if (ov && Array.isArray(ov.distances)) return ov.distances.slice();
+    const overrideDistances = read(ov);
+    if (overrideDistances !== null) return overrideDistances;
     const course = courseById(cid);
-    return course && Array.isArray(course.distances) ? course.distances.slice() : [];
+    const courseDistances = read(course);
+    return courseDistances === null ? [] : courseDistances;
   }
   /* مقیاس استاندارد سایت: سبز تیره → سبز روشن → زرد → نارنجی → قرمز روشن → قرمز تیره */
   const SCALE = ['#146C43', '#3DDC97', '#F4C430', '#E67E22', '#E85D4C', '#8B1A1A'];

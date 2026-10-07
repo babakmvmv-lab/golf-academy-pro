@@ -774,18 +774,54 @@
     if (!Number.isSafeInteger(n) || n < 1) return null;
     const D = window.Data;
     if (!D || typeof D.distancesOf !== 'function') return null;
-    const distances = D.distancesOf(courseKey());
+    const distances = D.distancesOf(courseKey(), geoGender());
     const raw = Array.isArray(distances) ? distances[n - 1] : null;
     if (raw == null || String(raw).trim() === '') return null;
     const value = Number(raw);
     return Number.isFinite(value) && value >= 0 ? value : null;
   }
+  function courseHoleIndex(hole){
+    const n = Number(hole);
+    if (!Number.isSafeInteger(n) || n < 1) return null;
+    const D = window.Data;
+    if (!D || typeof D.indexOf !== 'function') return null;
+    const indexes = D.indexOf(courseKey());
+    const raw = Array.isArray(indexes) ? indexes[n - 1] : null;
+    if (raw == null || String(raw).trim() === '') return null;
+    const value = Number(raw);
+    return Number.isSafeInteger(value) && value >= 1 ? value : null;
+  }
+  function courseIndexCount(){
+    const explicit = Number(optsRef.holeCount);
+    if (Number.isSafeInteger(explicit) && explicit >= 2) return explicit;
+    const D = window.Data;
+    const pars = D && typeof D.parsOf === 'function' ? D.parsOf(courseKey()) : null;
+    const count = Array.isArray(pars) && pars.length ? pars.length : holeNums().length;
+    return Number.isSafeInteger(+count) && +count >= 2 ? +count : 18;
+  }
+  function courseIndexColor(index){
+    const D = window.Data;
+    if (!D || typeof D.scaleIndex !== 'function') return 'var(--muted)';
+    const color = D.scaleIndex(index, courseIndexCount());
+    return /^#[0-9a-f]{6}$/i.test(color) ? color : 'var(--muted)';
+  }
+  function holeIndexCard(hole){
+    const n = Number(hole);
+    const valid = Number.isSafeInteger(n) && n > 0;
+    const value = valid ? courseHoleIndex(n) : null;
+    const color = value == null ? 'var(--muted)' : courseIndexColor(value);
+    const holeAttr = valid ? ' data-ew-index-hole="' + n + '"' : '';
+    const valueAttr = value == null ? '' : ' data-ew-index-value="' + value + '"';
+    return '<div class="ew-distance-card ew-index-card" role="status" aria-live="polite"' + holeAttr + valueAttr + ' data-ew-index-color="' + color + '" style="--ew-index-color:' + color + '"><span>Index</span><b>' + (value == null ? '—' : fa(value)) + '</b></div>';
+  }
   function holeDistanceCard(hole){
     const n = Number(hole);
     const valid = Number.isSafeInteger(n) && n > 0;
+    const gender = geoGender();
+    const label = gender === 'M' ? 'Distance آقایان' : 'Distance خانم‌ها';
     const value = valid ? courseHoleDistance(n) : null;
     const holeAttr = valid ? ' data-ew-distance-hole="' + n + '"' : '';
-    return '<div class="ew-distance-card" role="status" aria-live="polite"' + holeAttr + '><span>Distance</span><b>' + (value == null ? '—' : fa(value)) + '</b></div>';
+    return '<div class="ew-distance-card" role="status" aria-live="polite" data-ew-distance-gender="' + gender + '"' + holeAttr + '><span>' + label + '</span><b>' + (value == null ? '—' : fa(value)) + '</b></div>';
   }
   function vsStrokeColor(vs){
     if (window.Data && Data.scaleVsPar) return Data.scaleVsPar(vs);
@@ -878,7 +914,7 @@
     } else if (wizStep === 'ready'){
       const arr = holePlan();
       h = wizBack('hole','تغییر میدان')+'<div class="ew-head"><b>میدان '+holeSel+'</b><span>'+arr.length+' ضربه</span></div>'
-        + '<div class="ew-actions ew-main-acts"><button type="button" class="btn sm" id="ew-add">＋ افزودن ضربه</button><button type="button" class="btn sm" id="ew-lock">ثبت میدان</button>'+holeDistanceCard(holeSel)+'</div>'
+        + '<div class="ew-actions ew-main-acts"><button type="button" class="btn sm" id="ew-add">＋ افزودن ضربه</button><button type="button" class="btn sm" id="ew-lock">ثبت میدان</button>'+holeDistanceCard(holeSel)+holeIndexCard(holeSel)+'</div>'
         + '<div class="ew-shots">'+(arr.length ? arr.map(function(sh,i){ return shotArticle(sh,i); }).join('') : '<div class="ew-empty">هنوز ضربه‌ای ثبت نشده.</div>')+'</div>'
         + '<div class="ew-actions"><button type="button" class="btn sm ghost" id="ew-rep-one">گزارش این میدان</button><button type="button" class="btn sm" id="ew-rep-all">گزارش کامل</button></div>';
     } else if (wizStep === 'club'){

@@ -2605,7 +2605,7 @@ const sp = $('#st-podium');
         places.push({ name: c[1], lat, lng });
       });
       const cur = places.find(p => p.name === crs[1]) || places[0] || { lat:31.90494, lng:49.31398 };
-      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], pid: coursePlayerSel, gender: courseTeeGender || 'F' });
+      EarthMap.mount(document.getElementById('earth-map'), { center: cur, places, zoom: 16, courseId: 'mis', tourCourse: crs[0], holeCount: holes, pid: coursePlayerSel, gender: courseTeeGender || 'F' });
     })();
     } catch (err) {
       console.error('pageCourse', err);

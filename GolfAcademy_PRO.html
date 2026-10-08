@@ -6764,9 +6764,30 @@ window.IR_HOLIDAYS_1405 = IR_HOLIDAYS_1405;
       { id: 'academy.kpis', t: 'کارت‌های آمار آکادمی' },
       { id: 'academy.ranks', t: 'ترکیب رنک‌های فصل' },
       { id: 'academy.glance', t: 'آکادمی در یک نگاه — پیام سرپرست' } ] },
-    { id: 'avatarland', t: 'سرزمین آواتارها', ic: '💚', kids: [] }
+    { id: 'avatarland', t: 'سرزمین آواتارها', ic: '💚', kids: [] },
+    /* باشگاه پات کلاب — اپ جداگانهٔ gym.puttclub.ir با دیتابیس اختصاصی (اسکیمای gym).
+       همین شناسه‌ها سمت سرور در gym.access_nodes() (supabase/gym.sql) اجرا می‌شوند؛ هر تغییر = هر دو جا. */
+    { id: 'gym', t: 'باشگاه پات کلاب', ic: '🏋️', ext: 'https://gym.puttclub.ir',
+      svg: '<svg class="si" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>', kids: [
+      { id: 'gym.summary', t: 'خلاصه', tab: true, kids: [
+        { id: 'gym.summary.rings', t: 'حلقه‌های هفته (تمرین، حجم، ریکاوری)' },
+        { id: 'gym.summary.next', t: 'تمرین امروز / جلسهٔ بعدی' },
+        { id: 'gym.summary.metrics', t: 'معیارها (رکورد، حجم، آمادگی، بار تمرینی)' },
+        { id: 'gym.summary.trends', t: 'روندها' },
+        { id: 'gym.summary.awards', t: 'جوایز' } ] },
+      { id: 'gym.train', t: 'تمرین', tab: true, kids: [
+        { id: 'gym.train.program', t: 'برنامهٔ هفتگی مربی' },
+        { id: 'gym.train.session', t: 'ثبت جلسه و ست‌ها' },
+        { id: 'gym.train.timer', t: 'تایمر استراحت' } ] },
+      { id: 'gym.player', t: 'نمایش سه‌بعدی', tab: true, kids: [
+        { id: 'gym.player.form', t: 'فرم صحیح حرکت (سه‌بعدی)' },
+        { id: 'gym.player.anatomy', t: 'نمای آناتومی عضلات' } ] },
+      { id: 'gym.progress', t: 'پیشرفت', tab: true, kids: [
+        { id: 'gym.progress.meas', t: 'اندازه‌های بدن' },
+        { id: 'gym.progress.strength', t: 'قدرت و سابقهٔ جلسات' },
+        { id: 'gym.progress.muscles', t: 'عضلات و ریکاوری' } ] } ] }
   ];
-  var MEMBER_PAGES = ACCESS_TREE.map(function (n) { return n.id; });
+  var MEMBER_PAGES = ACCESS_TREE.filter(function (n) { return !n.ext; }).map(function (n) { return n.id; });
   function walkTree(fn) {
     (function w(list, depth, parent) {
       list.forEach(function (n) { fn(n, depth, parent); if (n.kids && n.kids.length) w(n.kids, depth + 1, n); });
@@ -11800,7 +11821,8 @@ window.addEventListener('ga:brand-changed', function(){
     lock:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
   };
   /* آیکن هر صفحه = همان آیکن SVG منوی کناری (یکدست با طراحی و مستقل از فونت ایموجی دستگاه) */
-  function acxIcon(id, fallback){
+  function acxIcon(id, fallback, svg){
+    if (svg) return svg;
     const el = document.querySelector('#app .nav-item[data-page="' + id + '"] .ico');
     return el ? el.innerHTML : esc(fallback || '');
   }
@@ -11922,8 +11944,8 @@ window.addEventListener('ga:brand-changed', function(){
       const always = n.id === 'memberzone';
       const lbl = lv === 0
         ? `<button type="button" class="acx-toggle" data-acx-open="${n.id}" aria-expanded="${o.open ? 'true' : 'false'}" ${o.hasKids ? '' : 'disabled'}>
-             <span class="acx-chev">${o.hasKids ? '▾' : '•'}</span><span class="acx-ic">${acxIcon(n.id, n.ic)}</span>
-             <span class="acx-t">${esc(n.t)}</span>
+             <span class="acx-chev">${o.hasKids ? '▾' : '•'}</span><span class="acx-ic">${acxIcon(n.id, n.ic, n.svg)}</span>
+             <span class="acx-t">${esc(n.t)}</span>${n.ext ? `<span class="acx-chip ghost" dir="ltr" title="اپ جداگانه با دیتابیس اختصاصی">${esc(n.ext.replace(/^https?:\/\//, ''))}</span>` : ''}
              ${o.hasKids ? `<span class="acx-chip">${fa(o.tot)} بخش</span>` : `<span class="acx-chip ghost">کل صفحه</span>`}
            </button>`
         : `<div class="acx-t2">${n.tab ? '<span class="acx-tabtag">تب</span>' : '<span class="acx-dot"></span>'}<span>${esc(n.t)}</span>${o.hasKids ? `<span class="acx-chip">${fa(o.tot)}</span>` : ''}</div>`;

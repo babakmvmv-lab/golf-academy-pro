@@ -129,9 +129,30 @@
       { id: 'academy.kpis', t: 'کارت‌های آمار آکادمی' },
       { id: 'academy.ranks', t: 'ترکیب رنک‌های فصل' },
       { id: 'academy.glance', t: 'آکادمی در یک نگاه — پیام سرپرست' } ] },
-    { id: 'avatarland', t: 'سرزمین آواتارها', ic: '💚', kids: [] }
+    { id: 'avatarland', t: 'سرزمین آواتارها', ic: '💚', kids: [] },
+    /* باشگاه پات کلاب — اپ جداگانهٔ gym.puttclub.ir با دیتابیس اختصاصی (اسکیمای gym).
+       همین شناسه‌ها سمت سرور در gym.access_nodes() (supabase/gym.sql) اجرا می‌شوند؛ هر تغییر = هر دو جا. */
+    { id: 'gym', t: 'باشگاه پات کلاب', ic: '🏋️', ext: 'https://gym.puttclub.ir',
+      svg: '<svg class="si" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>', kids: [
+      { id: 'gym.summary', t: 'خلاصه', tab: true, kids: [
+        { id: 'gym.summary.rings', t: 'حلقه‌های هفته (تمرین، حجم، ریکاوری)' },
+        { id: 'gym.summary.next', t: 'تمرین امروز / جلسهٔ بعدی' },
+        { id: 'gym.summary.metrics', t: 'معیارها (رکورد، حجم، آمادگی، بار تمرینی)' },
+        { id: 'gym.summary.trends', t: 'روندها' },
+        { id: 'gym.summary.awards', t: 'جوایز' } ] },
+      { id: 'gym.train', t: 'تمرین', tab: true, kids: [
+        { id: 'gym.train.program', t: 'برنامهٔ هفتگی مربی' },
+        { id: 'gym.train.session', t: 'ثبت جلسه و ست‌ها' },
+        { id: 'gym.train.timer', t: 'تایمر استراحت' } ] },
+      { id: 'gym.player', t: 'نمایش سه‌بعدی', tab: true, kids: [
+        { id: 'gym.player.form', t: 'فرم صحیح حرکت (سه‌بعدی)' },
+        { id: 'gym.player.anatomy', t: 'نمای آناتومی عضلات' } ] },
+      { id: 'gym.progress', t: 'پیشرفت', tab: true, kids: [
+        { id: 'gym.progress.meas', t: 'اندازه‌های بدن' },
+        { id: 'gym.progress.strength', t: 'قدرت و سابقهٔ جلسات' },
+        { id: 'gym.progress.muscles', t: 'عضلات و ریکاوری' } ] } ] }
   ];
-  var MEMBER_PAGES = ACCESS_TREE.map(function (n) { return n.id; });
+  var MEMBER_PAGES = ACCESS_TREE.filter(function (n) { return !n.ext; }).map(function (n) { return n.id; });
   function walkTree(fn) {
     (function w(list, depth, parent) {
       list.forEach(function (n) { fn(n, depth, parent); if (n.kids && n.kids.length) w(n.kids, depth + 1, n); });

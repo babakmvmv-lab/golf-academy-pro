@@ -57,7 +57,7 @@ const SHOT = (n) => process.env.SHOT_DIR ? path.join(process.env.SHOT_DIR, n) : 
     await go(page, 'settings');
     ok(await cur(page) === 'subs' && await page.evaluate(() => !!document.getElementById('acx-grid')), 'مسیر قدیمی #settings → صفحهٔ اشتراک‌ها (ماتریس)');
     const rows = await page.evaluate(() => Array.from(document.querySelectorAll('.acx-row.lv0 .acx-t')).map(e => e.textContent.trim()));
-    ok(rows.length === 12, '۱۲ صفحهٔ اعضا در ماتریس → ' + rows.join('، '));
+    ok(rows.length === 13 && rows[12] === 'باشگاه پات کلاب', '۱۲ صفحهٔ اعضا + «باشگاه پات کلاب» در ماتریس → ' + rows.join('، '));
     ok(!rows.some(r => /یوزرها|اشتراک‌ها|تنظیمات نمایش|پنل مدیریت|ارسال پیام/.test(r)), 'ردیف‌های مدیریتی (یوزرها/اشتراک‌ها/…) در ماتریس نیستند');
     const heads = await page.evaluate(() => document.querySelectorAll('.acx-head .acx-plan').length);
     ok(heads === 5, '۵ ستون پلن');
@@ -65,6 +65,18 @@ const SHOT = (n) => process.env.SHOT_DIR ? path.join(process.env.SHOT_DIR, n) : 
     await page.click('[data-acx-open="player"]'); await page.waitForTimeout(250);
     const kids = await page.evaluate(() => Array.from(document.querySelectorAll('.acx-row.lv1, .acx-row.lv2')).map(r => r.dataset.acxRow));
     ok(kids.includes('player.classic') && kids.includes('player.smart') && kids.includes('player.classic.radar') && kids.includes('player.smart.notes'), 'باز کردن «مرکز بازیکن»: تب کلاسیک و هوشمند + نمودارهای هر کدام (' + kids.length + ' ردیف)');
+    // «باشگاه پات کلاب» (gym.puttclub.ir): ۴ تب + ۱۳ بخش، هر کدام برای هر پلن جدا
+    await page.click('[data-acx-open="gym"]'); await page.waitForTimeout(250);
+    const gk = await page.evaluate(() => Array.from(document.querySelectorAll('.acx-row.lv1, .acx-row.lv2')).map(r => r.dataset.acxRow).filter(id => id.indexOf('gym.') === 0));
+    ok(['gym.summary','gym.train','gym.player','gym.progress'].every(t => gk.includes(t)) && gk.filter(id => id.split('.').length === 3).length === 13
+       && gk.includes('gym.train.session') && gk.includes('gym.player.anatomy'), 'باز کردن «باشگاه پات کلاب»: ۴ تب و ۱۳ بخش → ' + gk.length);
+    ok(await page.evaluate(() => /gym\.puttclub\.ir/.test(document.querySelector('[data-acx-row="gym"]').textContent) && !!document.querySelector('[data-acx-row="gym"] .acx-ic svg')), 'ردیف باشگاه: نشانی اپ جداگانه + آیکن SVG');
+    ok(await page.evaluate(() => document.querySelector('[data-acx-id="gym.player.anatomy"][data-acx-plan="trial"]').checked), 'پیش‌فرض: بخش‌های باشگاه برای همهٔ پلن‌ها روشن (غایب = روشن)');
+    await page.click('[data-acx-id="gym.player.anatomy"][data-acx-plan="trial"]'); await page.waitForTimeout(400);
+    const gf = await page.evaluate(() => { const f = JSON.parse(localStorage.getItem('ga_plan_features') || '{}'); return [f.trial && f.trial['gym.player.anatomy'], f.enterprise && f.enterprise['gym.player.anatomy']]; });
+    ok(gf[0] === false && gf[1] !== false, 'خاموش‌کردن «نمای آناتومی عضلات» فقط برای Trial ذخیره شد → ' + JSON.stringify(gf));
+    await page.click('[data-acx-id="gym.player.anatomy"][data-acx-plan="trial"]'); await page.waitForTimeout(300);
+    await page.click('[data-acx-open="gym"]'); await page.waitForTimeout(200);
     // وضعیت ذخیره‌شده درست نمایش داده می‌شود
     const st = await page.evaluate(() => {
       const q = (id, pl) => document.querySelector(`[data-acx-id="${id}"][data-acx-plan="${pl}"]`);

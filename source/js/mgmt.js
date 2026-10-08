@@ -343,7 +343,8 @@
     lock:'<svg class="si" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
   };
   /* آیکن هر صفحه = همان آیکن SVG منوی کناری (یکدست با طراحی و مستقل از فونت ایموجی دستگاه) */
-  function acxIcon(id, fallback){
+  function acxIcon(id, fallback, svg){
+    if (svg) return svg;
     const el = document.querySelector('#app .nav-item[data-page="' + id + '"] .ico');
     return el ? el.innerHTML : esc(fallback || '');
   }
@@ -465,8 +466,8 @@
       const always = n.id === 'memberzone';
       const lbl = lv === 0
         ? `<button type="button" class="acx-toggle" data-acx-open="${n.id}" aria-expanded="${o.open ? 'true' : 'false'}" ${o.hasKids ? '' : 'disabled'}>
-             <span class="acx-chev">${o.hasKids ? '▾' : '•'}</span><span class="acx-ic">${acxIcon(n.id, n.ic)}</span>
-             <span class="acx-t">${esc(n.t)}</span>
+             <span class="acx-chev">${o.hasKids ? '▾' : '•'}</span><span class="acx-ic">${acxIcon(n.id, n.ic, n.svg)}</span>
+             <span class="acx-t">${esc(n.t)}</span>${n.ext ? `<span class="acx-chip ghost" dir="ltr" title="اپ جداگانه با دیتابیس اختصاصی">${esc(n.ext.replace(/^https?:\/\//, ''))}</span>` : ''}
              ${o.hasKids ? `<span class="acx-chip">${fa(o.tot)} بخش</span>` : `<span class="acx-chip ghost">کل صفحه</span>`}
            </button>`
         : `<div class="acx-t2">${n.tab ? '<span class="acx-tabtag">تب</span>' : '<span class="acx-dot"></span>'}<span>${esc(n.t)}</span>${o.hasKids ? `<span class="acx-chip">${fa(o.tot)}</span>` : ''}</div>`;

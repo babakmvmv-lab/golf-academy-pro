@@ -128,6 +128,34 @@ create table if not exists gym.measurements (
   updated_at  timestamptz not null default now(),
   deleted_at  timestamptz
 );
+-- سطح ۲ و ۳ اندازه‌گیری (طول‌ها، پهناها، دورهای تکمیلی، چربی زیرپوستی، اعداد مشتق از عکس) — فقط کلیدهای مجاز با بازهٔ معتبر
+alter table gym.measurements add column if not exists extra jsonb;
+do $$ begin
+  alter table gym.measurements add constraint measurements_extra_chk check (extra is null or (jsonb_typeof(extra) = 'object' and pg_column_size(extra) < 4000));
+exception when duplicate_object then null; end $$;
+
+create or replace function gym.meas_extra(p jsonb) returns jsonb
+language plpgsql immutable set search_path = gym, pg_temp as $$
+declare
+  r jsonb := '{}'::jsonb; k text; v numeric;
+  spec constant jsonb := '{"sit":[40,140],"span":[80,240],"uarmL":[12,55],"farmL":[10,45],"handL":[8,30],"thighL":[18,70],"shankL":[18,65],"footL":[10,36],
+    "biac":[18,62],"biil":[14,50],"chestB":[14,50],"bicepsF":[12,70],"wrist":[9,26],"midthigh":[20,95],"ankle":[12,42],"shoulder":[60,180],
+    "sf_triceps":[1.5,80],"sf_subscap":[1.5,80],"sf_biceps":[1.5,80],"sf_iliac":[1.5,80],"sf_supra":[1.5,80],"sf_abd":[1.5,80],"sf_thigh":[1.5,80],"sf_calf":[1.5,80],
+    "w_chest":[8,75],"d_chest":[8,75],"w_waist":[8,75],"d_waist":[8,75],"w_hip":[8,75],"d_hip":[8,75],"bf":[2,70],"tier":[1,3],"age":[5,100]}'::jsonb;
+begin
+  if p is null or jsonb_typeof(p) <> 'object' then return null; end if;
+  for k in select jsonb_object_keys(p) loop
+    if spec ? k then
+      begin v := (p->>k)::numeric; exception when others then continue; end;
+      if v between (spec->k->>0)::numeric and (spec->k->>1)::numeric then r := r || jsonb_build_object(k, round(v, 1)); end if;
+    elsif k = 'bfm' and (p->>k) in ('navy', 'dw', 'slaughter', 'deur', 'deurc') then
+      r := r || jsonb_build_object(k, p->>k);
+    end if;
+  end loop;
+  if r = '{}'::jsonb then return null; end if;
+  return r;
+end $$;
+
 create index if not exists gym_meas_member on gym.measurements(member_id, measured_at);
 
 -- ── تنظیمات هر عضو ──
@@ -285,7 +313,7 @@ create or replace function gym.meas_json(m gym.measurements) returns jsonb
 language sql stable security definer set search_path = gym, pg_temp as $$
   select jsonb_strip_nulls(jsonb_build_object('id', m.id, 'date', to_char(m.measured_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
     'height', m.height, 'weight', m.weight, 'neck', m.neck, 'biceps', m.biceps, 'forearm', m.forearm,
-    'chest', m.chest, 'waist', m.waist, 'hip', m.hip, 'thigh', m.thigh, 'calf', m.calf))
+    'chest', m.chest, 'waist', m.waist, 'hip', m.hip, 'thigh', m.thigh, 'calf', m.calf, 'extra', m.extra))
 $$;
 
 -- دادهٔ باشگاهِ یک عضو (برای خودش یا برای مربی)
@@ -394,13 +422,14 @@ begin
     if t is null or t > now() + interval '1 day' then return jsonb_build_object('ok', false, 'err', 'bad date'); end if;
     if exists (select 1 from gym.measurements m where m.id = wid and m.member_id <> uid) then return jsonb_build_object('ok', false, 'err', 'forbidden'); end if;
     begin
-      insert into gym.measurements as m (id, member_id, measured_at, height, weight, neck, biceps, forearm, chest, waist, hip, thigh, calf)
+      insert into gym.measurements as m (id, member_id, measured_at, height, weight, neck, biceps, forearm, chest, waist, hip, thigh, calf, extra)
       values (wid, uid, t, (p_payload->>'height')::numeric, (p_payload->>'weight')::numeric, (p_payload->>'neck')::numeric,
               (p_payload->>'biceps')::numeric, (p_payload->>'forearm')::numeric, (p_payload->>'chest')::numeric,
-              (p_payload->>'waist')::numeric, (p_payload->>'hip')::numeric, (p_payload->>'thigh')::numeric, (p_payload->>'calf')::numeric)
+              (p_payload->>'waist')::numeric, (p_payload->>'hip')::numeric, (p_payload->>'thigh')::numeric, (p_payload->>'calf')::numeric,
+              gym.meas_extra(p_payload->'extra'))
       on conflict (id) do update set measured_at = excluded.measured_at, height = excluded.height, weight = excluded.weight,
         neck = excluded.neck, biceps = excluded.biceps, forearm = excluded.forearm, chest = excluded.chest, waist = excluded.waist,
-        hip = excluded.hip, thigh = excluded.thigh, calf = excluded.calf, updated_at = now(), deleted_at = null
+        hip = excluded.hip, thigh = excluded.thigh, calf = excluded.calf, extra = excluded.extra, updated_at = now(), deleted_at = null
       where m.member_id = uid;
     exception when check_violation or invalid_text_representation or numeric_value_out_of_range then
       return jsonb_build_object('ok', false, 'err', 'out of range');

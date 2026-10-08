@@ -4011,7 +4011,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   function markDirty(k, before) {
     if (applying || !k || k.indexOf(PFX) !== 0 || SKIP[k] || !hasCred()) return;
     if (sameAsSynced(k)) return;
-    if (!authPulled && before === null) { seeded[k] = 1; return; }
+    /* پیش‌فرضِ دستگاه (بذر) و هر ویرایشِ روی همان پیش‌فرض، تا قبل از اولین دریافتِ مجاز از سرور
+       «تغییرِ کاربر» حساب نمی‌شود؛ وگرنه یک نسخهٔ ناقص (مثلاً ga_players فقط با تاریخ تولد)
+       دادهٔ واقعیِ سرور را رونویسی می‌کند — همان چیزی که ۱۷ مهر ۱۴۰۵ عکس و مشخصات اعضا را پاک کرد. */
+    if (!authPulled && (before === null || seeded[k])) { seeded[k] = 1; return; }
     if (!canWrite(k)) return;
     var d = jread(DIRTY_KEY, {}), stamp = localStamp();
     // حتی دو ویرایش در یک میلی‌ثانیه باید نسخهٔ جدا داشته باشند.
@@ -4883,6 +4886,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
     push: push,
     wipeLocal: wipeLocal,
     lastPullOk: function () { return lastPullOk; },
+    /* true وقتی دادهٔ سرور حداقل یک بار با دسترسیِ معتبر خوانده شده (یا ابر خاموش است) */
+    ready: function () { return authPulled || !hasCred(); },
     test: test,
     tombShots: tombShots,
     tombSession: tombSession,
@@ -13283,6 +13288,7 @@ window.addEventListener('ga:brand-changed', function(){
     $('#pl-filter').addEventListener('change', renderRows);
 
     $('#np-add').addEventListener('click', () => {
+      if (!playersReady()) return;
       const d = readPlayerForm();
       const anyFilled = d.name || d.phone || d.national || d.email || d.user || d.father || d.mother;
       if (!anyFilled){ APP.toast('حداقل یک مورد را پر کنید (مثلاً نام یا موبایل)', 'red'); return; }
@@ -13319,6 +13325,7 @@ window.addEventListener('ga:brand-changed', function(){
       const p = S.players.find(x => x[0] === pid);
       if (!p) return;
       const isCustom = pid >= 9000;
+      if ((act === 'deact' || act === 'act' || act === 'edit') && !playersReady()) return;
       if (act === 'deact' || act === 'act'){
         const activeNow = act === 'act';
         if (isCustom){
@@ -13358,7 +13365,17 @@ window.addEventListener('ga:brand-changed', function(){
     }));
   }
 
+  /* مشخصات بازیکن (عکس، تلفن، والدین…) فقط روی سرور کامل است؛ قبل از دریافت آن، فرم
+     نسخهٔ ناقص دستگاه را نشان می‌دهد و ذخیره‌اش اطلاعات واقعی را پاک می‌کند. */
+  function playersReady(){
+    if (!window.GA_CLOUD || typeof GA_CLOUD.ready !== 'function' || GA_CLOUD.ready()) return true;
+    APP.toast('اطلاعات بازیکنان هنوز از دیتابیس دریافت نشده — چند ثانیه بعد دوباره امتحان کنید.', 'red');
+    try { GA_CLOUD.pull && GA_CLOUD.pull(); } catch(e){}
+    return false;
+  }
+
   function editPlayerModal(pid){
+    if (!playersReady()) return;
     const full = playerFull(pid);
     if (!full) return;
     let m = $('#modal-edit');
@@ -13383,6 +13400,7 @@ window.addEventListener('ga:brand-changed', function(){
     wirePlayerForm(sc);
     $('#ep-cancel').addEventListener('click', () => m.style.display = 'none');
     $('#ep-save').addEventListener('click', () => {
+      if (!playersReady()) return;
       const d = readPlayerForm(sc);
       const anyFilled = d.name || d.phone || d.national || d.email || d.user || d.father || d.mother;
       if (!anyFilled){ APP.toast('حداقل یک مورد را پر کنید', 'red'); return; }

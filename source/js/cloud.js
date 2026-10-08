@@ -300,7 +300,10 @@
   function markDirty(k, before) {
     if (applying || !k || k.indexOf(PFX) !== 0 || SKIP[k] || !hasCred()) return;
     if (sameAsSynced(k)) return;
-    if (!authPulled && before === null) { seeded[k] = 1; return; }
+    /* پیش‌فرضِ دستگاه (بذر) و هر ویرایشِ روی همان پیش‌فرض، تا قبل از اولین دریافتِ مجاز از سرور
+       «تغییرِ کاربر» حساب نمی‌شود؛ وگرنه یک نسخهٔ ناقص (مثلاً ga_players فقط با تاریخ تولد)
+       دادهٔ واقعیِ سرور را رونویسی می‌کند — همان چیزی که ۱۷ مهر ۱۴۰۵ عکس و مشخصات اعضا را پاک کرد. */
+    if (!authPulled && (before === null || seeded[k])) { seeded[k] = 1; return; }
     if (!canWrite(k)) return;
     var d = jread(DIRTY_KEY, {}), stamp = localStamp();
     // حتی دو ویرایش در یک میلی‌ثانیه باید نسخهٔ جدا داشته باشند.
@@ -1172,6 +1175,8 @@
     push: push,
     wipeLocal: wipeLocal,
     lastPullOk: function () { return lastPullOk; },
+    /* true وقتی دادهٔ سرور حداقل یک بار با دسترسیِ معتبر خوانده شده (یا ابر خاموش است) */
+    ready: function () { return authPulled || !hasCred(); },
     test: test,
     tombShots: tombShots,
     tombSession: tombSession,

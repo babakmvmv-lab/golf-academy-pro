@@ -1805,6 +1805,7 @@
     $('#pl-filter').addEventListener('change', renderRows);
 
     $('#np-add').addEventListener('click', () => {
+      if (!playersReady()) return;
       const d = readPlayerForm();
       const anyFilled = d.name || d.phone || d.national || d.email || d.user || d.father || d.mother;
       if (!anyFilled){ APP.toast('حداقل یک مورد را پر کنید (مثلاً نام یا موبایل)', 'red'); return; }
@@ -1841,6 +1842,7 @@
       const p = S.players.find(x => x[0] === pid);
       if (!p) return;
       const isCustom = pid >= 9000;
+      if ((act === 'deact' || act === 'act' || act === 'edit') && !playersReady()) return;
       if (act === 'deact' || act === 'act'){
         const activeNow = act === 'act';
         if (isCustom){
@@ -1880,7 +1882,17 @@
     }));
   }
 
+  /* مشخصات بازیکن (عکس، تلفن، والدین…) فقط روی سرور کامل است؛ قبل از دریافت آن، فرم
+     نسخهٔ ناقص دستگاه را نشان می‌دهد و ذخیره‌اش اطلاعات واقعی را پاک می‌کند. */
+  function playersReady(){
+    if (!window.GA_CLOUD || typeof GA_CLOUD.ready !== 'function' || GA_CLOUD.ready()) return true;
+    APP.toast('اطلاعات بازیکنان هنوز از دیتابیس دریافت نشده — چند ثانیه بعد دوباره امتحان کنید.', 'red');
+    try { GA_CLOUD.pull && GA_CLOUD.pull(); } catch(e){}
+    return false;
+  }
+
   function editPlayerModal(pid){
+    if (!playersReady()) return;
     const full = playerFull(pid);
     if (!full) return;
     let m = $('#modal-edit');
@@ -1905,6 +1917,7 @@
     wirePlayerForm(sc);
     $('#ep-cancel').addEventListener('click', () => m.style.display = 'none');
     $('#ep-save').addEventListener('click', () => {
+      if (!playersReady()) return;
       const d = readPlayerForm(sc);
       const anyFilled = d.name || d.phone || d.national || d.email || d.user || d.father || d.mother;
       if (!anyFilled){ APP.toast('حداقل یک مورد را پر کنید', 'red'); return; }

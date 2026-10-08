@@ -1,4 +1,4 @@
-// ga-sync — دروازهٔ امن نوشتن به دیتابیس پات کلاب (Supabase Edge Function) — نسخهٔ ۲ (2026-10-07)
+// ga-sync — دروازهٔ امن نوشتن به دیتابیس پات کلاب (Supabase Edge Function) — نسخهٔ ۱۰ (2026-10-08: ادغام امن ga_players)
 // نوشتن فقط از اینجا: با کلید مخفی service_role که فقط روی سرور است، نه مرورگر کاربر.
 // هویت: JWT کاربر Supabase Auth در هدر Authorization.
 //   • مدیر (adminpanel_access owner/admin یا ga_accounts.role=admin): همهٔ کلیدهای ga_*
@@ -53,6 +53,27 @@ function sameJson(a: any, b: any): boolean {
 function isObj(v: any): boolean { return !!v && typeof v === "object" && !Array.isArray(v); }
 function norm(u: any): string { return String(u == null ? "" : u).trim().toLowerCase(); }
 /* ادغام نوشتن عضو: فقط سهم خودِ عضو از مقدار ارسالی برداشته می‌شود؛ بقیه از ابر. */
+/* ادغام امن ga_players — توضیح در اکشن kv */
+function mergePlayers(cur: any, inc: any): any {
+  const isObj = (o: any) => !!o && typeof o === "object" && !Array.isArray(o);
+  if (!isObj(cur)) return (inc && inc.__del) ? {} : inc;
+  if (!isObj(inc) || inc.__del) return cur;
+  const out: any = JSON.parse(JSON.stringify(cur));
+  for (const pid of Object.keys(inc)) {
+    const n = inc[pid];
+    if (!isObj(n)) continue;                       // رکورد نامعتبر/null چیزی را پاک نمی‌کند
+    const o: any = isObj(out[pid]) ? out[pid] : {};
+    for (const f of Object.keys(n)) {
+      const nv = n[f];
+      if (f === "photo" && (nv == null || nv === "") && typeof o.photo === "string" && o.photo) continue;
+      if (nv === undefined) continue;
+      o[f] = nv;
+    }
+    out[pid] = o;
+  }
+  return out;
+}
+
 function mergeMember(k: string, current: any, incoming: any, user: string): { ok: boolean; v?: any; err?: string } {
   const mode = MEMBER_KEYS[k];
   const me = norm(user);
@@ -202,6 +223,16 @@ Deno.serve(async (req) => {
           values[r.k] = m.v;
         }
       }
+      /* ga_players (مشخصات و عکس بازیکنان): حتی برای مدیر هم کل کلید جایگزین نمی‌شود؛
+         ادغام بازیکن‌به‌بازیکن و فیلد‌به‌فیلد. بازیکن/فیلدِ غایب و «عکسِ خالی» مقدار سرور را پاک نمی‌کند
+         و حذفِ کل کلید پذیرفته نیست. (حادثهٔ ۱۷ مهر ۱۴۰۵: نسخهٔ بذرِ دستگاه همه‌چیز را پاک کرد.) */
+      if (isAdmin) {
+        for (const r of rows) {
+          if (r.k !== "ga_players") continue;
+          r.v = mergePlayers(current[r.k], r.v);
+          values[r.k] = r.v;
+        }
+      }
       const del = rows.filter((r: any) => r.v && r.v.__del).map((r: any) => r.k).filter((k: string) => k in current);
       const delAll = rows.filter((r: any) => r.v && r.v.__del).length;
       const put = rows.filter((r: any) => !(r.v && r.v.__del));
@@ -219,7 +250,7 @@ Deno.serve(async (req) => {
       put.forEach((r: any) => { stamps[r.k] = changed.indexOf(r) >= 0 ? nowIso : (curStamp[r.k] || nowIso); });
       rows.filter((r: any) => r.v && r.v.__del).forEach((r: any) => { stamps[r.k] = null; });
       const out: any = { ok: true, put: put.length, del: delAll, written: changed.length + del.length, stamps, now: nowIso };
-      if (!isAdmin) out.values = values;
+      if (!isAdmin || Object.keys(values).length) out.values = values;
       return json(out);
     }
 

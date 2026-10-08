@@ -14,7 +14,7 @@ try {
   js = block.replace(/\)\s*:\s*\{[^}]*\}\s*\{/g, ') {').replace(/:\s*Record<[^>]+>/g, '')
     .replace(/\)\s*:\s*(any|boolean|string)\s*\{/g, ') {').replace(/(\w)\s*:\s*(any|string|boolean)\b/g, '$1');
 }
-const P = new Function(js + '\nreturn { MEMBER_KEYS, mergeMember, sameJson };')();
+const P = new Function(js + '\nreturn { MEMBER_KEYS, mergeMember, sameJson, mergePlayers };')();
 let n = 0; const ok = (c, m) => { assert.ok(c, m); n++; console.log('PASS | ' + m); };
 
 // کلیدهای مجاز عضو
@@ -53,6 +53,18 @@ ok(r.ok && r.v.length === 3 && r.v[0].status === 'pending' && r.v[1].status === 
 ok(r.v[2].id === 'r3' && r.v[2].status === 'pending' && !('by' in r.v[2]), 'درخواست سکه: درخواست تازه همیشه «در انتظار»');
 
 ok(P.sameJson({ a: 1, b: [1, { c: 2, d: 3 }] }, { b: [1, { d: 3, c: 2 }], a: 1 }), 'مقایسهٔ محتوا مستقل از ترتیب کلیدها (نوشتنِ بی‌اثر انجام نمی‌شود)');
+
+// ga_players (حادثهٔ ۱۷ مهر ۱۴۰۵): نسخهٔ بذرِ ناقص دستگاه نباید مشخصات/عکس سرور را پاک کند
+{
+  const cur = { 1: { name: 'بابک', family: 'moradvand', photo: 'data:a', phone: '09' }, 2: { name: 'مهشید', photo: 'data:b' } };
+  let m = P.mergePlayers(cur, { 1: { birth: '1987-03-21', family: 'مرادوند', photo: '' }, 2: { birth: '2009-03-21' } });
+  ok(m[1].photo === 'data:a' && m[2].photo === 'data:b', 'بازیکنان: عکسِ خالی عکس سرور را پاک نمی‌کند');
+  ok(m[1].family === 'مرادوند' && m[1].phone === '09' && m[2].name === 'مهشید', 'بازیکنان: ویرایش اعمال می‌شود و فیلدهای غایب می‌مانند');
+  m = P.mergePlayers(cur, { 3: { name: 'تازه' } });
+  ok(m[1].name === 'بابک' && m[2].name === 'مهشید' && m[3].name === 'تازه', 'بازیکنان: بازیکنِ غایب حذف نمی‌شود');
+  ok(P.sameJson(P.mergePlayers(cur, { __del: 1 }), cur), 'بازیکنان: حذف کل کلید پذیرفته نیست');
+  ok(P.mergePlayers(cur, { 1: { photo: 'data:new' } })[1].photo === 'data:new', 'بازیکنان: تعویض عکس کار می‌کند');
+}
 
 // سه تابع لبه از نظر نحوی سالم‌اند
 try {

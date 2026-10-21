@@ -2340,9 +2340,9 @@ const sp = $('#st-podium');
     <div class="toolbar">
       <span class="lbl">🥇 مسابقه:</span>
       <select class="sel" id="mt-sel">${S.tournaments.map(x => `<option value="${x[0]}" ${x[0]===matchSel?'selected':''}>${esc(x[1])}</option>`).join('')}</select>
-      <span class="chip gold">⛳ ${esc(D.COURSE_NAME[t[3]])}</span>
+      ${D.isMiniTour && D.isMiniTour(t) ? '' : `<span class="chip gold">⛳ ${esc(D.COURSE_NAME[t[3]])}</span>`}
       <span class="chip blue">${D.fa(t[4])} حفره</span>
-      <span class="chip purple">سطح ${D.fa(t[2])}</span>
+      <span class="chip purple">${D.isMiniTour && D.isMiniTour(t) ? '⛳ مینی گلف' : ('سطح ' + D.fa(t[2]))}</span>
       <span class="chip dim">${D.fa(info.dd)} ${info.monthFa} ${D.fa(info.yy)}</span>
       <div style="flex:1"></div>
       <span class="chip ${D.dateFrom(t[5]) >= D.TODAY ? 'blue' : 'green'}">${D.dateFrom(t[5]) >= D.TODAY ? 'آینده' : 'برگزار شده'}</span>
@@ -2355,7 +2355,7 @@ const sp = $('#st-podium');
         ${cards.map((c, i) => {
           const pl = A.LB.find(r => r.pid === c.pid) || { name: D.nameOf(c.pid), color:'White' };
           const rank = i+1;
-          const pts = D.PTS_RULE[t[2]][Math.min(rank,4)-1];
+          const pts = (D.PTS_RULE[t[2]] || D.PTS_RULE[2] || [15,10,7,3])[Math.min(rank,4)-1];
           return `<tr class="top${rank<=3?rank:0}">
             <td>${medal(rank)} ${D.fa(rank)}</td>
             <td><b>${esc(pl.name)}</b></td>
@@ -2738,7 +2738,7 @@ const sp = $('#st-podium');
 
     S.tournaments.forEach(t => {
       const d = D.dateFrom(t[5]);
-      ev({ d, end: d, name: t[1], type: 'مسابقه', col: t[2]===1?'gold':t[2]===2?'green':'blue',
+      ev({ d, end: d, name: t[1], type: 'مسابقه', col: t[2]===4?'purple':t[2]===1?'gold':t[2]===2?'green':'blue',
            kind: 'مسابقه', icon: '🏆', extra: `${esc(D.COURSE_NAME[t[3]]||'—')} • ${D.fa(t[4])} حفره` });
     });
     (window.Data.loadPrograms ? Data.loadPrograms() : []).forEach(p => {
@@ -3978,9 +3978,10 @@ const stCal = $('#st-cal');
       <div class="card-head"><span class="ic">🏆</span><h3>طراح مسابقه — ثبت مسابقه جدید</h3><span class="tag">زمین + حفره + سطح</span></div>
       <div class="grid cols-6">
         <div style="grid-column:span 2"><label style="font-size:11px;color:var(--muted)">نام مسابقه</label><input class="input" id="at-name" style="width:100%;margin-top:5px" placeholder="جام جدید"></div>
-        <div><label style="font-size:11px;color:var(--muted)">سطح</label><select class="sel" id="at-lvl" style="width:100%;margin-top:5px"><option value="1">سطح ۱</option><option value="2" selected>سطح ۲</option><option value="3">سطح ۳</option></select></div>
-        <div><label style="font-size:11px;color:var(--muted)">زمین</label><select class="sel" id="at-crs" style="width:100%;margin-top:5px">${S.courses.map(c=>`<option value="${c[0]}">${esc(c[1])}</option>`).join('')}</select></div>
-        <div><label style="font-size:11px;color:var(--muted)">حفره</label><select class="sel" id="at-holes" style="width:100%;margin-top:5px"><option>9</option><option selected>18</option></select></div>
+        <div><label style="font-size:11px;color:var(--muted)">سطح</label><select class="sel" id="at-lvl" style="width:100%;margin-top:5px"><option value="1">سطح ۱</option><option value="2" selected>سطح ۲</option><option value="3">سطح ۳</option><option value="4">⛳ مینی گلف</option></select></div>
+        <div id="at-crs-wrap"><label style="font-size:11px;color:var(--muted)">زمین</label><select class="sel" id="at-crs" style="width:100%;margin-top:5px">${S.courses.map(c=>`<option value="${c[0]}">${esc(c[1])}</option>`).join('')}</select></div>
+        <div id="at-holes-wrap"><label style="font-size:11px;color:var(--muted)">حفره</label><select class="sel" id="at-holes" style="width:100%;margin-top:5px"><option>9</option><option selected>18</option></select></div>
+        <div id="at-mini-wrap" style="display:none"><label style="font-size:11px;color:var(--muted)">⛳ تعداد حفره</label><input class="input" id="at-mini" type="number" min="1" max="36" step="1" value="18" inputmode="numeric" style="width:100%;margin-top:5px"></div>
         <div style="grid-column:span 2"><label style="font-size:11px;color:var(--muted)">تاریخ</label><div class="jdate" id="at-date" data-iso="${D.todayISO ? D.todayISO() : ''}" style="margin-top:5px"></div></div>
       </div>
       <button class="btn sm" id="at-add" style="margin-top:14px">+ ثبت مسابقه</button>
@@ -3993,8 +3994,8 @@ const stCal = $('#st-cal');
         const j = D.jalaliInfo(D.dateFrom(t[5]));
         return `<tr>
           <td class="num">${D.fa(t[0])}</td><td><b>${esc(t[1])}</b></td>
-          <td><span class="chip ${t[2]===1?'gold':t[2]===2?'green':'blue'}">سطح ${D.fa(t[2])}</span></td>
-          <td style="color:var(--muted)">${esc(D.COURSE_NAME[t[3]]||'—')}</td>
+          <td><span class="chip ${t[2]===4?'purple':t[2]===1?'gold':t[2]===2?'green':'blue'}">${D.isMiniTour && D.isMiniTour(t) ? '⛳ مینی گلف' : ('سطح ' + D.fa(t[2]))}</span></td>
+          <td style="color:var(--muted)">${D.isMiniTour && D.isMiniTour(t) ? (D.fa(t[4]) + ' حفره') : esc(D.COURSE_NAME[t[3]]||'—')}</td>
           <td class="num">${D.fa(t[4])}</td>
           <td class="ltr" style="color:var(--muted);font-size:11.5px">${D.fa(j.dd)} ${j.monthFa} ${D.fa(j.yy)}</td>
           <td><span class="chip ${past?'dim':'green'}">${past?'برگزار شده':'آینده'}</span></td>
@@ -4003,12 +4004,28 @@ const stCal = $('#st-cal');
       }).join('')}</tbody></table></div>
     </div>`;
     if (window.JDate && $('#at-date')) JDate.render($('#at-date'));
+    function syncAtLevel(){
+      const mini = D.isMiniLvl ? D.isMiniLvl(+$('#at-lvl').value) : +$('#at-lvl').value === 4;
+      const cw = $('#at-crs-wrap'), hw = $('#at-holes-wrap'), mw = $('#at-mini-wrap');
+      if (cw) cw.style.display = mini ? 'none' : '';
+      if (hw) hw.style.display = mini ? 'none' : '';
+      if (mw) mw.style.display = mini ? '' : 'none';
+    }
+    syncAtLevel();
+    $('#at-lvl').addEventListener('change', syncAtLevel);
     $('#at-add').addEventListener('click', () => {
       const name = $('#at-name').value.trim();
       const date = $('#at-date')._value();
       if (!name || !date){ toast('نام و تاریخ را وارد کنید', 'red'); return; }
       const lst = extraTours();
-      lst.push({ name, lvl: +$('#at-lvl').value, course: +$('#at-crs').value, holes: +$('#at-holes').value, date });
+      const lvl = +$('#at-lvl').value;
+      const mini = D.isMiniLvl ? D.isMiniLvl(lvl) : lvl === 4;
+      if (mini){
+        const n = Math.max(1, Math.min(36, Math.round(+($('#at-mini') ? $('#at-mini').value : 18) || 18)));
+        lst.push({ name, lvl, course: 0, holes: n, holeIds: Array.from({ length: n }, (_, i) => i + 1), date, rule: 'normal' });
+      } else {
+        lst.push({ name, lvl, course: +$('#at-crs').value, holes: +$('#at-holes').value, date });
+      }
       saveTours(lst); reloadData(); go('atournaments');
       toast('مسابقه «' + name + '» ثبت شد ✓', 'green');
     });

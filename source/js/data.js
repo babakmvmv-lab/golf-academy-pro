@@ -222,6 +222,14 @@
     1:[10,12,8,10,16,17,13,10,2,5,2,17,16,16,15,13,15,16],
   };
   const COURSE_NAME = {}; COURSES.forEach(c => COURSE_NAME[c[0]] = c[1]);
+  /* ── سطح ۴ = مینی گلف ──
+     مینی گلف زمین ندارد؛ شناسهٔ زمین ۰ با همین نام ثبت می‌شود تا همهٔ نماها
+     (تقویم، نتایج، کارت امتیاز، نبرد میدان‌ها) بدون «—» و بدون خطا کار کنند. */
+  const MINI_LVL = 4, MINI_COURSE_ID = 0;
+  COURSE_NAME[MINI_COURSE_ID] = 'مینی گلف';
+  const isMiniLvl = lvl => +lvl === MINI_LVL;
+  const lvlName = lvl => isMiniLvl(lvl) ? 'مینی گلف' : ('سطح ' + fa(+lvl || 0));
+  const isMiniTour = t => isMiniLvl(Array.isArray(t) ? t[2] : (t && t.lvl));
   /* رجیستری پار (شامل زمین‌های سفارشی طراح + ویرایش زمین پایه) */
   const PAR_MAP = {};
   Object.keys(COURSE_PARS).forEach(k => PAR_MAP[k] = COURSE_PARS[k].slice());
@@ -435,6 +443,8 @@
     }
     if (ids && ids.length) return ids.map(Number).filter(n => n >= 1);
     const n = +t[4] || 18;
+    /* مینی گلف: تعداد حفره خودِ مسابقه تعیین‌کننده است، نه طول زمین */
+    if (isMiniTour(t)) return Array.from({ length: Math.max(1, n) }, (_, i) => i + 1);
     const courseN = (parsOf(t[3]) || []).length || n;
     const take = Math.max(1, Math.min(n, courseN));
     return Array.from({ length: take }, (_, i) => i + 1);
@@ -453,7 +463,8 @@
     [9,'جام آذر',1,1,18,'2026-12-18'],[10,'جام دی',1,1,18,'2027-01-15'],
     [11,'جام بهمن',1,1,18,'2027-02-19'],[12,'جام اسفند',1,1,18,'2027-03-19'],
   ];
-  const PTS_RULE = {1:[20,15,10,5], 2:[15,10,7,3], 3:[10,7,5,2]};
+  /* سطح ۴ = مینی گلف — پیش‌فرض هم‌سطح با سطح ۳؛ از «قوانین امتیازدهی فصل» قابل ویرایش است */
+  const PTS_RULE = {1:[20,15,10,5], 2:[15,10,7,3], 3:[10,7,5,2], 4:[10,7,5,2]};
     const RESULT_LABEL = ['اول','دوم','سوم','شرکت‌کننده'];
 
   /* ── پنهان‌سازی (حذف نرم) مسابقات پایهٔ فصل — از پنل مدیریت؛ بازیابی‌پذیر ── */
@@ -476,7 +487,11 @@
   function loadTourRules(){
     try {
       const r = JSON.parse(localStorage.getItem('ga_tour_rules') || 'null');
-      if (r && r[1] && r[2] && r[3]) return r;
+      if (r && r[1] && r[2] && r[3]){
+        /* قوانین ذخیره‌شدهٔ قدیمی ردیف سطح ۴ (مینی گلف) ندارند — از سطح ۳ پر می‌شود */
+        if (!Array.isArray(r[4])) r[4] = (r[3] || [10,7,5,2]).slice();
+        return r;
+      }
     } catch(e){}
     return JSON.parse(JSON.stringify(PTS_RULE));
   }
@@ -1222,7 +1237,7 @@
     fa, faNum, jalaliInfo, weekOf, dayFmt, dateFrom, todayStart, todayISO, tehranParts, tehranISODate, now, nowMs, syncClock, clockReady, SEASON_START,
     toJalaali, jalaaliToDateObject, j2d, shamsiToISO, isoToShamsi, parseShamsi,
     PLAYERS, PLAYER_NAME, ACTIVE, COURSES, COURSE_PARS, COURSE_NAME, TOURNAMENTS, seasonYear: (function(){ const j = jalaliInfo(SEASON_START); return j.yy; })(),
-    PTS_RULE, RESULT_LABEL, MONTHS_FA, RANK_DEF, RANK_TEXT, rankOf, FORM_META, GOLD_ELITE,
+    PTS_RULE, MINI_LVL, MINI_COURSE_ID, isMiniLvl, lvlName, isMiniTour, RESULT_LABEL, MONTHS_FA, RANK_DEF, RANK_TEXT, rankOf, FORM_META, GOLD_ELITE,
     loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,

@@ -2858,22 +2858,27 @@
       <div class="rules-box" style="background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.25);border-radius:12px;padding:10px 12px;margin-top:10px">
         <div style="font-size:11.5px;color:var(--gold-l);margin-bottom:8px">⚙️ قوانین امتیازدهی فصل (قابل ویرایش — نفر اول / دوم / سوم / شرکت)</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px">
-          ${[1,2,3].map(lv => `
+          ${[1,2,3,4].map(lv => `
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-              <span style="font-size:11px;color:var(--muted)">سطح ${D.fa(lv)}:</span>
-              ${['p1','p2','p3','entry'].map((k,i) => `<input class="input" id="r${lv}${k}" type="number" min="0" value="${rules[lv][i]}" style="width:52px;padding:5px 6px;text-align:center" title="${['اول','دوم','سوم','شرکت'][i]}">`).join('')}
+              <span style="font-size:11px;color:var(--muted)">${D.lvlName ? D.lvlName(lv) : ('سطح ' + D.fa(lv))}:</span>
+              ${['p1','p2','p3','entry'].map((k,i) => `<input class="input" id="r${lv}${k}" type="number" min="0" value="${(rules[lv] || rules[2] || [15,10,7,3])[i]}" style="width:52px;padding:5px 6px;text-align:center" title="${['اول','دوم','سوم','شرکت'][i]}">`).join('')}
             </div>`).join('')}
           <button class="btn sm ghost" id="rules-save" style="align-self:center">💾 ذخیره قوانین</button>
         </div>
       </div>
       <div class="field-grid" style="margin-top:10px">
         <div class="span2"><label>نام مسابقه</label><input class="input" id="mt-name" style="width:100%" placeholder="جام جدید"></div>
-        <div><label>سطح</label><select class="sel" id="mt-lvl" style="width:100%"><option value="1">سطح ۱ (حرفه‌ای)</option><option value="2" selected>سطح ۲ (نیمه‌حرفه‌ای)</option><option value="3">سطح ۳ (آماتور)</option></select></div>
-        <div class="span2"><label>⚖️ قانون مسابقه</label><select class="sel" id="mt-rule" style="width:100%">
+        <div><label>سطح</label><select class="sel" id="mt-lvl" style="width:100%"><option value="1">سطح ۱ (حرفه‌ای)</option><option value="2" selected>سطح ۲ (نیمه‌حرفه‌ای)</option><option value="3">سطح ۳ (آماتور)</option><option value="4">⛳ مینی گلف</option></select></div>
+        <div class="span2" id="mt-rule-wrap"><label>⚖️ قانون مسابقه</label><select class="sel" id="mt-rule" style="width:100%">
           <option value="normal" selected>قانون عادی — همهٔ ضربه‌ها محاسبه می‌شود</option>
           <option value="full">قانون فول — سقف ضربهٔ هر حفره: پار۳ حداکثر ۷ • پار۴ حداکثر ۹ • پار۵ حداکثر ۱۱</option>
         </select></div>
-        <div class="span2"><label>زمین</label><select class="sel" id="mt-crs" style="width:100%">${courseSelectOptions(S.courses)}</select></div>
+        <div class="span2" id="mt-crs-wrap"><label>زمین</label><select class="sel" id="mt-crs" style="width:100%">${courseSelectOptions(S.courses)}</select></div>
+        <div class="span2" id="mt-mini-wrap" style="display:none">
+          <label>⛳ تعداد حفره</label>
+          <input class="input" id="mt-mini-holes" type="number" min="1" max="36" step="1" value="18" inputmode="numeric" style="width:100%">
+          <div style="font-size:10.5px;color:var(--muted);margin-top:4px">مینی گلف زمین و قانون مسابقه ندارد؛ فقط تعداد حفره‌ها را وارد کنید (۱ تا ۳۶).</div>
+        </div>
         <div><label>🏆 امتیاز نفر اول</label><input class="input" id="mt-p1" type="number" min="0" value="20" style="width:100%"></div>
         <div><label>🥈 امتیاز نفر دوم</label><input class="input" id="mt-p2" type="number" min="0" value="15" style="width:100%"></div>
         <div><label>🥉 امتیاز نفر سوم</label><input class="input" id="mt-p3" type="number" min="0" value="10" style="width:100%"></div>
@@ -2902,9 +2907,9 @@
       return `<tr>
         <td class="num">${D.fa(t[0])}</td><td><b>${esc(t[1])}</b> ${base?'<span class="chip dim">پایه</span>':'<span class="chip purple">سفارشی</span>'}${!base && rule==='full'?' <span class="chip gold" title="سقف ضربهٔ هر حفره: پار۳≤۷، پار۴≤۹، پار۵≤۱۱">⚖️ فول</span>':''}
           <div style="font-size:10px;color:var(--muted);margin-top:3px">🏆${D.fa(pr[0])} 🥈${D.fa(pr[1])} 🥉${D.fa(pr[2])} 🎟${D.fa(pr[3])}</div></td>
-        <td><span class="chip ${t[2]===1?'gold':t[2]===2?'green':'blue'}">سطح ${D.fa(t[2])}</span></td>
-        <td style="color:var(--muted)">${esc(D.COURSE_NAME[t[3]]||'—')}</td>
-        <td style="color:var(--muted);font-size:11px">${esc((D.tourHoleIds(t)||[]).map(h => holeName(h)).join('، ') || (D.fa(t[4]) + ' میدان'))}</td>
+        <td><span class="chip ${t[2]===4?'purple':t[2]===1?'gold':t[2]===2?'green':'blue'}">${D.isMiniTour && D.isMiniTour(t) ? '⛳ مینی گلف' : ('سطح ' + D.fa(t[2]))}</span></td>
+        <td style="color:var(--muted)">${D.isMiniTour && D.isMiniTour(t) ? '—' : esc(D.COURSE_NAME[t[3]]||'—')}</td>
+        <td style="color:var(--muted);font-size:11px">${D.isMiniTour && D.isMiniTour(t) ? (D.fa(t[4]) + ' حفره') : esc((D.tourHoleIds(t)||[]).map(h => holeName(h)).join('، ') || (D.fa(t[4]) + ' میدان'))}</td>
         <td class="ltr" style="color:var(--muted);font-size:11.5px">${D.fa(j.dd)} ${j.monthFa}</td>
         <td><span class="chip ${past?'dim':'green'}">${past?'برگزار شده':'آینده'}</span></td>
         <td><div class="row-actions">
@@ -2946,7 +2951,7 @@
     renderTourSch();
     $('#rules-save').addEventListener('click', () => {
       const r = {};
-      [1,2,3].forEach(lv => r[lv] = ['p1','p2','p3','entry'].map(k => +($('#r'+lv+k).value||0)));
+      [1,2,3,4].forEach(lv => r[lv] = ['p1','p2','p3','entry'].map(k => +($('#r'+lv+k).value||0)));
       D.saveTourRules(r);
       APP.toast('قوانین امتیازدهی فصل ذخیره شد ✓', 'green');
     });
@@ -2957,6 +2962,17 @@
     }
     paintMtHoles();
     $('#mt-crs').addEventListener('change', paintMtHoles);
+    /* مینی گلف: زمین، قانون مسابقه و انتخاب میدان پنهان — فقط «تعداد حفره» */
+    function syncMtLevel(){
+      const mini = D.isMiniLvl ? D.isMiniLvl(+$('#mt-lvl').value) : +$('#mt-lvl').value === 4;
+      const cw = $('#mt-crs-wrap'), rw = $('#mt-rule-wrap'), mw = $('#mt-mini-wrap'), hb = $('#mt-holes-box');
+      if (cw) cw.style.display = mini ? 'none' : '';
+      if (rw) rw.style.display = mini ? 'none' : '';
+      if (mw) mw.style.display = mini ? '' : 'none';
+      if (hb) hb.style.display = mini ? 'none' : '';
+    }
+    syncMtLevel();
+    $('#mt-lvl').addEventListener('change', syncMtLevel);
     $('#mt-lvl').addEventListener('change', () => {
       const r = D.loadTourRules ? D.loadTourRules() : D.PTS_RULE;
       const pr = r[+$('#mt-lvl').value] || [15,10,7,3];
@@ -2971,10 +2987,22 @@
       $$('.mt-day-sel').forEach(s => schedule.push({ offset: +s.dataset.i, label: s.value }));
       /* 🐞 فیکس: «extra» آرایهٔ تبدیل‌شدهٔ نمایشی بود و با push به همان فرم ذخیره می‌شد ⟸ آبجکت مسابقهٔ بعدی روی قبلی می‌نشست */
       const rawTours = extraTours();
-      const holeIds = selectedHoleIds($('#mt-holes-box'));
-      if (!holeIds.length){ APP.toast('حداقل یک میدان را با کلیک انتخاب کنید', 'red'); return; }
-      rawTours.push({ name: name || 'مسابقه ' + D.fa(rawTours.length+1), lvl: +$('#mt-lvl').value, course: +$('#mt-crs').value, holes: holeIds.length, holeIds, date: start, end, time: $('#mt-time').value,
-        rule: ($('#mt-rule') ? $('#mt-rule').value : 'normal'),
+      const lvl = +$('#mt-lvl').value;
+      const mini = D.isMiniLvl ? D.isMiniLvl(lvl) : lvl === 4;
+      let course = 0, holeIds = [], holes = 0, rule = 'normal';
+      if (mini){
+        /* مینی گلف: بدون زمین، بدون قانون مسابقه، بدون انتخاب میدان */
+        holes = Math.max(1, Math.min(36, Math.round(+($('#mt-mini-holes') ? $('#mt-mini-holes').value : 18) || 18)));
+        holeIds = Array.from({ length: holes }, (_, i) => i + 1);
+      } else {
+        holeIds = selectedHoleIds($('#mt-holes-box'));
+        if (!holeIds.length){ APP.toast('حداقل یک میدان را با کلیک انتخاب کنید', 'red'); return; }
+        course = +$('#mt-crs').value;
+        holes = holeIds.length;
+        rule = ($('#mt-rule') ? $('#mt-rule').value : 'normal');
+      }
+      rawTours.push({ name: name || 'مسابقه ' + D.fa(rawTours.length+1), lvl, course, holes, holeIds, date: start, end, time: $('#mt-time').value,
+        rule,
         p1: +($('#mt-p1').value||0), p2: +($('#mt-p2').value||0), p3: +($('#mt-p3').value||0), entry: +($('#mt-entry').value||0), schedule });
       saveTours(rawTours); APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
       APP.toast('مسابقه «' + (name||'بدون نام') + '» ثبت شد ✓', 'green');
@@ -3028,9 +3056,14 @@
       <div class="field-grid" style="margin-top:12px">
         <div class="span2"><label>نام</label><input class="input" id="et-name" style="width:100%" value="${esc(t[1])}"></div>
         <div class="span2"><label>تاریخ</label><div class="jdate" id="et-date" data-iso="${t[5]}"></div></div>
-        <div><label>سطح</label><select class="sel" id="et-lvl" style="width:100%"><option value="1" ${t[2]===1?'selected':''}>سطح ۱</option><option value="2" ${t[2]===2?'selected':''}>سطح ۲</option><option value="3" ${t[2]===3?'selected':''}>سطح ۳</option></select></div>
-        <div class="span2"><label>زمین</label><select class="sel" id="et-crs" style="width:100%">${courseSelectOptions(S.courses, t[3])}</select></div>
-        <div class="span2"><label>⚖️ قانون مسابقه</label><select class="sel" id="et-rule" style="width:100%" ${base?'disabled title="فقط برای مسابقات سفارشی"':''}>
+        <div><label>سطح</label><select class="sel" id="et-lvl" style="width:100%"><option value="1" ${t[2]===1?'selected':''}>سطح ۱</option><option value="2" ${t[2]===2?'selected':''}>سطح ۲</option><option value="3" ${t[2]===3?'selected':''}>سطح ۳</option><option value="4" ${t[2]===4?'selected':''}>⛳ مینی گلف</option></select></div>
+        <div class="span2" id="et-crs-wrap"><label>زمین</label><select class="sel" id="et-crs" style="width:100%">${courseSelectOptions(S.courses, t[3])}</select></div>
+        <div class="span2" id="et-mini-wrap" style="display:none">
+          <label>⛳ تعداد حفره</label>
+          <input class="input" id="et-mini-holes" type="number" min="1" max="36" step="1" value="${Math.max(1, +t[4] || 18)}" inputmode="numeric" style="width:100%">
+          <div style="font-size:10.5px;color:var(--muted);margin-top:4px">مینی گلف زمین و قانون مسابقه ندارد؛ فقط تعداد حفره‌ها را وارد کنید.</div>
+        </div>
+        <div class="span2" id="et-rule-wrap"><label>⚖️ قانون مسابقه</label><select class="sel" id="et-rule" style="width:100%" ${base?'disabled title="فقط برای مسابقات سفارشی"':''}>
           ${(() => { const cr = base ? 'normal' : ((extraTours()[idx] && extraTours()[idx].rule) || 'normal');
             return `<option value="normal" ${cr==='normal'?'selected':''}>قانون عادی — همهٔ ضربه‌ها محاسبه</option><option value="full" ${cr==='full'?'selected':''}>قانون فول — سقف ضربهٔ حفره (پار۳≤۷ • پار۴≤۹ • پار۵≤۱۱)</option>`; })()}
         </select></div>
@@ -3059,13 +3092,32 @@
     }
     paintEtHoles();
     $('#et-crs').addEventListener('change', paintEtHoles);
+    function syncEtLevel(){
+      const mini = D.isMiniLvl ? D.isMiniLvl(+$('#et-lvl').value) : +$('#et-lvl').value === 4;
+      const cw = $('#et-crs-wrap'), rw = $('#et-rule-wrap'), mw = $('#et-mini-wrap'), hb = $('#et-holes-box');
+      if (cw) cw.style.display = mini ? 'none' : '';
+      if (rw) rw.style.display = mini ? 'none' : '';
+      if (mw) mw.style.display = mini ? '' : 'none';
+      if (hb) hb.style.display = mini ? 'none' : '';
+    }
+    syncEtLevel();
+    $('#et-lvl').addEventListener('change', syncEtLevel);
     $('#et-cancel').addEventListener('click', () => m.style.display = 'none');
     $('#et-save').addEventListener('click', () => {
       const name = $('#et-name').value.trim();
       if (!name){ APP.toast('نام مسابقه را وارد کنید','red'); return; }
-      const holeIds = selectedHoleIds($('#et-holes-box'));
-      if (!holeIds.length){ APP.toast('حداقل یک میدان را انتخاب کنید','red'); return; }
-      const data = { name, date: $('#et-date')._value(), lvl: +$('#et-lvl').value, course: +$('#et-crs').value, holes: holeIds.length, holeIds,
+      const etLvl = +$('#et-lvl').value;
+      const etMini = D.isMiniLvl ? D.isMiniLvl(etLvl) : etLvl === 4;
+      let holeIds = [], etCourse = 0, etHoles = 0;
+      if (etMini){
+        etHoles = Math.max(1, Math.min(36, Math.round(+($('#et-mini-holes') ? $('#et-mini-holes').value : 18) || 18)));
+        holeIds = Array.from({ length: etHoles }, (_, i) => i + 1);
+      } else {
+        holeIds = selectedHoleIds($('#et-holes-box'));
+        if (!holeIds.length){ APP.toast('حداقل یک میدان را انتخاب کنید','red'); return; }
+        etCourse = +$('#et-crs').value; etHoles = holeIds.length;
+      }
+      const data = { name, date: $('#et-date')._value(), lvl: etLvl, course: etCourse, holes: etHoles, holeIds,
         p1: +($('#et-p1').value||0), p2: +($('#et-p2').value||0), p3: +($('#et-p3').value||0), entry: +($('#et-entry').value||0) };
       if (base){
         let ov = {};
@@ -4954,7 +5006,7 @@
           <b>${esc(t[1])}</b>
           <span class="chip ${has?'green':'gold'}">${has?'ثبت شده ✓':'بدون نتیجه'}</span>
         </div>
-        <div style="font-size:10.5px;color:var(--muted);margin-top:4px">${D.fa(j.dd)} ${j.monthFa} • سطح ${D.fa(t[2])} • ${esc(D.COURSE_NAME[t[3]]||'—')}${has ? ` • 👥 ${D.fa((has.participants||[]).length + (has.free||[]).length)} نفر${(has.free||[]).length ? ' (' + D.fa(has.free.length) + ' آزاد)' : ''}` : ''}</div>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:4px">${D.fa(j.dd)} ${j.monthFa} • ${D.isMiniTour && D.isMiniTour(t) ? ('⛳ مینی گلف • ' + D.fa(t[4]) + ' حفره') : ('سطح ' + D.fa(t[2]) + ' • ' + esc(D.COURSE_NAME[t[3]]||'—'))}${has ? ` • 👥 ${D.fa((has.participants||[]).length + (has.free||[]).length)} نفر${(has.free||[]).length ? ' (' + D.fa(has.free.length) + ' آزاد)' : ''}` : ''}</div>
         <div style="font-size:10px;color:var(--muted);margin-top:3px">🏆${D.fa(pr[0])} 🥈${D.fa(pr[1])} 🥉${D.fa(pr[2])} 🎟${D.fa(pr[3])}</div>
         <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
           <button class="btn sm" data-mrset="${t[0]}">👥 انتخاب شرکت‌کنندگان</button>

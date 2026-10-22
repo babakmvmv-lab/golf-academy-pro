@@ -113,9 +113,32 @@
     const r = userRec(u);
     if (r){
       if (r.role === 'admin') return (r.main ? 'مدیر اصلی آکادمی' : (r.name || 'مدیر'));
-      return 'عضو آکادمی — ' + (r.name || u);
+      /* منبعِ حقیقتِ نامِ عضو، پروندهٔ بازیکن (ga_players) است؛ نامِ حساب (ga_accounts) فقط پشتیبان.
+         قبلاً فقط نام حساب خوانده می‌شد و تغییر نامِ بازیکن در ادمین‌پنل در پنل دیده نمی‌شد. */
+      let pname = '';
+      try { if (r.pid && window.Data && Data.nameOf) pname = Data.nameOf(r.pid); } catch(e){}
+      if (!pname || pname === '—') pname = r.name || u;
+      return 'عضو آکادمی — ' + pname;
     }
     return 'کاربر';
+  }
+  /* نقشهٔ «بازیکن ← یوزر» روی این دستگاه محلی است (ga_player_users در فهرست SKIP است)؛ پس از تفکیک
+     پنل/ادمین‌پنل، ادمین‌پنل این نقشه را نداشت و مشخصات شخصی «منتقل نشده» دیده می‌شد.
+     منبعِ ابریِ همین نقشه، ستون pid در ga_accounts است: از آن بازسازی می‌شود. */
+  function hydratePlayerUsers(){
+    try {
+      const A = AUTH();
+      if (!A || A.mode() !== 'adminpanel' || !A.accounts || !A.accounts.loaded || !A.accounts.loaded()) return;
+      const list = A.accounts.list() || [];
+      if (!list.length || !window.MGMT || !MGMT.playerUsers || !MGMT.savePlayerUsers) return;
+      const pu = MGMT.playerUsers();
+      let changed = false;
+      list.forEach(a => {
+        if (!a || !a.pid || !a.user) return;
+        if (!pu[a.pid]) { pu[a.pid] = { user: a.user, name: a.name || '', active: a.active !== false }; changed = true; }
+      });
+      if (changed) MGMT.savePlayerUsers(pu);
+    } catch(e){}
   }
 
   /* ── State ── */
@@ -4030,7 +4053,9 @@ const stCal = $('#st-cal');
       toast('مسابقه «' + name + '» ثبت شد ✓', 'green');
     });
     $$('#at-list [data-del]').forEach(b => b.addEventListener('click', () => {
-      const lst = extraTours(); lst.splice(+b.dataset.del,1); saveTours(lst); reloadData(); go('atournaments');
+      const del = +b.dataset.del, lst = extraTours(); lst.splice(del,1);
+      if (window.MGMT && MGMT.reindexTourHistory) MGMT.reindexTourHistory(del);
+      saveTours(lst); reloadData(); go('atournaments');
     }));
   }
 
@@ -4427,7 +4452,9 @@ const stCal = $('#st-cal');
       const fresh = cloudPullAfterLogin().then(() => loadingNote(false), () => loadingNote(false));
       if (A.mode() === 'adminpanel'){
         /* فهرست حساب‌ها برای «یوزرها»/«اشتراک‌ها»/«پیام‌ها» — شکست آن ورود را متوقف نمی‌کند */
-        Promise.all([fresh, Promise.race([A.accounts.load().catch(() => null), new Promise(r => setTimeout(r, 8000))])]).then(go2);
+        Promise.all([fresh, Promise.race([A.accounts.load().catch(() => null), new Promise(r => setTimeout(r, 8000))])])
+          .then(() => { try { hydratePlayerUsers(); } catch (e) {} })
+          .then(go2);
       } else fresh.then(go2);
     });
   });

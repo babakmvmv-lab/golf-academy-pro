@@ -1961,6 +1961,8 @@
         name: fullName,
         active: prev.active !== false
       });
+      /* نام نمایشی پنل عضو از حساب ابری خوانده می‌شود؛ بدون این خط، تغییر نام فقط در ادمین‌پنل می‌ماند. */
+      if (!full.isCustom) syncAccountName(pid, fullName);
       APP.reloadData(); APP.go('mgmt');
       m.style.display = 'none';
       APP.toast('مشخصات «' + fullName + '» ذخیره شد ✓', 'green');
@@ -3024,6 +3026,7 @@
         const _dd = scDraftLoad(); if (_dd[_tid]){ delete _dd[_tid]; scDraftSave(_dd); }
         if (extraCards().some(c => c.tour === _tid)) saveCards(extraCards().filter(c => c.tour !== _tid));
         const _rr = D.loadResults(); if (_rr[_tid]){ delete _rr[_tid]; D.saveResults(_rr); }
+        if (D.addResultsTomb) D.addResultsTomb(_tid);
         if (row.base){
           /* حذف نرم مسابقهٔ پایه: از فصل پنهان می‌شود و قابل‌بازیابی است (داده‌ها بازنمی‌گردند) */
           const hid = D.loadHiddenTours();
@@ -3031,7 +3034,9 @@
           APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
           APP.toast('«' + row.t[1] + '» و همهٔ داده‌هایش (پیش‌نویس/کارت/نتیجه) حذف شد 🗑 — بازیابی‌پذیر از زیر جدول', 'orange');
         } else {
-          const lst = extraTours(); lst.splice(row.idx,1); saveTours(lst);
+          const lst = extraTours(); lst.splice(row.idx,1);
+          reindexTourHistory(row.idx);
+          saveTours(lst);
           APP.reloadData(); APP.go('mgmt'); mgmtTab='tournaments';
           APP.toast('مسابقه حذف شد 🗑','orange');
         }
@@ -6186,13 +6191,104 @@
   function extraTours(){ try{ const a = JSON.parse(localStorage.getItem('ga_tournaments')||'[]'); return Array.isArray(a) ? a.map(unwrapTour) : []; }catch(e){ return []; } }
   function extraCards(){ try{ return JSON.parse(localStorage.getItem('ga_scorecards')||'[]'); }catch(e){ return []; } }
   function saveCourses(a){ try{ localStorage.setItem('ga_courses', JSON.stringify(a)); }catch(e){} }
-  function saveTours(a){ try{ localStorage.setItem('ga_tournaments', JSON.stringify(a)); }catch(e){} }
+  /* uid پایدار برای هر مسابقه (کلید ادغام ابری). رکوردهای قدیمی بدون uid، هش قطعی می‌گیرند
+     تا روی همهٔ دستگاه‌ها یکسان باشد و ویرایش نام، هویت مسابقه را عوض نکند. */
+  function ensureTourUids(a){
+    const out = Array.isArray(a) ? a : [];
+    out.forEach(t => {
+      if (!t || typeof t !== 'object' || t.uid) return;
+      const n = String(t.name || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      if (!n) return;
+      let h = 5381;
+      const s = n + '|' + String(t.date || '');
+      for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+      t.uid = 'L' + h.toString(36);
+    });
+    return out;
+  }
+  function tourKeyOfLocal(t){
+    if (!t || typeof t !== 'object') return '';
+    if (t.uid) return 'U' + String(t.uid);
+    const n = String(t.name || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (!n) return '';
+    let h = 5381;
+    const s = n + '|' + String(t.date || '');
+    for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+    return 'L' + h.toString(36);
+  }
+  function newTourUid(){ return 'T' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function tourDelList(){
+    try { const a = JSON.parse(localStorage.getItem('ga_tour_del') || '[]'); return Array.isArray(a) ? a : []; } catch(e){ return []; }
+  }
+  /* حذفِ مسابقه باید در ga_tour_del ثبت شود؛ وگرنه ادغام ابری آن را برمی‌گرداند. */
+  function saveTours(a){
+    try{
+      a = ensureTourUids(a);
+      let prev = [];
+      try { prev = JSON.parse(localStorage.getItem('ga_tournaments') || '[]'); } catch(e){}
+      const next = {}; (a || []).forEach(t => { const k = tourKeyOfLocal(t); if (k) next[k] = 1; });
+      const del = tourDelList().filter(d => d && d.k && !next[d.k]);
+      (prev || []).forEach(t => {
+        const k = tourKeyOfLocal(t);
+        if (k && !next[k] && !del.some(d => d.k === k)) del.push({ k: k, at: new Date().toISOString() });
+      });
+      localStorage.setItem('ga_tour_del', JSON.stringify(del.slice(-600)));
+      localStorage.setItem('ga_tournaments', JSON.stringify(a));
+    }catch(e){}
+  }
+  /* با حذف یک مسابقه، شناسه‌های بعدی (1000+اندیس) جابه‌جا می‌شوند و نتایج/کارت‌ها/پیش‌نویس‌ها
+     به مسابقهٔ اشتباه می‌چسبند. این تابع تاریخچه را همراه جابه‌جایی، بازشماره می‌کند. */
+  function reindexTourHistory(idx){
+    const from = 1000 + (+idx) + 1;
+    const shiftObj = (raw) => {
+      let o; try { o = JSON.parse(raw || '{}'); } catch(e){ return null; }
+      if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+      let changed = false; const out = {};
+      Object.keys(o).forEach(k => {
+        const n = +k;
+        if (Number.isFinite(n) && n >= from) { out[n - 1] = o[k]; changed = true; }
+        else out[k] = o[k];
+      });
+      return changed ? JSON.stringify(out) : null;
+    };
+    ['ga_results', 'ga_score_draft'].forEach(k => {
+      const v = shiftObj(localStorage.getItem(k));
+      if (v) localStorage.setItem(k, v);
+    });
+    try {
+      const cards = JSON.parse(localStorage.getItem('ga_scorecards') || '[]');
+      if (Array.isArray(cards)){
+        let changed = false;
+        const next = cards.map(c => {
+          if (c && Number.isFinite(+c.tour) && +c.tour >= from) { changed = true; return Object.assign({}, c, { tour: +c.tour - 1 }); }
+          return c;
+        });
+        if (changed) localStorage.setItem('ga_scorecards', JSON.stringify(next));
+      }
+    }catch(e){}
+  }
+  /* نام حساب کاربری هم باید با نام بازیکن هم‌گام شود؛ پنل، نام سربرگ را از ga_accounts می‌خواند. */
+  function syncAccountName(pid, name){
+    try {
+      const A = window.GA_AUTH;
+      if (!A || !A.accounts || typeof A.accounts.list !== 'function') return;
+      try { var pr = A.profile && A.profile(); if (!pr || pr.role !== 'admin') return; } catch (e) { return; }
+      if (A.accounts.loaded && !A.accounts.loaded()) return;
+      const full = String(name || '').trim();
+      if (!full) return;
+      const list = A.accounts.list();
+      const rec = list.find(x => x && +x.pid === +pid);
+      if (!rec || !rec.id || rec.name === full) return;
+      A.accounts.save(list.map(x => x.id === rec.id ? Object.assign({}, x, { name: full }) : x));
+    } catch(e){}
+  }
   function saveCards(a){ try{ localStorage.setItem('ga_scorecards', JSON.stringify(a)); }catch(e){} }
 
   /* ═══════════════ API ═══════════════ */
   window.MGMT = {
     pageMgmt, pageUsers, pageSubs, pageMessages, renderMgmtTab, customEvents, saveEvents,
     customPlayers, saveCustomPlayers, playerEdits, savePlayerEdits,
+    reindexTourHistory, saveTours, newTourUid,
     playerUsers, savePlayerUsers, playerFull,
     getSettings, saveSettings, DEFAULTS,
     getSiteInfo, saveSiteInfo, SITE_DEFAULTS,

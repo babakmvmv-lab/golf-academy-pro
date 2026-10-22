@@ -1,4 +1,4 @@
-// ga-sync — دروازهٔ امن نوشتن به دیتابیس پات کلاب (Supabase Edge Function) — نسخهٔ ۱۰ (2026-10-08: ادغام امن ga_players)
+// ga-sync — دروازهٔ امن نوشتن به دیتابیس پات کلاب (Supabase Edge Function) — نسخهٔ ۱۱ (2026-10-22: ادغام اتحادی ga_tournaments + سیاههٔ حذف ga_tour_del)
 // نوشتن فقط از اینجا: با کلید مخفی service_role که فقط روی سرور است، نه مرورگر کاربر.
 // هویت: JWT کاربر Supabase Auth در هدر Authorization.
 //   • مدیر (adminpanel_access owner/admin یا ga_accounts.role=admin): همهٔ کلیدهای ga_*
@@ -54,6 +54,79 @@ function isObj(v: any): boolean { return !!v && typeof v === "object" && !Array.
 function norm(u: any): string { return String(u == null ? "" : u).trim().toLowerCase(); }
 /* ادغام نوشتن عضو: فقط سهم خودِ عضو از مقدار ارسالی برداشته می‌شود؛ بقیه از ابر. */
 /* ادغام امن ga_players — توضیح در اکشن kv */
+/* ── مسابقات: ادغام اتحادی (نسخهٔ ۱۱) ────────────────────────────────────────────
+   ga_tournaments یک آرایهٔ کامل در یک ردیف است؛ با «آخرین نویسنده برنده» هر دستگاه قدیمی
+   می‌توانست کل فهرست را رونویسی کند (حادثهٔ ۳۰ مهر ۱۴۰۵: مسابقهٔ مینی‌گلف گم شد).
+   حالا نوشتنِ تازه فقط «اضافه/ویرایش» می‌کند و حذف فقط از راه سیاههٔ ga_tour_del اعمال می‌شود. */
+function _normText(s: any): string { return String(s == null ? "" : s).replace(/\s+/g, " ").trim().toLowerCase(); }
+function _djb2(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+function tourKeyOf(t: any): string {
+  if (!t || typeof t !== "object") return "";
+  if (t.uid) return "U" + String(t.uid);
+  const arr = Array.isArray(t.t) ? t.t : null;
+  const name = _normText(arr ? arr[1] : t.name);
+  if (!name) return "";
+  const date = arr ? arr[5] : t.date;
+  return "L" + _djb2(name + "|" + String(date || ""));
+}
+const TOUR_DEL_DAYS = 180;
+function pruneTourDel(list: any): any {
+  const cut = Date.now() - TOUR_DEL_DAYS * 86400000, out: any[] = [], seen: Record<string, number> = {};
+  (Array.isArray(list) ? list : []).forEach((d: any) => {
+    if (!d || typeof d.k !== "string" || seen[d.k]) return;
+    const at = Date.parse(d.at || "");
+    if (!Number.isFinite(at) || at < cut) return;
+    seen[d.k] = 1;
+    out.push({ k: d.k, at: new Date(at).toISOString() });
+  });
+  return out.slice(-600);
+}
+function mergeTourDel(cur: any, inc: any): any {
+  const out = pruneTourDel(cur);
+  pruneTourDel(inc).forEach((d) => { if (!out.some((x) => x.k === d.k)) out.push(d); });
+  return pruneTourDel(out);
+}
+function mergeTours(cur: any, inc: any, tomb: any[]): any {
+  if (!Array.isArray(cur)) return Array.isArray(inc) ? inc : [];
+  if (!Array.isArray(inc)) return cur;
+  const dead: Record<string, number> = {};
+  (tomb || []).forEach((d: any) => { if (d && d.k) dead[d.k] = 1; });
+  const out: any[] = [], pos: Record<string, number> = {};
+  cur.forEach((t: any) => {
+    const k = tourKeyOf(t);
+    if (!k || dead[k] || pos[k] !== undefined) return;
+    pos[k] = out.length; out.push(t);
+  });
+  inc.forEach((t: any) => {
+    const k = tourKeyOf(t);
+    if (!k || dead[k]) return;
+    if (pos[k] !== undefined) out[pos[k]] = t;
+    else { pos[k] = out.length; out.push(t); }
+  });
+  return out;
+}
+
+/* ادغام «نتایج» و «پیش‌نویس» که هر دو با شناسهٔ مسابقه کلید خورده‌اند:
+   هر مسابقه مستقلاً به‌روز می‌شود؛ رکورد مسابقهٔ دیگر پاک نمی‌شود (دو پنل هم‌زمان). */
+function mergeByTour(cur: any, inc: any, tombKeys: Record<string, number>): any {
+  if (!isObj(cur)) return isObj(inc) ? inc : cur;
+  if (!isObj(inc)) return cur;
+  const out: any = JSON.parse(JSON.stringify(cur));
+  for (const tid of Object.keys(inc)) {
+    if (tombKeys[tid]) { delete out[tid]; continue; }
+    const v = inc[tid];
+    if (v === null || v === undefined) continue;
+    if (!isObj(v)) continue;
+    out[tid] = v;
+  }
+  for (const tid of Object.keys(tombKeys)) delete out[tid];
+  return out;
+}
+
 function mergePlayers(cur: any, inc: any): any {
   const isObj = (o: any) => !!o && typeof o === "object" && !Array.isArray(o);
   if (!isObj(cur)) return (inc && inc.__del) ? {} : inc;
@@ -227,9 +300,26 @@ Deno.serve(async (req) => {
          ادغام بازیکن‌به‌بازیکن و فیلد‌به‌فیلد. بازیکن/فیلدِ غایب و «عکسِ خالی» مقدار سرور را پاک نمی‌کند
          و حذفِ کل کلید پذیرفته نیست. (حادثهٔ ۱۷ مهر ۱۴۰۵: نسخهٔ بذرِ دستگاه همه‌چیز را پاک کرد.) */
       if (isAdmin) {
+        /* سیاههٔ حذف مسابقات: فقطاجتماع، تا حذفِ یک دستگاه در دستگاه قدیمی زنده نشود */
         for (const r of rows) {
-          if (r.k !== "ga_players") continue;
-          r.v = mergePlayers(current[r.k], r.v);
+          if (r.k !== "ga_tour_del" && r.k !== "ga_results_del") continue;
+          r.v = mergeTourDel(current[r.k], r.v);
+          values[r.k] = r.v;
+        }
+        const tourTomb = mergeTourDel(current["ga_tour_del"], (rows.find((r) => r.k === "ga_tour_del") || {}).v || []);
+        const resTombList = mergeTourDel(current["ga_results_del"], (rows.find((r) => r.k === "ga_results_del") || {}).v || []);
+        const resTomb: Record<string, number> = {};
+        resTombList.forEach((d: any) => { if (d && d.k) resTomb[d.k] = 1; });
+        for (const r of rows) {
+          if (r.k !== "ga_players" && r.k !== "ga_tournaments" && r.k !== "ga_results" && r.k !== "ga_score_draft") continue;
+          if (r.v && r.v.__del) continue;
+          if (r.k === "ga_tournaments") {
+            r.v = mergeTours(current[r.k], r.v, tourTomb);
+          } else if (r.k === "ga_results" || r.k === "ga_score_draft") {
+            r.v = mergeByTour(current[r.k], r.v, resTomb);
+          } else {
+            r.v = mergePlayers(current[r.k], r.v);
+          }
           values[r.k] = r.v;
         }
       }

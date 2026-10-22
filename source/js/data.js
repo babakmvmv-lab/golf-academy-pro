@@ -496,7 +496,27 @@
     return JSON.parse(JSON.stringify(PTS_RULE));
   }
   function saveTourRules(r){ try { localStorage.setItem('ga_tour_rules', JSON.stringify(r)); } catch(e){} }
-  function loadResults(){ try { return JSON.parse(localStorage.getItem('ga_results') || '{}'); } catch(e){ return {}; } }
+  /* سیاههٔ حذفِ نتیجه‌ها: حذف باید «صریح» باشد تا ادغام ابری آن را زنده نکند. */
+  function loadResultsDel(){
+    try { return JSON.parse(localStorage.getItem('ga_results_del') || '[]'); } catch(e){ return []; }
+  }
+  function addResultsTomb(tid){
+    try {
+      const k = String(tid);
+      const a = loadResultsDel().filter(x => x && String(x.k) !== k);
+      a.push({ k: k, at: new Date().toISOString() });
+      localStorage.setItem('ga_results_del', JSON.stringify(a.slice(-600)));
+    } catch(e){}
+  }
+  function loadResults(){
+    let r = {};
+    try { r = JSON.parse(localStorage.getItem('ga_results') || '{}'); } catch(e){ return {}; }
+    if (!r || typeof r !== 'object') return {};
+    const dead = {};
+    loadResultsDel().forEach(x => { if (x && x.k != null) dead[String(x.k)] = 1; });
+    Object.keys(r).forEach(k => { if (dead[k]) delete r[k]; });
+    return r;
+  }
   function saveResults(r){
     let changed=false;
     try {
@@ -607,7 +627,7 @@
       if (!e) return p;
       const np = p.slice();
       if (e.active !== undefined) np[5] = e.active ? 1 : 0;
-      if (e.name) np[1] = e.name;
+      if (e.name || e.family) np[1] = joinName(e.name || p[1], e.family);
       if (e.hcp !== undefined) np[3] = +e.hcp;
       if (e.gender) np[2] = e.gender;
       return np;
@@ -1167,13 +1187,20 @@
 
 
   /* ── کمکی: بازیکنان زنده (نام ویرایش‌شده + عکس) ── */
+  /* نام نمایشی = نام + نام خانوادگی (اگر قبلاً داخل نام نیامده باشد) */
+  function joinName(name, family){
+    const n = String(name || '').trim(), f = String(family || '').trim();
+    if (!f) return n;
+    if (!n) return f;
+    return n.indexOf(f) >= 0 ? n : (n + ' ' + f);
+  }
   function playerRows(){
     const rows = [];
     let edits = {};
     try { edits = JSON.parse(localStorage.getItem('ga_players') || '{}'); } catch(e){}
     PLAYERS.forEach(p => {
       const e = edits[p[0]] || {};
-      rows.push({ pid: p[0], name: e.name || p[1], gender: e.gender || p[2], hcp: e.hcp !== undefined ? +e.hcp : p[3], active: e.active !== undefined ? e.active : !!p[5], photo: e.photo || '' });
+      rows.push({ pid: p[0], name: joinName(e.name || p[1], e.family), gender: e.gender || p[2], hcp: e.hcp !== undefined ? +e.hcp : p[3], active: e.active !== undefined ? e.active : !!p[5], photo: e.photo || '' });
     });
     try {
       const cs = loadCustomPlayers(), offsets = customPlayerOffsets(cs);
@@ -1198,9 +1225,30 @@
   }
 
   /* ── بذر دادهٔ فصل ۱۴۰۵ (حذف دادهٔ فیک و بارگذاری دادهٔ واقعی) ── */
+  /* اگر این دستگاه قبلاً با ابر هم‌گام شده، «بذر فصل» هرگز نباید دادهٔ واقعی را پاک کند.
+     حادثهٔ ۱۷ مهر ۱۴۰۵ (پاک‌شدن مشخصات اعضا) و ۳۰ مهر ۱۴۰۵ (گم‌شدن مسابقه) هر دو از همین‌جا
+     شروع شدند: مرورگر بدون کلید ga_seed_v2 باز می‌شد و این تابع ۱۵ کلید داده را حذف می‌کرد. */
+  function cloudHasData(){
+    try {
+      if (window.GA_CLOUD && GA_CLOUD.cfg) {
+        var c = GA_CLOUD.cfg();
+        if (c && c.on && c.url && c.key) return true;
+      }
+    } catch(e){}
+    try {
+      var ts = JSON.parse(localStorage.getItem('ga_cloud_ts') || '{}');
+      return Object.keys(ts).filter(function (k) { return k.indexOf('ga_') === 0; }).length > 0;
+    } catch(e){ return false; }
+  }
   function seedSeason(force){
     try {
       if (!force && localStorage.getItem('ga_seed_v2') === '1405') return;
+      if (cloudHasData()){
+        localStorage.setItem('ga_seed_v2', '1405');   /* فقط پرچم؛ هیچ کلیدی حذف نمی‌شود */
+        return;
+      }
+      if (force && typeof confirm === 'function' &&
+          !confirm('بازنشانی کامل دادهٔ فصل: مسابقات، نتایج، کارت‌ها و مشخصات بازیکنان این دستگاه پاک می‌شود. مطمئن هستید؟')) return;
       const keys = ['ga_tour_rules','ga_results','ga_tour_override','ga_tour_hidden','ga_programs','ga_courses','ga_course_override','ga_course_geo','ga_tournaments','ga_scorecards','ga_del_acts','ga_events','ga_custom_players','ga_player_users','ga_players'];
       keys.forEach(k => { try { localStorage.removeItem(k); } catch(e){} });
       // تولد اعضا (برای نمایش سن/تولد در مدیریت)
@@ -1238,7 +1286,7 @@
     toJalaali, jalaaliToDateObject, j2d, shamsiToISO, isoToShamsi, parseShamsi,
     PLAYERS, PLAYER_NAME, ACTIVE, COURSES, COURSE_PARS, COURSE_NAME, TOURNAMENTS, seasonYear: (function(){ const j = jalaliInfo(SEASON_START); return j.yy; })(),
     PTS_RULE, MINI_LVL, MINI_COURSE_ID, isMiniLvl, lvlName, isMiniTour, RESULT_LABEL, MONTHS_FA, RANK_DEF, RANK_TEXT, rankOf, FORM_META, GOLD_ELITE,
-    loadTourRules, saveTourRules, loadResults, saveResults, loadPrograms, savePrograms,
+    loadTourRules, saveTourRules, loadResults, loadResultsDel, addResultsTomb, saveResults, loadPrograms, savePrograms,
     loadHiddenTours, saveHiddenTours, isTourHidden, visibleTours, holeCap, tourRuleOf,
     loadDelActs, saveDelActs, loadExtraTours, prizesOf,
     parsOf, PAR_MAP, indexOf, INDEX_MAP, COURSE_INDEX, distancesOf, SCALE, scaleStep, scaleIndex, scaleVsPar, holeName, tourHoleIds, tourPars, loadCourseOverride, loadTourOverride, applyCourseOverrides,

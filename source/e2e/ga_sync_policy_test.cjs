@@ -12,7 +12,8 @@ try {
   js = ts.transpileModule(block, { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.None } }).outputText;
 } catch (e) {
   js = block.replace(/\)\s*:\s*\{[^}]*\}\s*\{/g, ') {').replace(/:\s*Record<[^>]+>/g, '')
-    .replace(/\)\s*:\s*(any|boolean|string)\s*\{/g, ') {').replace(/(\w)\s*:\s*(any|string|boolean)\b/g, '$1');
+    .replace(/\)\s*:\s*(any|boolean|string)(\[\])?\s*\{/g, ') {')
+    .replace(/(\w)\s*:\s*(any|string|boolean)(\[\])?/g, '$1');
 }
 const P = new Function(js + '\nreturn { MEMBER_KEYS, mergeMember, sameJson, mergePlayers };')();
 let n = 0; const ok = (c, m) => { assert.ok(c, m); n++; console.log('PASS | ' + m); };

@@ -279,6 +279,70 @@
      مجاز (با ورود) ساخته شد — مثل تیم‌های پیش‌فرض «نبرد میدان‌ها» — تغییر کاربر نیست؛
      صف نمی‌شود تا مقدار واقعی ابر را بازنویسی نکند. اگر ابر آن کلید را نداشت، بعد از دریافت صف می‌شود. */
   var authPulled = false, seeded = {};
+
+  /* ── مسابقات (ga_tournaments) ──────────────────────────────────────────────
+     این کلید یک «آرایهٔ کامل» در یک ردیف است؛ هر دستگاه کل آرایه را می‌فرستد. بدون ادغام،
+     نسخهٔ قدیمیِ یک تب/مرورگر کل فهرست را رونویسی می‌کند و مسابقهٔ تازهٔ دستگاه دیگر گم می‌شود
+     (حادثهٔ ۳۰ مهر ۱۴۰۵: مسابقهٔ مینی‌گلف پس از یک شب نبود). اینجا:
+       ۱) هر مسابقه یک کلید هویتی پایدار دارد (uid یا هش قطعیِ نام+تاریخ+سطح+زمین+حفره)
+       ۲) pull به‌جای «جایگزینی»، اجتماع محلی و ابری را می‌سازد (بدون تکرار)
+       ۳) حذف‌ها در ga_tour_del ثبت می‌شوند تا با ادغام دوباره «زنده» نشوند
+  */
+  var TOUR_KEY = 'ga_tournaments', TOUR_DEL = 'ga_tour_del';
+  var TOUR_DEL_DAYS = 180;
+  var RES_DEL = 'ga_results_del';
+  var metaFlight = null, lastMeta = {};   /* دیدبانی سبک: «کدام کلید کِی عوض شد» */
+  function normText(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().toLowerCase(); }
+  function djb2(s) {
+    var h = 5381;
+    for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+    return h.toString(36);
+  }
+  function tourKeyOf(t) {
+    if (!t || typeof t !== 'object') return '';
+    if (t.uid) return 'U' + String(t.uid);
+    var name, date, lvl, course, holes;
+    if (Array.isArray(t.t)) { name = t.t[1]; date = t.t[5]; lvl = t.t[2]; course = t.t[3]; holes = t.t[4]; }
+    else { name = t.name; date = t.date; lvl = t.lvl; course = t.course; holes = t.holes; }
+    var n = normText(name);
+    if (!n) return '';
+    /* هویت = نام + تاریخ؛ ویرایش زمین/سطح/تعداد حفره نباید مسابقه را «دیگری» کند (وگرنه ادغام، رکورد تکراری می‌سازد). */
+    return 'L' + djb2(n + '|' + String(date || ''));
+  }
+  function parseTourList(x) {
+    if (Array.isArray(x)) return x;
+    try { var o = JSON.parse(x == null ? '[]' : x); return Array.isArray(o) ? o : []; } catch (e) { return []; }
+  }
+  function pruneTourDel(list) {
+    var cut = Date.now() - TOUR_DEL_DAYS * 86400000, out = [], seen = {};
+    (Array.isArray(list) ? list : []).forEach(function (d) {
+      if (!d || !d.k || seen[d.k]) return;
+      var at = Date.parse(d.at || '');
+      if (!Number.isFinite(at) || at < cut) return;
+      seen[d.k] = 1; out.push({ k: String(d.k), at: new Date(at).toISOString() });
+    });
+    return out.slice(-600);
+  }
+  function readDelList(key) {
+    try { return pruneTourDel(JSON.parse(ls().getItem(key || TOUR_DEL) || '[]')); } catch (e) { return []; }
+  }
+  function readTourDel() { return readDelList(TOUR_DEL); }
+  function unionTourDel(a, b) {
+    var out = pruneTourDel(a).slice();
+    pruneTourDel(b).forEach(function (d) { if (!out.some(function (x) { return x.k === d.k; })) out.push(d); });
+    return pruneTourDel(out);
+  }
+  function mergeTourList(localRaw, remoteRaw, del) {
+    var L = parseTourList(localRaw), R = parseTourList(remoteRaw), dead = {}, out = [], pos = {};
+    (del || []).forEach(function (d) { if (d && d.k) dead[d.k] = 1; });
+    R.forEach(function (t) { var k = tourKeyOf(t); if (!k || dead[k] || pos[k] !== undefined) return; pos[k] = out.length; out.push(t); });
+    L.forEach(function (t) {
+      var k = tourKeyOf(t); if (!k || dead[k]) return;
+      if (pos[k] !== undefined) out[pos[k]] = t;      /* ویرایشِ همین دستگاه برنده است */
+      else { pos[k] = out.length; out.push(t); }       /* مسابقه‌ای که فقط این دستگاه دارد */
+    });
+    return JSON.stringify(out);
+  }
   /* آخرین مقدار شناخته‌شدهٔ سرور برای هر کلید (از pull یا تأیید ارسال). اگر کدی همان داده را
      فقط با ترتیب دیگری از کلیدها دوباره ذخیره کند (مثل ga_sp_sessions هنگام ورود مدیر)، تغییر
      واقعی نیست و صف نمی‌شود. مقایسهٔ کامل فقط وقتی طول رشته برابر است انجام می‌شود (ارزان). */
@@ -303,8 +367,11 @@
     /* پیش‌فرضِ دستگاه (بذر) و هر ویرایشِ روی همان پیش‌فرض، تا قبل از اولین دریافتِ مجاز از سرور
        «تغییرِ کاربر» حساب نمی‌شود؛ وگرنه یک نسخهٔ ناقص (مثلاً ga_players فقط با تاریخ تولد)
        دادهٔ واقعیِ سرور را رونویسی می‌کند — همان چیزی که ۱۷ مهر ۱۴۰۵ عکس و مشخصات اعضا را پاک کرد. */
-    if (!authPulled && (before === null || seeded[k])) { seeded[k] = 1; return; }
-    if (!canWrite(k)) return;
+    /* مسابقات از این محافظ مستثناست: اگر کلید روی این دستگاه نبود (مرورگر تازه/پس از خروج)
+       و کاربر همان‌جا مسابقه ثبت کرد، نباید بی‌صدا دور ریخته شود. ادغام اتحادی سمت سرور
+       (ga-sync v11) تضمین می‌کند نسخهٔ ناقص، دادهٔ ابر را بازنویسی نکند. */
+    if (!authPulled && (before === null || seeded[k]) && k !== TOUR_KEY && k !== TOUR_DEL && k !== RES_DEL) { seeded[k] = 1; return; }
+    if (!canWrite(k)) { noticeBlocked(k); return; }
     var d = jread(DIRTY_KEY, {}), stamp = localStamp();
     // حتی دو ویرایش در یک میلی‌ثانیه باید نسخهٔ جدا داشته باشند.
     var previous = Date.parse(d[k]);
@@ -340,8 +407,44 @@
     } catch (e) { /* اگر قابل بازنویسی نبود، جاروب دوره‌ای جبران می‌کند */ }
   }
 
+  /* ── شفافیت ──────────────────────────────────────────────────────────────────
+     اگر نقش کاربر اجازهٔ ذخیرهٔ یک بخش مشترک (مسابقه/نتیجه/بازیکن) را نداشته باشد،
+     تغییر فقط روی همان دستگاه می‌ماند. قبلاً این اتفاق کاملاً بی‌صدا بود؛ حالا یک بار
+     در دقیقه به کاربر گفته می‌شود. همچنین اگر تغییری بیش از ۱۰ دقیقه در صف بماند،
+     نواری نشان داده می‌شود تا کاربر بداند پنل دیگر آن را نمی‌بیند. */
+  var KEY_LABEL = {
+    ga_tournaments: 'مسابقات', ga_results: 'نتایج', ga_scorecards: 'کارت‌های امتیاز',
+    ga_score_draft: 'پیش‌نویس امتیازها', ga_players: 'بازیکنان', ga_custom_players: 'بازیکنان جدید',
+    ga_programs: 'دوره‌ها', ga_events: 'رویدادها', ga_courses: 'زمین‌ها', ga_tour_rules: 'قوانین امتیازدهی'
+  };
+  function labelOf(k) { return KEY_LABEL[k] || k; }
+  var blockedNotice = {};
+  function noticeBlocked(k) {
+    var now = Date.now();
+    if (blockedNotice[k] && now - blockedNotice[k] < 60000) return;
+    blockedNotice[k] = now;
+    setPhase('error', '«' + labelOf(k) + '» برای نقش شما در سرور ذخیره نمی‌شود.');
+    toast('«' + labelOf(k) + '» فقط روی همین دستگاه ذخیره شد — برای ثبت در سرور با نقش مدیر اصلی وارد شوید.', 'err');
+  }
+  function stuckBanner() {
+    try {
+      if (typeof document === 'undefined' || !document.body) return;
+      var d = jread(DIRTY_KEY, {}), keys = Object.keys(d);
+      var el = document.getElementById('ga-queue-warn');
+      if (!keys.length) { if (el) el.remove(); return; }
+      var oldest = keys.reduce(function (m, k) { var t = Date.parse(d[k]); return Number.isFinite(t) && t < m ? t : m; }, Date.now());
+      if (Date.now() - oldest < 10 * 60000) { if (el) el.remove(); return; }
+      if (el) return;
+      el = document.createElement('div'); el.id = 'ga-queue-warn'; el.setAttribute('role', 'status');
+      el.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:99997;max-width:min(92vw,460px);padding:9px 14px;border-radius:12px;background:#5a3b0b;color:#fff3d6;border:1px solid #c9a24a;font:inherit;font-size:13px;line-height:1.6;box-shadow:0 6px 24px rgba(0,0,0,.35)';
+      el.textContent = '⚠️ ' + keys.length + ' تغییر هنوز به سرور نرسیده (' + keys.map(labelOf).join('، ') + '). تا وقتی صف خالی نشود، پنل‌های دیگر این تغییرها را نمی‌بینند.';
+      document.body.appendChild(el);
+    } catch (e) {}
+  }
+
   var sweepCache = {};
   function sweep() {
+    try { stuckBanner(); } catch (e) {}
     if (!hasCred() || applying) return;
     var L = ls();
     var keys = syncableKeys();
@@ -490,7 +593,11 @@
 
   /* ── pull: اعمال دادهٔ جدیدترِ سرور روی این دستگاه ──────────────── */
   var pullFlightAuth = false;
-  function pull() {
+  /* pull({keys:[…]}) = دریافت جزئی: فقط همان کلیدها (برای دیدبانی ۵ ثانیه‌ای). */
+  function pull(opts) {
+    var only = opts && Array.isArray(opts.keys) && opts.keys.length
+      ? opts.keys.filter(function (k) { return k.indexOf(PFX) === 0 && !SKIP[k]; }) : null;
+    if (only && !only.length) return Promise.resolve(false);
     if (pullFlight) {
       /* دریافتِ در جریان قبل از ورود (فقط داده‌های عمومی) بود و حالا وارد شده‌ایم ⇒ بعد از آن یک دریافت کامل */
       var A9 = auth(), nowAuth = !A9 || !!(A9.profile() && A9.token());
@@ -503,9 +610,11 @@
     lastPullTry = Date.now();
     var A0 = auth(), authorized = !A0 || !!(A0.profile() && A0.token());
     pullFlightAuth = authorized;
-    pullFlight = rest('ga_store?select=k,v,updated_at&order=updated_at.desc&limit=500')
+    pullFlight = rest('ga_store?select=k,v,updated_at&order=updated_at.desc&limit=500' +
+      (only ? '&k=in.(' + only.map(encodeURIComponent).join(',') + ')' : ''))
       .then(function (rows) {
         if (!Array.isArray(rows)) throw new Error('پاسخ دریافت داده معتبر نیست.');
+        if (!only) lastMeta = {};   /* دریافت کامل = تصویر کامل سرور */
         applying = true; // نگهبانِ محلی حین اعمال خاموش است
         try {
           var d = jread(DIRTY_KEY, {}), ts = jread(TS_KEY, {}), L = ls(), applied = 0, resultsApplied = false;
@@ -557,6 +666,44 @@
               } catch (e) {}
               return;
             }
+            /* ── مسابقات: ادغام اتحادی، نه رونویسی ── */
+            if (r.k === TOUR_KEY) {
+              try {
+                var remoteTours = decode(r.v);
+                var mergedTours = mergeTourList(L.getItem(TOUR_KEY), remoteTours, readTourDel());
+                if (!sameJsonValue(mergedTours, remoteTours)) {
+                  L.setItem(TOUR_KEY, mergedTours);
+                  if (authorized) d[TOUR_KEY] = localStamp();   /* اجتماعِ محلی دوباره به ابر می‌رود */
+                  applied++;
+                } else if (!sameJsonValue(mergedTours, L.getItem(TOUR_KEY))) {
+                  L.setItem(TOUR_KEY, mergedTours);
+                  applied++;
+                }
+                noteSynced(TOUR_KEY, mergedTours);
+                ts[TOUR_KEY] = r.updated_at;
+              } catch (e) {}
+              return;
+            }
+            /* ── سیاههٔ حذفِ نتایج: همان رفتار اجتماع ── */
+            if (r.k === RES_DEL) {
+              try {
+                var mergedRdel = unionTourDel(readDelList(RES_DEL), parseTourList(decode(r.v)));
+                var rdelTxt = JSON.stringify(mergedRdel);
+                if (!sameJsonValue(rdelTxt, decode(r.v))) { L.setItem(RES_DEL, rdelTxt); if (authorized) d[RES_DEL] = localStamp(); }
+                ts[RES_DEL] = r.updated_at;
+              } catch (e) {}
+              return;
+            }
+            /* ── سیاههٔ حذفِ مسابقات: فقط اجتماع (حذفِ یک دستگاه در دستگاه دیگر زنده نشود) ── */
+            if (r.k === TOUR_DEL) {
+              try {
+                var mergedDel = unionTourDel(readTourDel(), parseTourList(decode(r.v)));
+                var delTxt = JSON.stringify(mergedDel);
+                if (!sameJsonValue(delTxt, decode(r.v))) { L.setItem(TOUR_DEL, delTxt); if (authorized) d[TOUR_DEL] = localStamp(); }
+                ts[TOUR_DEL] = r.updated_at;
+              } catch (e) {}
+              return;
+            }
             /* سرور مرجع است: وقتی وارد شده‌ایم و این کلید تغییر ارسال‌نشده ندارد، نسخهٔ این مرورگر
                دقیقاً همان نسخهٔ سرور می‌شود — بدون توجه به مهر زمان، ساعت دستگاه یا سابقهٔ همین مرورگر.
                (زمین‌ها و اشتراک‌ها هم دیگر با نسخهٔ محلی ادغام نمی‌شوند؛ ادغام فقط هنگام ارسالِ تغییر است.) */
@@ -583,17 +730,17 @@
           (rows || []).forEach(function (r) { if (r && r.k) remoteKeys[r.k] = 1; });
           /* کلیدی که قبلاً از سرور آمده بود و حالا روی سرور نیست (حذف شده یا این کاربر اجازهٔ دیدنش را ندارد)
              از این مرورگر هم برداشته می‌شود — مگر تغییر ارسال‌نشده داشته باشد. فقط با فهرست کامل. */
-          if (authorized && rows.length < 500) {
+          if (!only && authorized && rows.length < 500) {
             Object.keys(ts).forEach(function (k) {
               if (remoteKeys[k] || d[k] || SKIP[k] || k.indexOf(PFX) !== 0) return;
               try { if (L.getItem(k) !== null) { L.removeItem(k); applied++; } } catch (e) {}
               delete ts[k];
             });
           }
-          Object.keys(COURSE_MERGE).concat(Object.keys(SUB_MERGE)).forEach(function (k) {
+          if (!only) Object.keys(COURSE_MERGE).concat(Object.keys(SUB_MERGE)).forEach(function (k) {
             if (!remoteKeys[k] && L.getItem(k) !== null && !d[k]) d[k] = localStamp();
           });
-          if (authorized) {
+          if (authorized && !only) {
             /* پیش‌فرض‌های قبل از دریافت: اگر ابر مقدار داشت، همان بالا اعمال شد؛ اگر نداشت، حالا صف شود */
             Object.keys(seeded).forEach(function (k) {
               if (!remoteKeys[k] && L.getItem(k) !== null && canWrite(k) && !d[k]) d[k] = localStamp();
@@ -782,7 +929,10 @@
       return Promise.resolve(false);
     }
     clearTimeout(timer);
-    keys.sort(function (a, b) { return a === 'ga_sp_tomb' ? -1 : b === 'ga_sp_tomb' ? 1 : 0; });
+    /* ترتیب ارسال: ابتدا سیاهه‌های حذف (ga_sp_tomb، ga_tour_del) و بعد خودِ کلید داده، تا ادغام سمت سرور
+       برای حذف‌شدگان تومب‌استون را ببیند و آن‌ها را زنده نکند. */
+    var rank = function (k) { return k === 'ga_sp_tomb' ? 0 : k === TOUR_DEL ? 1 : k === RES_DEL ? 2 : 3; };
+    keys.sort(function (a, b) { return rank(a) - rank(b); });
     var sent = 0, errors = state.errors.filter(function (e) { return keys.indexOf(e.key) < 0 && pendingKeys().indexOf(e.key) >= 0; }), stopped = false, remoteFlight = null;
     state.err = null;
     state.errors = errors.slice();
@@ -1099,6 +1249,34 @@
       pull();
     }
     setInterval(function () { freshen(55000); }, 60000);
+    /* ── دیدبانی «درجا» ──────────────────────────────────────────────────────────
+       هر ۵ ثانیه فقط فهرست (کلید، زمانِ سرور) خوانده می‌شود — چند کیلوبایت — و اگر کلیدی عوض شده
+       باشد فقط همان کلیدها دوباره خوانده می‌شوند (نه چند مگابایت). نتیجه: تغییر مدیر در
+       adminpanel تقریباً بلافاصله در panel دیده می‌شود، و برعکس؛ با کمترین مصرف داده. */
+    var META_GAP = 5000;
+    function watchRemote() {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (metaFlight || pullFlight || pushFlight || !hasCred()) return;
+      var A2 = auth(); if (A2 && !(A2.profile() && A2.token())) return;
+      metaFlight = rest('ga_store?select=k,updated_at&limit=500').then(function (rows) {
+        if (!Array.isArray(rows)) return false;
+        var seen = {}, changed = [];
+        rows.forEach(function (r) {
+          if (!r || !r.k || SKIP[r.k]) return;
+          seen[r.k] = r.updated_at;
+          if (lastMeta[r.k] !== r.updated_at) changed.push(r.k);
+        });
+        var missing = Object.keys(lastMeta).filter(function (k) { return !seen[k]; });
+        lastMeta = seen;
+        if (!changed.length && !missing.length) return false;
+        return (missing.length || changed.length > 12) ? pull() : pull({ keys: changed });
+      }).catch(function () {}).then(function (r) { metaFlight = null; return r; });
+    }
+    setInterval(watchRemote, META_GAP);
+    if (window.addEventListener) {
+      window.addEventListener('focus', watchRemote);
+      document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') setTimeout(watchRemote, 300); });
+    }
     if (window.addEventListener) {
       window.addEventListener('focus', function () { freshen(15000); });
       document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') freshen(15000); });

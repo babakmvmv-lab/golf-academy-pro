@@ -615,6 +615,7 @@
       .then(function (rows) {
         if (!Array.isArray(rows)) throw new Error('پاسخ دریافت داده معتبر نیست.');
         if (!only) lastMeta = {};   /* دریافت کامل = تصویر کامل سرور */
+        (rows || []).forEach(function (r) { if (r && r.k && !SKIP[r.k]) lastMeta[r.k] = r.updated_at; });
         applying = true; // نگهبانِ محلی حین اعمال خاموش است
         try {
           var d = jread(DIRTY_KEY, {}), ts = jread(TS_KEY, {}), L = ls(), applied = 0, resultsApplied = false;

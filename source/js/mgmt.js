@@ -1942,7 +1942,19 @@
         saveCustomPlayers(lst);
       } else {
         const ed = playerEdits();
-        ed[pid] = Object.assign({}, ed[pid], { name: d.name, family: d.family, gender: d.gender, hcp: d.hcp, join: d.join,
+        /* فیلدِ خالی، مقدارِ موجود را پاک نمی‌کند: ویرایش‌گری که فرمش کامل پر نشده بود
+           (مثلاً فیلدهای شخصیِ بازیکن هنوز روی آن دستگاه نیامده بود) نباید تلفن/کد ملی/آدرس را
+           پاک کند. برای پاک‌کردن، باید مقدار تازه نوشته شود — نه خالی. */
+        const keepEmpty = ['name','family','gender','hcp','join','birth','phone','national','email','address','father','fatherPhone','mother','motherPhone'];
+        const prevEd = ed[pid] || {};
+        const merged = Object.assign({}, prevEd);
+        keepEmpty.forEach(function (f) {
+          const nv = d[f];
+          const blank = nv === undefined || nv === null || (typeof nv === 'string' && !nv.trim());
+          if (blank && prevEd[f] !== undefined && String(prevEd[f] || '').trim() !== '') return;
+          merged[f] = nv;
+        });
+        ed[pid] = Object.assign(merged, { name: d.name, family: d.family, gender: d.gender, hcp: d.hcp, join: d.join,
           birth: d.birth, phone: d.phone, national: d.national, email: d.email, address: d.address,
           father: d.father, fatherPhone: d.fatherPhone, mother: d.mother, motherPhone: d.motherPhone, photo });
         savePlayerEdits(ed);

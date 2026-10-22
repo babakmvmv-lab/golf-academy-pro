@@ -46,7 +46,10 @@
     'ga_player_users': 1,
     /* پیش‌پرکردن فرم ورود همین دستگاه — نباید روی ابر برود (نام آخرین یوزر را برای همه فاش می‌کرد) */
     'ga_last_user': 1,
-    'ga_user_label': 1
+    'ga_user_label': 1,
+    /* دروازهٔ زمان (ga_epoch) و کشِ محلیِ آن: فقط خواندنی، هرگز از دستگاه به ابر نمی‌رود */
+    'ga_epoch': 1,
+    '__ga_epoch': 1
   };
 
   /* ── هویت و مجوز نوشتن (حساب‌های ابری 2026-10-07) ──
@@ -292,6 +295,43 @@
   var TOUR_DEL_DAYS = 180;
   var RES_DEL = 'ga_results_del';
   var metaFlight = null, lastMeta = {};   /* دیدبانی سبک: «کدام کلید کِی عوض شد» */
+
+  /* ── دروازهٔ زمان (epoch) ────────────────────────────────────────────────────
+     مدیرِ سرور یک برچسب زمانی می‌گذارد (کلید ga_epoch در ga_store). هر دستگاهی که پس از آن
+     برچسب هنوز نتوانسته کلیدی را با سرور هم‌تراز کند، «کهنه» است: دادهٔ محلی‌اش (کشِ دیروز،
+     نسخهٔ بذر، صفِ ارسال‌نشده) حق ندارد با دادهٔ سرور ادغام شود یا آن را بازنویسی کند؛
+     فقط نسخهٔ سرور می‌نشیند. تغییرِ تازه‌ای که کاربر بعد از برچسب بزند «تازه» است و مثل قبل
+     ادغام/ارسال می‌شود. نتیجه: دادهٔ امروز دست‌نخورده می‌ماند و از این به بعد هم چیزی کهنه
+     نمی‌تواند چیزی تازه را پاک کند. */
+  var epochMs = (function () {
+    var t = Date.parse((function () { try { return JSON.parse(ls().getItem('__ga_epoch') || 'null'); } catch (e) { return null; } }()) || '');
+    return Number.isFinite(t) ? t : 0;
+  })();
+  function setEpoch(v) {
+    var at = Date.parse((v && (v.at || v.updated_at)) || '');
+    if (!Number.isFinite(at) || at <= 0) return;
+    /* فقط جلو می‌رود؛ برچسب قدیمی‌تر هرگز این دروازه را عقب نمی‌کشد */
+    if (at <= epochMs) return;
+    epochMs = at;
+    try { ls().setItem('__ga_epoch', JSON.stringify({ at: new Date(at).toISOString() })); } catch (e) {}
+  }
+  /* کِی این دستگاه با سرور هم‌تراز شد؟ tsStamp = آخرین نسخهٔ سروری که دیدیم */
+  function syncedSinceEpoch(tsStamp) {
+    if (!epochMs) return true;                    /* برچسبی نیست ⇒ رفتار قبلی */
+    var t = Date.parse(tsStamp || '');
+    return Number.isFinite(t) && t >= epochMs;
+  }
+  function editedSinceEpoch(dirtyStamp) {
+    var t = Date.parse(dirtyStamp || '');
+    return Number.isFinite(t) && t >= epochMs;
+  }
+  /* کلید «کهنه» است اگر: برچسب زمان داریم، این دستگاه پس از برچسب با سرور هم‌تراز نشده
+     و کاربر هم پس از برچسب تغییری روی آن نزده باشد. */
+  function isStaleKey(k, dirtyStamp, tsStamp) {
+    if (!epochMs) return false;
+    if (editedSinceEpoch(dirtyStamp)) return false;
+    return !syncedSinceEpoch(tsStamp);
+  }
   function normText(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().toLowerCase(); }
   function djb2(s) {
     var h = 5381;
@@ -615,6 +655,7 @@
       .then(function (rows) {
         if (!Array.isArray(rows)) throw new Error('پاسخ دریافت داده معتبر نیست.');
         if (!only) lastMeta = {};   /* دریافت کامل = تصویر کامل سرور */
+        (rows || []).forEach(function (r) { if (r && r.k === 'ga_epoch') setEpoch(r.v); });
         (rows || []).forEach(function (r) { if (r && r.k && !SKIP[r.k]) lastMeta[r.k] = r.updated_at; });
         applying = true; // نگهبانِ محلی حین اعمال خاموش است
         try {
@@ -623,6 +664,15 @@
             if (!r || !r.k || SKIP[r.k]) return;
             var remoteNewer = !ts[r.k] || !sameStamp(r.updated_at, ts[r.k]);
             var localDirty = d[r.k];
+            /* کهنه = هرگز پس از برچسب با سرور هم‌تراز نشده و کاربر هم تغییری نزده.
+               صفِ کهنه در «پارک» (فقط محلی، برای بازیابی دستی) کنار گذاشته می‌شود و
+               نسخهٔ سرور — که دادهٔ امروز است — می‌نشیند. */
+            var stale = isStaleKey(r.k, localDirty, ts[r.k]);
+            if (stale && localDirty) {
+              park(r.k, L.getItem(r.k), localDirty);
+              try { delete d[r.k]; } catch (e) {}
+              localDirty = undefined;
+            }
             if (localDirty && authorized && role() === 'member' && !canWrite(r.k)) {
               park(r.k, L.getItem(r.k), localDirty);
               delete d[r.k];
@@ -648,7 +698,7 @@
               }
               return;
             }
-            if ((COURSE_MERGE[r.k] || SUB_MERGE[r.k]) && !authorized) {
+            if (!stale && (COURSE_MERGE[r.k] || SUB_MERGE[r.k]) && !authorized) {
               /* داده‌های چندرکوردی را هنگام pull هم merge کن تا رکوردهای محلیِ غایب
                  از ابر حذف نشوند. اشتراک‌ها بر اساس id ادغام می‌شوند، نه کلید آرایه. */
               var localRaw = L.getItem(r.k), remoteVal = decode(r.v);
@@ -667,8 +717,8 @@
               } catch (e) {}
               return;
             }
-            /* ── مسابقات: ادغام اتحادی، نه رونویسی ── */
-            if (r.k === TOUR_KEY) {
+            /* ── مسابقات: ادغام اتحادی، نه رونویسی (مگر نسخهٔ محلی «کهنه» باشد) ── */
+            if (r.k === TOUR_KEY && !stale) {
               try {
                 var remoteTours = decode(r.v);
                 var mergedTours = mergeTourList(L.getItem(TOUR_KEY), remoteTours, readTourDel());
@@ -686,7 +736,7 @@
               return;
             }
             /* ── سیاههٔ حذفِ نتایج: همان رفتار اجتماع ── */
-            if (r.k === RES_DEL) {
+            if (r.k === RES_DEL && !stale) {
               try {
                 var mergedRdel = unionTourDel(readDelList(RES_DEL), parseTourList(decode(r.v)));
                 var rdelTxt = JSON.stringify(mergedRdel);
@@ -696,7 +746,7 @@
               return;
             }
             /* ── سیاههٔ حذفِ مسابقات: فقط اجتماع (حذفِ یک دستگاه در دستگاه دیگر زنده نشود) ── */
-            if (r.k === TOUR_DEL) {
+            if (r.k === TOUR_DEL && !stale) {
               try {
                 var mergedDel = unionTourDel(readTourDel(), parseTourList(decode(r.v)));
                 var delTxt = JSON.stringify(mergedDel);
@@ -958,6 +1008,14 @@
       var stamp, raw, row, bytes = 0;
       /* تغییری که پیش از ارسال به همان مقدار شناخته‌شدهٔ سرور برگشت (مثلاً تمرین‌های legacy که هنگام ورود
          موقتاً اضافه و بلافاصله دوباره جدا می‌شوند) چیزی برای ارسال ندارد؛ بدون درخواست از صف خارج می‌شود. */
+      /* صفِ کهنه (پیش از برچسب زمان) هرگز ارسال نمی‌شود: همان نسخه‌ای است که دادهٔ
+         قدیمی را برمی‌گرداند. در «پارک» نگه داشته می‌شود تا دستی قابل بازیابی باشد. */
+      if (isStaleKey(k, jread(DIRTY_KEY, {})[k], jread(TS_KEY, {})[k])) {
+        var dq0 = jread(DIRTY_KEY, {});
+        park(k, L.getItem(k), dq0[k]);
+        delete dq0[k]; jwrite(DIRTY_KEY, dq0); sweepCache[k] = L.getItem(k);
+        return Promise.resolve();
+      }
       if (sameAsSynced(k)) {
         var dq = jread(DIRTY_KEY, {});
         if (dq[k]) { delete dq[k]; jwrite(DIRTY_KEY, dq); sweepCache[k] = L.getItem(k); }

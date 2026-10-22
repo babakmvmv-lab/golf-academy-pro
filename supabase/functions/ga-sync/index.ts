@@ -127,6 +127,13 @@ function mergeByTour(cur: any, inc: any, tombKeys: Record<string, number>): any 
   return out;
 }
 
+/* فیلدهایی که «خالی» نباید مقدار موجود را پاک کند (فقط پاک‌سازیِ صریح با مقدار تازه مجاز است) */
+const KEEP_IF_EMPTY: any = {
+  name: 1, family: 1, phone: 1, national: 1, father: 1, fatherPhone: 1,
+  mother: 1, motherPhone: 1, address: 1, email: 1, birth: 1, join: 1, gender: 1, hcp: 1,
+  photo: 1,
+};
+
 function mergePlayers(cur: any, inc: any): any {
   const isObj = (o: any) => !!o && typeof o === "object" && !Array.isArray(o);
   if (!isObj(cur)) return (inc && inc.__del) ? {} : inc;
@@ -138,8 +145,14 @@ function mergePlayers(cur: any, inc: any): any {
     const o: any = isObj(out[pid]) ? out[pid] : {};
     for (const f of Object.keys(n)) {
       const nv = n[f];
-      if (f === "photo" && (nv == null || nv === "") && typeof o.photo === "string" && o.photo) continue;
       if (nv === undefined) continue;
+      const blank = nv === null || (typeof nv === "string" && !nv.trim());
+      /* فیلدِ خالی روی مقدارِ موجود نمی‌نشیند — نه برای عکس، نه برای هیچ فیلد شخصی.
+         (ویرایشگرِ ناقص/دستگاهِ نیمه‌همگام نباید تلفن و کد ملی و آدرس را پاک کند.) */
+      if (blank && KEEP_IF_EMPTY[f]) {
+        const ov = o[f];
+        if (ov !== undefined && ov !== null && !(typeof ov === "string" && !ov.trim())) continue;
+      }
       o[f] = nv;
     }
     out[pid] = o;

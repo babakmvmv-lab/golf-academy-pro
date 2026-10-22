@@ -1256,15 +1256,8 @@
       const ed = {};
       Object.keys(births).forEach(pid => { ed[pid] = { birth: births[pid] }; });
       localStorage.setItem('ga_players', JSON.stringify(ed));
-      // نتایج مسابقات برگزارشده: اول بابک، دوم مهشید، سوم متناوب ستایش/روشا — همهٔ اعضا شرکت‌کننده
-      const ALL = [1,2,3,4,5,6,7,8];
-      const res = {};
-      TOURNAMENTS.forEach((t, ti) => {
-        if (isTourHidden(t[0])) return;
-        if (dateFrom(t[5]) >= TODAY) return;
-        res[t[0]] = { participants: ALL.slice(), top: { 1: 1, 2: 2, 3: (ti % 2 === 0 ? 6 : 7) } };
-      });
-      localStorage.setItem('ga_results', JSON.stringify(res));
+      /* نتایجِ مسابقات دیگر هرگز «بذر» نمی‌شود: نتایج دادهٔ واقعی است و تولید نسخهٔ ساختگی
+         همان چیزی بود که می‌توانست بعداً روی ابر بنشیند و نتیجهٔ واقعی را بازنویسی کند. */
       // دوره‌ها: هیچ بذری ثبت نمی‌شود — مدیر همهٔ دوره‌ها/تمرین‌ها را خودش دستی (پنل مدیریت → دوره‌ها) وارد می‌کند
       localStorage.setItem('ga_seed_v2', '1405');
     } catch(e){}

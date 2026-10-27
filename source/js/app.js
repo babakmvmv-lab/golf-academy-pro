@@ -2796,9 +2796,28 @@ const sp = $('#st-podium');
 
     const events = seasonCalendarEvents();
 
-    const nextIdx = Math.max(0, events.findIndex(e => e.d >= D.TODAY));
+    /* ── رویداد «نزدیک به امروز» و ماهِ آغازینِ تقویم ─────────────────────────────
+       قبلاً: Math.max(0, events.findIndex(e => e.d >= TODAY))؛ در پایان فصل (یا هر وقفه‌ای که
+       رویداد آینده نداشته باشد) findIndex مقدار −۱ می‌داد، Math.max آن را ۰ می‌کرد و صفحه
+       «اولین رویداد سال» (فروردین) را انتخاب و تقویم را روی ماه ۱ می‌بست.
+       حالا: نزدیک‌ترین رویدادِ تمام‌نشده؛ اگر نبود، آخرین رویدادِ گذشته. و ماهِ آغازین همیشه
+       «ماه جاری» است (با محدود کردن به بازهٔ فصل). */
+    const today = D.TODAY;
+    const pick = D.calNearest(events, today);          /* { idx, upcoming } */
+    const hasEvents = events.length > 0 && pick.idx >= 0;
+    function currentMonth(){
+      const tj = D.jalaliInfo();
+      if (tj.yy === D.seasonYear) return tj.mm;
+      return tj.yy < D.seasonYear ? 1 : 12;
+    }
+    const nextIdx = hasEvents ? pick.idx : 0;
+    const upcoming = !!pick.upcoming;
+    const nx0 = hasEvents ? events[nextIdx] : null;
+    const nxJ = nx0 ? D.jalaliInfo(nx0.d) : null;
+    const leftDays = nx0 ? Math.ceil((nx0.d - today) / 86400000) : 0;
+    const nxCaption = upcoming ? 'رویداد بعدی' : (nx0 ? 'آخرین رویداد' : 'رویدادی ثبت نشده');
     let selIdx = nextIdx;
-    let viewMonth = D.jalaliInfo(events[selIdx].d).mm;
+    let viewMonth = currentMonth();
     let filter = 'all';
 
     function daysInJMonth(mm){
@@ -2821,13 +2840,13 @@ const sp = $('#st-podium');
     <div data-acc="cal.next" class="glass gold-border" style="margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <img src="assets/ball_3d.webp" class="floaty fast glow-img green" style="width:64px;height:64px;border-radius:14px;object-fit:cover" alt="">
       <div>
-        <div style="font-size:12px;color:var(--muted)">رویداد بعدی</div>
-        <div style="font-size:19px;font-weight:900" class="gold-text">${TYPE_ICON[events[nextIdx].type]||'📌'} ${esc(events[nextIdx].name)}</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:3px">${events[nextIdx].type} • ${D.fa(D.jalaliInfo(events[nextIdx].d).dd)} ${MONTHS[D.jalaliInfo(events[nextIdx].d).mm-1]}</div>
+        <div style="font-size:12px;color:var(--muted)">${nxCaption}</div>
+        <div style="font-size:19px;font-weight:900" class="gold-text">${nx0 ? (TYPE_ICON[nx0.type]||'📌') + ' ' + esc(nx0.name) : '—'}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:3px">${nx0 ? nx0.type + ' • ' + D.fa(nxJ.dd) + ' ' + MONTHS[nxJ.mm-1] : 'هنوز رویدادی به تقویم فصل اضافه نشده است'}</div>
       </div>
       <div style="margin-right:auto;text-align:center">
-        <div class="big-num gold-text">${D.fa(Math.max(0, Math.ceil((events[nextIdx].d - D.TODAY)/86400000)))}</div>
-        <div style="font-size:11px;color:var(--muted)">روز تا شروع</div>
+        <div class="big-num gold-text">${D.fa(nx0 ? Math.abs(leftDays) : 0)}</div>
+        <div style="font-size:11px;color:var(--muted)">${nx0 ? (leftDays >= 0 ? 'روز تا شروع' : 'روز از پایان') : ''}</div>
       </div>
       <div style="text-align:center;padding:0 16px">
         <div style="font-size:11px;color:var(--muted)">رویدادهای فصل</div>
@@ -2872,6 +2891,7 @@ const sp = $('#st-podium');
 const stCal = $('#st-cal');
     if (stCal) stCal.addEventListener('click', () => {
       const nx = events[nextIdx];
+      if (!nx) return;                     /* تقویم خالی: استوری معنا ندارد */
       const days = Math.max(0, Math.ceil((nx.d - D.TODAY)/86400000));
       const j = D.jalaliInfo(nx.d);
       igStory(stCal, 'استوری-تقویم-فصل.png', ({ W, H, GOLD, GL, FG, MUT, rrect, txt, c }) => {
@@ -2975,7 +2995,7 @@ const stCal = $('#st-cal');
       const rows = [];
       const mk = (e, pastFlag) => {
         const j = D.jalaliInfo(e.d);
-        const isSel = events[selIdx].id === e.id;
+        const isSel = !!(events[selIdx] && events[selIdx].id === e.id);
         const days = daysBetween(e.d, e.end);
         const range = days > 1 ? ` (${D.fa(days)} روز)` : '';
         return `<div class="cal-ev-item ${isSel?'sel':''} ${pastFlag?'past':''}" data-id="${e.id}">
@@ -2993,8 +3013,18 @@ const stCal = $('#st-cal');
       };
       future.slice(0, 60).forEach(e => rows.push(mk(e, false)));
       if (past.length) rows.push('<div class="cal-ev-group">برگزار شده</div>');
-      past.slice(-30).forEach(e => rows.push(mk(e, true)));
+      /* گذشته‌ها از «تازه‌ترین» به «قدیمی‌ترین» — قبلاً صعودی بود و بالای فهرست، قدیمی‌ترین
+         رویدادِ فصل می‌نشست؛ حالا بالای فهرست همان نزدیک‌ترین رویداد به امروز است. */
+      past.slice(-30).reverse().forEach(e => rows.push(mk(e, true)));
       wrap.innerHTML = rows.join('') || '<div style="color:var(--muted);font-size:12px;padding:10px">رویدادی نیست.</div>';
+      /* رویداد انتخاب‌شده (نزدیک‌ترین به امروز) در وسط فهرست دیده شود، نه بیرون از کادر */
+      try {
+        const selEl = wrap.querySelector('.cal-ev-item.sel');
+        if (selEl && wrap.scrollHeight > wrap.clientHeight){
+          const r = selEl.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+          wrap.scrollTop += Math.round(r.top - w.top - w.height / 2 + r.height / 2);
+        }
+      } catch (e) {}
       $$('#cal-events-list .cal-ev-item').forEach(it => it.addEventListener('click', () => {
         selIdx = events.findIndex(e => e.id === +it.dataset.id);
         if (selIdx < 0) selIdx = nextIdx;
@@ -3074,7 +3104,19 @@ const stCal = $('#st-cal');
         return false;
       }).length;
       const hc = $('#cal-month-hols');
-      if (hc) hc.innerHTML = `📅 رویدادهای این ماه: <b>${D.fa(cnt)}</b>`;
+      if (hc) {
+        let extra = '';
+        if (!cnt && nx0){
+          extra = ` — نزدیک‌ترین رویداد: <a href="#" id="cal-jump-near" style="color:var(--gold);text-decoration:underline">${esc(nx0.name)} · ${D.fa(nxJ.dd)} ${MONTHS[nxJ.mm-1]}</a>`;
+        }
+        hc.innerHTML = `📅 رویدادهای این ماه: <b>${D.fa(cnt)}</b>${extra}`;
+        const jl = $('#cal-jump-near');
+        if (jl) jl.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          viewMonth = nxJ.mm;
+          renderGrid(); renderMonthStats();
+        });
+      }
     }
 
     renderList(); renderGrid(); renderMonthStats();
@@ -3088,7 +3130,7 @@ const stCal = $('#st-cal');
       renderGrid(); renderMonthStats();
     });
     $('#cal-today').addEventListener('click', () => {
-      viewMonth = D.jalaliInfo(D.TODAY).mm;
+      viewMonth = currentMonth();
       selIdx = nextIdx;
       renderList(); renderGrid(); renderMonthStats();
     });

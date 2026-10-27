@@ -2803,7 +2803,13 @@ const sp = $('#st-podium');
        حالا: نزدیک‌ترین رویدادِ تمام‌نشده؛ اگر نبود، آخرین رویدادِ گذشته. و ماهِ آغازین همیشه
        «ماه جاری» است (با محدود کردن به بازهٔ فصل). */
     const today = D.TODAY;
-    const pick = D.calNearest(events, today);          /* { idx, upcoming } */
+    /* { idx, upcoming } — اگر بستهٔ data.js نسخهٔ قدیمی باشد (کش مرورگر)، همین قاعده اینجا هم هست */
+    const pick = (function () {
+      try { if (typeof D.calNearest === 'function') return D.calNearest(events, today); } catch (e) {}
+      if (!events.length) return { idx: -1, upcoming: false };
+      for (let i = 0; i < events.length; i++) if ((events[i].end || events[i].d) >= today) return { idx: i, upcoming: true };
+      return { idx: events.length - 1, upcoming: false };
+    })();
     const hasEvents = events.length > 0 && pick.idx >= 0;
     function currentMonth(){
       const tj = D.jalaliInfo();

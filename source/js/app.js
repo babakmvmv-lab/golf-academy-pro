@@ -2803,26 +2803,28 @@ const sp = $('#st-podium');
        حالا: نزدیک‌ترین رویدادِ تمام‌نشده؛ اگر نبود، آخرین رویدادِ گذشته. و ماهِ آغازین همیشه
        «ماه جاری» است (با محدود کردن به بازهٔ فصل). */
     const today = D.TODAY;
-    /* { idx, upcoming } — اگر بستهٔ data.js نسخهٔ قدیمی باشد (کش مرورگر)، همین قاعده اینجا هم هست */
-    const pick = (function () {
-      try { if (typeof D.calNearest === 'function') return D.calNearest(events, today); } catch (e) {}
-      if (!events.length) return { idx: -1, upcoming: false };
-      for (let i = 0; i < events.length; i++) if ((events[i].end || events[i].d) >= today) return { idx: i, upcoming: true };
-      return { idx: events.length - 1, upcoming: false };
+    /* قاعدهٔ نمایش (به‌درخواست کاربر): فقط رویدادِ «امروز به بعد» نوشته می‌شود.
+       اگر از امروز به بعد هیچ رویدادی نباشد، کارت بالای صفحه به‌کلی نمایش داده نمی‌شود —
+       نه «آخرین رویداد»، نه «۰ روز»، نه هیچ نوشتهٔ دیگری. گذشته‌ها فقط در فهرست
+       «برگزار شده» و در ماه‌های قبلی تقویم دیده می‌شوند. */
+    const pickUpcoming = (function () {
+      for (let i = 0; i < events.length; i++) {
+        const end = (events[i].end && !isNaN(events[i].end)) ? events[i].end : events[i].d;
+        if (end && end >= today) return i;          /* در جریان یا آینده */
+      }
+      return -1;
     })();
-    const hasEvents = events.length > 0 && pick.idx >= 0;
     function currentMonth(){
       const tj = D.jalaliInfo();
       if (tj.yy === D.seasonYear) return tj.mm;
       return tj.yy < D.seasonYear ? 1 : 12;
     }
-    const nextIdx = hasEvents ? pick.idx : 0;
-    const upcoming = !!pick.upcoming;
-    const nx0 = hasEvents ? events[nextIdx] : null;
+    const hasUpcoming = pickUpcoming >= 0;
+    const nextIdx = hasUpcoming ? pickUpcoming : -1;
+    const nx0 = hasUpcoming ? events[nextIdx] : null;
     const nxJ = nx0 ? D.jalaliInfo(nx0.d) : null;
     const leftDays = nx0 ? Math.ceil((nx0.d - today) / 86400000) : 0;
-    const nxCaption = upcoming ? 'رویداد بعدی' : (nx0 ? 'آخرین رویداد' : 'رویدادی ثبت نشده');
-    let selIdx = nextIdx;
+    let selIdx = hasUpcoming ? nextIdx : -1;
     let viewMonth = currentMonth();
     let filter = 'all';
 
@@ -2842,26 +2844,29 @@ const sp = $('#st-podium');
       return Math.round((b - a) / 86400000) + 1;
     }
 
-    v.innerHTML = `
+    const heroHTML = hasUpcoming ? `
     <div data-acc="cal.next" class="glass gold-border" style="margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <img src="assets/ball_3d.webp" class="floaty fast glow-img green" style="width:64px;height:64px;border-radius:14px;object-fit:cover" alt="">
       <div>
-        <div style="font-size:12px;color:var(--muted)">${nxCaption}</div>
-        <div style="font-size:19px;font-weight:900" class="gold-text">${nx0 ? (TYPE_ICON[nx0.type]||'📌') + ' ' + esc(nx0.name) : '—'}</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:3px">${nx0 ? nx0.type + ' • ' + D.fa(nxJ.dd) + ' ' + MONTHS[nxJ.mm-1] : 'هنوز رویدادی به تقویم فصل اضافه نشده است'}</div>
+        <div style="font-size:12px;color:var(--muted)">رویداد بعدی</div>
+        <div style="font-size:19px;font-weight:900" class="gold-text">${(TYPE_ICON[nx0.type]||'📌') + ' ' + esc(nx0.name)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:3px">${nx0.type} • ${D.fa(nxJ.dd)} ${MONTHS[nxJ.mm-1]}</div>
       </div>
       <div style="margin-right:auto;text-align:center">
-        <div class="big-num gold-text">${D.fa(nx0 ? Math.abs(leftDays) : 0)}</div>
-        <div style="font-size:11px;color:var(--muted)">${nx0 ? (leftDays >= 0 ? 'روز تا شروع' : 'روز از پایان') : ''}</div>
+        <div class="big-num gold-text">${D.fa(Math.max(0, leftDays))}</div>
+        <div style="font-size:11px;color:var(--muted)">${leftDays === 0 ? 'همین امروز' : 'روز تا شروع'}</div>
       </div>
       <div style="text-align:center;padding:0 16px">
         <div style="font-size:11px;color:var(--muted)">رویدادهای فصل</div>
         <div style="font-size:16px;font-weight:800" class="gold-text">${D.fa(events.length)} رویداد</div>
       </div>
         <button class="btn sm" id="st-cal" style="background:linear-gradient(135deg,#d62976,#fa7e1e);color:#fff;font-weight:800">📱 استوری</button>
-        
+
         <button class="btn sm ghost" onclick="APP.go('mgmt')">⚙️ مدیریت ${esc(L('nav.cal','تقویم فصل'))}</button>
-    </div>
+    </div>` : '';
+
+    v.innerHTML = `
+    ${heroHTML}
 
     <div class="cal-main">
       <!-- لیست رویدادها -->
@@ -2894,7 +2899,7 @@ const sp = $('#st-podium');
     </div>`;
 
         /* انتشار تقویم خودکار است — دکمه‌ای وجود ندارد. */
-const stCal = $('#st-cal');
+const stCal = hasUpcoming ? $('#st-cal') : null;
     if (stCal) stCal.addEventListener('click', () => {
       const nx = events[nextIdx];
       if (!nx) return;                     /* تقویم خالی: استوری معنا ندارد */
@@ -3111,9 +3116,11 @@ const stCal = $('#st-cal');
       }).length;
       const hc = $('#cal-month-hols');
       if (hc) {
+        /* ماهِ خالی + وجود رویدادِ آینده ⇒ میان‌بُر به ماهِ همان رویداد.
+           اگر از امروز به بعد هیچ رویدادی نباشد، دربارهٔ هیچ رویدادِ گذشته‌ای هم چیزی نوشته نمی‌شود. */
         let extra = '';
-        if (!cnt && nx0){
-          extra = ` — نزدیک‌ترین رویداد: <a href="#" id="cal-jump-near" style="color:var(--gold);text-decoration:underline">${esc(nx0.name)} · ${D.fa(nxJ.dd)} ${MONTHS[nxJ.mm-1]}</a>`;
+        if (!cnt && hasUpcoming && nxJ && nxJ.mm !== mm){
+          extra = ` — <a href="#" id="cal-jump-near" style="color:var(--gold);text-decoration:underline">رفتن به ماه رویداد بعدی</a>`;
         }
         hc.innerHTML = `📅 رویدادهای این ماه: <b>${D.fa(cnt)}</b>${extra}`;
         const jl = $('#cal-jump-near');

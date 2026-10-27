@@ -6,7 +6,7 @@
  * علت: Math.max(0, events.findIndex(e => e.d >= TODAY)) — وقتی هیچ رویداد آینده‌ای نبود،
  * −۱ به ۰ تبدیل می‌شد ⇒ اولین رویداد فصل.
  *
- * این فایل هم منطق خالص (Data.calNearest) و هم اجرای واقعیِ pageCal را با
+ * این فایل هم منطق خالص (Data.calNextIdx) و هم اجرای واقعیِ pageCal را با
  * data.js واقعی می‌سنجد.
  */
 import fs from 'node:fs';
@@ -58,7 +58,7 @@ vm.createContext(sandbox);
 vm.runInContext(dataSrc, sandbox, { filename: 'data.js' });
 
 const D = sandbox.window.Data;
-assert.ok(D && typeof D.calNearest === 'function', 'Data.calNearest صادر نشده است');
+assert.ok(D && typeof D.calNextIdx === 'function', 'Data.calNextIdx صادر نشده است');
 
 const T = (s, end) => ({ d: D.dateFrom(s), end: D.dateFrom(end || s), name: s, type: 'تمرین', kind: 'تمرین' });
 
@@ -70,21 +70,23 @@ const today = D.dateFrom('2026-10-27');
 const list = [
   T('2026-04-09'), T('2026-05-14'), T('2026-09-24'), T('2026-10-08'), T('2026-10-15'), T('2026-10-22'),
 ];
-let p = D.calNearest(list, today);
-ok(p.idx === 5 && p.upcoming === false, 'همهٔ رویدادها گذشته‌اند ⇒ آخرین رویداد (نه اولین) انتخاب می‌شود');
-ok(list[p.idx].d.toISOString().slice(0, 10) === '2026-10-22', 'انتخابِ درست: نزدیک‌ترین رویداد گذشته');
+let p = D.calNextIdx(list, today);
+ok(p === -1, 'همهٔ رویدادها گذشته‌اند ⇒ هیچ رویدادی انتخاب نمی‌شود (نه اولین، نه آخرین)');
 
-p = D.calNearest([...list, T('2026-11-05')], today);
-ok(p.idx === 6 && p.upcoming === true, 'رویداد آینده ⇒ «رویداد بعدی»');
+p = D.calNextIdx([...list, T('2026-11-05')], today);
+ok(p === 6, 'رویداد آینده ⇒ اندیس همان رویداد');
 
-p = D.calNearest([T('2026-10-25', '2026-10-29'), T('2026-11-05')], today);
-ok(p.idx === 0 && p.upcoming === true, 'رویداد چندروزهٔ در جریان ⇒ همان انتخاب می‌شود');
+p = D.calNextIdx([T('2026-10-25', '2026-10-29'), T('2026-11-05')], today);
+ok(p === 0, 'رویداد چندروزهٔ در جریان ⇒ انتخاب می‌شود');
 
-p = D.calNearest([], today);
-ok(p.idx === -1 && p.upcoming === false, 'فهرست خالی ⇒ idx = −۱ (بدون استثنا)');
+p = D.calNextIdx([], today);
+ok(p === -1, 'فهرست خالی ⇒ −۱ (بدون استثنا)');
 
-p = D.calNearest([T('2026-03-01'), T('2026-03-20')], today);
-ok(p.idx === 1, 'همه پیش از امروز و خارج از ترتیب امروز ⇒ آخرین آیتم');
+p = D.calNextIdx([T('2026-03-01'), T('2026-03-20')], today);
+ok(p === -1, 'همه پیش از امروز ⇒ −۱ (گذشته هرگز «بعدی» نمی‌شود)');
+
+p = D.calNextIdx([T('2026-10-27'), T('2026-11-02')], today);
+ok(p === 0, 'رویدادِ امروز ⇒ همان امروز انتخاب می‌شود');
 
 /* ── ۲) اجرای واقعیِ pageCal با data.js واقعی ───────────────────────── */
 const s0 = appSrc.indexOf('  function seasonCalendarEvents(){');

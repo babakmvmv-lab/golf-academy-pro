@@ -617,30 +617,23 @@
     return out;
   }
 
-  /* ── تقویم فصل: «نزدیک‌ترین رویداد به امروز» ──────────────────────────────
-     ورودی: رویدادهای مرتب‌شده ({d: تاریخ شروع, end: تاریخ پایان}).
-       • اگر رویدادی هنوز تمام نشده باشد (end >= امروز) ⇒ اولینِ همان‌ها («رویداد بعدی»).
-       • اگر هیچ رویداد آینده‌ای نباشد (پایان فصل یا وقفه) ⇒ آخرین رویدادِ گذشته،
-         یعنی نزدیک‌ترین به امروز — نه اولین رویداد فصل.
-     دلیل: پیش‌تر در app.js از Math.max(0, findIndex(...)) استفاده می‌شد؛ وقتی هیچ رویداد
-     آینده‌ای نبود، −۱ به ۰ تبدیل می‌شد و تقویم به فروردین (اولین رویداد سال) می‌پرید
-     و «رویداد بعدی» هم همان رویداد فروردین را نشان می‌داد.
-     خروجی: { idx, upcoming } — idx فقط زمانی −۱ است که فهرست خالی باشد. */
-  function calNearest(events, today){
+  /* ── تقویم فصل: «رویداد امروز یا بعد» ─────────────────────────────────────
+     ورودی: رویدادهای مرتب‌شده ({d: شروع, end: پایان}).
+     خروجی: اندیس نخستین رویدادی که هنوز تمام نشده (end >= امروز)، وگرنه −۱.
+     • هیچ‌وقت «گذشته» برنمی‌گرداند؛ پایان فصل/وقفه ⇒ −۱ و پنل بالای صفحه چیزی نمی‌نویسد.
+     • رویداد چندروزهٔ در جریان هم «امروز به بعد» حساب می‌شود.
+     دلیل وجود: قبلاً app.js از Math.max(0, findIndex(...)) استفاده می‌کرد؛ −۱ به ۰ تبدیل
+     می‌شد و صفحه به اولین رویداد فصل (فروردین) می‌پرید. */
+  function calNextIdx(events, today){
     const list = Array.isArray(events) ? events : [];
     const t = (today instanceof Date) ? today : new Date(today == null ? nowMs() : today);
-    if (!list.length) return { idx: -1, upcoming: false };
-    const endOf = e => (e && e.end && !isNaN(e.end)) ? e.end : (e ? e.d : null);
     for (let i = 0; i < list.length; i++){
-      const e = endOf(list[i]);
-      if (e && e >= t) return { idx: i, upcoming: true };
+      const e = list[i];
+      if (!e) continue;
+      const end = (e.end instanceof Date && !isNaN(e.end)) ? e.end : ((e.end && !isNaN(e.end)) ? e.end : e.d);
+      if (end && end >= t) return i;
     }
-    let last = 0;
-    for (let k = 0; k < list.length; k++){
-      const e = list[k] && list[k].d;
-      if (e && e <= t) last = k;
-    }
-    return { idx: last, upcoming: false };
+    return -1;
   }
 
   /* ── ذخیره تنظیمات مدیر (بازیکن فعال/غیرفعال + نمایش نمودارها) ── */
@@ -1312,7 +1305,7 @@
     courseIdOf, isArchivedCourse, courseRecords, courseById, createCourse, updateCourse, archiveCourse, restoreCourse,
     compute, careerStats, nationalPlaces, loadState, loadPlayers, loadCustomPlayers, customPlayerOffsets, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
-    playerRows, nameOf, photoOf, thursdaysSeason, seedSeason, calNearest,
+    playerRows, nameOf, photoOf, thursdaysSeason, seedSeason, calNextIdx,
   };
   /* 🧹 مهاجرت یک‌باره: حذف تمرین/دوره‌های بذریِ خودکار از حافظه (تطبیق دقیق نام+تاریخ — ورودی‌های دستی هرگز پاک نمی‌شوند) */
   function cleanupSeededPrograms(){

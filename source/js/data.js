@@ -617,6 +617,42 @@
     return out;
   }
 
+  /* ── تقویم: شبکهٔ ماه شمسی — منبعِ واحد برای پنل و استوری ──────────────────
+     ستون‌ها همیشه «منطقی» هستند: شنبه = ۰ … جمعه = ۶.
+       • در پنل، شبکه با CSS `direction: rtl` چیده می‌شود، پس ستون ۰ خودش
+         سمت راست می‌افتد — درست است.
+       • در استوری (canvas) محور x از چپ به راست است؛ اگر ستون ۰ همان‌جا
+         سمت چپ کشیده شود، تصویر «برعکس» می‌شود (شنبه چپ، جمعه راست).
+         برای همین از calWeekX استفاده می‌کنیم که ستون را آینه می‌کند.
+     این توابع هم‌زمان باعث می‌شوند پنل و استوری هرگز از هم جدا نیفتند. */
+  const CAL_WD_SHORT = ['ش','ی','د','س','چ','پ','ج'];                       /* شنبه → جمعه */
+  const CAL_WD_LONG  = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
+  function jalaliDaysInMonth(jy, jm){
+    if (jm <= 6) return 31;
+    if (jm <= 11) return 30;
+    const g = jalaaliToDateObject(jy, 12, 30);
+    const j = toJalaali(g.gy, g.gm, g.gd);
+    return (j[0] === jy && j[1] === 12 && j[2] === 30) ? 30 : 29;
+  }
+  function calWeekdayIndex(date){               /* شنبه = ۰ … جمعه = ۶ */
+    const d = (date instanceof Date) ? date : dateFrom(String(date || '') .slice(0, 10));
+    const utc = (d && !isNaN(d)) ? d.getUTCDay() : new Date().getUTCDay();
+    return (utc + 1) % 7;
+  }
+  function calMonthCells(jy, jm){               /* خانه‌های ماه، آماده برای چیدن */
+    const first = dateFrom(shamsiToISO(jy, jm, 1));
+    const firstCol = calWeekdayIndex(first);
+    const days = jalaliDaysInMonth(jy, jm);
+    const cells = [];
+    for (let d = 1; d <= days; d++){
+      const idx = firstCol + d - 1;
+      cells.push({ d, col: idx % 7, row: Math.floor(idx / 7) });
+    }
+    return { jy, jm, firstCol, days, rows: Math.ceil((firstCol + days) / 7), cells };
+  }
+  /* x ستون روی بوم: آینهٔ RTL — ستون شنبه (۰) راست‌ترین خانه است */
+  function calWeekX(col, cell, gx){ return gx + (6 - col) * cell; }
+
   /* ── تقویم فصل: «رویداد امروز یا بعد» ─────────────────────────────────────
      ورودی: رویدادهای مرتب‌شده ({d: شروع, end: پایان}).
      خروجی: اندیس نخستین رویدادی که هنوز تمام نشده (end >= امروز)، وگرنه −۱.
@@ -1306,6 +1342,7 @@
     compute, careerStats, nationalPlaces, loadState, loadPlayers, loadCustomPlayers, customPlayerOffsets, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
     playerRows, nameOf, photoOf, thursdaysSeason, seedSeason, calNextIdx,
+    CAL_WD_SHORT, CAL_WD_LONG, jalaliDaysInMonth, calWeekdayIndex, calMonthCells, calWeekX,
   };
   /* 🧹 مهاجرت یک‌باره: حذف تمرین/دوره‌های بذریِ خودکار از حافظه (تطبیق دقیق نام+تاریخ — ورودی‌های دستی هرگز پاک نمی‌شوند) */
   function cleanupSeededPrograms(){

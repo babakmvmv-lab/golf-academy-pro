@@ -2790,7 +2790,7 @@ const sp = $('#st-podium');
     const v = $('#view');
     const MONTHS = D.MONTHS_FA;
     const DAYS_IN = [31,31,31,31,31,31,30,30,30,30,30,29];
-    const WD = ['ش','ی','د','س','چ','پ','ج'];
+    const WD = (D.CAL_WD_SHORT && D.CAL_WD_SHORT.length === 7) ? D.CAL_WD_SHORT : ['ش','ی','د','س','چ','پ','ج'];
     const TYPE_ICON = { 'مسابقه':'🏆', 'کلاس':'📚', 'تمرین':'🏌️', 'اردو':'🏕️' };
     const TYPES = ['مسابقه','کلاس','تمرین','اردو'];
 
@@ -2827,6 +2827,7 @@ const sp = $('#st-podium');
     let filter = 'all';
 
     function daysInJMonth(mm){
+      if (typeof D.jalaliDaysInMonth === 'function') return D.jalaliDaysInMonth(D.seasonYear, mm);
       if (mm <= 6) return 31;
       if (mm <= 11) return 30;
       const g = D.jalaaliToDateObject(D.seasonYear, 12, 30);
@@ -2950,7 +2951,9 @@ const stCal = hasUpcoming ? $('#st-cal') : null;
         const mm = D.jalaliInfo(nx2.d).mm;
         const dim = daysInJMonth(mm);
         const first = jalMonthStart(mm);
-        const dow = (first.getUTCDay() + 1) % 7;
+        const dow = (typeof D.calMonthCells === 'function')
+          ? D.calMonthCells(D.seasonYear, mm).firstCol
+          : (first.getUTCDay() + 1) % 7;                                  /* شنبه = ۰ */
         const todayJ = D.jalaliInfo(D.TODAY);
         const nearIds = new Set(near.map(e => e.id));
         const byDay = {};
@@ -2963,16 +2966,20 @@ const stCal = hasUpcoming ? $('#st-cal') : null;
           }
         });
         const cell = 84, gx = (W - cell * 7) / 2;
+        /* آینهٔ RTL برای بوم: ستون شنبه (۰) راست‌ترین خانه است — همان چیدمان پنل.
+           قبلاً x = gx + col*cell بود، یعنی شنبه سمت چپ و جمعه سمت راست ⇒ تقویمِ استوری
+           نسبت به پنل «برعکس» دیده می‌شد. */
+        const colX = (col) => (typeof D.calWeekX === 'function') ? D.calWeekX(col, cell, gx) : gx + (6 - col) * cell;
         const rowsN = Math.ceil((dow + dim) / 7);
         const panelH = 78 + rowsN * cell + 22;
         const gy = 920;
         rrect(48, gy, W - 96, panelH, 28);
         c.fillStyle = 'rgba(255,255,255,.035)'; c.strokeStyle = 'rgba(212,175,55,.28)'; c.lineWidth = 1.6; c.fill(); c.stroke();
         txt(MONTHS[mm - 1] + '  ' + D.fa(D.seasonYear), W / 2, gy + 38, '800', 26, GL);
-        WD.forEach((w, i) => txt(w, gx + i * cell + cell / 2, gy + 70, '700', 17, i === 6 ? '#e8b083' : MUT));
+        WD.forEach((w, i) => txt(w, colX(i) + cell / 2, gy + 70, '700', 17, i === 6 ? '#e8b083' : MUT));
         for (let d = 1; d <= dim; d++){
           const col = (dow + d - 1) % 7, row = Math.floor((dow + d - 1) / 7);
-          const x = gx + col * cell, y = gy + 84 + row * cell;
+          const x = colX(col), y = gy + 84 + row * cell;
           const isToday = todayJ.yy === D.seasonYear && todayJ.mm === mm && todayJ.dd === d;
           const hits = byDay[d] || [];
           const featured = hits.some(e => nearIds.has(e.id));
@@ -3060,8 +3067,9 @@ const stCal = hasUpcoming ? $('#st-cal') : null;
         }
       }
       const first = jalMonthStart(mm);
-      const dow = (first.getUTCDay() + 1) % 7;
-      const daysInMonth = daysInJMonth(mm);
+      const g0 = (typeof D.calMonthCells === 'function') ? D.calMonthCells(D.seasonYear, mm) : null;
+      const dow = g0 ? g0.firstCol : (first.getUTCDay() + 1) % 7;      /* شنبه = ۰ */
+      const daysInMonth = g0 ? g0.days : daysInJMonth(mm);
       let html = `<div class="cal-grid-big-row">${WD.map((w,wi)=>`<div class="cal-wd${wi===6?' fri':''}">${w}</div>`).join('')}</div>`;  /* CAL_EVERYWHERE_V1 */
       html += '<div class="cal-grid-big-row">';
       for (let i=0;i<dow;i++) html += '<div class="cal-cell empty"></div>';

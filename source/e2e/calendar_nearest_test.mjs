@@ -94,18 +94,28 @@ const s1 = appSrc.indexOf('  function pageTv(){');
 assert.ok(s0 > 0 && s1 > s0, 'بخش تقویم در app.js پیدا نشد');
 const block = appSrc.slice(s0, s1);
 
+/* «امروز» را ثابت نگه می‌داریم: D.TODAY از ساعت واقعیِ ماشین می‌آید و تست را
+   با گذشت زمان شکننده می‌کند (روی CI تاریخ جلو می‌رود ⇒ سنجه‌ها می‌افتند).
+   یک نمای (proxy) از Data می‌سازیم که TODAY را ۵ آبان ۱۴۰۵ نشان دهد. */
+const PIN = D.dateFrom('2026-10-27');
+function dataView(){
+  const Dv = Object.create(D);
+  Object.defineProperty(Dv, 'TODAY', { value: PIN, writable: true });
+  return Dv;
+}
 function runCal(tournaments, events, programs) {
+  const Dv = dataView();
   const ctx = {
     S: { tournaments },
     MGMT: { customEvents: () => events },
-    D, Data: D, window: { Data: D }, document: doc,
+    D: Dv, Data: Dv, window: { Data: Dv }, document: doc,
     L: x => x,
     esc: s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
     $, $$, igStory() {}, store: { get: () => null, set() {} },
     APP: { go() {}, toast() {} },
     console,
   };
-  D.loadPrograms = () => programs;      /* برنامه‌های فصل */
+  Dv.loadPrograms = () => programs;     /* برنامه‌های فصل */
   const keys = Object.keys(ctx);
   const fn = new Function(...keys, block + '\nreturn pageCal;')(...keys.map(k => ctx[k]));
   fn();
@@ -150,12 +160,12 @@ ok(posNew > 0 && posOld > 0 && posNew < posOld, 'در فهرست، تازه‌ت
 r = runCal(tours, [...evs, { name: 'اردوی آبان', type: 'اردو', start: '2026-11-05', end: '2026-11-06' }], []);
 ok(r.view.includes('data-acc="cal.next"'), 'با رویداد آینده، کارت بالا رندر می‌شود');
 ok(r.view.includes('رویداد بعدی') && r.view.includes('اردوی آبان'), 'با رویداد آینده، کارت «رویداد بعدی» درست است');
-const left = Math.ceil((D.dateFrom('2026-11-05') - D.TODAY) / 86400000);
+const left = Math.ceil((D.dateFrom('2026-11-05') - PIN) / 86400000);
 ok(r.view.includes(D.fa(Math.max(0, left))), 'شمارش روز تا رویداد درست است (' + left + ')');
 ok(r.month === 'آبان ۱۴۰۵', 'ماهِ آغازین همچنان ماه جاری است');
 
 /* رویدادِ امروز (در جریان) هم «بالا» حساب می‌شود */
-r = runCal(tours, [...evs, { name: 'تمرین امروز', type: 'تمرین', start: D.todayISO(), end: D.todayISO() }], []);
+r = runCal(tours, [...evs, { name: 'تمرین امروز', type: 'تمرین', start: '2026-10-27', end: '2026-10-27' }], []);
 ok(r.view.includes('رویداد بعدی') && r.view.includes('تمرین امروز'), 'رویداد امروز ⇒ کارت بالا با «همین امروز»');
 ok(r.view.includes('همین امروز'), 'برچسب «همین امروز» برای رویداد امروز');
 

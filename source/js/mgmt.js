@@ -91,7 +91,17 @@
 
   /* ── ویرایش بازیکنان پایه ── */
   function playerEdits(){ try { return JSON.parse(localStorage.getItem('ga_players') || '{}'); } catch(e){ return {}; } }
-  function savePlayerEdits(e){ try { localStorage.setItem('ga_players', JSON.stringify(e)); } catch(e){} }
+  /* هر ویرایشِ محلی مهرِ زمانی می‌خورد؛ بعد از دریافتِ تازه از سرور، ویرایشِ قدیمی‌تر از
+     updated_at سرور دیگر نمایش داده نمی‌شود (data.js: localEditsTrusted). */
+  function savePlayerEdits(e){
+    try {
+      localStorage.setItem('ga_players', JSON.stringify(e));
+      let m = {};
+      try { m = JSON.parse(localStorage.getItem('ga_edit_at') || '{}') || {}; } catch(_e){ m = {}; }
+      m['ga_players'] = new Date().toISOString();
+      localStorage.setItem('ga_edit_at', JSON.stringify(m));
+    } catch(err){}
+  }
 
   /* ── یوزر/پسورد سایت بازیکنان ── */
   /* رمزها فقط در Supabase Auth‌اند (حساب‌های ابری 2026-10-07): این رجیستری محلی دیگر رمز نگه نمی‌دارد،
@@ -174,6 +184,40 @@
     }
     return rec;
   }
+  /* نامِ نمایشیِ حساب (مثل «رزا احمدی») → پروندهٔ بازیکن. نامِ حاکم در همهٔ صفحه‌ها
+     ga_players است؛ پس تغییر نام از صفحهٔ «یوزرها» هم باید همان‌جا نوشته شود، وگرنه
+     ذخیره می‌شود ولی جایی دیده نمی‌شود (دو منبع، دو نتیجه). */
+  function applyDisplayNameToPlayer(pid, fullName){
+    pid = +pid; fullName = String(fullName || '').trim();
+    if (!pid || !fullName) return false;
+    const parts = fullName.split(/\s+/);
+    const nm = parts[0], fm = parts.slice(1).join(' ');
+    if (pid >= 9000){
+      const lst = customPlayers();
+      const c = customPlayerAtPid(pid, lst);
+      if (!c) return false;
+      const cur = ((c.name || '') + ' ' + (c.family || '')).trim();
+      if (cur === fullName) return false;
+      c.name = nm; c.family = fm;
+      saveCustomPlayers(lst);
+      return true;
+    }
+    const ed = playerEdits();
+    const cur = ed[pid] || {};
+    const curFull = ((cur.name || '') + ' ' + (cur.family || '')).trim();
+    if (curFull === fullName) return false;
+    ed[pid] = Object.assign({}, cur, { name: nm, family: fm });
+    savePlayerEdits(ed);
+    return true;
+  }
+  /* نامِ نمایشیِ یک ردیفِ «یوزرها» از پروندهٔ بازیکن (منبعِ واحد) */
+  function nameOfUserRec(u){
+    if (!u) return '';
+    if (u.pid && window.Data && Data.playerFullName) {
+      try { return Data.playerFullName(u.pid) || ''; } catch(e){}
+    }
+    return '';
+  }
   function syncUserToPlayer(u){
     if (!u || !u.pid) return;
     const pu = playerUsers();
@@ -184,6 +228,8 @@
       active: u.active !== false
     });
     savePlayerUsers(pu);
+    /* ← نام: دو طرف یک منبع داشته باشند */
+    if (u.name && applyDisplayNameToPlayer(u.pid, u.name) && window.APP && APP.reloadData) APP.reloadData();
   }
   function removeUserOfPlayer(pid){
     const U = usersAPI(); if (!U || !pid) return;
@@ -1952,11 +1998,13 @@
           const nv = d[f];
           const blank = nv === undefined || nv === null || (typeof nv === 'string' && !nv.trim());
           if (blank && prevEd[f] !== undefined && String(prevEd[f] || '').trim() !== '') return;
+          if (blank) return;                     /* خالی هرگز روی مقدار نمی‌نشیند — نه فقط وقتی مقدار قبلی در ویرایش‌ها بود */
           merged[f] = nv;
         });
-        ed[pid] = Object.assign(merged, { name: d.name, family: d.family, gender: d.gender, hcp: d.hcp, join: d.join,
-          birth: d.birth, phone: d.phone, national: d.national, email: d.email, address: d.address,
-          father: d.father, fatherPhone: d.fatherPhone, mother: d.mother, motherPhone: d.motherPhone, photo });
+        /* باگ قبلی: بلافاصله بعد از این حلقه، همین فیلدها یک‌بار دیگر بی‌قید نوشته می‌شدند و
+           نگهبانِ بالا را خنثی می‌کردند — ذخیرهٔ فرمی که کامل پر نشده بود، تلفن/کد ملی/نام را پاک می‌کرد. */
+        if (photo) merged.photo = photo;
+        ed[pid] = merged;
         savePlayerEdits(ed);
       }
       // یوزر/پسورد
@@ -5260,6 +5308,9 @@
     </div>
     <div class="glass">
       <div class="card-head"><span class="ic">👤</span><h3>لیست ${esc(L('nav.users','یوزرها'))}</h3><span class="tag">مدیر / عضو</span></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.8">
+        نامِ هر عضو از <b style="color:var(--gold-l)">پروندهٔ بازیکن</b> خوانده می‌شود — همان نامی که در «بازیکنان» (و ادمین‌پنل) ویرایش می‌کنید. ویرایش نام از همین صفحه هم همان پرونده را عوض می‌کند.
+      </div>
       <div style="overflow-x:auto"><table class="tbl"><thead><tr>
         <th>#</th><th>نام</th><th>یوزر</th><th>رمز</th><th>نقش / دسترسی</th><th>پلن</th><th>اشتراک</th><th>وضعیت</th><th>عملیات</th>
       </tr></thead><tbody id="us-rows"></tbody></table></div>
@@ -5280,7 +5331,9 @@
       $('#us-rows').innerHTML = rows.map(u => `
         <tr class="${u.active ? '' : 'off-row'}">
           <td class="num">${D.fa(u.id)}</td>
-          <td><b>${esc(u.name || u.user)}</b> ${u.main ? '<span class="chip gold">مدیر اصلی</span>' : ''}</td>
+          <td><b>${esc(u.main ? (u.name || u.user) : (nameOfUserRec(u) || u.name || u.user))}</b> ${u.main ? '<span class="chip gold">مدیر اصلی</span>' : ''}${
+            !u.main && u.pid && nameOfUserRec(u) && u.name && nameOfUserRec(u) !== u.name
+              ? `<div style="font-size:10px;color:var(--muted)" title="نامِ ثبت‌شده روی حساب">حساب: ${esc(u.name)}</div>` : ''}</td>
           <td style="direction:ltr" class="num">${esc(u.user)}</td>
           <td><code aria-label="رمز ذخیره‌شده" title="برای تغییر رمز از دکمهٔ یوزر و رمز استفاده کنید" style="direction:ltr;background:rgba(255,255,255,.06);padding:3px 8px;border-radius:8px;font-size:12px">••••••••</code></td>
           <td>

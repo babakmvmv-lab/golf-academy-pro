@@ -66,17 +66,17 @@ const T = (s, end) => ({ d: D.dateFrom(s), end: D.dateFrom(end || s), name: s, t
 let n = 0;
 const ok = (c, m) => { assert.ok(c, m); n++; console.log('PASS | ' + m); };
 
-const today = D.dateFrom('2026-10-27');
+const today = D.dateFrom('2026-11-24');
 const list = [
   T('2026-04-09'), T('2026-05-14'), T('2026-09-24'), T('2026-10-08'), T('2026-10-15'), T('2026-10-22'),
 ];
 let p = D.calNextIdx(list, today);
 ok(p === -1, 'همهٔ رویدادها گذشته‌اند ⇒ هیچ رویدادی انتخاب نمی‌شود (نه اولین، نه آخرین)');
 
-p = D.calNextIdx([...list, T('2026-11-05')], today);
+p = D.calNextIdx([...list, T('2026-11-05')], D.dateFrom('2026-10-23'));
 ok(p === 6, 'رویداد آینده ⇒ اندیس همان رویداد');
 
-p = D.calNextIdx([T('2026-10-25', '2026-10-29'), T('2026-11-05')], today);
+p = D.calNextIdx([T('2026-10-25', '2026-10-29'), T('2026-11-05')], D.dateFrom('2026-10-23'));
 ok(p === 0, 'رویداد چندروزهٔ در جریان ⇒ انتخاب می‌شود');
 
 p = D.calNextIdx([], today);
@@ -85,7 +85,7 @@ ok(p === -1, 'فهرست خالی ⇒ −۱ (بدون استثنا)');
 p = D.calNextIdx([T('2026-03-01'), T('2026-03-20')], today);
 ok(p === -1, 'همه پیش از امروز ⇒ −۱ (گذشته هرگز «بعدی» نمی‌شود)');
 
-p = D.calNextIdx([T('2026-10-27'), T('2026-11-02')], today);
+p = D.calNextIdx([T('2026-11-24'), T('2026-11-02')], today);
 ok(p === 0, 'رویدادِ امروز ⇒ همان امروز انتخاب می‌شود');
 
 /* ── ۲) اجرای واقعیِ pageCal با data.js واقعی ───────────────────────── */
@@ -96,8 +96,8 @@ const block = appSrc.slice(s0, s1);
 
 /* «امروز» را ثابت نگه می‌داریم: D.TODAY از ساعت واقعیِ ماشین می‌آید و تست را
    با گذشت زمان شکننده می‌کند (روی CI تاریخ جلو می‌رود ⇒ سنجه‌ها می‌افتند).
-   یک نمای (proxy) از Data می‌سازیم که TODAY را ۵ آبان ۱۴۰۵ نشان دهد. */
-const PIN = D.dateFrom('2026-10-27');
+   یک نمای (proxy) از Data می‌سازیم که TODAY را ۵ آذر ۱۴۰۵ نشان دهد. */
+const PIN = D.dateFrom('2026-11-24');
 function dataView(){
   const Dv = Object.create(D);
   Object.defineProperty(Dv, 'TODAY', { value: PIN, writable: true });
@@ -147,7 +147,7 @@ ok(!r.view.includes('رویداد بعدی'), 'عبارت «رویداد بعد�
 ok(!r.view.includes('آخرین رویداد'), 'عبارت «آخرین رویداد» هم نوشته نمی‌شود');
 ok(!r.view.includes('روز از پایان') && !r.view.includes('روز تا شروع'), 'شمارندهٔ روز نمایش داده نمی‌شود');
 ok(!r.view.includes('تمرین 7') || !r.view.split('cal-main')[0].includes('تمرین 7'), 'هیچ رویداد گذشته‌ای در ناحیهٔ بالا نوشته نمی‌شود');
-ok(r.month === 'آبان ۱۴۰۵', 'تقویم روی ماه جاری (آبان ۱۴۰۵) باز می‌شود: ' + r.month);
+ok(r.month === 'آذر ۱۴۰۵', 'تقویم روی ماه جاری (آذر ۱۴۰۵) باز می‌شود: ' + r.month);
 ok(/cal-grid-big/.test(el('#cal-grid').innerHTML), 'شبکهٔ ماه رسم شده است');
 ok(!r.hol.includes('cal-jump-near'), 'بدون رویداد آینده، لینک میان‌بُر هم نوشته نمی‌شود');
 ok(r.list.includes('برگزار شده'), 'گذشته‌ها فقط در فهرست «برگزار شده» می‌مانند');
@@ -157,15 +157,15 @@ const posNew = r.list.indexOf('تمرین 7'), posOld = r.list.indexOf('تمری
 ok(posNew > 0 && posOld > 0 && posNew < posOld, 'در فهرست، تازه‌ترین رویداد بالاتر از قدیمی‌ترها است');
 
 /* با رویداد آینده: «رویداد بعدی» + شمارش روز */
-r = runCal(tours, [...evs, { name: 'اردوی آبان', type: 'اردو', start: '2026-11-05', end: '2026-11-06' }], []);
+r = runCal(tours, [...evs, { name: 'اردوی آذر', type: 'اردو', start: '2026-11-28', end: '2026-11-29' }], []);
 ok(r.view.includes('data-acc="cal.next"'), 'با رویداد آینده، کارت بالا رندر می‌شود');
-ok(r.view.includes('رویداد بعدی') && r.view.includes('اردوی آبان'), 'با رویداد آینده، کارت «رویداد بعدی» درست است');
-const left = Math.ceil((D.dateFrom('2026-11-05') - PIN) / 86400000);
+ok(r.view.includes('رویداد بعدی') && r.view.includes('اردوی آذر'), 'با رویداد آینده، کارت «رویداد بعدی» درست است');
+const left = Math.ceil((D.dateFrom('2026-11-28') - PIN) / 86400000);
 ok(r.view.includes(D.fa(Math.max(0, left))), 'شمارش روز تا رویداد درست است (' + left + ')');
-ok(r.month === 'آبان ۱۴۰۵', 'ماهِ آغازین همچنان ماه جاری است');
+ok(r.month === 'آذر ۱۴۰۵', 'ماهِ آغازین همچنان ماه جاری است');
 
 /* رویدادِ امروز (در جریان) هم «بالا» حساب می‌شود */
-r = runCal(tours, [...evs, { name: 'تمرین امروز', type: 'تمرین', start: '2026-10-27', end: '2026-10-27' }], []);
+r = runCal(tours, [...evs, { name: 'تمرین امروز', type: 'تمرین', start: '2026-11-24', end: '2026-11-24' }], []);
 ok(r.view.includes('رویداد بعدی') && r.view.includes('تمرین امروز'), 'رویداد امروز ⇒ کارت بالا با «همین امروز»');
 ok(r.view.includes('همین امروز'), 'برچسب «همین امروز» برای رویداد امروز');
 
@@ -173,6 +173,6 @@ ok(r.view.includes('همین امروز'), 'برچسب «همین امروز» �
 r = runCal([], [], []);
 ok(!r.view.includes('data-acc="cal.next"'), 'تقویم خالی: کارت بالا وجود ندارد');
 ok(r.list.includes('رویدادی نیست'), 'فهرست خالی پیام کوتاه دارد و خطا نمی‌دهد');
-ok(r.month === 'آبان ۱۴۰۵', 'تقویم خالی هم روی ماه جاری است');
+ok(r.month === 'آذر ۱۴۰۵', 'تقویم خالی هم روی ماه جاری است');
 
 console.log('\n' + n + ' بررسی موفق');

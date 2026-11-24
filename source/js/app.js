@@ -107,18 +107,34 @@
     if (me && String(me.user || '').toLowerCase() === key) return me;
     return loadUsers().find(x => String(x.user || '').trim().toLowerCase() === key) || null;
   }
+  /* سربرگ کنار صفحه («عضو آکادمی — …») باید همان لحظه‌ای که نامِ بازیکن عوض می‌شود تازه شود.
+     قبلاً فقط هنگام ورود/تغییر نقش نوشته می‌شد و تا رفرش، نامِ قدیمی می‌ماند. */
+  function refreshUserLabel(){
+    const el = $('#user-label');
+    if (!el || !currentUser) return;
+    const next = userLabelFor(currentUser);
+    if (el.textContent !== next) el.textContent = next;
+  }
   function isMain(u){ const r = userRec(u); return !!(r && r.main && r.active); }
   function isAdmin(u){ const r = userRec(u); return !!(r && r.role === 'admin' && r.active); }
+  /* ── نامِ نمایشیِ عضو: یک منبع، همهٔ صفحه‌ها ─────────────────────────────────
+     منبعِ حقیقت پروندهٔ بازیکن (ga_players.pid) است که مدیر در پنل مدیریت ویرایش می‌کند؛
+     نامِ حساب (ga_accounts.name) فقط پشتیبان است. قبلاً فقط «سربرگ کنار» از این قاعده
+     پیروی می‌کرد و «بخش اعضا»، کارت رنک، سربرگ خوش‌آمد و «دسترسی سریع» هنوز نامِ قدیمیِ
+     حساب را می‌خواندند — همان چیزی که کاربر دید: تغییر نام در ادمین‌پنل، بی‌اثر در پنل. */
+  function displayNameOf(u){
+    const r = userRec(u);
+    if (!r) return String(u || '');
+    if (window.Data && typeof Data.accountDisplayName === 'function') return Data.accountDisplayName(r, u);
+    let pname = '';
+    try { if (r.pid && window.Data && Data.playerFullName) pname = Data.playerFullName(r.pid); } catch(e){}
+    return pname || String(r.name || '').trim() || String(u || '');
+  }
   function userLabelFor(u){
     const r = userRec(u);
     if (r){
-      if (r.role === 'admin') return (r.main ? 'مدیر اصلی آکادمی' : (r.name || 'مدیر'));
-      /* منبعِ حقیقتِ نامِ عضو، پروندهٔ بازیکن (ga_players) است؛ نامِ حساب (ga_accounts) فقط پشتیبان.
-         قبلاً فقط نام حساب خوانده می‌شد و تغییر نامِ بازیکن در ادمین‌پنل در پنل دیده نمی‌شد. */
-      let pname = '';
-      try { if (r.pid && window.Data && Data.nameOf) pname = Data.nameOf(r.pid); } catch(e){}
-      if (!pname || pname === '—') pname = r.name || u;
-      return 'عضو آکادمی — ' + pname;
+      if (r.role === 'admin') return (r.main ? 'مدیر اصلی آکادمی' : (displayNameOf(u) || 'مدیر'));
+      return 'عضو آکادمی — ' + displayNameOf(u);
     }
     return 'کاربر';
   }
@@ -3266,6 +3282,7 @@ const stCal = hasUpcoming ? $('#st-cal') : null;
           ${pbar(t.pts/maxT*100, 'gold')}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
             ${t.members.map(m => {
+              /* نام از جدولِ فصل (خروجی playerRows/ga_players) می‌آید — همان منبعِ فرم بازیکن */
               const rec = (A && A.LB && A.LB.find(r=>r.pid===m)) || { name: D.nameOf(m) };
               return `<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.03);border:1px solid var(--line-soft);border-radius:11px;padding:7px 9px">
                 <img src="${avatar(m)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid ${t.color}" alt="">
@@ -3624,7 +3641,7 @@ const stCal = hasUpcoming ? $('#st-cal') : null;
   function pageMemberZone(){
     const v = $('#view');
     const rec = userRec(currentUser) || {};
-    const name = rec.name || currentUser;
+    const name = displayNameOf(currentUser) || currentUser;   /* نامِ پروندهٔ بازیکن، نه نامِ قدیمیِ حساب */
     const pid = rec.pid;
     const row = pid && A && A.LB ? A.LB.find(r => r.pid === pid) : null;
     const coin = coinOf(currentUser);
@@ -3798,7 +3815,7 @@ const stCal = hasUpcoming ? $('#st-cal') : null;
       const noteEl = body.querySelector(`[data-note="${rule.id}"]`);
       const rec = userRec(currentUser) || {};
       AV.addReq({
-        user: currentUser, name: rec.name || currentUser, pid: rec.pid || 0,
+        user: currentUser, name: displayNameOf(currentUser) || currentUser, pid: rec.pid || 0,
         ruleId: rule.id, title: rule.title, amount: rule.amount, note: noteEl ? noteEl.value.trim() : '',
       });
       APP.toast('درخواست شما برای مدیریت ارسال شد — پس از تأیید، ' + D.fa(rule.amount) + ' سکه اضافه می‌شود ⏳', 'green');
@@ -3846,7 +3863,7 @@ const stCal = hasUpcoming ? $('#st-cal') : null;
     <div class="grid cols-3">
       <div class="glass" style="text-align:center">
         <div class="card-head"><span class="ic">🎨</span><h3>آواتار من</h3><span class="tag">Live 3D Card</span></div>
-        <div style="margin-top:10px;display:flex;justify-content:center">${honorCardHTML(currentUser, (userRec(currentUser)||{}).name || currentUser, 'md', 'mz-card')}</div>
+        <div style="margin-top:10px;display:flex;justify-content:center">${honorCardHTML(currentUser, displayNameOf(currentUser) || currentUser, 'md', 'mz-card')}</div>
         ${honorProgHTML(o.hn)}
         <div style="margin-top:12px;font-size:12.5px;color:var(--muted)">موجودی: <b class="gold-text" style="font-size:16px">${D.fa(c.total)} 🪙</b></div>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">
@@ -4321,7 +4338,7 @@ const stCal = hasUpcoming ? $('#st-cal') : null;
     });
     $$('#app .nav-group').forEach(g => { g.style.display = (!knownRole || member) ? 'none' : ''; });
     const mb = $('#side-mgmt-btn'); if (mb) mb.style.display = (!knownRole || member) ? 'none' : '';
-    $('#user-label').textContent = userLabelFor(currentUser);
+    refreshUserLabel();
     $('#user-name').textContent = currentUser;
     if (window.GA_SUB) GA_SUB.paintSide(currentUser);
   }
@@ -4451,6 +4468,7 @@ const stCal = hasUpcoming ? $('#st-cal') : null;
        (مثل Emt با pid‌های ۹۰۰۰+) همان لحظه در تمام سلکت‌ها/گزارش‌ها دیده شوند */
     S = D.loadState();
     A = D.compute(S);
+    refreshUserLabel();          /* نامِ دریافتی از سرور (تغییر مدیر در پنل دیگر) همان لحظه در سربرگ */
     if (currentPage === 'player') go('player');
     else if (currentPage === 'course') go('course'); /* دریافت KML/هندسه پس از رندر اول: نقشه را با geo تازه دوباره بساز */
     else if (currentPage && $('#app') && $('#app').classList.contains('on')){
@@ -4464,6 +4482,9 @@ const stCal = hasUpcoming ? $('#st-cal') : null;
   document.addEventListener('focusout', () => setTimeout(() => {
     if (__cloudApplied.pending && !userBusy()){ __cloudApplied.pending = false; __cloudApplied(); }
   }, 400));
+  /* نامِ اعضا ممکن است از حساب (ga_accounts) هم بیاید؛ وقتی نشست/پروفایل تازه شد،
+     برچسبِ کنارِ صفحه را هم همان لحظه بازنویسی کن. */
+  window.addEventListener('ga-auth-changed', () => { try { refreshUserLabel(); } catch (e) {} });
   window.addEventListener('ga-cloud-applied', e => {
     if (e.detail && e.detail.resultsChanged) __cloudResultsChanged = true;
     clearTimeout(__cloudT);
@@ -4541,7 +4562,7 @@ const stCal = hasUpcoming ? $('#st-cal') : null;
     const trigger=e.target.closest && e.target.closest('[data-rank-guide]');
     if(!trigger || !window.RANK_GUIDE) return;
     e.preventDefault();
-    RANK_GUIDE.open(() => ({user:currentUser,name:(userRec(currentUser) || {}).name || currentUser,stats:careerOfUser(currentUser)}),trigger);
+    RANK_GUIDE.open(() => ({user:currentUser,name:displayNameOf(currentUser) || currentUser,stats:careerOfUser(currentUser)}),trigger);
   });
 
   window.APP = {

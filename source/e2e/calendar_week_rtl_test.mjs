@@ -88,7 +88,7 @@ const fa = v => String(v).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[+d]);
   }
   ok(bad.length === 0, `ستونِ همهٔ ${checked} روزِ سال ۱۴۰۵ با روز واقعیِ هفته می‌خواند`);
   if (bad.length) console.log(bad.slice(0, 6).join('\n'));
-  ok(D.calMonthCells(SEASON, 8).firstCol === 6, '۱ آبان ۱۴۰۵ در ستون ۶ (جمعه) — شنبه = ۰');
+  ok(D.calMonthCells(SEASON, 8).firstCol === 6, '۱ آذر ۱۴۰۵ در ستون ۶ (جمعه) — شنبه = ۰');
   ok(D.calMonthCells(SEASON, 1).firstCol === D.calWeekdayIndex(D.dateFrom(D.shamsiToISO(SEASON, 1, 1))),
      'firstCol = روز هفتهٔ اول فروردین');
   ok(D.calWeekX(0, 84, 36) > D.calWeekX(6, 84, 36), 'calWeekX: ستون شنبه راست‌تر از جمعه است');
@@ -149,9 +149,10 @@ const tours = [
 const evs = [
   { name: 'تمرین ۶', type: 'تمرین', start: '2026-11-16', end: '2026-11-16' },
   { name: 'اردوی آبان', type: 'اردو', start: '2026-11-19', end: '2026-11-20' },
+  { name: 'اردوی آذر', type: 'اردو', start: '2026-12-05', end: '2026-12-05' },   /* رویداد آینده: دکمهٔ استوری بدون آن ساخته نمی‌شود */
 ];
 const r = runCal(tours, evs);
-ok(r.name === 'آبان ۱۴۰۵', 'پنل روی آبان ۱۴۰۵ باز شده: ' + r.name);
+ok(r.name === 'آذر ۱۴۰۵', 'پنل روی آذر ۱۴۰۵ باز شده: ' + r.name);
 
 /* شبکهٔ پنل */
 {
@@ -161,12 +162,13 @@ ok(r.name === 'آبان ۱۴۰۵', 'پنل روی آبان ۱۴۰۵ باز شد�
   const wds = [...header.matchAll(/<div class="cal-wd([^"]*)">([^<]+)<\/div>/g)].map(m => m[2]);
   ok(wds.join('') === 'شیدسچپج', 'ترتیب سرستون پنل: ' + wds.join(' ') + ' (DOM؛ با direction:rtl ⇒ ش راست‌ترین)');
   ok(/<div class="cal-wd fri">ج<\/div>/.test(header), 'خانهٔ جمعه در پنل کلاس fri دارد (چپ‌ترین)');
-  const aban = D.calMonthCells(SEASON, 8);
+  /* ماهِ جاری = آذر ۱۴۰۵ (index 8) — تست با گذشت زمان شکننده نباشد */
+  const aban = D.calMonthCells(SEASON, 9);   /* آذر */
   const empties = (rows[2].match(/cal-cell empty/g) || []).length;
-  ok(empties === aban.firstCol, `خانه‌های خالیِ آغاز آبان = ${empties} (باید ${aban.firstCol})`);
+  ok(empties === aban.firstCol, `خانه‌های خالیِ آغاز آذر = ${empties} (باید ${aban.firstCol})`);
   const nums = [...rows[2].matchAll(/<div class="cal-num">([۰-۹]+)<\/div>/g)].map(m => m[1]);
-  ok(nums[0] === '۱', 'اولین عددِ ردیف = ۱ (۱ آبان، جمعه)');
-  ok(nums.length === aban.days, `همهٔ ${aban.days} روزِ آبان در شبکه آمده‌اند`);
+  ok(nums[0] === '۱', 'اولین عددِ ردیف = ۱ (۱ آذر)');
+  ok(nums.length === aban.days, `همهٔ ${aban.days} روزِ آذر در شبکه آمده‌اند`);
   ok(nums[aban.days - 1] === fa(aban.days), 'آخرین روز ماه = ' + fa(aban.days));
   /* هر روز جمعه در DOM باید کلاس fri داشته باشد (در RTL چپ‌ترین ستون) */
   const friCells = [...rows[2].matchAll(/<div class="cal-cell([^"]*)" title="[^"]*">\s*<div class="cal-num">([۰-۹]+)<\/div>/g)]
@@ -192,22 +194,22 @@ ok(labelX['ش'] > labelX['ی'] && labelX['ی'] > labelX['د'] && labelX['د'] > 
    'ترتیب سرستون‌ها راست‌به‌چپ است: ش … ج (شنبه راست‌ترین)');
 ok(labelX['ش'] + labelX['ج'] === 1080, 'ستون‌ها حول مرکز بوم قرینه‌اند (ش + ج = عرض بوم)');
 
-const aban = D.calMonthCells(SEASON, 8);
+const aban = D.calMonthCells(SEASON, 9);   /* آذر — ماهِ جاری */
 const cellX = {};
 r.calls.filter(c => c.px === 22 && /^[۰-۹]+$/.test(c.t)).forEach(c => { cellX[c.t] = c.x; });
 const mismatch = [];
 for (const c of aban.cells) {
-  const wd = D.jalaliInfo(D.dateFrom(D.shamsiToISO(SEASON, 8, c.d))).wd;
+  const wd = D.jalaliInfo(D.dateFrom(D.shamsiToISO(SEASON, 9, c.d))).wd;
   const expect = labelX[D.CAL_WD_SHORT[D.CAL_WD_LONG.indexOf(wd)]];
   const got = cellX[fa(c.d)];
-  if (got === undefined || Math.abs(got - expect) > 0.6) mismatch.push(`${fa(c.d)} آبان → x=${got} انتظار ${expect} (${wd})`);
+  if (got === undefined || Math.abs(got - expect) > 0.6) mismatch.push(`${fa(c.d)} آذر → x=${got} انتظار ${expect} (${wd})`);
 }
-ok(mismatch.length === 0, 'هر روزِ آبان دقیقاً زیر ستون روز هفتهٔ خودش افتاده (۳۰ روز)');
+ok(mismatch.length === 0, 'هر روزِ آذر دقیقاً زیر ستون روز هفتهٔ خودش افتاده (۳۰ روز)');
 if (mismatch.length) console.log(mismatch.slice(0, 8).join('\n'));
-ok(Math.abs(cellX['۱'] - labelX['ج']) < 0.6, '۱ آبان (جمعه) زیر ستون «ج» — نه سمت شنبه');
-ok(cellX['۲'] > cellX['۱'], '۲ آبان (شنبه) راست‌تر از ۱ آبان است ⇒ هفته از شنبه شروع می‌شود');
-ok(Math.abs(cellX['۸'] - labelX['ج']) < 0.6, '۸ آبان (جمعهٔ هفتهٔ دوم) هم زیر «ج»');
-ok(cellX['۹'] > cellX['۸'], '۹ آبان (شنبهٔ هفتهٔ دوم) دوباره سمت راست');
+ok(Math.abs(cellX['۶'] - labelX['ج']) < 0.6, '۶ آذر (جمعه) زیر ستون «ج» — نه سمت شنبه');
+ok(cellX['۷'] > cellX['۶'], '۷ آذر (شنبه) راست‌تر از ۶ آذر است ⇒ هفته از شنبه شروع می‌شود');
+ok(Math.abs(cellX['۱۳'] - labelX['ج']) < 0.6, '۱۳ آذر (جمعهٔ هفتهٔ دوم) هم زیر «ج»');
+ok(cellX['۱۴'] > cellX['۱۳'], '۱۴ آذر (شنبهٔ هفتهٔ دوم) دوباره سمت راست');
 
 /* ضدِ رگرسیون: اگر کسی دوباره x = gx + col*cell بنویسد */
 ok(/colX\(i\) \+ cell \/ 2/.test(block), 'سرستون استوری از colX (آینهٔ RTL) استفاده می‌کند');

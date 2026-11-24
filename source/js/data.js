@@ -1249,10 +1249,42 @@
     if (!n) return f;
     return n.indexOf(f) >= 0 ? n : (n + ' ' + f);
   }
+  /* ── ویرایش‌های «پروندهٔ بازیکن» فقط تا وقتی معتبرند که از دادهٔ ابری قدیمی‌تر نباشند ──────
+     باگ گزارش‌شده (۲ آذر ۱۴۰۵): مدیر در ادمین‌پنل نامِ بازیکن را عوض می‌کرد، سرور درست ذخیره
+     می‌شد، ولی همین مرورگر (یا تبِ دیگر) یک ویرایشِ محلیِ قدیمی داشت و `edits[pid].name` نامِ
+     قدیمی را دوباره روی سربرگ/بخش اعضا می‌نشاند — «یک نام، دو نتیجه».
+     علاج: ویرایشِ محلی فقط وقتی برنده است که وقتی از سرور تازه‌تر باشد (مثل LWW خودِ cloud.js).
+     برچسب زمانی = timeStampKeys['ga_players'] که cloud هنگام دریافت از سرور می‌نویسد. */
+  function editStampTs(){
+    try {
+      const ts = JSON.parse(localStorage.getItem('ga_cloud_ts') || '{}');
+      const a = ts['ga_players'];
+      if (!a) return 0;
+      const t = Date.parse(a);
+      return Number.isFinite(t) ? t : 0;
+    } catch(e){ return 0; }
+  }
+  function editStampAt(){
+    try {
+      const m = JSON.parse(localStorage.getItem('ga_edit_at') || '{}');
+      const a = m['ga_players'];
+      return a ? String(a) : '';
+    } catch(e){ return ''; }
+  }
+  /* ویرایش محلی وقتی معتبر است که بعد از آخرین دریافتِ سرور ثبت شده باشد. */
+  function localEditsTrusted(){
+    const at = editStampAt();
+    if (!at) return true;                        /* ویرایش‌های قدیمیِ بدون برچسب = مالِ همین دستگاه */
+    const server = editStampTs();
+    if (!server) return true;                    /* هنوز چیزی از سرور نیامده */
+    const t = Date.parse(at);
+    return !(Number.isFinite(t) && Number.isFinite(server) && server > t);
+  }
   function playerRows(){
     const rows = [];
     let edits = {};
     try { edits = JSON.parse(localStorage.getItem('ga_players') || '{}'); } catch(e){}
+    if (!localEditsTrusted()) edits = {};        /* ویرایشِ کهنه برندهٔ دادهٔ تازهٔ سرور نیست */
     PLAYERS.forEach(p => {
       const e = edits[p[0]] || {};
       rows.push({ pid: p[0], name: joinName(e.name || p[1], e.family), gender: e.gender || p[2], hcp: e.hcp !== undefined ? +e.hcp : p[3], active: e.active !== undefined ? e.active : !!p[5], photo: e.photo || '' });
@@ -1263,6 +1295,28 @@
     } catch(e){}
     return rows;
   }
+  /* نامِ نمایشیِ بازیکن از روی «پروندهٔ بازیکن» — منبعِ واحدِ نام برای همهٔ صفحه‌ها.
+     مشکل گزارش‌شده (۲ آذر ۱۴۰۵): مدیر در ادمین‌پنل نام بازیکن را عوض می‌کرد، «فهرست بازیکنان»
+     نام تازه را نشان می‌داد ولی «بخش اعضا»/سربرگ/کارت رنکِ همان عضو نام قدیمیِ حساب (ga_accounts)
+     را می‌خواند. حالا هر جا نامِ عضو لازم است از همین تابع می‌آید. */
+  function playerFullName(pid){
+    pid = +pid;
+    if (!Number.isFinite(pid) || pid <= 0) return '';
+    try {
+      const r = playerRows().find(x => x.pid === pid);
+      if (r && String(r.name || '').trim() && r.name !== '—') return String(r.name).trim();
+    } catch(e){}
+    return '';
+  }
+  /* نامِ نمایشیِ یک حساب: pid دارد؟ پروندهٔ بازیکن حاکم است؛ وگرنه نامِ حساب. */
+  function accountDisplayName(rec, fallback){
+    rec = rec || {};
+    const p = playerFullName(rec.pid);
+    if (p) return p;
+    const n = String(rec.name || '').trim();
+    return n || String(fallback || rec.user || '').trim();
+  }
+
   /* نام فعلی بازیکن (با ویرایش‌ها — اصلاح باگ نمایش نام قدیمی در کل سایت) */
   function nameOf(pid){
     pid = +pid;
@@ -1341,7 +1395,7 @@
     courseIdOf, isArchivedCourse, courseRecords, courseById, createCourse, updateCourse, archiveCourse, restoreCourse,
     compute, careerStats, nationalPlaces, loadState, loadPlayers, loadCustomPlayers, customPlayerOffsets, loadPlayerUsers, savePlayerUsers,
     IR_HOLIDAYS, holidaysOf, isHoliday,
-    playerRows, nameOf, photoOf, thursdaysSeason, seedSeason, calNextIdx,
+    playerRows, nameOf, photoOf, playerFullName, accountDisplayName, localEditsTrusted, editStampTs, editStampAt, thursdaysSeason, seedSeason, calNextIdx,
     CAL_WD_SHORT, CAL_WD_LONG, jalaliDaysInMonth, calWeekdayIndex, calMonthCells, calWeekX,
   };
   /* 🧹 مهاجرت یک‌باره: حذف تمرین/دوره‌های بذریِ خودکار از حافظه (تطبیق دقیق نام+تاریخ — ورودی‌های دستی هرگز پاک نمی‌شوند) */
